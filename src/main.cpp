@@ -1,29 +1,12 @@
 #include <Arduino.h>
-#include "wifi_manager.h"
-#include "mqtt_manager.h"
+#include "app.h"
 
-bool helloSent = false;
-
-void setup() {
-    Serial.begin(115200);
-    delay(1000);
-
-    Serial.println("MiaDeviceOS basladi");
-
-    connectWiFi();
-
-    setupMQTT();
+void setup()
+{
+    appSetup();
 }
 
-void loop() {
-
-    loopMQTT();
-
-    if (!helloSent) {
-        publishHello();
-        requestConfig();
-        helloSent = true;
-    }
-
-    delay(100);
+void loop()
+{
+    appLoop();
 }
