@@ -2,8 +2,8 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <Preferences.h>
 #include "mqtt_manager.h"
+#include "storage_manager.h"
 
 
 WiFiClient espClient;
@@ -15,7 +15,7 @@ int currentLimit = 20;
 int temperatureLimit = 50;
 int repeatIfContinuesMin = 10;
 int normalSendIntervalSec = 60;
-Preferences preferences;
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print("MQTT mesaj alindi. Topic: ");
     Serial.println(topic);
@@ -54,10 +54,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         normalSendIntervalSec = doc["normal_send_interval_sec"];
     }
 
-   preferences.putInt("curLim", currentLimit);
-    preferences.putInt("tempLim", temperatureLimit);
-    preferences.putInt("repMin", repeatIfContinuesMin);
-    preferences.putInt("sendInt", normalSendIntervalSec);
+   saveConfigToStorage(
+    currentLimit,
+    temperatureLimit,
+    repeatIfContinuesMin,
+    normalSendIntervalSec
+);
 
 Serial.println("Config flash hafizaya kaydedildi.");
 
@@ -99,7 +101,6 @@ void reconnect() {
 
 void setupMQTT() {
 
-    preferences.begin("config", false);
 
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(mqttCallback);
