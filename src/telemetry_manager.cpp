@@ -16,10 +16,13 @@ void updateTelemetry()
 {
     unsigned long now = millis();
 
-    if (now - lastTelemetrySent < 5000)
-    {
-        return;
-    }
+    unsigned long intervalMs =
+    deviceContext.config.normalSendIntervalSec * 1000UL;
+
+if (now - lastTelemetrySent < intervalMs)
+{
+    return;
+}
 
     lastTelemetrySent = now;
 

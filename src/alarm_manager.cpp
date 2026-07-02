@@ -12,7 +12,7 @@ enum AlarmEngineState
 
 AlarmEngineState overCurrentState = ALARM_ENGINE_NORMAL;
 
-const unsigned long OVER_CURRENT_DELAY_MS = 10000; // test için 10 saniye
+//const unsigned long OVER_CURRENT_DELAY_MS = 10000; // test için 10 saniye
 
 void setupAlarm()
 {
@@ -47,29 +47,35 @@ void updateAlarm()
             }
             break;
 
-        case ALARM_ENGINE_WAITING:
-            if (!overLimit)
-            {
-                overCurrentState = ALARM_ENGINE_NORMAL;
+case ALARM_ENGINE_WAITING:
+{
+    unsigned long overCurrentDelayMs =
+        deviceContext.config.overCurrentDelaySec * 1000UL;
 
-                deviceContext.alarm.active = false;
-                deviceContext.alarm.activeAlarm = AlarmType::None;
-                deviceContext.alarm.firstDetectedMs = 0;
+    if (!overLimit)
+    {
+        overCurrentState = ALARM_ENGINE_NORMAL;
 
-                Serial.println("Alarm iptal: current normale dondu");
-            }
-            else if (now - deviceContext.alarm.firstDetectedMs >= OVER_CURRENT_DELAY_MS)
-            {
-                overCurrentState = ALARM_ENGINE_ACTIVE;
+        deviceContext.alarm.active = false;
+        deviceContext.alarm.activeAlarm = AlarmType::None;
+        deviceContext.alarm.firstDetectedMs = 0;
 
-                deviceContext.alarm.active = true;
-                deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
-                deviceContext.alarm.lastNotificationMs = now;
-                deviceContext.alarm.notificationCount++;
+        Serial.println("Alarm iptal: current normale dondu");
+    }
+    else if (now - deviceContext.alarm.firstDetectedMs >= overCurrentDelayMs)
+    {
+        overCurrentState = ALARM_ENGINE_ACTIVE;
 
-                Serial.println("ALARM AKTIF: OverCurrent");
-            }
-            break;
+        deviceContext.alarm.active = true;
+        deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
+        deviceContext.alarm.lastNotificationMs = now;
+        deviceContext.alarm.notificationCount++;
+
+        Serial.println("ALARM AKTIF: OverCurrent");
+    }
+
+    break;
+}
 
         case ALARM_ENGINE_ACTIVE:
             deviceContext.alarm.active = true;

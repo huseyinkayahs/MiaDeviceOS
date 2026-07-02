@@ -15,6 +15,8 @@ struct AlarmContext
     AlarmType activeAlarm = AlarmType::None;
 
     bool active = false;
+    bool published = false;
+    bool acknowledged = false;
 
     unsigned long firstDetectedMs = 0;
     unsigned long lastNotificationMs = 0;

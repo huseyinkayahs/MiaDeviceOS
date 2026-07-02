@@ -6,10 +6,11 @@
 void setupConfig()
 {
     loadConfigFromStorage(
-        deviceContext.config.currentLimit,
-        deviceContext.config.temperatureLimit,
-        deviceContext.config.repeatIfContinuesMin,
-        deviceContext.config.normalSendIntervalSec
+    deviceContext.config.currentLimit,
+    deviceContext.config.temperatureLimit,
+    deviceContext.config.repeatIfContinuesMin,
+    deviceContext.config.normalSendIntervalSec,
+    deviceContext.config.overCurrentDelaySec
     );
 }
 
@@ -27,10 +28,11 @@ const DeviceConfig& getConfig()
 void saveConfig()
 {
     saveConfigToStorage(
-        deviceContext.config.currentLimit,
-        deviceContext.config.temperatureLimit,
-        deviceContext.config.repeatIfContinuesMin,
-        deviceContext.config.normalSendIntervalSec
+    deviceContext.config.currentLimit,
+    deviceContext.config.temperatureLimit,
+    deviceContext.config.repeatIfContinuesMin,
+    deviceContext.config.normalSendIntervalSec,
+    deviceContext.config.overCurrentDelaySec
     );
 }
 
@@ -64,6 +66,11 @@ if (doc["repeat_if_continues_min"].is<int>())
 
 if (doc["normal_send_interval_sec"].is<int>())
     config.normalSendIntervalSec = doc["normal_send_interval_sec"];
+
+    if (doc["over_current_delay_sec"].is<int>())
+{
+    config.overCurrentDelaySec = doc["over_current_delay_sec"];
+}
     applyConfig(config);
 
     return true;

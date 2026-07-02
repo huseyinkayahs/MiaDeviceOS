@@ -5,4 +5,5 @@ struct DeviceConfig {
     int temperatureLimit = 50;
     int repeatIfContinuesMin = 10;
     int normalSendIntervalSec = 60;
+    int overCurrentDelaySec = 10;
 };

@@ -108,3 +108,11 @@ void publishTelemetry(const char* payload)
         payload
     );
 }
+
+void publishAlarm(const char* payload)
+{
+    client.publish(
+        "mia/site01/laser01/alarm",
+        payload
+    );
+}

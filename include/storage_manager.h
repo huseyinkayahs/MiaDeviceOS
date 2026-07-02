@@ -6,12 +6,14 @@ void saveConfigToStorage(
     int currentLimit,
     int temperatureLimit,
     int repeatIfContinuesMin,
-    int normalSendIntervalSec
+    int normalSendIntervalSec,
+    int overCurrentDelaySec
 );
 
 void loadConfigFromStorage(
     int &currentLimit,
     int &temperatureLimit,
     int &repeatIfContinuesMin,
-    int &normalSendIntervalSec
+    int &normalSendIntervalSec,
+    int &overCurrentDelaySec
 );
