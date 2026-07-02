@@ -5,6 +5,7 @@
 #include "config_manager.h"
 #include "mqtt_manager.h"
 #include "sensor_manager.h"
+#include "display_manager.h"
 
 void appSetup()
 {
@@ -24,6 +25,8 @@ void appSetup()
     setupMQTT();
 
     setupSensors();
+
+    setupDisplay();
 }
 
 void appLoop()
@@ -31,4 +34,6 @@ void appLoop()
     loopMQTT();
 
     updateSensors();
+
+    updateDisplay();
 }
