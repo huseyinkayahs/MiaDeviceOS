@@ -1,5 +1,6 @@
 #include "storage_manager.h"
 #include <Preferences.h>
+#include "device_context.h"
 
 Preferences preferences;
 
