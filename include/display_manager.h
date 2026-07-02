@@ -2,4 +2,6 @@
 
 void setupDisplay();
 
+void showBootScreen();
+
 void updateDisplay();

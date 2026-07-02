@@ -6,6 +6,7 @@
 #include "mqtt_manager.h"
 #include "sensor_manager.h"
 #include "display_manager.h"
+#include "telemetry_manager.h"
 
 void appSetup()
 {
@@ -27,13 +28,19 @@ void appSetup()
     setupSensors();
 
     setupDisplay();
+
+    setupTelemetry();
 }
 
 void appLoop()
 {
+    updateWiFi();
+
     loopMQTT();
 
     updateSensors();
+
+    updateTelemetry();
 
     updateDisplay();
 }

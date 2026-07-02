@@ -4,6 +4,7 @@
 
 #include "mqtt_manager.h"
 #include "config_manager.h"
+#include "device_context.h"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -51,6 +52,7 @@ void reconnect()
         if (client.connect(clientId.c_str()))
         {
             Serial.println(" BAGLANDI");
+            deviceContext.state.mqttConnected = true;
 
             client.subscribe("mia/site01/laser01/config");
             Serial.println("Config topic dinleniyor.");
@@ -78,6 +80,7 @@ void loopMQTT()
     }
 
     client.loop();
+    deviceContext.state.mqttConnected = client.connected();
 }
 
 void publishHello()
@@ -96,4 +99,12 @@ void requestConfig()
         "{\"device_id\":\"laser01\",\"request\":\"get_config\"}");
 
     Serial.println("Config istegi gonderildi.");
+}
+
+void publishTelemetry(const char* payload)
+{
+    client.publish(
+        "mia/site01/laser01/telemetry",
+        payload
+    );
 }
