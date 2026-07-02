@@ -7,6 +7,7 @@
 #include "sensor_manager.h"
 #include "display_manager.h"
 #include "telemetry_manager.h"
+#include "alarm_manager.h"
 
 void appSetup()
 {
@@ -30,6 +31,8 @@ void appSetup()
     setupDisplay();
 
     setupTelemetry();
+
+    setupAlarm();
 }
 
 void appLoop()
@@ -41,6 +44,8 @@ void appLoop()
     updateSensors();
 
     updateTelemetry();
+
+    updateAlarm();
 
     updateDisplay();
 }

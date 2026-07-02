@@ -12,13 +12,6 @@ void setupSensors()
 
 void updateSensors()
 {
-    simulatedCurrent += 0.25f;
-
-    if (simulatedCurrent > 30.0f)
-    {
-        simulatedCurrent = 0.0f;
-    }
-
-    deviceContext.state.current = simulatedCurrent;
+    deviceContext.state.current = 20.0f;   // limit üstü sabit test
     deviceContext.state.temperature = 28.0f;
 }
