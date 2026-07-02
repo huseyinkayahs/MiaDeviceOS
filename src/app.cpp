@@ -4,6 +4,7 @@
 #include "storage_manager.h"
 #include "config_manager.h"
 #include "mqtt_manager.h"
+#include "sensor_manager.h"
 
 void appSetup()
 {
@@ -21,9 +22,13 @@ void appSetup()
     setupConfig();
 
     setupMQTT();
+
+    setupSensors();
 }
 
 void appLoop()
 {
     loopMQTT();
+
+    updateSensors();
 }
