@@ -3,23 +3,26 @@
 
 #include <Arduino.h>
 
-enum AlarmState {
-    ALARM_STATE_NORMAL,
-    ALARM_STATE_LIMIT_EXCEEDED_WAITING,
-    ALARM_STATE_ACTIVE
+enum AlarmEngineState
+{
+    ALARM_ENGINE_NORMAL,
+    ALARM_ENGINE_WAITING,
+    ALARM_ENGINE_ACTIVE
 };
 
-AlarmState overCurrentState = ALARM_STATE_NORMAL;
-
-unsigned long overCurrentStartTime = 0;
+AlarmEngineState overCurrentState = ALARM_ENGINE_NORMAL;
 
 const unsigned long OVER_CURRENT_DELAY_MS = 10000; // test için 10 saniye
 
 void setupAlarm()
 {
-    overCurrentState = ALARM_STATE_NORMAL;
-    overCurrentStartTime = 0;
-    deviceContext.state.alarmActive = false;
+    overCurrentState = ALARM_ENGINE_NORMAL;
+
+    deviceContext.alarm.active = false;
+    deviceContext.alarm.activeAlarm = AlarmType::None;
+    deviceContext.alarm.firstDetectedMs = 0;
+    deviceContext.alarm.lastNotificationMs = 0;
+    deviceContext.alarm.notificationCount = 0;
 }
 
 void updateAlarm()
@@ -27,46 +30,58 @@ void updateAlarm()
     bool overLimit =
         deviceContext.state.current > deviceContext.config.currentLimit;
 
+    unsigned long now = millis();
+
     switch (overCurrentState)
     {
-        case ALARM_STATE_NORMAL:
-            deviceContext.state.alarmActive = false;
+        case ALARM_ENGINE_NORMAL:
+            deviceContext.alarm.active = false;
+            deviceContext.alarm.activeAlarm = AlarmType::None;
 
             if (overLimit)
             {
-                overCurrentStartTime = millis();
-                overCurrentState = ALARM_STATE_LIMIT_EXCEEDED_WAITING;
+                overCurrentState = ALARM_ENGINE_WAITING;
+                deviceContext.alarm.firstDetectedMs = now;
 
-                Serial.println("Alarm izleme basladi: Over current");
+                Serial.println("Alarm izleme basladi: OverCurrent");
             }
             break;
 
-        case ALARM_STATE_LIMIT_EXCEEDED_WAITING:
+        case ALARM_ENGINE_WAITING:
             if (!overLimit)
             {
-                overCurrentState = ALARM_STATE_NORMAL;
-                overCurrentStartTime = 0;
-                deviceContext.state.alarmActive = false;
+                overCurrentState = ALARM_ENGINE_NORMAL;
+
+                deviceContext.alarm.active = false;
+                deviceContext.alarm.activeAlarm = AlarmType::None;
+                deviceContext.alarm.firstDetectedMs = 0;
 
                 Serial.println("Alarm iptal: current normale dondu");
             }
-            else if (millis() - overCurrentStartTime >= OVER_CURRENT_DELAY_MS)
+            else if (now - deviceContext.alarm.firstDetectedMs >= OVER_CURRENT_DELAY_MS)
             {
-                overCurrentState = ALARM_STATE_ACTIVE;
-                deviceContext.state.alarmActive = true;
+                overCurrentState = ALARM_ENGINE_ACTIVE;
 
-                Serial.println("ALARM AKTIF: Over current");
+                deviceContext.alarm.active = true;
+                deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
+                deviceContext.alarm.lastNotificationMs = now;
+                deviceContext.alarm.notificationCount++;
+
+                Serial.println("ALARM AKTIF: OverCurrent");
             }
             break;
 
-        case ALARM_STATE_ACTIVE:
-            deviceContext.state.alarmActive = true;
+        case ALARM_ENGINE_ACTIVE:
+            deviceContext.alarm.active = true;
+            deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
 
             if (!overLimit)
             {
-                overCurrentState = ALARM_STATE_NORMAL;
-                overCurrentStartTime = 0;
-                deviceContext.state.alarmActive = false;
+                overCurrentState = ALARM_ENGINE_NORMAL;
+
+                deviceContext.alarm.active = false;
+                deviceContext.alarm.activeAlarm = AlarmType::None;
+                deviceContext.alarm.firstDetectedMs = 0;
 
                 Serial.println("ALARM KAPANDI: current normale dondu");
             }
