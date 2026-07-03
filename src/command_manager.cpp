@@ -53,6 +53,9 @@ namespace
         config["normal_send_interval_sec"] = deviceContext.config.normalSendIntervalSec;
         config["over_current_delay_sec"] = deviceContext.config.overCurrentDelaySec;
         config["heartbeat_interval_sec"] = deviceContext.config.heartbeatIntervalSec;
+        config["wifi_connect_timeout_sec"] = deviceContext.config.wifiConnectTimeoutSec;
+        config["wifi_reconnect_interval_sec"] = deviceContext.config.wifiReconnectIntervalSec;
+        config["mqtt_reconnect_interval_sec"] = deviceContext.config.mqttReconnectIntervalSec;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);

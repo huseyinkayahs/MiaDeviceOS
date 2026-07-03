@@ -11,4 +11,11 @@ struct DeviceState {
     unsigned long uptimeMs = 0;
 
     bool alarmActive = false;
+
+    unsigned long lastWifiReconnectMs = 0;
+    unsigned long lastMqttReconnectMs = 0;
+
+    unsigned int wifiReconnectCount = 0;
+    unsigned int mqttReconnectCount = 0;
+    unsigned int mqttConnectFailCount = 0;
 };

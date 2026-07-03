@@ -27,6 +27,51 @@ namespace
 
     bool incomingCommandPending = false;
     String incomingCommandPayload;
+
+    unsigned long lastMqttReconnectAttemptMs = 0;
+
+    unsigned long secondsToMs(int seconds, int minimumSeconds)
+    {
+        if (seconds < minimumSeconds)
+        {
+            seconds = minimumSeconds;
+        }
+
+        return seconds * 1000UL;
+    }
+
+    bool attemptMqttConnection()
+    {
+        Serial.print("MQTT baglaniyor...");
+
+        unsigned long now = millis();
+        lastMqttReconnectAttemptMs = now;
+        deviceContext.state.lastMqttReconnectMs = now;
+        deviceContext.state.mqttReconnectCount++;
+
+        String clientId = "Laser01-";
+        clientId += String(random(0xffff), HEX);
+
+        if (client.connect(clientId.c_str()))
+        {
+            Serial.println(" BAGLANDI");
+            deviceContext.state.mqttConnected = true;
+
+            client.subscribe(TOPIC_CONFIG);
+            Serial.println("Config topic dinleniyor.");
+
+            client.subscribe(TOPIC_COMMAND);
+            Serial.println("Command topic dinleniyor.");
+
+            return true;
+        }
+
+        Serial.print(" HATA: ");
+        Serial.println(client.state());
+        deviceContext.state.mqttConnected = false;
+        deviceContext.state.mqttConnectFailCount++;
+        return false;
+    }
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length)
@@ -64,55 +109,55 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
     Serial.println("MQTT mesaji bu cihaz tarafindan islenmedi.");
 }
 
-void reconnect()
-{
-    while (!client.connected())
-    {
-        Serial.print("MQTT baglaniyor...");
-
-        String clientId = "Laser01-";
-        clientId += String(random(0xffff), HEX);
-
-        if (client.connect(clientId.c_str()))
-        {
-            Serial.println(" BAGLANDI");
-            deviceContext.state.mqttConnected = true;
-
-            client.subscribe(TOPIC_CONFIG);
-            Serial.println("Config topic dinleniyor.");
-
-            client.subscribe(TOPIC_COMMAND);
-            Serial.println("Command topic dinleniyor.");
-        }
-        else
-        {
-            Serial.print(" HATA: ");
-            Serial.println(client.state());
-            delay(3000);
-        }
-    }
-}
-
 void setupMQTT()
 {
     client.setBufferSize(768);
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(mqttCallback);
+    lastMqttReconnectAttemptMs = 0;
+    deviceContext.state.mqttConnected = false;
 }
 
 void loopMQTT()
 {
+    if (!deviceContext.state.wifiConnected)
+    {
+        if (client.connected())
+        {
+            client.disconnect();
+        }
+
+        deviceContext.state.mqttConnected = false;
+        return;
+    }
+
     if (!client.connected())
     {
-        reconnect();
+        deviceContext.state.mqttConnected = false;
+
+        unsigned long now = millis();
+        unsigned long reconnectIntervalMs = secondsToMs(deviceContext.config.mqttReconnectIntervalSec, 3);
+
+        if (lastMqttReconnectAttemptMs == 0 || now - lastMqttReconnectAttemptMs >= reconnectIntervalMs)
+        {
+            attemptMqttConnection();
+        }
+
+        return;
     }
 
     client.loop();
-    deviceContext.state.mqttConnected = client.connected();
+    deviceContext.state.mqttConnected = true;
 }
 
 void publishHello()
 {
+    if (!client.connected())
+    {
+        Serial.println("MQTT bagli degil. Hello gonderilmedi.");
+        return;
+    }
+
     client.publish(
         "mia/test",
         "{\"device\":\"laser01\",\"status\":\"ONLINE\"}");
@@ -122,6 +167,12 @@ void publishHello()
 
 void requestConfig()
 {
+    if (!client.connected())
+    {
+        Serial.println("MQTT bagli degil. Config istegi gonderilmedi.");
+        return;
+    }
+
     client.publish(
         TOPIC_GET_CONFIG,
         "{\"device_id\":\"laser01\",\"request\":\"get_config\"}");
@@ -131,6 +182,12 @@ void requestConfig()
 
 void publishTelemetry(const char* payload)
 {
+    if (!client.connected())
+    {
+        Serial.println("MQTT bagli degil. Telemetry gonderilmedi.");
+        return;
+    }
+
     client.publish(
         TOPIC_TELEMETRY,
         payload
@@ -139,6 +196,12 @@ void publishTelemetry(const char* payload)
 
 void publishAlarm(const char* payload)
 {
+    if (!client.connected())
+    {
+        Serial.println("MQTT bagli degil. Alarm gonderilmedi.");
+        return;
+    }
+
     client.publish(
         TOPIC_ALARM,
         payload
@@ -147,6 +210,13 @@ void publishAlarm(const char* payload)
 
 void publishCommandStatus(const char* payload)
 {
+    if (!client.connected())
+    {
+        Serial.print("MQTT bagli degil. Command status gonderilmedi: ");
+        Serial.println(payload);
+        return;
+    }
+
     bool published = client.publish(
         TOPIC_COMMAND_STATUS,
         payload
@@ -166,6 +236,13 @@ void publishCommandStatus(const char* payload)
 
 void publishHeartbeat(const char* payload)
 {
+    if (!client.connected())
+    {
+        Serial.print("MQTT bagli degil. Heartbeat gonderilmedi: ");
+        Serial.println(payload);
+        return;
+    }
+
     bool published = client.publish(
         TOPIC_HEARTBEAT,
         payload

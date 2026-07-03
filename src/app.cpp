@@ -58,7 +58,7 @@ void appSetup()
     delay(1000);
 
     Serial.println("==================================");
-    Serial.println("      MiaDeviceOS v0.6");
+    Serial.println("      MiaDeviceOS v0.7");
     Serial.println("==================================");
 
     connectWiFi();

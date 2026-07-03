@@ -6,31 +6,109 @@
 const char* WIFI_SSID = "SUPERONLINE_Wi-Fi_EAE7";
 const char* WIFI_PASSWORD = "DjnUxjsfX9";
 
-void connectWiFi() {
-  Serial.print("WiFi baglaniyor: ");
-  Serial.println(WIFI_SSID);
+namespace
+{
+    unsigned long lastWifiAttemptMs = 0;
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    unsigned long secondsToMs(int seconds, int minimumSeconds)
+    {
+        if (seconds < minimumSeconds)
+        {
+            seconds = minimumSeconds;
+        }
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+        return seconds * 1000UL;
+    }
 
-  Serial.println();
-  Serial.println("WiFi baglandi");
-  deviceContext.state.wifiConnected = true;
-  deviceContext.state.wifiRSSI = WiFi.RSSI();
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
-  
+    void markWifiConnected()
+    {
+        deviceContext.state.wifiConnected = true;
+        deviceContext.state.wifiRSSI = WiFi.RSSI();
+
+        Serial.println();
+        Serial.println("WiFi baglandi");
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+    }
+
+    void markWifiDisconnected()
+    {
+        deviceContext.state.wifiConnected = false;
+        deviceContext.state.wifiRSSI = 0;
+    }
+
+    void startWifiAttempt(unsigned long now, const char* reason)
+    {
+        Serial.print("WiFi baglaniyor: ");
+        Serial.print(WIFI_SSID);
+        Serial.print(" (");
+        Serial.print(reason);
+        Serial.println(")");
+
+        lastWifiAttemptMs = now;
+        deviceContext.state.lastWifiReconnectMs = now;
+        deviceContext.state.wifiReconnectCount++;
+
+        WiFi.mode(WIFI_STA);
+        WiFi.disconnect(false);
+        delay(50);
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
 }
+
+void connectWiFi()
+{
+    unsigned long now = millis();
+    unsigned long timeoutMs = secondsToMs(deviceContext.config.wifiConnectTimeoutSec, 3);
+
+    startWifiAttempt(now, "initial");
+
+    while (WiFi.status() != WL_CONNECTED && millis() - now < timeoutMs)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        markWifiConnected();
+        return;
+    }
+
+    Serial.println();
+    Serial.println("WiFi baglanti timeout. Cihaz calismaya devam edecek.");
+    markWifiDisconnected();
+}
+
 void updateWiFi()
 {
-    deviceContext.state.wifiConnected = (WiFi.status() == WL_CONNECTED);
+    unsigned long now = millis();
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        if (!deviceContext.state.wifiConnected)
+        {
+            Serial.println("WiFi yeniden baglandi.");
+            Serial.print("IP: ");
+            Serial.println(WiFi.localIP());
+        }
+
+        deviceContext.state.wifiConnected = true;
+        deviceContext.state.wifiRSSI = WiFi.RSSI();
+        return;
+    }
 
     if (deviceContext.state.wifiConnected)
     {
-        deviceContext.state.wifiRSSI = WiFi.RSSI();
+        Serial.println("WiFi baglantisi koptu.");
+    }
+
+    markWifiDisconnected();
+
+    unsigned long reconnectIntervalMs = secondsToMs(deviceContext.config.wifiReconnectIntervalSec, 3);
+
+    if (lastWifiAttemptMs == 0 || now - lastWifiAttemptMs >= reconnectIntervalMs)
+    {
+        startWifiAttempt(now, "retry");
     }
 }

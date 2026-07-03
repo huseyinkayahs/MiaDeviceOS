@@ -37,6 +37,9 @@ namespace
         doc["alarm_active"] = deviceContext.alarm.active;
         doc["current"] = deviceContext.state.current;
         doc["temperature"] = deviceContext.state.temperature;
+        doc["wifi_reconnect_count"] = deviceContext.state.wifiReconnectCount;
+        doc["mqtt_reconnect_count"] = deviceContext.state.mqttReconnectCount;
+        doc["mqtt_connect_fail_count"] = deviceContext.state.mqttConnectFailCount;
 
         heartbeatPayload = "";
         serializeJson(doc, heartbeatPayload);

@@ -8,7 +8,10 @@ void saveConfigToStorage(
     int repeatIfContinuesMin,
     int normalSendIntervalSec,
     int overCurrentDelaySec,
-    int heartbeatIntervalSec
+    int heartbeatIntervalSec,
+    int wifiConnectTimeoutSec,
+    int wifiReconnectIntervalSec,
+    int mqttReconnectIntervalSec
 );
 
 void loadConfigFromStorage(
@@ -17,5 +20,8 @@ void loadConfigFromStorage(
     int &repeatIfContinuesMin,
     int &normalSendIntervalSec,
     int &overCurrentDelaySec,
-    int &heartbeatIntervalSec
+    int &heartbeatIntervalSec,
+    int &wifiConnectTimeoutSec,
+    int &wifiReconnectIntervalSec,
+    int &mqttReconnectIntervalSec
 );
