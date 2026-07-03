@@ -1,4 +1,5 @@
 #include "alarm_manager.h"
+
 #include "device_context.h"
 
 #include <Arduino.h>
@@ -12,17 +13,23 @@ enum AlarmEngineState
 
 AlarmEngineState overCurrentState = ALARM_ENGINE_NORMAL;
 
-//const unsigned long OVER_CURRENT_DELAY_MS = 10000; // test için 10 saniye
-
-void setupAlarm()
+void resetAlarmContext()
 {
     overCurrentState = ALARM_ENGINE_NORMAL;
 
     deviceContext.alarm.active = false;
     deviceContext.alarm.activeAlarm = AlarmType::None;
+    deviceContext.alarm.published = false;
+    deviceContext.alarm.acknowledged = true;
     deviceContext.alarm.firstDetectedMs = 0;
     deviceContext.alarm.lastNotificationMs = 0;
     deviceContext.alarm.notificationCount = 0;
+}
+
+void setupAlarm()
+{
+    resetAlarmContext();
+    deviceContext.alarm.acknowledged = false;
 }
 
 void updateAlarm()
@@ -31,6 +38,14 @@ void updateAlarm()
         deviceContext.state.current > deviceContext.config.currentLimit;
 
     unsigned long now = millis();
+
+    if (deviceContext.command.resetAlarmRequested)
+    {
+        deviceContext.command.resetAlarmRequested = false;
+        resetAlarmContext();
+
+        Serial.println("Alarm reset komutu uygulandi.");
+    }
 
     switch (overCurrentState)
     {
@@ -47,35 +62,35 @@ void updateAlarm()
             }
             break;
 
-case ALARM_ENGINE_WAITING:
-{
-    unsigned long overCurrentDelayMs =
-        deviceContext.config.overCurrentDelaySec * 1000UL;
+        case ALARM_ENGINE_WAITING:
+        {
+            unsigned long overCurrentDelayMs =
+                deviceContext.config.overCurrentDelaySec * 1000UL;
 
-    if (!overLimit)
-    {
-        overCurrentState = ALARM_ENGINE_NORMAL;
+            if (!overLimit)
+            {
+                overCurrentState = ALARM_ENGINE_NORMAL;
 
-        deviceContext.alarm.active = false;
-        deviceContext.alarm.activeAlarm = AlarmType::None;
-        deviceContext.alarm.firstDetectedMs = 0;
+                deviceContext.alarm.active = false;
+                deviceContext.alarm.activeAlarm = AlarmType::None;
+                deviceContext.alarm.firstDetectedMs = 0;
 
-        Serial.println("Alarm iptal: current normale dondu");
-    }
-    else if (now - deviceContext.alarm.firstDetectedMs >= overCurrentDelayMs)
-    {
-        overCurrentState = ALARM_ENGINE_ACTIVE;
+                Serial.println("Alarm iptal: current normale dondu");
+            }
+            else if (now - deviceContext.alarm.firstDetectedMs >= overCurrentDelayMs)
+            {
+                overCurrentState = ALARM_ENGINE_ACTIVE;
 
-        deviceContext.alarm.active = true;
-        deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
-        deviceContext.alarm.lastNotificationMs = now;
-        deviceContext.alarm.notificationCount++;
+                deviceContext.alarm.active = true;
+                deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
+                deviceContext.alarm.lastNotificationMs = now;
+                deviceContext.alarm.notificationCount++;
 
-        Serial.println("ALARM AKTIF: OverCurrent");
-    }
+                Serial.println("ALARM AKTIF: OverCurrent");
+            }
 
-    break;
-}
+            break;
+        }
 
         case ALARM_ENGINE_ACTIVE:
             deviceContext.alarm.active = true;

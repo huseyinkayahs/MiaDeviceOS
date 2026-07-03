@@ -1,16 +1,18 @@
 #include "config_manager.h"
+
 #include "device_context.h"
 #include "storage_manager.h"
+
 #include <ArduinoJson.h>
 
 void setupConfig()
 {
     loadConfigFromStorage(
-    deviceContext.config.currentLimit,
-    deviceContext.config.temperatureLimit,
-    deviceContext.config.repeatIfContinuesMin,
-    deviceContext.config.normalSendIntervalSec,
-    deviceContext.config.overCurrentDelaySec
+        deviceContext.config.currentLimit,
+        deviceContext.config.temperatureLimit,
+        deviceContext.config.repeatIfContinuesMin,
+        deviceContext.config.normalSendIntervalSec,
+        deviceContext.config.overCurrentDelaySec
     );
 }
 
@@ -28,11 +30,11 @@ const DeviceConfig& getConfig()
 void saveConfig()
 {
     saveConfigToStorage(
-    deviceContext.config.currentLimit,
-    deviceContext.config.temperatureLimit,
-    deviceContext.config.repeatIfContinuesMin,
-    deviceContext.config.normalSendIntervalSec,
-    deviceContext.config.overCurrentDelaySec
+        deviceContext.config.currentLimit,
+        deviceContext.config.temperatureLimit,
+        deviceContext.config.repeatIfContinuesMin,
+        deviceContext.config.normalSendIntervalSec,
+        deviceContext.config.overCurrentDelaySec
     );
 }
 
@@ -56,21 +58,30 @@ bool applyConfigJson(const char* json)
     DeviceConfig config = deviceContext.config;
 
     if (doc["current_limit"].is<int>())
-    config.currentLimit = doc["current_limit"];
+    {
+        config.currentLimit = doc["current_limit"];
+    }
 
-if (doc["temperature_limit"].is<int>())
-    config.temperatureLimit = doc["temperature_limit"];
+    if (doc["temperature_limit"].is<int>())
+    {
+        config.temperatureLimit = doc["temperature_limit"];
+    }
 
-if (doc["repeat_if_continues_min"].is<int>())
-    config.repeatIfContinuesMin = doc["repeat_if_continues_min"];
+    if (doc["repeat_if_continues_min"].is<int>())
+    {
+        config.repeatIfContinuesMin = doc["repeat_if_continues_min"];
+    }
 
-if (doc["normal_send_interval_sec"].is<int>())
-    config.normalSendIntervalSec = doc["normal_send_interval_sec"];
+    if (doc["normal_send_interval_sec"].is<int>())
+    {
+        config.normalSendIntervalSec = doc["normal_send_interval_sec"];
+    }
 
     if (doc["over_current_delay_sec"].is<int>())
-{
-    config.overCurrentDelaySec = doc["over_current_delay_sec"];
-}
+    {
+        config.overCurrentDelaySec = doc["over_current_delay_sec"];
+    }
+
     applyConfig(config);
 
     return true;

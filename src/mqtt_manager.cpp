@@ -1,9 +1,9 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <string.h>
 
 #include "mqtt_manager.h"
-#include "config_manager.h"
 #include "device_context.h"
 
 WiFiClient espClient;
@@ -11,6 +11,22 @@ PubSubClient client(espClient);
 
 const char* mqtt_server = "broker.emqx.io";
 const int mqtt_port = 1883;
+
+namespace
+{
+    const char* TOPIC_CONFIG = "mia/site01/laser01/config";
+    const char* TOPIC_GET_CONFIG = "mia/site01/laser01/getconfig";
+    const char* TOPIC_TELEMETRY = "mia/site01/laser01/telemetry";
+    const char* TOPIC_ALARM = "mia/site01/laser01/alarm";
+    const char* TOPIC_COMMAND = "mia/site01/laser01/command";
+    const char* TOPIC_COMMAND_STATUS = "mia/site01/laser01/command/status";
+
+    bool incomingConfigPending = false;
+    String incomingConfigPayload;
+
+    bool incomingCommandPending = false;
+    String incomingCommandPayload;
+}
 
 void mqttCallback(char* topic, byte* payload, unsigned int length)
 {
@@ -30,14 +46,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
 
     Serial.println();
 
-    if (applyConfigJson(json.c_str()))
+    if (strcmp(topic, TOPIC_CONFIG) == 0)
     {
-        Serial.println("Config basariyla uygulandi.");
+        incomingConfigPayload = json;
+        incomingConfigPending = true;
+        return;
     }
-    else
+
+    if (strcmp(topic, TOPIC_COMMAND) == 0)
     {
-        Serial.println("Config uygulanamadi.");
+        incomingCommandPayload = json;
+        incomingCommandPending = true;
+        return;
     }
+
+    Serial.println("MQTT mesaji bu cihaz tarafindan islenmedi.");
 }
 
 void reconnect()
@@ -54,8 +77,11 @@ void reconnect()
             Serial.println(" BAGLANDI");
             deviceContext.state.mqttConnected = true;
 
-            client.subscribe("mia/site01/laser01/config");
+            client.subscribe(TOPIC_CONFIG);
             Serial.println("Config topic dinleniyor.");
+
+            client.subscribe(TOPIC_COMMAND);
+            Serial.println("Command topic dinleniyor.");
         }
         else
         {
@@ -68,6 +94,7 @@ void reconnect()
 
 void setupMQTT()
 {
+    client.setBufferSize(768);
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(mqttCallback);
 }
@@ -95,7 +122,7 @@ void publishHello()
 void requestConfig()
 {
     client.publish(
-        "mia/site01/laser01/getconfig",
+        TOPIC_GET_CONFIG,
         "{\"device_id\":\"laser01\",\"request\":\"get_config\"}");
 
     Serial.println("Config istegi gonderildi.");
@@ -104,7 +131,7 @@ void requestConfig()
 void publishTelemetry(const char* payload)
 {
     client.publish(
-        "mia/site01/laser01/telemetry",
+        TOPIC_TELEMETRY,
         payload
     );
 }
@@ -112,7 +139,56 @@ void publishTelemetry(const char* payload)
 void publishAlarm(const char* payload)
 {
     client.publish(
-        "mia/site01/laser01/alarm",
+        TOPIC_ALARM,
         payload
     );
+}
+
+void publishCommandStatus(const char* payload)
+{
+    bool published = client.publish(
+        TOPIC_COMMAND_STATUS,
+        payload
+    );
+
+    if (published)
+    {
+        Serial.print("Command status gonderildi: ");
+        Serial.println(payload);
+    }
+    else
+    {
+        Serial.print("Command status gonderilemedi: ");
+        Serial.println(payload);
+    }
+}
+
+bool hasIncomingConfigPayload()
+{
+    return incomingConfigPending;
+}
+
+String takeIncomingConfigPayload()
+{
+    String payload = incomingConfigPayload;
+
+    incomingConfigPayload = "";
+    incomingConfigPending = false;
+
+    return payload;
+}
+
+bool hasIncomingCommandPayload()
+{
+    return incomingCommandPending;
+}
+
+String takeIncomingCommandPayload()
+{
+    String payload = incomingCommandPayload;
+
+    incomingCommandPayload = "";
+    incomingCommandPending = false;
+
+    return payload;
 }
