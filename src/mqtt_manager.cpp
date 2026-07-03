@@ -20,6 +20,7 @@ namespace
     const char* TOPIC_ALARM = "mia/site01/laser01/alarm";
     const char* TOPIC_COMMAND = "mia/site01/laser01/command";
     const char* TOPIC_COMMAND_STATUS = "mia/site01/laser01/command/status";
+    const char* TOPIC_HEARTBEAT = "mia/site01/laser01/heartbeat";
 
     bool incomingConfigPending = false;
     String incomingConfigPayload;
@@ -159,6 +160,25 @@ void publishCommandStatus(const char* payload)
     else
     {
         Serial.print("Command status gonderilemedi: ");
+        Serial.println(payload);
+    }
+}
+
+void publishHeartbeat(const char* payload)
+{
+    bool published = client.publish(
+        TOPIC_HEARTBEAT,
+        payload
+    );
+
+    if (published)
+    {
+        Serial.print("Heartbeat gonderildi: ");
+        Serial.println(payload);
+    }
+    else
+    {
+        Serial.print("Heartbeat gonderilemedi: ");
         Serial.println(payload);
     }
 }

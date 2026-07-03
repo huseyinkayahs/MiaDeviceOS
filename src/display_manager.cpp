@@ -40,7 +40,7 @@ void showBootScreen()
 
     display.setTextSize(1);
     display.setCursor(18, 48);
-    display.println("v0.3.0");
+    display.println("v0.6.0");
 
     // Progress bar çerçevesi
     display.drawRect(14, 58, 100, 6, SSD1306_WHITE);

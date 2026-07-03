@@ -52,6 +52,7 @@ namespace
         config["repeat_if_continues_min"] = deviceContext.config.repeatIfContinuesMin;
         config["normal_send_interval_sec"] = deviceContext.config.normalSendIntervalSec;
         config["over_current_delay_sec"] = deviceContext.config.overCurrentDelaySec;
+        config["heartbeat_interval_sec"] = deviceContext.config.heartbeatIntervalSec;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);

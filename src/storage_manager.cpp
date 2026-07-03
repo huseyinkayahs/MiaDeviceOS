@@ -13,7 +13,8 @@ void saveConfigToStorage(
     int temperatureLimit,
     int repeatIfContinuesMin,
     int normalSendIntervalSec,
-    int overCurrentDelaySec
+    int overCurrentDelaySec,
+    int heartbeatIntervalSec
 
 ) {
     preferences.putInt("curLim", currentLimit);
@@ -21,6 +22,7 @@ void saveConfigToStorage(
     preferences.putInt("repMin", repeatIfContinuesMin);
     preferences.putInt("sendInt", normalSendIntervalSec);
     preferences.putInt("ocDelay", overCurrentDelaySec);
+    preferences.putInt("hbInt", heartbeatIntervalSec);
 }
 
 void loadConfigFromStorage(
@@ -28,11 +30,13 @@ void loadConfigFromStorage(
     int &temperatureLimit,
     int &repeatIfContinuesMin,
     int &normalSendIntervalSec,
-    int &overCurrentDelaySec
+    int &overCurrentDelaySec,
+    int &heartbeatIntervalSec
 ) {
     currentLimit = preferences.getInt("curLim", 20);
     temperatureLimit = preferences.getInt("tempLim", 50);
     repeatIfContinuesMin = preferences.getInt("repMin", 10);
     normalSendIntervalSec = preferences.getInt("sendInt", 60);
     overCurrentDelaySec = preferences.getInt("ocDelay", 10);
+    heartbeatIntervalSec = preferences.getInt("hbInt", 30);
 }

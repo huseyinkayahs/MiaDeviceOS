@@ -7,6 +7,7 @@
 #include "command_manager.h"
 #include "config_manager.h"
 #include "display_manager.h"
+#include "heartbeat_manager.h"
 #include "mqtt_manager.h"
 #include "sensor_manager.h"
 #include "storage_manager.h"
@@ -42,6 +43,12 @@ namespace
             String statusPayload = takeCommandStatusPayload();
             publishCommandStatus(statusPayload.c_str());
         }
+
+        if (hasHeartbeatPayload())
+        {
+            String heartbeatPayload = takeHeartbeatPayload();
+            publishHeartbeat(heartbeatPayload.c_str());
+        }
     }
 }
 
@@ -51,7 +58,7 @@ void appSetup()
     delay(1000);
 
     Serial.println("==================================");
-    Serial.println("      MiaDeviceOS v0.5");
+    Serial.println("      MiaDeviceOS v0.6");
     Serial.println("==================================");
 
     connectWiFi();
@@ -69,6 +76,8 @@ void appSetup()
     setupDisplay();
 
     setupTelemetry();
+
+    setupHeartbeat();
 
     setupAlarm();
 
@@ -88,6 +97,10 @@ void appLoop()
     updateSensors();
 
     updateTelemetry();
+
+    updateHeartbeat();
+
+    processMqttMessages();
 
     updateAlarm();
 

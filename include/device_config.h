@@ -6,4 +6,5 @@ struct DeviceConfig {
     int repeatIfContinuesMin = 10;
     int normalSendIntervalSec = 60;
     int overCurrentDelaySec = 10;
+    int heartbeatIntervalSec = 30;
 };

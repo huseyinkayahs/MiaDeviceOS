@@ -12,7 +12,8 @@ void setupConfig()
         deviceContext.config.temperatureLimit,
         deviceContext.config.repeatIfContinuesMin,
         deviceContext.config.normalSendIntervalSec,
-        deviceContext.config.overCurrentDelaySec
+        deviceContext.config.overCurrentDelaySec,
+        deviceContext.config.heartbeatIntervalSec
     );
 }
 
@@ -34,7 +35,8 @@ void saveConfig()
         deviceContext.config.temperatureLimit,
         deviceContext.config.repeatIfContinuesMin,
         deviceContext.config.normalSendIntervalSec,
-        deviceContext.config.overCurrentDelaySec
+        deviceContext.config.overCurrentDelaySec,
+        deviceContext.config.heartbeatIntervalSec
     );
 }
 
@@ -80,6 +82,11 @@ bool applyConfigJson(const char* json)
     if (doc["over_current_delay_sec"].is<int>())
     {
         config.overCurrentDelaySec = doc["over_current_delay_sec"];
+    }
+
+    if (doc["heartbeat_interval_sec"].is<int>())
+    {
+        config.heartbeatIntervalSec = doc["heartbeat_interval_sec"];
     }
 
     applyConfig(config);
