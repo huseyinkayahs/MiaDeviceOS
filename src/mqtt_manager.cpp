@@ -21,6 +21,7 @@ namespace
     const char* TOPIC_COMMAND = "mia/site01/laser01/command";
     const char* TOPIC_COMMAND_STATUS = "mia/site01/laser01/command/status";
     const char* TOPIC_HEARTBEAT = "mia/site01/laser01/heartbeat";
+    const char* TOPIC_OTA_STATUS = "mia/site01/laser01/ota/status";
 
     bool incomingConfigPending = false;
     String incomingConfigPayload;
@@ -256,6 +257,33 @@ void publishHeartbeat(const char* payload)
     else
     {
         Serial.print("Heartbeat gonderilemedi: ");
+        Serial.println(payload);
+    }
+}
+
+
+void publishOtaStatus(const char* payload)
+{
+    if (!client.connected())
+    {
+        Serial.print("MQTT bagli degil. OTA status gonderilmedi: ");
+        Serial.println(payload);
+        return;
+    }
+
+    bool published = client.publish(
+        TOPIC_OTA_STATUS,
+        payload
+    );
+
+    if (published)
+    {
+        Serial.print("OTA status gonderildi: ");
+        Serial.println(payload);
+    }
+    else
+    {
+        Serial.print("OTA status gonderilemedi: ");
         Serial.println(payload);
     }
 }

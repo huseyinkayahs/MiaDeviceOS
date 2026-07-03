@@ -9,6 +9,7 @@
 #include "display_manager.h"
 #include "heartbeat_manager.h"
 #include "mqtt_manager.h"
+#include "ota_manager.h"
 #include "sensor_manager.h"
 #include "storage_manager.h"
 #include "telemetry_manager.h"
@@ -49,6 +50,12 @@ namespace
             String heartbeatPayload = takeHeartbeatPayload();
             publishHeartbeat(heartbeatPayload.c_str());
         }
+
+        if (hasOtaStatusPayload())
+        {
+            String otaStatusPayload = takeOtaStatusPayload();
+            publishOtaStatus(otaStatusPayload.c_str());
+        }
     }
 }
 
@@ -58,7 +65,7 @@ void appSetup()
     delay(1000);
 
     Serial.println("==================================");
-    Serial.println("      MiaDeviceOS v0.7");
+    Serial.println("      MiaDeviceOS v0.9");
     Serial.println("==================================");
 
     connectWiFi();
@@ -70,6 +77,8 @@ void appSetup()
     setupMQTT();
 
     setupCommand();
+
+    setupOta();
 
     setupSensors();
 
@@ -93,6 +102,15 @@ void appLoop()
     processMqttMessages();
 
     updateCommand();
+
+    updateOta();
+
+    processMqttMessages();
+
+    if (isOtaInProgress())
+    {
+        return;
+    }
 
     updateSensors();
 

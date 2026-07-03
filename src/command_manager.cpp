@@ -95,6 +95,12 @@ namespace
             return;
         }
 
+        if (command == "ota_update")
+        {
+            setCommandStatus(requestId, command, "rejected", "OTA command must be handled with full payload");
+            return;
+        }
+
         setCommandStatus(requestId, command, "rejected", "Unknown command");
     }
 }
@@ -143,6 +149,35 @@ void handleCommandJson(const char* json)
 
     String command = doc["command"].as<String>();
     String requestId = readOptionalString(doc, "request_id");
+
+    if (command == "ota_update")
+    {
+        String url = readOptionalString(doc, "url");
+        String version = readOptionalString(doc, "version");
+
+        if (url.length() == 0)
+        {
+            setCommandStatus(requestId, command, "rejected", "Missing OTA URL");
+            return;
+        }
+
+        if (deviceContext.ota.updateRequested || deviceContext.ota.inProgress)
+        {
+            setCommandStatus(requestId, command, "rejected", "OTA already in progress");
+            return;
+        }
+
+        deviceContext.ota.updateRequested = true;
+        deviceContext.ota.inProgress = false;
+        deviceContext.ota.downloadingStatusPrepared = false;
+        deviceContext.ota.requestId = requestId;
+        deviceContext.ota.url = url;
+        deviceContext.ota.targetVersion = version;
+        deviceContext.ota.requestedAtMs = millis();
+
+        setCommandStatus(requestId, command, "accepted", "OTA update requested");
+        return;
+    }
 
     executeCommand(command, requestId);
 }
