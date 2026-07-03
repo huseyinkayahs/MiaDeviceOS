@@ -12,6 +12,7 @@
 namespace MiaTopics
 {
     constexpr const char* CONFIG = MIA_TOPIC_BASE "/config";
+    constexpr const char* CONFIG_STATUS = MIA_TOPIC_BASE "/config/status";
     constexpr const char* GET_CONFIG = MIA_TOPIC_BASE "/getconfig";
     constexpr const char* TELEMETRY = MIA_TOPIC_BASE "/telemetry";
     constexpr const char* ALARM = MIA_TOPIC_BASE "/alarm";

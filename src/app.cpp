@@ -30,8 +30,14 @@ namespace
             }
             else
             {
-                Serial.println("Config uygulanamadi.");
+                Serial.println("Config reddedildi.");
             }
+        }
+
+        if (hasConfigStatusPayload())
+        {
+            String configStatusPayload = takeConfigStatusPayload();
+            publishConfigStatus(configStatusPayload.c_str());
         }
 
         if (hasIncomingCommandPayload())

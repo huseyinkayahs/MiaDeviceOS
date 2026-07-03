@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 #include "device_config.h"
 
 void setupConfig();
@@ -13,3 +15,6 @@ const DeviceConfig& getConfig();
 void saveConfig();
 
 void resetToDefaults();
+
+bool hasConfigStatusPayload();
+String takeConfigStatusPayload();

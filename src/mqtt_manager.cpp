@@ -114,7 +114,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
 
 void setupMQTT()
 {
-    client.setBufferSize(768);
+    client.setBufferSize(1024);
     client.setServer(MQTT_SERVER, MQTT_PORT);
     client.setCallback(mqttCallback);
     lastMqttReconnectAttemptMs = 0;
@@ -245,6 +245,32 @@ void publishCommandStatus(const char* payload)
     else
     {
         Serial.print("Command status gonderilemedi: ");
+        Serial.println(payload);
+    }
+}
+
+void publishConfigStatus(const char* payload)
+{
+    if (!client.connected())
+    {
+        Serial.print("MQTT bagli degil. Config status gonderilmedi: ");
+        Serial.println(payload);
+        return;
+    }
+
+    bool published = client.publish(
+        MiaTopics::CONFIG_STATUS,
+        payload
+    );
+
+    if (published)
+    {
+        Serial.print("Config status gonderildi: ");
+        Serial.println(payload);
+    }
+    else
+    {
+        Serial.print("Config status gonderilemedi: ");
         Serial.println(payload);
     }
 }
