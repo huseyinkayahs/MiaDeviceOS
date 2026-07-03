@@ -5,6 +5,7 @@
 
 #include "mqtt_manager.h"
 #include "device_context.h"
+#include "app_version.h"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -159,9 +160,16 @@ void publishHello()
         return;
     }
 
+    char payload[160];
+    snprintf(payload, sizeof(payload),
+        "{\"device_id\":\"%s\",\"device_model\":\"%s\",\"firmware_version\":\"%s\",\"status\":\"ONLINE\"}",
+        MIA_DEVICE_ID,
+        MIA_DEVICE_MODEL,
+        MIA_FIRMWARE_VERSION);
+
     client.publish(
         "mia/test",
-        "{\"device\":\"laser01\",\"status\":\"ONLINE\"}");
+        payload);
 
     Serial.println("MQTT mesaji gonderildi.");
 }
@@ -174,9 +182,14 @@ void requestConfig()
         return;
     }
 
+    char payload[96];
+    snprintf(payload, sizeof(payload),
+        "{\"device_id\":\"%s\",\"request\":\"get_config\"}",
+        MIA_DEVICE_ID);
+
     client.publish(
         TOPIC_GET_CONFIG,
-        "{\"device_id\":\"laser01\",\"request\":\"get_config\"}");
+        payload);
 
     Serial.println("Config istegi gonderildi.");
 }

@@ -1,6 +1,7 @@
 #include "ota_manager.h"
 
 #include "device_context.h"
+#include "app_version.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -10,7 +11,6 @@
 
 namespace
 {
-    const char* DEVICE_ID = "laser01";
 
     const unsigned long OTA_START_DELAY_MS = 700;
     const unsigned long OTA_RESTART_DELAY_MS = 2000;
@@ -22,9 +22,10 @@ namespace
     {
         JsonDocument doc;
 
-        doc["device_id"] = DEVICE_ID;
+        doc["device_id"] = MIA_DEVICE_ID;
         doc["request_id"] = deviceContext.ota.requestId;
         doc["event"] = "OTA_STATUS";
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
         doc["status"] = status;
         doc["message"] = message;
         doc["target_version"] = deviceContext.ota.targetVersion;

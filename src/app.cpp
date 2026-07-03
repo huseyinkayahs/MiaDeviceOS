@@ -14,6 +14,7 @@
 #include "storage_manager.h"
 #include "telemetry_manager.h"
 #include "wifi_manager.h"
+#include "app_version.h"
 
 namespace
 {
@@ -65,8 +66,17 @@ void appSetup()
     delay(1000);
 
     Serial.println("==================================");
-    Serial.println("      MiaDeviceOS v0.9");
+    Serial.print("      ");
+    Serial.print(MIA_PROJECT_NAME);
+    Serial.print(" v");
+    Serial.println(MIA_FIRMWARE_VERSION);
     Serial.println("==================================");
+    Serial.print("Model: ");
+    Serial.println(MIA_DEVICE_MODEL);
+    Serial.print("Build: ");
+    Serial.println(MIA_BUILD_TYPE);
+    Serial.print("Device ID: ");
+    Serial.println(MIA_DEVICE_ID);
 
     connectWiFi();
 

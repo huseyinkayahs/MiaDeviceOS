@@ -1,6 +1,7 @@
 #include "alarm_publisher.h"
 
 #include "device_context.h"
+#include "app_version.h"
 #include "mqtt_manager.h"
 
 #include <Arduino.h>
@@ -42,7 +43,8 @@ void publishAlarmEvent(const char* eventName)
 {
     JsonDocument doc;
 
-    doc["device_id"] = "laser01";
+    doc["device_id"] = MIA_DEVICE_ID;
+    doc["firmware_version"] = MIA_FIRMWARE_VERSION;
     doc["event"] = eventName;
     doc["type"] = alarmTypeToString(deviceContext.alarm.activeAlarm);
     doc["current"] = deviceContext.state.current;

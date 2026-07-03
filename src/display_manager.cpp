@@ -1,5 +1,6 @@
 #include "display_manager.h"
 #include "device_context.h"
+#include "app_version.h"
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -40,7 +41,8 @@ void showBootScreen()
 
     display.setTextSize(1);
     display.setCursor(18, 48);
-    display.println("v0.9.0");
+    display.print("v");
+    display.println(MIA_FIRMWARE_VERSION);
 
     // Progress bar çerçevesi
     display.drawRect(14, 58, 100, 6, SSD1306_WHITE);

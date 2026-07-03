@@ -1,14 +1,13 @@
 #include "command_manager.h"
 
 #include "device_context.h"
+#include "app_version.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
 namespace
 {
-    const char* DEVICE_ID = "laser01";
-
     const unsigned long RESTART_DELAY_MS = 1500;
 
     bool commandStatusPending = false;
@@ -23,7 +22,7 @@ namespace
     {
         JsonDocument doc;
 
-        doc["device_id"] = DEVICE_ID;
+        doc["device_id"] = MIA_DEVICE_ID;
         doc["request_id"] = requestId;
         doc["command"] = command;
         doc["status"] = status;
@@ -39,12 +38,20 @@ namespace
     {
         JsonDocument doc;
 
-        doc["device_id"] = DEVICE_ID;
+        doc["device_id"] = MIA_DEVICE_ID;
         doc["request_id"] = requestId;
         doc["command"] = "get_config";
         doc["status"] = "done";
         doc["message"] = "Config returned";
         doc["uptime_ms"] = millis();
+
+        JsonObject device = doc["device"].to<JsonObject>();
+        device["project"] = MIA_PROJECT_NAME;
+        device["device_id"] = MIA_DEVICE_ID;
+        device["device_model"] = MIA_DEVICE_MODEL;
+        device["firmware_version"] = MIA_FIRMWARE_VERSION;
+        device["build_type"] = MIA_BUILD_TYPE;
+        device["hardware_revision"] = MIA_HARDWARE_REVISION;
 
         JsonObject config = doc["config"].to<JsonObject>();
         config["current_limit"] = deviceContext.config.currentLimit;

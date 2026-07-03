@@ -2,6 +2,7 @@
 
 #include "device_context.h"
 #include "mqtt_manager.h"
+#include "app_version.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -28,7 +29,8 @@ if (now - lastTelemetrySent < intervalMs)
 
     JsonDocument doc;
 
-    doc["device_id"] = "laser01";
+    doc["device_id"] = MIA_DEVICE_ID;
+    doc["firmware_version"] = MIA_FIRMWARE_VERSION;
     doc["current"] = deviceContext.state.current;
     doc["temperature"] = deviceContext.state.temperature;
     doc["wifi_rssi"] = deviceContext.state.wifiRSSI;
@@ -36,7 +38,7 @@ if (now - lastTelemetrySent < intervalMs)
     doc["wifi_connected"] = deviceContext.state.wifiConnected;
     doc["mqtt_connected"] = deviceContext.state.mqttConnected;
 
-    char buffer[256];
+    char buffer[384];
     serializeJson(doc, buffer);
 
     publishTelemetry(buffer);

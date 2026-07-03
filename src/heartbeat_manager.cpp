@@ -1,14 +1,13 @@
 #include "heartbeat_manager.h"
 
 #include "device_context.h"
+#include "app_version.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
 namespace
 {
-    const char* DEVICE_ID = "laser01";
-
     bool heartbeatPayloadPending = false;
     String heartbeatPayload;
 
@@ -26,8 +25,11 @@ namespace
     {
         JsonDocument doc;
 
-        doc["device_id"] = DEVICE_ID;
+        doc["device_id"] = MIA_DEVICE_ID;
         doc["event"] = "HEARTBEAT";
+        doc["device_model"] = MIA_DEVICE_MODEL;
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["build_type"] = MIA_BUILD_TYPE;
         doc["status"] = "online";
         doc["sequence"] = deviceContext.heartbeat.sequence;
         doc["uptime_ms"] = now;
