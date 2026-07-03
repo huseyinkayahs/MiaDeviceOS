@@ -6,6 +6,7 @@
 #include "mqtt_manager.h"
 #include "device_context.h"
 #include "app_version.h"
+#include "mqtt_topics.h"
 #include "secrets.h"
 
 WiFiClient espClient;
@@ -13,15 +14,6 @@ PubSubClient client(espClient);
 
 namespace
 {
-    const char* TOPIC_CONFIG = "mia/site01/laser01/config";
-    const char* TOPIC_GET_CONFIG = "mia/site01/laser01/getconfig";
-    const char* TOPIC_TELEMETRY = "mia/site01/laser01/telemetry";
-    const char* TOPIC_ALARM = "mia/site01/laser01/alarm";
-    const char* TOPIC_COMMAND = "mia/site01/laser01/command";
-    const char* TOPIC_COMMAND_STATUS = "mia/site01/laser01/command/status";
-    const char* TOPIC_HEARTBEAT = "mia/site01/laser01/heartbeat";
-    const char* TOPIC_OTA_STATUS = "mia/site01/laser01/ota/status";
-
     bool incomingConfigPending = false;
     String incomingConfigPayload;
 
@@ -68,10 +60,10 @@ namespace
             Serial.println(" BAGLANDI");
             deviceContext.state.mqttConnected = true;
 
-            client.subscribe(TOPIC_CONFIG);
+            client.subscribe(MiaTopics::CONFIG);
             Serial.println("Config topic dinleniyor.");
 
-            client.subscribe(TOPIC_COMMAND);
+            client.subscribe(MiaTopics::COMMAND);
             Serial.println("Command topic dinleniyor.");
 
             return true;
@@ -103,14 +95,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
 
     Serial.println();
 
-    if (strcmp(topic, TOPIC_CONFIG) == 0)
+    if (strcmp(topic, MiaTopics::CONFIG) == 0)
     {
         incomingConfigPayload = json;
         incomingConfigPending = true;
         return;
     }
 
-    if (strcmp(topic, TOPIC_COMMAND) == 0)
+    if (strcmp(topic, MiaTopics::COMMAND) == 0)
     {
         incomingCommandPayload = json;
         incomingCommandPending = true;
@@ -177,7 +169,7 @@ void publishHello()
         MIA_FIRMWARE_VERSION);
 
     client.publish(
-        "mia/test",
+        MiaTopics::TEST,
         payload);
 
     Serial.println("MQTT mesaji gonderildi.");
@@ -197,7 +189,7 @@ void requestConfig()
         MIA_DEVICE_ID);
 
     client.publish(
-        TOPIC_GET_CONFIG,
+        MiaTopics::GET_CONFIG,
         payload);
 
     Serial.println("Config istegi gonderildi.");
@@ -212,7 +204,7 @@ void publishTelemetry(const char* payload)
     }
 
     client.publish(
-        TOPIC_TELEMETRY,
+        MiaTopics::TELEMETRY,
         payload
     );
 }
@@ -226,7 +218,7 @@ void publishAlarm(const char* payload)
     }
 
     client.publish(
-        TOPIC_ALARM,
+        MiaTopics::ALARM,
         payload
     );
 }
@@ -241,7 +233,7 @@ void publishCommandStatus(const char* payload)
     }
 
     bool published = client.publish(
-        TOPIC_COMMAND_STATUS,
+        MiaTopics::COMMAND_STATUS,
         payload
     );
 
@@ -267,7 +259,7 @@ void publishHeartbeat(const char* payload)
     }
 
     bool published = client.publish(
-        TOPIC_HEARTBEAT,
+        MiaTopics::HEARTBEAT,
         payload
     );
 
@@ -294,7 +286,7 @@ void publishOtaStatus(const char* payload)
     }
 
     bool published = client.publish(
-        TOPIC_OTA_STATUS,
+        MiaTopics::OTA_STATUS,
         payload
     );
 

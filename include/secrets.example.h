@@ -12,5 +12,6 @@
 #define MQTT_SERVER "broker.emqx.io"
 #define MQTT_PORT 1883
 
+// MQTT broker kullanici adi/sifre istemiyorsa bos birak.
 #define MQTT_USERNAME ""
 #define MQTT_PASSWORD ""
