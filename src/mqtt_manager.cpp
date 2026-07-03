@@ -6,12 +6,10 @@
 #include "mqtt_manager.h"
 #include "device_context.h"
 #include "app_version.h"
+#include "secrets.h"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
-const char* mqtt_server = "broker.emqx.io";
-const int mqtt_port = 1883;
 
 namespace
 {
@@ -54,7 +52,18 @@ namespace
         String clientId = "Laser01-";
         clientId += String(random(0xffff), HEX);
 
-        if (client.connect(clientId.c_str()))
+        bool connected = false;
+
+        if (strlen(MQTT_USERNAME) > 0)
+        {
+            connected = client.connect(clientId.c_str(), MQTT_USERNAME, MQTT_PASSWORD);
+        }
+        else
+        {
+            connected = client.connect(clientId.c_str());
+        }
+
+        if (connected)
         {
             Serial.println(" BAGLANDI");
             deviceContext.state.mqttConnected = true;
@@ -114,7 +123,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
 void setupMQTT()
 {
     client.setBufferSize(768);
-    client.setServer(mqtt_server, mqtt_port);
+    client.setServer(MQTT_SERVER, MQTT_PORT);
     client.setCallback(mqttCallback);
     lastMqttReconnectAttemptMs = 0;
     deviceContext.state.mqttConnected = false;

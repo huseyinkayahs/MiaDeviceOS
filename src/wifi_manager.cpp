@@ -2,9 +2,7 @@
 #include <WiFi.h>
 #include "wifi_manager.h"
 #include "device_context.h"
-
-const char* WIFI_SSID = "SUPERONLINE_Wi-Fi_EAE7";
-const char* WIFI_PASSWORD = "DjnUxjsfX9";
+#include "secrets.h"
 
 namespace
 {
