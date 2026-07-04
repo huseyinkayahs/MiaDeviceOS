@@ -2,6 +2,7 @@
 
 #include "device_context.h"
 #include "app_version.h"
+#include "platform/platform_system.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -26,6 +27,7 @@ namespace
         doc["request_id"] = deviceContext.ota.requestId;
         doc["event"] = "OTA_STATUS";
         doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
         doc["status"] = status;
         doc["message"] = message;
         doc["target_version"] = deviceContext.ota.targetVersion;
@@ -178,7 +180,7 @@ void updateOta()
         if ((long)(now - deviceContext.ota.restartAtMs) >= 0)
         {
             Serial.println("OTA sonrasi restart uygulaniyor.");
-            ESP.restart();
+            MiaPlatform::restart();
         }
 
         return;

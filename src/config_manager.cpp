@@ -40,6 +40,7 @@ namespace
         doc["status"] = status;
         doc["message"] = message;
         doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
         doc["uptime_ms"] = millis();
 
         if (includeConfig)

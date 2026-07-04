@@ -325,3 +325,8 @@ refactor(...)
 chore(...)
 docs(...)
 ```
+
+## Platform Abstraction
+
+MiaDeviceOS is prepared for future hardware targets with a small platform boundary.
+See `docs/PLATFORM_ABSTRACTION.md`.

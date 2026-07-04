@@ -30,6 +30,7 @@ namespace
         doc["device_model"] = MIA_DEVICE_MODEL;
         doc["firmware_version"] = MIA_FIRMWARE_VERSION;
         doc["build_type"] = MIA_BUILD_TYPE;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
         doc["status"] = "online";
         doc["sequence"] = deviceContext.heartbeat.sequence;
         doc["uptime_ms"] = now;

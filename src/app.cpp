@@ -15,6 +15,7 @@
 #include "telemetry_manager.h"
 #include "wifi_manager.h"
 #include "app_version.h"
+#include "platform/platform_system.h"
 
 namespace
 {
@@ -71,6 +72,8 @@ void appSetup()
     Serial.begin(115200);
     delay(1000);
 
+    MiaPlatform::setup();
+
     Serial.println("==================================");
     Serial.print("      ");
     Serial.print(MIA_PROJECT_NAME);
@@ -81,6 +84,8 @@ void appSetup()
     Serial.println(MIA_DEVICE_MODEL);
     Serial.print("Build: ");
     Serial.println(MIA_BUILD_TYPE);
+    Serial.print("Platform: ");
+    Serial.println(MIA_PLATFORM_NAME);
     Serial.print("Device ID: ");
     Serial.println(MIA_DEVICE_ID);
 

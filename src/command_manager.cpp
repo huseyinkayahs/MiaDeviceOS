@@ -2,6 +2,7 @@
 
 #include "device_context.h"
 #include "app_version.h"
+#include "platform/platform_system.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -52,6 +53,7 @@ namespace
         device["firmware_version"] = MIA_FIRMWARE_VERSION;
         device["build_type"] = MIA_BUILD_TYPE;
         device["hardware_revision"] = MIA_HARDWARE_REVISION;
+        device["platform_name"] = MIA_PLATFORM_NAME;
 
         JsonObject config = doc["config"].to<JsonObject>();
         config["current_limit"] = deviceContext.config.currentLimit;
@@ -131,7 +133,7 @@ void updateCommand()
         if (now - deviceContext.command.restartRequestedAtMs >= RESTART_DELAY_MS)
         {
             Serial.println("Restart komutu uygulanıyor.");
-            ESP.restart();
+            MiaPlatform::restart();
         }
     }
 }

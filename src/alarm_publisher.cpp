@@ -45,6 +45,7 @@ void publishAlarmEvent(const char* eventName)
 
     doc["device_id"] = MIA_DEVICE_ID;
     doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+    doc["platform_name"] = MIA_PLATFORM_NAME;
     doc["event"] = eventName;
     doc["type"] = alarmTypeToString(deviceContext.alarm.activeAlarm);
     doc["current"] = deviceContext.state.current;
