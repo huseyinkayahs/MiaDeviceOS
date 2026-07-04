@@ -3,12 +3,24 @@
 #include "app_version.h"
 #include "device_context.h"
 
+#if __has_include("secrets.h")
+#include "secrets.h"
+#endif
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+
+#ifndef BLE_SERVICE_PIN
+#define BLE_SERVICE_PIN "123456"
+#endif
+
+#ifndef BLE_MAX_FAILED_AUTH
+#define BLE_MAX_FAILED_AUTH 5
+#endif
 
 namespace
 {
@@ -26,6 +38,13 @@ namespace
 
     bool bleStarted = false;
 
+    void setCommandResult(const String& command, const String& status, const String& message)
+    {
+        deviceContext.ble.lastCommand = command;
+        deviceContext.ble.lastCommandStatus = status;
+        deviceContext.ble.lastCommandMessage = message;
+    }
+
     String buildInfoPayload()
     {
         JsonDocument doc;
@@ -38,6 +57,7 @@ namespace
         doc["hardware_revision"] = MIA_HARDWARE_REVISION;
         doc["platform_name"] = MIA_PLATFORM_NAME;
         doc["ble_device_name"] = BLE_DEVICE_NAME;
+        doc["ble_security"] = "service_pin";
 
         String payload;
         serializeJson(doc, payload);
@@ -60,7 +80,13 @@ namespace
         doc["current"] = deviceContext.state.current;
         doc["temperature"] = deviceContext.state.temperature;
         doc["ble_client_connected"] = deviceContext.ble.clientConnected;
+        doc["ble_service_authenticated"] = deviceContext.ble.serviceAuthenticated;
         doc["ble_command_count"] = deviceContext.ble.commandCount;
+        doc["ble_rejected_command_count"] = deviceContext.ble.rejectedCommandCount;
+        doc["ble_failed_auth_count"] = deviceContext.ble.failedAuthCount;
+        doc["last_command"] = deviceContext.ble.lastCommand;
+        doc["last_command_status"] = deviceContext.ble.lastCommandStatus;
+        doc["last_command_message"] = deviceContext.ble.lastCommandMessage;
 
         String payload;
         serializeJson(doc, payload);
@@ -107,11 +133,65 @@ namespace
         return "";
     }
 
+    bool isValidPin(const String& pin)
+    {
+        return pin == String(BLE_SERVICE_PIN);
+    }
+
+    bool authorizeCommand(const String& command, const String& pin)
+    {
+        if (command == "get_status")
+        {
+            return true;
+        }
+
+        if (deviceContext.ble.serviceAuthenticated)
+        {
+            return true;
+        }
+
+        if (deviceContext.ble.failedAuthCount >= BLE_MAX_FAILED_AUTH)
+        {
+            deviceContext.ble.rejectedCommandCount++;
+            return false;
+        }
+
+        if (pin.length() > 0 && isValidPin(pin))
+        {
+            return true;
+        }
+
+        if (pin.length() > 0)
+        {
+            deviceContext.ble.failedAuthCount++;
+        }
+
+        deviceContext.ble.rejectedCommandCount++;
+        return false;
+    }
+
+    void rejectBleCommand(const String& command, const String& message)
+    {
+        Serial.print("BLE komut reddedildi: ");
+        Serial.println(message);
+        setCommandResult(command, "rejected", message);
+        updateStatusCharacteristic(true);
+    }
+
+    void acceptAuthentication()
+    {
+        deviceContext.ble.serviceAuthenticated = true;
+        setCommandResult("auth", "done", "Service PIN accepted");
+        Serial.println("BLE servis PIN kabul edildi.");
+        updateStatusCharacteristic(true);
+    }
+
     void handleBleCommand(const String& payload)
     {
         deviceContext.ble.commandCount++;
 
         String command = payload;
+        String pin = "";
         command.trim();
 
         if (command.startsWith("{"))
@@ -121,20 +201,65 @@ namespace
 
             if (error)
             {
-                Serial.println("BLE komut reddedildi: Invalid JSON");
-                updateStatusCharacteristic(true);
+                rejectBleCommand("", "Invalid JSON");
                 return;
             }
 
             command = readOptionalString(doc, "command");
+            pin = readOptionalString(doc, "pin");
             command.trim();
+            pin.trim();
         }
 
         Serial.print("BLE komut alindi: ");
         Serial.println(command);
 
+        if (command.length() == 0)
+        {
+            rejectBleCommand(command, "Missing command");
+            return;
+        }
+
+        if (command == "auth")
+        {
+            if (deviceContext.ble.failedAuthCount >= BLE_MAX_FAILED_AUTH)
+            {
+                deviceContext.ble.rejectedCommandCount++;
+                rejectBleCommand(command, "Too many failed PIN attempts. Reconnect required");
+                return;
+            }
+
+            if (isValidPin(pin))
+            {
+                deviceContext.ble.failedAuthCount = 0;
+                acceptAuthentication();
+                return;
+            }
+
+            deviceContext.ble.failedAuthCount++;
+            deviceContext.ble.rejectedCommandCount++;
+            rejectBleCommand(command, "Invalid service PIN");
+            return;
+        }
+
+        if (command == "logout")
+        {
+            deviceContext.ble.serviceAuthenticated = false;
+            setCommandResult(command, "done", "BLE service session closed");
+            Serial.println("BLE servis oturumu kapatildi.");
+            updateStatusCharacteristic(true);
+            return;
+        }
+
+        if (!authorizeCommand(command, pin))
+        {
+            rejectBleCommand(command, "Service PIN required or invalid");
+            return;
+        }
+
         if (command == "get_status")
         {
+            setCommandResult(command, "done", "Status returned");
             updateStatusCharacteristic(true);
             return;
         }
@@ -142,13 +267,14 @@ namespace
         if (command == "reset_alarm")
         {
             deviceContext.command.resetAlarmRequested = true;
+            setCommandResult(command, "accepted", "Alarm reset requested");
             Serial.println("BLE reset_alarm komutu kabul edildi.");
             updateStatusCharacteristic(true);
             return;
         }
 
-        Serial.println("BLE komut reddedildi: Unknown command");
-        updateStatusCharacteristic(true);
+        deviceContext.ble.rejectedCommandCount++;
+        rejectBleCommand(command, "Unknown command");
     }
 
     class MiaBleServerCallbacks : public BLEServerCallbacks
@@ -157,6 +283,8 @@ namespace
         void onConnect(BLEServer* server) override
         {
             deviceContext.ble.clientConnected = true;
+            deviceContext.ble.serviceAuthenticated = false;
+            deviceContext.ble.failedAuthCount = 0;
             Serial.println("BLE client baglandi.");
             updateStatusCharacteristic(true);
         }
@@ -164,6 +292,8 @@ namespace
         void onDisconnect(BLEServer* server) override
         {
             deviceContext.ble.clientConnected = false;
+            deviceContext.ble.serviceAuthenticated = false;
+            deviceContext.ble.failedAuthCount = 0;
             Serial.println("BLE client ayrildi. Advertising tekrar baslatiliyor.");
             server->getAdvertising()->start();
         }
@@ -224,12 +354,15 @@ void setupBLE()
     BLEDevice::startAdvertising();
 
     deviceContext.ble.clientConnected = false;
+    deviceContext.ble.serviceAuthenticated = false;
     deviceContext.ble.lastStatusUpdateMs = millis();
+    setCommandResult("", "idle", "");
 
     bleStarted = true;
 
     Serial.print("BLE service mode basladi. Device name: ");
     Serial.println(BLE_DEVICE_NAME);
+    Serial.println("BLE service mode security: service PIN required for protected commands.");
 }
 
 void updateBLE()

@@ -345,8 +345,12 @@ Initial BLE commands:
 
 ```text
 get_status
+auth
 reset_alarm
+logout
 ```
+
+Protected BLE commands require `BLE_SERVICE_PIN` from local `include/secrets.h`.
 
 Detailed BLE documentation:
 
