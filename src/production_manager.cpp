@@ -4,6 +4,7 @@
 #include "device_context.h"
 #include "log_manager.h"
 #include "platform/platform_system.h"
+#include "watchdog_manager.h"
 
 #include <ArduinoJson.h>
 #include <Preferences.h>
@@ -109,6 +110,11 @@ const char* productionHealthStatus()
         return "WARN";
     }
 
+    if (deviceContext.watchdog.enabled && !deviceContext.watchdog.setupOk)
+    {
+        return "WARN";
+    }
+
     if (deviceContext.ota.inProgress)
     {
         return "OTA";
@@ -142,6 +148,14 @@ String buildProductionHealthJson()
     doc["mqtt_connected"] = deviceContext.state.mqttConnected;
     doc["alarm_active"] = deviceContext.alarm.active;
     doc["ota_in_progress"] = deviceContext.ota.inProgress;
+
+    JsonObject watchdog = doc["watchdog"].to<JsonObject>();
+    watchdog["enabled"] = deviceContext.watchdog.enabled;
+    watchdog["supported"] = deviceContext.watchdog.supported;
+    watchdog["setup_ok"] = deviceContext.watchdog.setupOk;
+    watchdog["timeout_sec"] = deviceContext.watchdog.timeoutSec;
+    watchdog["feed_count"] = deviceContext.watchdog.feedCount;
+    watchdog["last_feed_ms"] = deviceContext.watchdog.lastFeedMs;
 
     String payload;
     serializeJson(doc, payload);

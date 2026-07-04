@@ -138,6 +138,5 @@ reset_reason
 
 ## Notes
 
-- This sprint does not add a watchdog yet.
-- Watchdog should be added carefully in a later sprint after loop timing is reviewed.
+- v1.8 adds watchdog support and boot diagnostics on top of this production health layer.
 - Sensor is still simulated.

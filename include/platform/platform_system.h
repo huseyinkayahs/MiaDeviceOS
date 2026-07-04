@@ -15,4 +15,7 @@ namespace MiaPlatform
     uint32_t flashChipSizeBytes();
     uint32_t sketchSizeBytes();
     uint32_t freeSketchSpaceBytes();
+    bool watchdogSupported();
+    bool setupWatchdog(uint32_t timeoutSec);
+    bool feedWatchdog();
 }

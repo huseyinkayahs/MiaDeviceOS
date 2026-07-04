@@ -40,6 +40,8 @@ The response includes:
 - WiFi status and RSSI
 - MQTT status and reconnect counters
 - runtime memory information
+- boot count and reset reason
+- watchdog status
 - alarm status
 - BLE service status
 - OTA state
@@ -128,5 +130,40 @@ Ayrıca hızlı saha kontrolü için yeni komut eklendi:
 {
   "command": "get_health",
   "request_id": "health-001"
+}
+```
+
+
+## v1.8 Watchdog and Boot Diagnostics
+
+Diagnostics now include a `watchdog` section.
+
+Example:
+
+```json
+"watchdog": {
+  "enabled": true,
+  "supported": true,
+  "setup_ok": true,
+  "timeout_sec": 30,
+  "feed_interval_ms": 1000,
+  "feed_count": 42,
+  "last_feed_ms": 120000
+}
+```
+
+New commands:
+
+```json
+{
+  "command": "get_watchdog",
+  "request_id": "wd-001"
+}
+```
+
+```json
+{
+  "command": "get_boot_diagnostics",
+  "request_id": "boot-001"
 }
 ```

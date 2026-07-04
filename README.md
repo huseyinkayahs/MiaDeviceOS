@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 1.7.0
+Firmware version: 1.8.1
 Build type: production
 Hardware revision: prototype
 ```
@@ -34,6 +34,8 @@ Hardware revision: prototype
 - Production health monitor
 - Boot count and reset reason diagnostics
 - Remote health check command
+- ESP32 task watchdog setup and feed tracking
+- Boot diagnostics command
 
 ## Architecture principle
 
@@ -51,6 +53,7 @@ App Layer
 ├─ AlarmPublisher
 ├─ HeartbeatManager
 ├─ CommandManager
+├─ WatchdogManager
 ├─ OTAManager
 └─ DisplayManager
         ↓
@@ -87,6 +90,7 @@ docs/OPERATING_GUIDE.md
 docs/BLE_SERVICE_MODE.md
 docs/LOGGING_POLICY.md
 docs/DIAGNOSTICS.md
+docs/WATCHDOG_BOOT_DIAGNOSTICS.md
 ```
 
 ## Local secrets setup
@@ -145,13 +149,15 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected boot output:
 
 ```text
-MiaDeviceOS v1.7.0
+MiaDeviceOS v1.8.1
 Model: MiaDeviceOS-LaserMonitor
 Build: production
 Device ID: laser01
 Log Level: INFO
 Reset Reason: POWER_ON
 Boot Count: 1
+Watchdog: ENABLED
+Watchdog Timeout Sec: 30
 WiFi baglandi
 MQTT baglaniyor... BAGLANDI
 Config topic dinleniyor.
@@ -220,7 +226,30 @@ mia/site01/laser01/command
 }
 ```
 
-Returns production health information such as boot count, reset reason, heap status, WiFi/MQTT status, alarm state, and OTA state.
+Returns production health information such as boot count, reset reason, heap status, WiFi/MQTT status, alarm state, OTA state, and watchdog state.
+
+
+### get_watchdog
+
+```json
+{
+  "command": "get_watchdog",
+  "request_id": "wd-001"
+}
+```
+
+Returns watchdog state, timeout and feed counter.
+
+### get_boot_diagnostics
+
+```json
+{
+  "command": "get_boot_diagnostics",
+  "request_id": "boot-001"
+}
+```
+
+Returns boot count, reset reason, memory summary and watchdog boot state.
 
 ### reset_alarm
 
@@ -247,7 +276,7 @@ Returns production health information such as boot count, reset reason, heap sta
   "command": "ota_update",
   "request_id": "ota-001",
   "url": "http://192.168.1.2:8000/firmware.bin",
-  "version": "1.7.0-test"
+  "version": "1.8.1-test"
 }
 ```
 
@@ -434,5 +463,25 @@ Example:
 {
   "command": "get_health",
   "request_id": "health-001"
+}
+```
+
+
+## v1.8 Watchdog + Boot Diagnostics
+
+- ESP32 task watchdog setup added through platform abstraction.
+- Watchdog is fed from the main app loop.
+- New command: `get_watchdog`.
+- New command: `get_boot_diagnostics`.
+- Diagnostics and health outputs now include watchdog state.
+- Heartbeat includes watchdog status and feed count.
+- Detailed explanation: `docs/WATCHDOG_BOOT_DIAGNOSTICS.md`
+
+Example:
+
+```json
+{
+  "command": "get_boot_diagnostics",
+  "request_id": "boot-001"
 }
 ```

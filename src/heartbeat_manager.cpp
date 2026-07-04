@@ -47,6 +47,9 @@ namespace
         doc["health_status"] = productionHealthStatus();
         doc["boot_count"] = deviceContext.production.bootCount;
         doc["reset_reason"] = deviceContext.production.resetReason;
+        doc["watchdog_enabled"] = deviceContext.watchdog.enabled;
+        doc["watchdog_setup_ok"] = deviceContext.watchdog.setupOk;
+        doc["watchdog_feed_count"] = deviceContext.watchdog.feedCount;
 
         heartbeatPayload = "";
         serializeJson(doc, heartbeatPayload);

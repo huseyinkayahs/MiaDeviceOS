@@ -21,6 +21,7 @@
 #include "log_manager.h"
 #include "runtime_settings_manager.h"
 #include "production_manager.h"
+#include "watchdog_manager.h"
 
 namespace
 {
@@ -85,6 +86,8 @@ void appSetup()
 
     setupProductionManager();
 
+    setupWatchdogManager();
+
     Serial.println("==================================");
     Serial.print("      ");
     Serial.print(MIA_PROJECT_NAME);
@@ -105,6 +108,10 @@ void appSetup()
     Serial.println(deviceContext.production.resetReason);
     Serial.print("Boot Count: ");
     Serial.println(deviceContext.production.bootCount);
+    Serial.print("Watchdog: ");
+    Serial.println(deviceContext.watchdog.setupOk ? "ENABLED" : "DISABLED");
+    Serial.print("Watchdog Timeout Sec: ");
+    Serial.println(deviceContext.watchdog.timeoutSec);
 
     connectWiFi();
 
@@ -135,6 +142,8 @@ void appSetup()
 
 void appLoop()
 {
+    updateWatchdogManager();
+
     updateProductionManager();
 
     updateWiFi();
@@ -171,4 +180,6 @@ void appLoop()
     updateAlarmPublisher();
 
     updateDisplay();
+
+    updateWatchdogManager();
 }

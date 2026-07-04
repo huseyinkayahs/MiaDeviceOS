@@ -6,6 +6,7 @@
 #include "log_manager.h"
 #include "runtime_settings_manager.h"
 #include "production_manager.h"
+#include "watchdog_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -144,6 +145,15 @@ namespace
         runtime["low_heap_warning"] = deviceContext.production.lowHeapWarningActive;
         runtime["low_heap_warning_count"] = deviceContext.production.lowHeapWarningCount;
 
+        JsonObject watchdog = doc["watchdog"].to<JsonObject>();
+        watchdog["enabled"] = deviceContext.watchdog.enabled;
+        watchdog["supported"] = deviceContext.watchdog.supported;
+        watchdog["setup_ok"] = deviceContext.watchdog.setupOk;
+        watchdog["timeout_sec"] = deviceContext.watchdog.timeoutSec;
+        watchdog["feed_interval_ms"] = deviceContext.watchdog.feedIntervalMs;
+        watchdog["feed_count"] = deviceContext.watchdog.feedCount;
+        watchdog["last_feed_ms"] = deviceContext.watchdog.lastFeedMs;
+
         JsonObject alarm = doc["alarm"].to<JsonObject>();
         alarm["active"] = deviceContext.alarm.active;
         alarm["type"] = alarmTypeToString(deviceContext.alarm.activeAlarm);
@@ -264,6 +274,75 @@ namespace
         health["alarm_active"] = deviceContext.alarm.active;
         health["ota_in_progress"] = deviceContext.ota.inProgress;
 
+        JsonObject watchdog = health["watchdog"].to<JsonObject>();
+        watchdog["enabled"] = deviceContext.watchdog.enabled;
+        watchdog["setup_ok"] = deviceContext.watchdog.setupOk;
+        watchdog["timeout_sec"] = deviceContext.watchdog.timeoutSec;
+        watchdog["feed_count"] = deviceContext.watchdog.feedCount;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+
+    void setWatchdogStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_watchdog";
+        doc["status"] = "done";
+        doc["message"] = "Watchdog returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject watchdog = doc["watchdog"].to<JsonObject>();
+        watchdog["enabled"] = deviceContext.watchdog.enabled;
+        watchdog["supported"] = deviceContext.watchdog.supported;
+        watchdog["setup_ok"] = deviceContext.watchdog.setupOk;
+        watchdog["timeout_sec"] = deviceContext.watchdog.timeoutSec;
+        watchdog["feed_interval_ms"] = deviceContext.watchdog.feedIntervalMs;
+        watchdog["feed_count"] = deviceContext.watchdog.feedCount;
+        watchdog["last_feed_ms"] = deviceContext.watchdog.lastFeedMs;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setBootDiagnosticsStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_boot_diagnostics";
+        doc["status"] = "done";
+        doc["message"] = "Boot diagnostics returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject boot = doc["boot"].to<JsonObject>();
+        boot["boot_count"] = deviceContext.production.bootCount;
+        boot["reset_reason"] = deviceContext.production.resetReason;
+        boot["started_at_ms"] = deviceContext.production.startedAtMs;
+        boot["free_heap"] = MiaPlatform::freeHeapBytes();
+        boot["min_free_heap"] = MiaPlatform::minFreeHeapBytes();
+        boot["sketch_size"] = MiaPlatform::sketchSizeBytes();
+        boot["free_sketch"] = MiaPlatform::freeSketchSpaceBytes();
+        boot["health_status"] = productionHealthStatus();
+
+        JsonObject watchdog = boot["watchdog"].to<JsonObject>();
+        watchdog["enabled"] = deviceContext.watchdog.enabled;
+        watchdog["supported"] = deviceContext.watchdog.supported;
+        watchdog["setup_ok"] = deviceContext.watchdog.setupOk;
+        watchdog["timeout_sec"] = deviceContext.watchdog.timeoutSec;
+        watchdog["feed_count"] = deviceContext.watchdog.feedCount;
+
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
         commandStatusPending = true;
@@ -286,6 +365,18 @@ namespace
         if (command == "get_health")
         {
             setHealthStatus(requestId);
+            return;
+        }
+
+        if (command == "get_watchdog")
+        {
+            setWatchdogStatus(requestId);
+            return;
+        }
+
+        if (command == "get_boot_diagnostics")
+        {
+            setBootDiagnosticsStatus(requestId);
             return;
         }
 

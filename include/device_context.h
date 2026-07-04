@@ -8,6 +8,7 @@
 #include "ota_context.h"
 #include "ble_context.h"
 #include "production_context.h"
+#include "watchdog_context.h"
 
 struct DeviceContext
 {
@@ -26,6 +27,8 @@ struct DeviceContext
     BleContext ble;
 
     ProductionContext production;
+
+    WatchdogContext watchdog;
 };
 
 extern DeviceContext deviceContext;

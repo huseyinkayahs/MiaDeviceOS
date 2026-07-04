@@ -2,6 +2,9 @@
 
 #include <Arduino.h>
 #include <esp_system.h>
+#include <esp_err.h>
+#include <esp_task_wdt.h>
+#include <esp_idf_version.h>
 
 namespace MiaPlatform
 {
@@ -94,4 +97,43 @@ namespace MiaPlatform
     {
         return ESP.getFreeSketchSpace();
     }
+
+    bool watchdogSupported()
+    {
+        return true;
+    }
+
+    bool setupWatchdog(uint32_t timeoutSec)
+    {
+        if (timeoutSec < 5)
+        {
+            timeoutSec = 5;
+        }
+
+#if ESP_IDF_VERSION_MAJOR >= 5
+        esp_task_wdt_config_t config = {};
+        config.timeout_ms = timeoutSec * 1000U;
+        config.idle_core_mask = (1 << portNUM_PROCESSORS) - 1;
+        config.trigger_panic = true;
+
+        esp_err_t initResult = esp_task_wdt_init(&config);
+#else
+        esp_err_t initResult = esp_task_wdt_init(timeoutSec, true);
+#endif
+
+        if (initResult != ESP_OK && initResult != ESP_ERR_INVALID_STATE)
+        {
+            return false;
+        }
+
+        esp_err_t addResult = esp_task_wdt_add(NULL);
+
+        return addResult == ESP_OK || addResult == ESP_ERR_INVALID_STATE;
+    }
+
+    bool feedWatchdog()
+    {
+        return esp_task_wdt_reset() == ESP_OK;
+    }
+
 }
