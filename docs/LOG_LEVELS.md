@@ -66,3 +66,12 @@ veya numeric:
 - Log level şu an runtime ayardır.
 - Cihaz restart sonrası varsayılan `INFO` seviyesine döner.
 - MQTT, Heartbeat, Telemetry ve Alarm sistemleri çalışmaya devam eder; sadece Serial Monitor çıktısı değişir.
+
+
+## v1.6 Persistence
+
+`set_log_level` komutu artık seçilen seviyeyi runtime settings storage içine kaydeder.
+Cihaz yeniden başlasa bile son kaydedilen log level ile açılır.
+
+Önerilen üretim seviyesi: `INFO`.
+Sorun analizi için geçici seviye: `DEBUG`.

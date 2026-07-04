@@ -91,3 +91,16 @@ It is not a continuous telemetry stream; it is requested only when needed.
   "level_value": 2
 }
 ```
+
+
+## v1.6 Persistent Runtime Settings
+
+Diagnostics `log` bölümünde aktif log level bilgisiyle birlikte `persistent: true` alanı bulunur.
+
+```json
+"log": {
+  "level": "INFO",
+  "level_value": 2,
+  "persistent": true
+}
+```

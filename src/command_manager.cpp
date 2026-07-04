@@ -4,6 +4,7 @@
 #include "app_version.h"
 #include "platform/platform_system.h"
 #include "log_manager.h"
+#include "runtime_settings_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -156,6 +157,7 @@ namespace
         JsonObject log = doc["log"].to<JsonObject>();
         log["level"] = currentLogLevelName();
         log["level_value"] = static_cast<int>(getLogLevel());
+        log["persistent"] = true;
 
         JsonObject sensor = doc["sensor"].to<JsonObject>();
         sensor["current"] = deviceContext.state.current;
@@ -179,6 +181,7 @@ namespace
         doc["firmware_version"] = MIA_FIRMWARE_VERSION;
         doc["log_level"] = currentLogLevelName();
         doc["log_level_value"] = static_cast<int>(getLogLevel());
+        doc["persistent"] = true;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -198,6 +201,29 @@ namespace
         doc["firmware_version"] = MIA_FIRMWARE_VERSION;
         doc["log_level"] = currentLogLevelName();
         doc["log_level_value"] = static_cast<int>(getLogLevel());
+        doc["persistent"] = true;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setRuntimeSettingsStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_runtime_settings";
+        doc["status"] = "done";
+        doc["message"] = "Runtime settings returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+
+        JsonObject runtimeSettings = doc["runtime_settings"].to<JsonObject>();
+        runtimeSettings["log_level"] = currentLogLevelName();
+        runtimeSettings["log_level_value"] = static_cast<int>(getLogLevel());
+        runtimeSettings["log_level_persistent"] = true;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -221,6 +247,12 @@ namespace
         if (command == "get_log_level")
         {
             setGetLogLevelStatus(requestId);
+            return;
+        }
+
+        if (command == "get_runtime_settings")
+        {
+            setRuntimeSettingsStatus(requestId);
             return;
         }
 
@@ -313,7 +345,13 @@ void handleCommandJson(const char* json)
             return;
         }
 
-        setLogLevelStatus(requestId, "done", "Log level updated");
+        if (!saveRuntimeLogLevel(static_cast<int>(getLogLevel())))
+        {
+            setLogLevelStatus(requestId, "failed", "Log level updated in memory but failed to persist");
+            return;
+        }
+
+        setLogLevelStatus(requestId, "done", "Log level updated and persisted");
         return;
     }
 

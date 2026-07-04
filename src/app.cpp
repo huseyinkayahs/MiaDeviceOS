@@ -18,6 +18,7 @@
 #include "ble_manager.h"
 #include "platform/platform_system.h"
 #include "log_manager.h"
+#include "runtime_settings_manager.h"
 
 namespace
 {
@@ -73,6 +74,8 @@ void appSetup()
 {
     Serial.begin(115200);
     delay(1000);
+
+    setupRuntimeSettings();
 
     setupLogManager();
 

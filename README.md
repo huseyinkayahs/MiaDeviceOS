@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 1.4.0
+Firmware version: 1.6.0
 Build type: production
 Hardware revision: prototype
 ```
@@ -30,6 +30,7 @@ Hardware revision: prototype
 - BLE service mode with service PIN authentication
 - Reduced serial logging for production readability
 - Diagnostics command for service checks
+- Runtime log level persistence
 
 ## Architecture principle
 
@@ -141,7 +142,7 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected boot output:
 
 ```text
-MiaDeviceOS v1.4.0
+MiaDeviceOS v1.6.0
 Model: MiaDeviceOS-LaserMonitor
 Build: production
 Device ID: laser01
@@ -229,7 +230,7 @@ mia/site01/laser01/command
   "command": "ota_update",
   "request_id": "ota-001",
   "url": "http://192.168.1.2:8000/firmware.bin",
-  "version": "1.4.0-test"
+  "version": "1.6.0-test"
 }
 ```
 
@@ -381,3 +382,20 @@ docs/BLE_SERVICE_MODE.md
 - Serial Monitor çıktısı ERROR / WARN / INFO / DEBUG seviyelerine ayrıldı.
 - `get_diagnostics` cevabına aktif log level bilgisi eklendi.
 - Detaylı açıklama: `docs/LOG_LEVELS.md`
+
+
+## v1.6 Persistent Runtime Settings
+
+- `set_log_level` komutu artık log seviyesini kalıcı olarak kaydeder.
+- Cihaz restart sonrası son kaydedilen log level ile açılır.
+- Yeni komut: `get_runtime_settings`.
+- Detaylı açıklama: `docs/RUNTIME_SETTINGS.md`
+
+Example:
+
+```json
+{
+  "command": "get_runtime_settings",
+  "request_id": "runtime-001"
+}
+```

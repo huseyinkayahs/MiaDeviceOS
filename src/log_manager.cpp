@@ -1,4 +1,5 @@
 #include "log_manager.h"
+#include "runtime_settings_manager.h"
 
 namespace
 {
@@ -15,7 +16,15 @@ namespace
 
 void setupLogManager()
 {
-    currentLevel = LOG_LEVEL_INFO;
+    int storedLevel = loadRuntimeLogLevel(static_cast<int>(LOG_LEVEL_INFO));
+
+    if (storedLevel < LOG_LEVEL_ERROR || storedLevel > LOG_LEVEL_DEBUG)
+    {
+        currentLevel = LOG_LEVEL_INFO;
+        return;
+    }
+
+    currentLevel = static_cast<MiaLogLevel>(storedLevel);
 }
 
 bool setLogLevel(MiaLogLevel level)
