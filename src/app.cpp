@@ -17,6 +17,7 @@
 #include "app_version.h"
 #include "ble_manager.h"
 #include "platform/platform_system.h"
+#include "log_manager.h"
 
 namespace
 {
@@ -28,11 +29,11 @@ namespace
 
             if (applyConfigJson(configPayload.c_str()))
             {
-                Serial.println("Config basariyla uygulandi.");
+                logPrintln(LOG_LEVEL_INFO, "Config basariyla uygulandi.");
             }
             else
             {
-                Serial.println("Config reddedildi.");
+                logPrintln(LOG_LEVEL_WARN, "Config reddedildi.");
             }
         }
 
@@ -73,6 +74,8 @@ void appSetup()
     Serial.begin(115200);
     delay(1000);
 
+    setupLogManager();
+
     MiaPlatform::setup();
 
     Serial.println("==================================");
@@ -89,6 +92,8 @@ void appSetup()
     Serial.println(MIA_PLATFORM_NAME);
     Serial.print("Device ID: ");
     Serial.println(MIA_DEVICE_ID);
+    Serial.print("Log Level: ");
+    Serial.println(currentLogLevelName());
 
     connectWiFi();
 

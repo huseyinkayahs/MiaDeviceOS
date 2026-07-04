@@ -3,6 +3,7 @@
 #include "device_context.h"
 #include "app_version.h"
 #include "platform/platform_system.h"
+#include "log_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -152,9 +153,51 @@ namespace
         ota["in_progress"] = deviceContext.ota.inProgress;
         ota["restart_pending"] = deviceContext.ota.restartPending;
 
+        JsonObject log = doc["log"].to<JsonObject>();
+        log["level"] = currentLogLevelName();
+        log["level_value"] = static_cast<int>(getLogLevel());
+
         JsonObject sensor = doc["sensor"].to<JsonObject>();
         sensor["current"] = deviceContext.state.current;
         sensor["temperature"] = deviceContext.state.temperature;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setLogLevelStatus(const String& requestId, const char* status, const char* message)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "set_log_level";
+        doc["status"] = status;
+        doc["message"] = message;
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["log_level"] = currentLogLevelName();
+        doc["log_level_value"] = static_cast<int>(getLogLevel());
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setGetLogLevelStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_log_level";
+        doc["status"] = "done";
+        doc["message"] = "Log level returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["log_level"] = currentLogLevelName();
+        doc["log_level_value"] = static_cast<int>(getLogLevel());
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -172,6 +215,12 @@ namespace
         if (command == "get_diagnostics")
         {
             setDiagnosticsStatus(requestId);
+            return;
+        }
+
+        if (command == "get_log_level")
+        {
+            setGetLogLevelStatus(requestId);
             return;
         }
 
@@ -218,7 +267,7 @@ void updateCommand()
 
         if (now - deviceContext.command.restartRequestedAtMs >= RESTART_DELAY_MS)
         {
-            Serial.println("Restart komutu uygulanıyor.");
+            logPrintln(LOG_LEVEL_INFO, "Restart komutu uygulanıyor.");
             MiaPlatform::restart();
         }
     }
@@ -244,6 +293,29 @@ void handleCommandJson(const char* json)
 
     String command = doc["command"].as<String>();
     String requestId = readOptionalString(doc, "request_id");
+
+    if (command == "set_log_level")
+    {
+        bool changed = false;
+
+        if (doc["level"].is<const char*>())
+        {
+            changed = setLogLevelFromString(doc["level"].as<String>());
+        }
+        else if (doc["level"].is<int>())
+        {
+            changed = setLogLevelFromInt(doc["level"].as<int>());
+        }
+
+        if (!changed)
+        {
+            setLogLevelStatus(requestId, "rejected", "Invalid log level. Use ERROR, WARN, INFO, DEBUG or 0-3");
+            return;
+        }
+
+        setLogLevelStatus(requestId, "done", "Log level updated");
+        return;
+    }
 
     if (command == "ota_update")
     {

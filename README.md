@@ -372,3 +372,12 @@ Detailed BLE documentation:
 ```text
 docs/BLE_SERVICE_MODE.md
 ```
+
+
+## v1.5 Diagnostics / Log Level
+
+- `get_log_level` komutu eklendi.
+- `set_log_level` komutu eklendi.
+- Serial Monitor çıktısı ERROR / WARN / INFO / DEBUG seviyelerine ayrıldı.
+- `get_diagnostics` cevabına aktif log level bilgisi eklendi.
+- Detaylı açıklama: `docs/LOG_LEVELS.md`

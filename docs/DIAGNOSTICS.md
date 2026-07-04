@@ -77,3 +77,17 @@ The response includes:
 
 The payload is kept compact so it fits the MQTT buffer.
 It is not a continuous telemetry stream; it is requested only when needed.
+
+
+## Log Bilgisi
+
+`get_diagnostics` cevabında aktif Serial log seviyesi de döner.
+
+Örnek:
+
+```json
+"log": {
+  "level": "INFO",
+  "level_value": 2
+}
+```
