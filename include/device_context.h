@@ -6,6 +6,7 @@
 #include "command_context.h"
 #include "heartbeat_context.h"
 #include "ota_context.h"
+#include "ble_context.h"
 
 struct DeviceContext
 {
@@ -20,6 +21,8 @@ struct DeviceContext
     HeartbeatContext heartbeat;
 
     OtaContext ota;
+
+    BleContext ble;
 };
 
 extern DeviceContext deviceContext;

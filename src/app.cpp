@@ -15,6 +15,7 @@
 #include "telemetry_manager.h"
 #include "wifi_manager.h"
 #include "app_version.h"
+#include "ble_manager.h"
 #include "platform/platform_system.h"
 
 namespace
@@ -109,6 +110,8 @@ void appSetup()
 
     setupHeartbeat();
 
+    setupBLE();
+
     setupAlarm();
 
     setupAlarmPublisher();
@@ -126,6 +129,8 @@ void appLoop()
 
     updateOta();
 
+    updateBLE();
+
     processMqttMessages();
 
     if (isOtaInProgress())
@@ -138,6 +143,8 @@ void appLoop()
     updateTelemetry();
 
     updateHeartbeat();
+
+    updateBLE();
 
     processMqttMessages();
 

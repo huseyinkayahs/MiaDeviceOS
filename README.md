@@ -330,3 +330,26 @@ docs(...)
 
 MiaDeviceOS is prepared for future hardware targets with a small platform boundary.
 See `docs/PLATFORM_ABSTRACTION.md`.
+
+## BLE Service Mode
+
+MiaDeviceOS includes a local BLE service mode for field/service checks.
+
+BLE device name:
+
+```text
+MiaDeviceOS-laser01
+```
+
+Initial BLE commands:
+
+```text
+get_status
+reset_alarm
+```
+
+Detailed BLE documentation:
+
+```text
+docs/BLE_SERVICE_MODE.md
+```
