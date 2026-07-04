@@ -5,6 +5,7 @@
 #include "platform/platform_system.h"
 #include "log_manager.h"
 #include "runtime_settings_manager.h"
+#include "production_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -136,6 +137,12 @@ namespace
         runtime["min_free_heap"] = MiaPlatform::minFreeHeapBytes();
         runtime["sketch_size"] = MiaPlatform::sketchSizeBytes();
         runtime["free_sketch"] = MiaPlatform::freeSketchSpaceBytes();
+        runtime["boot_count"] = deviceContext.production.bootCount;
+        runtime["reset_reason"] = deviceContext.production.resetReason;
+        runtime["health_status"] = productionHealthStatus();
+        runtime["low_heap_threshold"] = deviceContext.production.lowHeapThresholdBytes;
+        runtime["low_heap_warning"] = deviceContext.production.lowHeapWarningActive;
+        runtime["low_heap_warning_count"] = deviceContext.production.lowHeapWarningCount;
 
         JsonObject alarm = doc["alarm"].to<JsonObject>();
         alarm["active"] = deviceContext.alarm.active;
@@ -230,6 +237,38 @@ namespace
         commandStatusPending = true;
     }
 
+    void setHealthStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_health";
+        doc["status"] = "done";
+        doc["message"] = "Health returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject health = doc["health"].to<JsonObject>();
+        health["status"] = productionHealthStatus();
+        health["boot_count"] = deviceContext.production.bootCount;
+        health["reset_reason"] = deviceContext.production.resetReason;
+        health["free_heap"] = MiaPlatform::freeHeapBytes();
+        health["min_free_heap"] = MiaPlatform::minFreeHeapBytes();
+        health["low_heap_threshold"] = deviceContext.production.lowHeapThresholdBytes;
+        health["low_heap_warning"] = deviceContext.production.lowHeapWarningActive;
+        health["low_heap_warning_count"] = deviceContext.production.lowHeapWarningCount;
+        health["wifi_connected"] = deviceContext.state.wifiConnected;
+        health["mqtt_connected"] = deviceContext.state.mqttConnected;
+        health["alarm_active"] = deviceContext.alarm.active;
+        health["ota_in_progress"] = deviceContext.ota.inProgress;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
     void executeCommand(const String& command, const String& requestId)
     {
         if (command == "get_config")
@@ -241,6 +280,12 @@ namespace
         if (command == "get_diagnostics")
         {
             setDiagnosticsStatus(requestId);
+            return;
+        }
+
+        if (command == "get_health")
+        {
+            setHealthStatus(requestId);
             return;
         }
 

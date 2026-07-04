@@ -7,6 +7,7 @@
 #include "heartbeat_context.h"
 #include "ota_context.h"
 #include "ble_context.h"
+#include "production_context.h"
 
 struct DeviceContext
 {
@@ -23,6 +24,8 @@ struct DeviceContext
     OtaContext ota;
 
     BleContext ble;
+
+    ProductionContext production;
 };
 
 extern DeviceContext deviceContext;

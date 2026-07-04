@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 1.6.0
+Firmware version: 1.7.0
 Build type: production
 Hardware revision: prototype
 ```
@@ -31,6 +31,9 @@ Hardware revision: prototype
 - Reduced serial logging for production readability
 - Diagnostics command for service checks
 - Runtime log level persistence
+- Production health monitor
+- Boot count and reset reason diagnostics
+- Remote health check command
 
 ## Architecture principle
 
@@ -142,10 +145,13 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected boot output:
 
 ```text
-MiaDeviceOS v1.6.0
+MiaDeviceOS v1.7.0
 Model: MiaDeviceOS-LaserMonitor
 Build: production
 Device ID: laser01
+Log Level: INFO
+Reset Reason: POWER_ON
+Boot Count: 1
 WiFi baglandi
 MQTT baglaniyor... BAGLANDI
 Config topic dinleniyor.
@@ -205,6 +211,17 @@ mia/site01/laser01/command
 }
 ```
 
+### get_health
+
+```json
+{
+  "command": "get_health",
+  "request_id": "health-001"
+}
+```
+
+Returns production health information such as boot count, reset reason, heap status, WiFi/MQTT status, alarm state, and OTA state.
+
 ### reset_alarm
 
 ```json
@@ -230,7 +247,7 @@ mia/site01/laser01/command
   "command": "ota_update",
   "request_id": "ota-001",
   "url": "http://192.168.1.2:8000/firmware.bin",
-  "version": "1.6.0-test"
+  "version": "1.7.0-test"
 }
 ```
 
@@ -397,5 +414,25 @@ Example:
 {
   "command": "get_runtime_settings",
   "request_id": "runtime-001"
+}
+```
+
+
+## v1.7 Production Hardening
+
+- Production health monitor added.
+- Boot count is stored persistently.
+- Reset reason is shown at boot and returned in diagnostics.
+- Heartbeat now includes health status, boot count, and reset reason.
+- New command: `get_health`.
+- Low heap warning tracking added.
+- Detailed explanation: `docs/PRODUCTION_HARDENING.md`
+
+Example:
+
+```json
+{
+  "command": "get_health",
+  "request_id": "health-001"
 }
 ```

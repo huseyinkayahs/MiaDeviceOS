@@ -104,3 +104,29 @@ Diagnostics `log` bölümünde aktif log level bilgisiyle birlikte `persistent: 
   "persistent": true
 }
 ```
+
+## v1.7 Production Health
+
+Diagnostics `runtime` bölümünde artık production health bilgileri de bulunur.
+
+Örnek:
+
+```json
+"runtime": {
+  "boot_count": 4,
+  "reset_reason": "SOFTWARE_RESET",
+  "health_status": "ALARM",
+  "low_heap_threshold": 30000,
+  "low_heap_warning": false,
+  "low_heap_warning_count": 0
+}
+```
+
+Ayrıca hızlı saha kontrolü için yeni komut eklendi:
+
+```json
+{
+  "command": "get_health",
+  "request_id": "health-001"
+}
+```

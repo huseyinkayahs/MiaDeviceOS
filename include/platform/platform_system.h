@@ -5,6 +5,7 @@
 namespace MiaPlatform
 {
     const char* name();
+    const char* resetReason();
     void setup();
     void restart();
     unsigned long uptimeMs();

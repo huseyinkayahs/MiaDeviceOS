@@ -7,6 +7,7 @@
 #include "command_manager.h"
 #include "config_manager.h"
 #include "display_manager.h"
+#include "device_context.h"
 #include "heartbeat_manager.h"
 #include "mqtt_manager.h"
 #include "ota_manager.h"
@@ -19,6 +20,7 @@
 #include "platform/platform_system.h"
 #include "log_manager.h"
 #include "runtime_settings_manager.h"
+#include "production_manager.h"
 
 namespace
 {
@@ -81,6 +83,8 @@ void appSetup()
 
     MiaPlatform::setup();
 
+    setupProductionManager();
+
     Serial.println("==================================");
     Serial.print("      ");
     Serial.print(MIA_PROJECT_NAME);
@@ -97,6 +101,10 @@ void appSetup()
     Serial.println(MIA_DEVICE_ID);
     Serial.print("Log Level: ");
     Serial.println(currentLogLevelName());
+    Serial.print("Reset Reason: ");
+    Serial.println(deviceContext.production.resetReason);
+    Serial.print("Boot Count: ");
+    Serial.println(deviceContext.production.bootCount);
 
     connectWiFi();
 
@@ -127,6 +135,8 @@ void appSetup()
 
 void appLoop()
 {
+    updateProductionManager();
+
     updateWiFi();
 
     loopMQTT();

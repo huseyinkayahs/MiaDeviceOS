@@ -2,6 +2,7 @@
 
 #include "device_context.h"
 #include "app_version.h"
+#include "production_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -43,6 +44,9 @@ namespace
         doc["wifi_reconnect_count"] = deviceContext.state.wifiReconnectCount;
         doc["mqtt_reconnect_count"] = deviceContext.state.mqttReconnectCount;
         doc["mqtt_connect_fail_count"] = deviceContext.state.mqttConnectFailCount;
+        doc["health_status"] = productionHealthStatus();
+        doc["boot_count"] = deviceContext.production.bootCount;
+        doc["reset_reason"] = deviceContext.production.resetReason;
 
         heartbeatPayload = "";
         serializeJson(doc, heartbeatPayload);
