@@ -44,6 +44,4 @@ if (now - lastTelemetrySent < intervalMs)
 
     publishTelemetry(buffer);
 
-    Serial.print("Telemetry gonderildi: ");
-    Serial.println(buffer);
 }

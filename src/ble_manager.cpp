@@ -108,8 +108,6 @@ namespace
             statusCharacteristic->notify();
         }
 
-        Serial.print("BLE status guncellendi: ");
-        Serial.println(payload);
     }
 
     String readStringValue(BLECharacteristic* characteristic)

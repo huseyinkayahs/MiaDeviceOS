@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 1.0.0
+Firmware version: 1.3.1
 Build type: production
 Hardware revision: prototype
 ```
@@ -27,6 +27,8 @@ Hardware revision: prototype
 - Persistent configuration storage
 - Local secrets file for WiFi/MQTT credentials
 - Centralized MQTT topic definitions
+- BLE service mode with service PIN authentication
+- Reduced serial logging for production readability
 
 ## Architecture principle
 
@@ -77,6 +79,8 @@ src/
 platformio.ini
 README.md
 docs/OPERATING_GUIDE.md
+docs/BLE_SERVICE_MODE.md
+docs/LOGGING_POLICY.md
 ```
 
 ## Local secrets setup

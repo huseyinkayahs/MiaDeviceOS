@@ -199,7 +199,6 @@ void publishTelemetry(const char* payload)
 {
     if (!client.connected())
     {
-        Serial.println("MQTT bagli degil. Telemetry gonderilmedi.");
         return;
     }
 
@@ -279,26 +278,13 @@ void publishHeartbeat(const char* payload)
 {
     if (!client.connected())
     {
-        Serial.print("MQTT bagli degil. Heartbeat gonderilmedi: ");
-        Serial.println(payload);
         return;
     }
 
-    bool published = client.publish(
+    client.publish(
         MiaTopics::HEARTBEAT,
         payload
     );
-
-    if (published)
-    {
-        Serial.print("Heartbeat gonderildi: ");
-        Serial.println(payload);
-    }
-    else
-    {
-        Serial.print("Heartbeat gonderilemedi: ");
-        Serial.println(payload);
-    }
 }
 
 
