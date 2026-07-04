@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 1.3.1
+Firmware version: 1.4.0
 Build type: production
 Hardware revision: prototype
 ```
@@ -29,6 +29,7 @@ Hardware revision: prototype
 - Centralized MQTT topic definitions
 - BLE service mode with service PIN authentication
 - Reduced serial logging for production readability
+- Diagnostics command for service checks
 
 ## Architecture principle
 
@@ -81,6 +82,7 @@ README.md
 docs/OPERATING_GUIDE.md
 docs/BLE_SERVICE_MODE.md
 docs/LOGGING_POLICY.md
+docs/DIAGNOSTICS.md
 ```
 
 ## Local secrets setup
@@ -139,7 +141,7 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected boot output:
 
 ```text
-MiaDeviceOS v1.0.0
+MiaDeviceOS v1.4.0
 Model: MiaDeviceOS-LaserMonitor
 Build: production
 Device ID: laser01
@@ -193,6 +195,15 @@ mia/site01/laser01/command
 }
 ```
 
+### get_diagnostics
+
+```json
+{
+  "command": "get_diagnostics",
+  "request_id": "diag-001"
+}
+```
+
 ### reset_alarm
 
 ```json
@@ -218,7 +229,7 @@ mia/site01/laser01/command
   "command": "ota_update",
   "request_id": "ota-001",
   "url": "http://192.168.1.2:8000/firmware.bin",
-  "version": "1.0.0-test"
+  "version": "1.4.0-test"
 }
 ```
 

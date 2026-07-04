@@ -30,4 +30,29 @@ namespace MiaPlatform
     {
         delay(durationMs);
     }
+
+    uint32_t freeHeapBytes()
+    {
+        return ESP.getFreeHeap();
+    }
+
+    uint32_t minFreeHeapBytes()
+    {
+        return ESP.getMinFreeHeap();
+    }
+
+    uint32_t flashChipSizeBytes()
+    {
+        return ESP.getFlashChipSize();
+    }
+
+    uint32_t sketchSizeBytes()
+    {
+        return ESP.getSketchSize();
+    }
+
+    uint32_t freeSketchSpaceBytes()
+    {
+        return ESP.getFreeSketchSpace();
+    }
 }

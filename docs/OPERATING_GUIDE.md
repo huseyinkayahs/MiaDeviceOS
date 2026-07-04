@@ -60,7 +60,7 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected startup:
 
 ```text
-MiaDeviceOS v1.0.0
+MiaDeviceOS v1.4.0
 WiFi baglandi
 MQTT baglaniyor... BAGLANDI
 Config topic dinleniyor.
@@ -286,7 +286,7 @@ Payload:
   "command": "ota_update",
   "request_id": "ota-local-test-001",
   "url": "http://192.168.1.2:8000/firmware.bin",
-  "version": "1.0.0-test"
+  "version": "1.4.0-test"
 }
 ```
 
@@ -303,7 +303,7 @@ OTA sonrasi restart uygulaniyor
 After restart:
 
 ```text
-MiaDeviceOS v1.0.0
+MiaDeviceOS v1.4.0
 WiFi baglandi
 MQTT BAGLANDI
 Heartbeat gonderildi

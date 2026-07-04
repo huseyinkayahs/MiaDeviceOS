@@ -81,11 +81,97 @@ namespace
         return "";
     }
 
+
+    const char* alarmTypeToString(AlarmType type)
+    {
+        switch (type)
+        {
+            case AlarmType::OverCurrent:
+                return "OVER_CURRENT";
+
+            case AlarmType::OverTemperature:
+                return "OVER_TEMPERATURE";
+
+            case AlarmType::WiFiDisconnected:
+                return "WIFI_DISCONNECTED";
+
+            case AlarmType::MQTTDisconnected:
+                return "MQTT_DISCONNECTED";
+
+            case AlarmType::SensorError:
+                return "SENSOR_ERROR";
+
+            default:
+                return "NONE";
+        }
+    }
+
+    void setDiagnosticsStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_diagnostics";
+        doc["status"] = "done";
+        doc["message"] = "Diagnostics returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject wifi = doc["wifi"].to<JsonObject>();
+        wifi["connected"] = deviceContext.state.wifiConnected;
+        wifi["rssi"] = deviceContext.state.wifiRSSI;
+        wifi["reconnects"] = deviceContext.state.wifiReconnectCount;
+
+        JsonObject mqtt = doc["mqtt"].to<JsonObject>();
+        mqtt["connected"] = deviceContext.state.mqttConnected;
+        mqtt["reconnects"] = deviceContext.state.mqttReconnectCount;
+        mqtt["failures"] = deviceContext.state.mqttConnectFailCount;
+
+        JsonObject runtime = doc["runtime"].to<JsonObject>();
+        runtime["free_heap"] = MiaPlatform::freeHeapBytes();
+        runtime["min_free_heap"] = MiaPlatform::minFreeHeapBytes();
+        runtime["sketch_size"] = MiaPlatform::sketchSizeBytes();
+        runtime["free_sketch"] = MiaPlatform::freeSketchSpaceBytes();
+
+        JsonObject alarm = doc["alarm"].to<JsonObject>();
+        alarm["active"] = deviceContext.alarm.active;
+        alarm["type"] = alarmTypeToString(deviceContext.alarm.activeAlarm);
+        alarm["ack"] = deviceContext.alarm.acknowledged;
+        alarm["notifications"] = deviceContext.alarm.notificationCount;
+
+        JsonObject ble = doc["ble"].to<JsonObject>();
+        ble["enabled"] = deviceContext.ble.enabled;
+        ble["connected"] = deviceContext.ble.clientConnected;
+        ble["authenticated"] = deviceContext.ble.serviceAuthenticated;
+        ble["commands"] = deviceContext.ble.commandCount;
+        ble["rejected"] = deviceContext.ble.rejectedCommandCount;
+
+        JsonObject ota = doc["ota"].to<JsonObject>();
+        ota["in_progress"] = deviceContext.ota.inProgress;
+        ota["restart_pending"] = deviceContext.ota.restartPending;
+
+        JsonObject sensor = doc["sensor"].to<JsonObject>();
+        sensor["current"] = deviceContext.state.current;
+        sensor["temperature"] = deviceContext.state.temperature;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
     void executeCommand(const String& command, const String& requestId)
     {
         if (command == "get_config")
         {
             setConfigStatus(requestId);
+            return;
+        }
+
+        if (command == "get_diagnostics")
+        {
+            setDiagnosticsStatus(requestId);
             return;
         }
 
