@@ -3,6 +3,7 @@
 #include "device_context.h"
 #include "app_version.h"
 #include "production_manager.h"
+#include "field_reliability_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -50,6 +51,11 @@ namespace
         doc["watchdog_enabled"] = deviceContext.watchdog.enabled;
         doc["watchdog_setup_ok"] = deviceContext.watchdog.setupOk;
         doc["watchdog_feed_count"] = deviceContext.watchdog.feedCount;
+        doc["field_reliability_status"] = fieldReliabilityStatus();
+        doc["field_reliability_issue"] = fieldReliabilityIssue();
+        doc["field_reliability_score"] = fieldReliabilityScore();
+        doc["wifi_drop_events"] = deviceContext.fieldReliability.wifiDropEvents;
+        doc["mqtt_drop_events"] = deviceContext.fieldReliability.mqttDropEvents;
 
         heartbeatPayload = "";
         serializeJson(doc, heartbeatPayload);

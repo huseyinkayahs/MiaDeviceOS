@@ -7,6 +7,7 @@
 #include "runtime_settings_manager.h"
 #include "production_manager.h"
 #include "watchdog_manager.h"
+#include "field_reliability_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -154,6 +155,17 @@ namespace
         watchdog["feed_count"] = deviceContext.watchdog.feedCount;
         watchdog["last_feed_ms"] = deviceContext.watchdog.lastFeedMs;
 
+        JsonObject reliability = doc["field_reliability"].to<JsonObject>();
+        reliability["status"] = fieldReliabilityStatus();
+        reliability["issue"] = fieldReliabilityIssue();
+        reliability["score"] = fieldReliabilityScore();
+        reliability["wifi_drop_events"] = deviceContext.fieldReliability.wifiDropEvents;
+        reliability["mqtt_drop_events"] = deviceContext.fieldReliability.mqttDropEvents;
+        reliability["wifi_offline_ms"] = fieldReliabilityWifiOfflineMs();
+        reliability["mqtt_offline_ms"] = fieldReliabilityMqttOfflineMs();
+        reliability["warning_count"] = deviceContext.fieldReliability.warningCount;
+        reliability["offline_warning_threshold_ms"] = deviceContext.fieldReliability.offlineWarningThresholdMs;
+
         JsonObject alarm = doc["alarm"].to<JsonObject>();
         alarm["active"] = deviceContext.alarm.active;
         alarm["type"] = alarmTypeToString(deviceContext.alarm.activeAlarm);
@@ -273,12 +285,54 @@ namespace
         health["mqtt_connected"] = deviceContext.state.mqttConnected;
         health["alarm_active"] = deviceContext.alarm.active;
         health["ota_in_progress"] = deviceContext.ota.inProgress;
+        health["field_reliability_status"] = fieldReliabilityStatus();
+        health["field_reliability_issue"] = fieldReliabilityIssue();
+        health["field_reliability_score"] = fieldReliabilityScore();
 
         JsonObject watchdog = health["watchdog"].to<JsonObject>();
         watchdog["enabled"] = deviceContext.watchdog.enabled;
         watchdog["setup_ok"] = deviceContext.watchdog.setupOk;
         watchdog["timeout_sec"] = deviceContext.watchdog.timeoutSec;
         watchdog["feed_count"] = deviceContext.watchdog.feedCount;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+
+    void setFieldReliabilityStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_reliability";
+        doc["status"] = "done";
+        doc["message"] = "Field reliability returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject reliability = doc["field_reliability"].to<JsonObject>();
+        reliability["status"] = fieldReliabilityStatus();
+        reliability["issue"] = fieldReliabilityIssue();
+        reliability["score"] = fieldReliabilityScore();
+        reliability["wifi_connected"] = deviceContext.state.wifiConnected;
+        reliability["mqtt_connected"] = deviceContext.state.mqttConnected;
+        reliability["wifi_drop_events"] = deviceContext.fieldReliability.wifiDropEvents;
+        reliability["mqtt_drop_events"] = deviceContext.fieldReliability.mqttDropEvents;
+        reliability["wifi_offline_ms"] = fieldReliabilityWifiOfflineMs();
+        reliability["mqtt_offline_ms"] = fieldReliabilityMqttOfflineMs();
+        reliability["wifi_offline_warning"] = deviceContext.fieldReliability.wifiOfflineWarning;
+        reliability["mqtt_offline_warning"] = deviceContext.fieldReliability.mqttOfflineWarning;
+        reliability["warning_count"] = deviceContext.fieldReliability.warningCount;
+        reliability["check_interval_ms"] = deviceContext.fieldReliability.checkIntervalMs;
+        reliability["offline_warning_threshold_ms"] = deviceContext.fieldReliability.offlineWarningThresholdMs;
+        reliability["low_heap_warning"] = deviceContext.production.lowHeapWarningActive;
+        reliability["alarm_active"] = deviceContext.alarm.active;
+        reliability["ota_in_progress"] = deviceContext.ota.inProgress;
+        reliability["watchdog_setup_ok"] = deviceContext.watchdog.setupOk;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -365,6 +419,12 @@ namespace
         if (command == "get_health")
         {
             setHealthStatus(requestId);
+            return;
+        }
+
+        if (command == "get_reliability")
+        {
+            setFieldReliabilityStatus(requestId);
             return;
         }
 

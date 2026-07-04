@@ -140,3 +140,17 @@ reset_reason
 
 - v1.8 adds watchdog support and boot diagnostics on top of this production health layer.
 - Sensor is still simulated.
+
+## v1.9 Field Reliability Bağlantısı
+
+Production health çıktıları artık field reliability bilgisiyle desteklenir.
+
+`get_health` cevabına şu alanlar eklenmiştir:
+
+```text
+field_reliability_status
+field_reliability_issue
+field_reliability_score
+```
+
+Detaylı bilgi için `docs/FIELD_RELIABILITY.md` dosyasına bakılabilir.

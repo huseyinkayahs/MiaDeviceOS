@@ -22,6 +22,7 @@
 #include "runtime_settings_manager.h"
 #include "production_manager.h"
 #include "watchdog_manager.h"
+#include "field_reliability_manager.h"
 
 namespace
 {
@@ -88,6 +89,8 @@ void appSetup()
 
     setupWatchdogManager();
 
+    setupFieldReliabilityManager();
+
     Serial.println("==================================");
     Serial.print("      ");
     Serial.print(MIA_PROJECT_NAME);
@@ -150,6 +153,8 @@ void appLoop()
 
     loopMQTT();
 
+    updateFieldReliabilityManager();
+
     processMqttMessages();
 
     updateCommand();
@@ -176,6 +181,8 @@ void appLoop()
     processMqttMessages();
 
     updateAlarm();
+
+    updateFieldReliabilityManager();
 
     updateAlarmPublisher();
 

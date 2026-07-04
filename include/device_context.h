@@ -9,6 +9,7 @@
 #include "ble_context.h"
 #include "production_context.h"
 #include "watchdog_context.h"
+#include "field_reliability_context.h"
 
 struct DeviceContext
 {
@@ -29,6 +30,8 @@ struct DeviceContext
     ProductionContext production;
 
     WatchdogContext watchdog;
+
+    FieldReliabilityContext fieldReliability;
 };
 
 extern DeviceContext deviceContext;

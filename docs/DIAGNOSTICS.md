@@ -167,3 +167,24 @@ New commands:
   "request_id": "boot-001"
 }
 ```
+
+## v1.9 Field Reliability
+
+`get_diagnostics` çıktısına field reliability bölümü eklendi.
+
+Örnek:
+
+```json
+"field_reliability": {
+  "status": "ALARM",
+  "issue": "ALARM_ACTIVE",
+  "score": 95,
+  "wifi_drop_events": 0,
+  "mqtt_drop_events": 0,
+  "wifi_offline_ms": 0,
+  "mqtt_offline_ms": 0,
+  "warning_count": 0
+}
+```
+
+Bu bölüm saha kararlılığı için WiFi/MQTT kopma geçmişini, aktif sorunu ve güvenilirlik puanını gösterir.
