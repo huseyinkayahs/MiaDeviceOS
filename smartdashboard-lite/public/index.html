@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SmartDashboard Lite</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>SmartDashboard Lite</h1>
+      <p>FactoryBox One / MiaDeviceOS lokal kontrol paneli</p>
+    </div>
+    <div class="status-pill" id="mqttStatus">MQTT bekleniyor</div>
+  </header>
+
+  <main>
+    <section class="hero-card">
+      <div>
+        <span class="label">Makine Durumu</span>
+        <h2 id="machineState">—</h2>
+        <p id="machineSource">Kaynak: —</p>
+      </div>
+      <div class="utilization">
+        <span id="utilizationPct">—%</span>
+        <small>Kullanım</small>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <span class="label">Bugünkü çalışma</span>
+        <strong id="runtimeMin">— dk</strong>
+      </article>
+      <article class="card">
+        <span class="label">Bugünkü duruş</span>
+        <strong id="stopMin">— dk</strong>
+      </article>
+      <article class="card">
+        <span class="label">DI1</span>
+        <strong id="di1State">—</strong>
+      </article>
+      <article class="card">
+        <span class="label">Alarm</span>
+        <strong id="alarmState">—</strong>
+      </article>
+      <article class="card">
+        <span class="label">Firmware</span>
+        <strong id="firmwareVersion">—</strong>
+      </article>
+      <article class="card">
+        <span class="label">Reliability</span>
+        <strong id="reliabilityScore">—</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h3>Komutlar</h3>
+      <div class="buttons">
+        <button data-action="refresh">Yenile</button>
+        <button data-command="get_health">get_health</button>
+        <button data-command="get_machine_runtime">get_machine_runtime</button>
+        <button data-command="get_daily_summary">get_daily_summary</button>
+        <button data-command="get_digital_inputs">get_digital_inputs</button>
+        <button data-source="AUTO_CURRENT">AUTO_CURRENT seç</button>
+        <button data-source="DI1">DI1 seç</button>
+        <button class="danger" data-action="restart">Restart</button>
+      </div>
+    </section>
+
+    <section class="panel two-col">
+      <div>
+        <h3>Son Komut Cevabı</h3>
+        <pre id="lastCommand">Bekleniyor...</pre>
+      </div>
+      <div>
+        <h3>Son MQTT Mesajları</h3>
+        <pre id="rawMessages">Bekleniyor...</pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
