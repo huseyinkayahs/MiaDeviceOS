@@ -12,7 +12,10 @@
       <h1>SmartDashboard Lite</h1>
       <p>FactoryBox One / MiaDeviceOS lokal kontrol paneli</p>
     </div>
-    <div class="status-pill" id="mqttStatus">MQTT bekleniyor</div>
+    <div class="top-status">
+      <div class="status-pill" id="mqttStatus">MQTT bekleniyor</div>
+      <div class="status-pill" id="deviceStatus">Cihaz bekleniyor</div>
+    </div>
   </header>
 
   <main>
@@ -55,10 +58,36 @@
       </article>
     </section>
 
+    <section class="panel status-panel">
+      <h3>Bağlantı ve Komut Durumu</h3>
+      <div class="status-grid">
+        <div>
+          <span class="label">Son panel güncelleme</span>
+          <strong id="lastUpdateTime">—</strong>
+        </div>
+        <div>
+          <span class="label">Son MQTT mesajı</span>
+          <strong id="lastMqttTime">—</strong>
+        </div>
+        <div>
+          <span class="label">Son gönderilen komut</span>
+          <strong id="lastCommandSent">—</strong>
+        </div>
+        <div>
+          <span class="label">Son cevap</span>
+          <strong id="lastCommandStatus">—</strong>
+        </div>
+        <div class="wide">
+          <span class="label">Son hata</span>
+          <strong id="lastError">Yok</strong>
+        </div>
+      </div>
+    </section>
+
     <section class="panel">
       <h3>Komutlar</h3>
       <div class="buttons">
-        <button data-action="refresh">Yenile</button>
+        <button data-action="refresh">Tüm Verileri Yenile</button>
         <button data-command="get_health">get_health</button>
         <button data-command="get_machine_runtime">get_machine_runtime</button>
         <button data-command="get_daily_summary">get_daily_summary</button>
@@ -69,10 +98,14 @@
       </div>
     </section>
 
-    <section class="panel two-col">
+    <section class="panel three-col">
       <div>
         <h3>Son Komut Cevabı</h3>
         <pre id="lastCommand">Bekleniyor...</pre>
+      </div>
+      <div>
+        <h3>Komut Geçmişi</h3>
+        <pre id="commandHistory">Bekleniyor...</pre>
       </div>
       <div>
         <h3>Son MQTT Mesajları</h3>
@@ -80,6 +113,8 @@
       </div>
     </section>
   </main>
+
+  <div id="toast" class="toast"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>

@@ -12,6 +12,7 @@ const MQTT_USERNAME = process.env.MQTT_USERNAME || '';
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
 const BASE_TOPIC = process.env.MQTT_BASE_TOPIC || 'mia/site01/laser01';
 const DEVICE_ID = process.env.DEVICE_ID || 'laser01';
+const DEVICE_ONLINE_TIMEOUT_SEC = Number(process.env.DEVICE_ONLINE_TIMEOUT_SEC || 90);
 
 const topics = {
   command: `${BASE_TOPIC}/command`,
@@ -24,7 +25,15 @@ const topics = {
 
 const state = {
   mqttConnected: false,
+  deviceOnline: false,
+  baseTopic: BASE_TOPIC,
+  deviceId: DEVICE_ID,
+  serverStartedAt: new Date().toISOString(),
   lastUpdatedAt: null,
+  lastMqttMessageAt: null,
+  lastCommandSent: null,
+  lastCommandSentAt: null,
+  lastCommandError: null,
   lastCommandStatus: null,
   lastHeartbeat: null,
   lastAlarm: null,
@@ -39,6 +48,7 @@ const state = {
   runtimeSettings: null,
   config: null,
   rawMessages: [],
+  commandHistory: [],
 };
 
 const app = express();
@@ -52,9 +62,28 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function secondsSince(iso) {
+  if (!iso) return Infinity;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+}
+
+function computeDeviceOnline() {
+  const recentHeartbeat = secondsSince(state.lastHeartbeat?.receivedAt) <= DEVICE_ONLINE_TIMEOUT_SEC;
+  const recentCommand = secondsSince(state.lastCommandStatus?.receivedAt) <= DEVICE_ONLINE_TIMEOUT_SEC;
+  const recentMachine = secondsSince(state.machineRuntime?.receivedAt) <= DEVICE_ONLINE_TIMEOUT_SEC;
+  state.deviceOnline = Boolean(state.mqttConnected && (recentHeartbeat || recentCommand || recentMachine));
+}
+
 function pushRawMessage(topic, payload) {
-  state.rawMessages.unshift({ topic, payload, receivedAt: nowIso() });
+  const receivedAt = nowIso();
+  state.rawMessages.unshift({ topic, payload, receivedAt });
   if (state.rawMessages.length > 40) state.rawMessages.pop();
+  state.lastMqttMessageAt = receivedAt;
+}
+
+function pushCommandHistory(entry) {
+  state.commandHistory.unshift({ ...entry, at: nowIso() });
+  if (state.commandHistory.length > 20) state.commandHistory.pop();
 }
 
 function safeJsonParse(input) {
@@ -66,52 +95,72 @@ function safeJsonParse(input) {
   }
 }
 
+function withReceivedAt(message) {
+  if (!message || typeof message !== 'object') return message;
+  return { ...message, receivedAt: nowIso() };
+}
+
 function applyCommandStatus(message) {
-  state.lastCommandStatus = message;
+  const enriched = withReceivedAt(message);
+  state.lastCommandStatus = enriched;
+  state.lastCommandError = message.status === 'failed' || message.status === 'rejected'
+    ? message.message || 'Command failed'
+    : null;
+
+  if (message.command) {
+    pushCommandHistory({
+      direction: 'in',
+      command: message.command,
+      status: message.status,
+      message: message.message,
+      request_id: message.request_id,
+    });
+  }
 
   if (message.command === 'get_machine_runtime' && message.machine) {
-    state.machineRuntime = message.machine;
+    state.machineRuntime = withReceivedAt(message.machine);
   }
   if (message.command === 'get_daily_summary' && message.daily_summary) {
-    state.dailySummary = message.daily_summary;
+    state.dailySummary = withReceivedAt(message.daily_summary);
   }
   if (message.command === 'get_health' && message.health) {
-    state.health = message.health;
+    state.health = withReceivedAt(message.health);
   }
   if (message.command === 'get_diagnostics') {
-    state.diagnostics = message;
-    if (message.machine_runtime) state.machineRuntime = message.machine_runtime;
-    if (message.digital_inputs) state.digitalInputs = message.digital_inputs;
-    if (message.field_reliability) state.reliability = message.field_reliability;
-    if (message.watchdog) state.watchdog = message.watchdog;
+    state.diagnostics = enriched;
+    if (message.machine_runtime) state.machineRuntime = withReceivedAt(message.machine_runtime);
+    if (message.digital_inputs) state.digitalInputs = withReceivedAt(message.digital_inputs);
+    if (message.field_reliability) state.reliability = withReceivedAt(message.field_reliability);
+    if (message.watchdog) state.watchdog = withReceivedAt(message.watchdog);
   }
   if (message.command === 'get_reliability' && message.field_reliability) {
-    state.reliability = message.field_reliability;
+    state.reliability = withReceivedAt(message.field_reliability);
   }
   if (message.command === 'get_watchdog' && message.watchdog) {
-    state.watchdog = message.watchdog;
+    state.watchdog = withReceivedAt(message.watchdog);
   }
   if (message.command === 'get_digital_inputs' && message.digital_inputs) {
-    state.digitalInputs = message.digital_inputs;
+    state.digitalInputs = withReceivedAt(message.digital_inputs);
   }
   if (message.command === 'get_runtime_settings' && message.runtime_settings) {
-    state.runtimeSettings = message.runtime_settings;
+    state.runtimeSettings = withReceivedAt(message.runtime_settings);
   }
   if (message.command === 'get_config') {
-    state.config = message;
+    state.config = enriched;
   }
   if (message.command === 'set_machine_input_source' && message.machine) {
-    state.machineRuntime = {
+    state.machineRuntime = withReceivedAt({
       ...(state.machineRuntime || {}),
       ...message.machine,
-    };
+    });
   }
   if (message.command === 'set_di1_simulation' && message.digital_inputs) {
-    state.digitalInputs = message.digital_inputs;
+    state.digitalInputs = withReceivedAt(message.digital_inputs);
   }
 }
 
 function publishState() {
+  computeDeviceOnline();
   state.lastUpdatedAt = nowIso();
   io.emit('state', state);
 }
@@ -129,6 +178,7 @@ const mqttClient = mqtt.connect(MQTT_URL, mqttOptions);
 
 mqttClient.on('connect', () => {
   state.mqttConnected = true;
+  state.lastCommandError = null;
   mqttClient.subscribe([
     topics.commandStatus,
     topics.heartbeat,
@@ -136,7 +186,10 @@ mqttClient.on('connect', () => {
     topics.telemetry,
     topics.machineStatus,
   ], (error) => {
-    if (error) console.error('MQTT subscribe error:', error.message);
+    if (error) {
+      state.lastCommandError = `MQTT subscribe error: ${error.message}`;
+      console.error('MQTT subscribe error:', error.message);
+    }
   });
   publishState();
   requestSnapshot();
@@ -153,7 +206,9 @@ mqttClient.on('close', () => {
 });
 
 mqttClient.on('error', (error) => {
+  state.lastCommandError = `MQTT error: ${error.message}`;
   console.error('MQTT error:', error.message);
+  publishState();
 });
 
 mqttClient.on('message', (topic, buffer) => {
@@ -164,13 +219,13 @@ mqttClient.on('message', (topic, buffer) => {
   if (topic === topics.commandStatus) {
     applyCommandStatus(payload);
   } else if (topic === topics.heartbeat) {
-    state.lastHeartbeat = payload;
+    state.lastHeartbeat = withReceivedAt(payload);
   } else if (topic === topics.alarm) {
-    state.lastAlarm = payload;
+    state.lastAlarm = withReceivedAt(payload);
   } else if (topic === topics.telemetry) {
-    state.lastTelemetry = payload;
+    state.lastTelemetry = withReceivedAt(payload);
   } else if (topic === topics.machineStatus) {
-    state.machineRuntime = payload.machine || payload;
+    state.machineRuntime = withReceivedAt(payload.machine || payload);
   }
 
   publishState();
@@ -183,8 +238,19 @@ function sendCommand(command, extra = {}) {
     ...extra,
   };
 
+  state.lastCommandSent = payload;
+  state.lastCommandSentAt = nowIso();
+  state.lastCommandError = null;
+  pushCommandHistory({ direction: 'out', command, status: 'sent', request_id: payload.request_id });
+  publishState();
+
   mqttClient.publish(topics.command, JSON.stringify(payload), { qos: 0 }, (error) => {
-    if (error) console.error('MQTT publish error:', error.message);
+    if (error) {
+      state.lastCommandError = `MQTT publish error: ${error.message}`;
+      pushCommandHistory({ direction: 'out', command, status: 'publish_error', message: error.message, request_id: payload.request_id });
+      console.error('MQTT publish error:', error.message);
+      publishState();
+    }
   });
 
   return payload;
@@ -206,7 +272,13 @@ function requestSnapshot() {
   });
 }
 
+setInterval(() => {
+  computeDeviceOnline();
+  io.emit('state', state);
+}, 5000);
+
 app.get('/api/state', (_req, res) => {
+  computeDeviceOnline();
   res.json(state);
 });
 
@@ -218,25 +290,22 @@ app.post('/api/refresh', (_req, res) => {
 app.post('/api/command/:command', (req, res) => {
   const command = req.params.command;
   const payload = sendCommand(command, req.body || {});
-  res.json({ ok: true, published: payload });
+  res.json({ ok: true, payload });
 });
 
 app.post('/api/machine/input-source/:source', (req, res) => {
-  const source = req.params.source;
+  const source = String(req.params.source || '').toUpperCase();
   if (!['AUTO_CURRENT', 'DI1'].includes(source)) {
-    return res.status(400).json({ ok: false, error: 'Invalid source' });
+    return res.status(400).json({ ok: false, message: 'Invalid source' });
   }
+
   const payload = sendCommand('set_machine_input_source', { source });
-  return res.json({ ok: true, published: payload });
+  res.json({ ok: true, payload });
 });
 
 app.post('/api/device/restart', (_req, res) => {
   const payload = sendCommand('restart');
-  res.json({ ok: true, published: payload });
-});
-
-io.on('connection', (socket) => {
-  socket.emit('state', state);
+  res.json({ ok: true, payload });
 });
 
 server.listen(PORT, () => {

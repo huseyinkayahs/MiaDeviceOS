@@ -1,7 +1,7 @@
 {
   "name": "smartdashboard-lite",
-  "version": "0.1.0",
-  "description": "SmartDashboard Lite for FactoryBox One / MiaDeviceOS",
+  "version": "0.2.0",
+  "description": "Polished SmartDashboard Lite for FactoryBox One / MiaDeviceOS",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

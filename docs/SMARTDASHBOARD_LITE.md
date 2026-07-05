@@ -1,10 +1,8 @@
 # SmartDashboard Lite
 
-## Amaç
+SmartDashboard Lite, FactoryBox One / MiaDeviceOS için lokal çalışan basit web kontrol panelidir.
 
-SmartDashboard Lite, FactoryBox One / MiaDeviceOS için lokal çalışan basit bir web kontrol panelidir.
-
-Bu panel ESP32 içine gömülmez. Bilgisayarda Node.js ile çalışır ve MQTT üzerinden cihaza bağlanır.
+## Mimari
 
 ```text
 FactoryBox One / ESP32
@@ -13,31 +11,63 @@ MQTT
 ↓
 SmartDashboard Lite
 ↓
-Tarayıcı
+Web tarayıcı
 ```
 
-## İlk Sürüm Kapsamı
+## Çalıştırma
 
-Panelde gösterilen bilgiler:
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\smartdashboard-lite"
+npm.cmd install
+npm.cmd start
+```
+
+Tarayıcı:
 
 ```text
-Makine durumu: RUNNING / STOPPED
-Bugünkü çalışma süresi
-Bugünkü duruş süresi
+http://localhost:3000
+```
+
+## Ayar Dosyası
+
+İlk kurulumda:
+
+```powershell
+copy .env.example .env
+```
+
+Varsayılan ayarlar:
+
+```text
+MQTT_URL=mqtt://broker.emqx.io:1883
+MQTT_BASE_TOPIC=mia/site01/laser01
+DEVICE_ID=laser01
+DEVICE_ONLINE_TIMEOUT_SEC=90
+```
+
+## Panelde Görünen Bilgiler
+
+```text
+Makine durumu
+Input source
+Çalışma süresi
+Duruş süresi
 Kullanım oranı
 DI1 durumu
-Input source: AUTO_CURRENT / DI1
 Alarm durumu
 Firmware version
 Reliability score
+MQTT bağlantısı
+Cihaz online durumu
+Son MQTT mesaj zamanı
 Son komut cevabı
-Son MQTT mesajları
+Komut geçmişi
 ```
 
-Panelden gönderilebilen komutlar:
+## Panel Komutları
 
 ```text
-Yenile
+Tüm Verileri Yenile
 get_health
 get_machine_runtime
 get_daily_summary
@@ -47,55 +77,18 @@ DI1 seç
 Restart
 ```
 
-## Kurulum
-
-Proje klasöründe:
-
-```powershell
-cd smartdashboard-lite
-copy .env.example .env
-npm install
-npm start
-```
-
-Sonra tarayıcıdan aç:
+## v2.12 İyileştirmeleri
 
 ```text
-http://localhost:3000
+Cihaz online göstergesi
+Son güncelleme zamanı
+Son MQTT mesaj zamanı
+Komut gönderildi bildirimi
+Komut geçmişi
+Son hata alanı
+Buton disabled / gönderiliyor durumu
 ```
 
-## MQTT Ayarları
+## Güvenlik Notu
 
-`.env` dosyası:
-
-```text
-MQTT_URL=mqtt://broker.emqx.io:1883
-MQTT_BASE_TOPIC=mia/site01/laser01
-DEVICE_ID=laser01
-```
-
-Kullanıcı adı / şifreli broker kullanılırsa:
-
-```text
-MQTT_USERNAME=...
-MQTT_PASSWORD=...
-```
-
-## Kullanım Notları
-
-- Panel lokal çalışır.
-- Çoklu cihaz desteği henüz yoktur.
-- İlk hedef pilot kurulumda cihaz durumunu hızlı görmek ve temel komutları göndermektir.
-- ESP32 firmware içine web server eklenmedi; cihazın kaynakları korunur.
-
-## Sonraki Aşamalar
-
-```text
-Çoklu cihaz desteği
-Grafikler
-Günlük rapor geçmişi
-Kullanıcı girişi
-Bulut dashboard
-Mobil uyum iyileştirme
-SmartDashboard Pro
-```
+Bu panel lokal pilot/test panelidir. Production kullanıcı yönetimi, yetkilendirme ve internet üzerinden erişim kapsam dışıdır.
