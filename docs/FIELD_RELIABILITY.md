@@ -40,7 +40,7 @@ Payload:
   "command": "get_reliability",
   "status": "done",
   "message": "Field reliability returned",
-  "firmware_version": "1.9.0",
+  "firmware_version": "2.0.0",
   "field_reliability": {
     "status": "ALARM",
     "issue": "ALARM_ACTIVE",

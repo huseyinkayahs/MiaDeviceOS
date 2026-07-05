@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 1.9.0
+Firmware version: 2.0.0
 Build type: production
 Hardware revision: prototype
 ```
@@ -95,6 +95,9 @@ docs/LOGGING_POLICY.md
 docs/DIAGNOSTICS.md
 docs/WATCHDOG_BOOT_DIAGNOSTICS.md
 docs/FIELD_RELIABILITY.md
+docs/FINAL_SMOKE_TEST.md
+docs/FIELD_TEST_CHECKLIST.md
+docs/RELEASE_NOTES_v2.0.md
 ```
 
 ## Local secrets setup
@@ -153,7 +156,7 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected boot output:
 
 ```text
-MiaDeviceOS v1.9.0
+MiaDeviceOS v2.0.0
 Model: MiaDeviceOS-LaserMonitor
 Build: production
 Device ID: laser01
@@ -291,7 +294,7 @@ Returns boot count, reset reason, memory summary and watchdog boot state.
   "command": "ota_update",
   "request_id": "ota-001",
   "url": "http://192.168.1.2:8000/firmware.bin",
-  "version": "1.9.0-test"
+  "version": "2.0.0-test"
 }
 ```
 
@@ -490,8 +493,7 @@ Example:
 - New command: `get_boot_diagnostics`.
 - Diagnostics and health outputs now include watchdog state.
 - Heartbeat includes watchdog status and feed count.
-- Detailed explanation: `docs/WATCHDOG_BOOT_DIAGNOSTICS.md
-docs/FIELD_RELIABILITY.md`
+- Detailed explanation: `docs/WATCHDOG_BOOT_DIAGNOSTICS.md`
 
 Example:
 
@@ -518,4 +520,28 @@ Example:
   "command": "get_reliability",
   "request_id": "rel-001"
 }
+```
+
+
+## v2.0 Field Prototype Release
+
+- Firmware version bumped to `2.0.0`.
+- Added final smoke test documentation.
+- Added field test checklist.
+- Added release notes for Field Prototype Release.
+- This release freezes the current platform layer before real sensor driver work.
+
+Important docs:
+
+```text
+docs/FINAL_SMOKE_TEST.md
+docs/FIELD_TEST_CHECKLIST.md
+docs/RELEASE_NOTES_v2.0.md
+```
+
+Suggested release tag after final smoke test:
+
+```powershell
+git tag -a v2.0.0 -m "MiaDeviceOS v2.0.0 field prototype release"
+git push origin v2.0.0
 ```
