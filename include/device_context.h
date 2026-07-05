@@ -10,6 +10,7 @@
 #include "production_context.h"
 #include "watchdog_context.h"
 #include "field_reliability_context.h"
+#include "machine_runtime_context.h"
 
 struct DeviceContext
 {
@@ -32,6 +33,8 @@ struct DeviceContext
     WatchdogContext watchdog;
 
     FieldReliabilityContext fieldReliability;
+
+    MachineRuntimeContext machineRuntime;
 };
 
 extern DeviceContext deviceContext;

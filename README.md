@@ -545,3 +545,60 @@ Suggested release tag after final smoke test:
 git tag -a v2.0.0 -m "MiaDeviceOS v2.0.0 field prototype release"
 git push origin v2.0.0
 ```
+
+## v2.2.0 FactoryBox One MVP Core
+
+v2.2.0 ile MiaDeviceOS, FactoryBox One ürün mantığına geçmeye başladı.
+
+Eklenen ana özellikler:
+
+```text
+Machine Runtime Tracker
+RUNNING / STOPPED state takibi
+Günlük çalışma süresi
+Günlük duruş süresi
+Makine durum MQTT yayını
+Günlük rapor datası
+n8n daily report payload dokümanı
+Pilot kurulum planı
+```
+
+Yeni MQTT topic:
+
+```text
+mia/site01/laser01/machine/status
+```
+
+Yeni komutlar:
+
+```text
+get_machine_runtime
+get_daily_summary
+set_machine_state
+reset_machine_runtime
+```
+
+Bu sürümde gerçek sensör zorunlu değildir. Sensör hazır olana kadar `set_machine_state` komutu ile RUNNING / STOPPED simülasyonu yapılabilir.
+
+Detaylar:
+
+```text
+docs/MACHINE_RUNTIME_TRACKER.md
+docs/FACTORYBOX_ONE_MVP_CORE.md
+docs/N8N_DAILY_REPORT_PAYLOAD.md
+docs/PILOT_INSTALLATION_PLAN.md
+```
+
+
+## v2.2.1 Machine Runtime Counter Hotfix
+
+`longest_run_sec` hesaplamasında manuel RUNNING / STOPPED testleri sırasında görülebilen taşma değeri engellendi.
+
+Düzeltme:
+
+```text
+longest_run_sec overflow koruması
+state geçişinde segment istatistiğini güvenli kapatma
+last_state_change_ms için güvenli elapsed hesaplama
+Firmware 2.2.1
+```

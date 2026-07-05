@@ -1,59 +1,58 @@
 # FactoryBox One Sprint Plan
 
 ## v2.1 Product Definition
-Durum: Başlatıldı
+Durum: Tamamlandı
 
 Amaç:
 FactoryBox One ürün kapsamını netleştirmek.
 
-Çıktı:
-`docs/FACTORYBOX_ONE_PRODUCT_DEFINITION.md`
+Çıktılar:
+
+```text
+docs/FACTORYBOX_ONE_PRODUCT_DEFINITION.md
+docs/SMARTBOX_PLATFORM_VISION.md
+docs/FACTORYBOX_ONE_SPRINT_PLAN.md
+```
 
 ---
 
-## v2.2 Machine State Manager
+## v2.2 FactoryBox One MVP Core
+Durum: Başlatıldı
+
+Bu sprintte daha önce ayrı planlanan bazı sprintler tek pakette toplandı.
+
+Kapsam:
+
+```text
+Machine Runtime Tracker
+RUNNING / STOPPED state takibi
+Daily runtime counter
+Daily stop counter
+machine/status MQTT mesajı
+get_machine_runtime komutu
+get_daily_summary komutu
+set_machine_state test komutu
+reset_machine_runtime test komutu
+n8n daily report payload dokümanı
+Pilot installation plan dokümanı
+```
 
 Amaç:
-Makine durumunu takip edecek ana yazılım katmanını eklemek.
+Cihazı ilk ürün mantığına geçirmek.
 
-Durumlar:
-
-```text
-RUNNING
-STOPPED
-UNKNOWN
-ALARM
-```
-
-Beklenen çıktılar:
+Bu sprintten sonra FactoryBox One şu sorulara cevap verebilir:
 
 ```text
-get_machine_state komutu
-machine/state MQTT mesajı
-machine/event MQTT mesajı
-runtime başlangıç altyapısı
+Makine çalışıyor mu?
+Makine duruyor mu?
+Bugün kaç saniye çalıştı?
+Bugün kaç saniye durdu?
+Günlük rapor için veri hazır mı?
 ```
 
 ---
 
-## v2.3 Runtime Counter
-
-Amaç:
-Günlük çalışma ve duruş sürelerini hesaplamak.
-
-Beklenen çıktılar:
-
-```text
-runtime_today_sec
-downtime_today_sec
-last_run_duration_sec
-last_stop_duration_sec
-get_runtime_summary komutu
-```
-
----
-
-## v2.4 SmartFlows Runtime Report
+## v2.3 SmartFlows Daily Report
 
 Amaç:
 n8n üzerinden günlük üretim raporu oluşturmak.
@@ -61,15 +60,16 @@ n8n üzerinden günlük üretim raporu oluşturmak.
 Beklenen çıktılar:
 
 ```text
+Cron trigger
+MQTT get_daily_summary isteği
 Telegram günlük rapor
 WhatsApp hazırlığı
-Makine durdu / çalıştı bildirimi
 Basit AI yorum metni
 ```
 
 ---
 
-## v2.5 Pilot Installation Plan
+## v2.4 Pilot Hardware Planning
 
 Amaç:
 İlk saha prototipini kendi lazer makinesine bağlama planını hazırlamak.
@@ -80,6 +80,16 @@ Beklenen çıktılar:
 Kablo bağlantı planı
 Kutu yerleşim planı
 Güç besleme planı
-Test checklist
+Giriş/çıkış planı
 Risk listesi
+```
+
+---
+
+## Sensör Hazır Olduğunda
+
+```text
+Real Sensor Driver
+Sensor Calibration
+Field Sensor Test
 ```

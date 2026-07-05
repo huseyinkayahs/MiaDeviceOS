@@ -346,6 +346,42 @@ void publishOtaStatus(const char* payload)
     }
 }
 
+
+void publishMachineStatus(const char* payload)
+{
+    if (!client.connected())
+    {
+        if (shouldLog(LOG_LEVEL_WARN))
+        {
+            Serial.print("MQTT bagli degil. Machine status gonderilmedi: ");
+            Serial.println(payload);
+        }
+        return;
+    }
+
+    bool published = client.publish(
+        MiaTopics::MACHINE_STATUS,
+        payload
+    );
+
+    if (published)
+    {
+        if (shouldLog(LOG_LEVEL_DEBUG))
+        {
+            Serial.print("Machine status gonderildi: ");
+            Serial.println(payload);
+        }
+    }
+    else
+    {
+        if (shouldLog(LOG_LEVEL_WARN))
+        {
+            Serial.print("Machine status gonderilemedi: ");
+            Serial.println(payload);
+        }
+    }
+}
+
 bool hasIncomingConfigPayload()
 {
     return incomingConfigPending;

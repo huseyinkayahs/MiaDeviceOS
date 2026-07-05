@@ -23,6 +23,7 @@
 #include "production_manager.h"
 #include "watchdog_manager.h"
 #include "field_reliability_manager.h"
+#include "machine_runtime_manager.h"
 
 namespace
 {
@@ -70,6 +71,12 @@ namespace
         {
             String otaStatusPayload = takeOtaStatusPayload();
             publishOtaStatus(otaStatusPayload.c_str());
+        }
+
+        if (hasMachineStatusPayload())
+        {
+            String machineStatusPayload = takeMachineStatusPayload();
+            publishMachineStatus(machineStatusPayload.c_str());
         }
     }
 }
@@ -130,6 +137,10 @@ void appSetup()
 
     setupSensors();
 
+    updateSensors();
+
+    setupMachineRuntimeManager();
+
     setupDisplay();
 
     setupTelemetry();
@@ -171,6 +182,8 @@ void appLoop()
     }
 
     updateSensors();
+
+    updateMachineRuntimeManager();
 
     updateTelemetry();
 

@@ -8,6 +8,7 @@
 #include "production_manager.h"
 #include "watchdog_manager.h"
 #include "field_reliability_manager.h"
+#include "machine_runtime_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -166,6 +167,17 @@ namespace
         reliability["warning_count"] = deviceContext.fieldReliability.warningCount;
         reliability["offline_warning_threshold_ms"] = deviceContext.fieldReliability.offlineWarningThresholdMs;
 
+        JsonObject machine = doc["machine_runtime"].to<JsonObject>();
+        machine["state"] = machineRuntimeStateName();
+        machine["source"] = machineRuntimeSourceName();
+        machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
+        machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
+        machine["observed_sec"] = machineRuntimeObservedSec();
+        machine["utilization_pct"] = machineRuntimeUtilizationPct();
+        machine["state_change_count"] = deviceContext.machineRuntime.stateChangeCount;
+        machine["current_segment_sec"] = deviceContext.machineRuntime.currentSegmentSec;
+
         JsonObject alarm = doc["alarm"].to<JsonObject>();
         alarm["active"] = deviceContext.alarm.active;
         alarm["type"] = alarmTypeToString(deviceContext.alarm.activeAlarm);
@@ -288,6 +300,10 @@ namespace
         health["field_reliability_status"] = fieldReliabilityStatus();
         health["field_reliability_issue"] = fieldReliabilityIssue();
         health["field_reliability_score"] = fieldReliabilityScore();
+        health["machine_state"] = machineRuntimeStateName();
+        health["machine_utilization_pct"] = machineRuntimeUtilizationPct();
+        health["machine_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
+        health["machine_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
 
         JsonObject watchdog = health["watchdog"].to<JsonObject>();
         watchdog["enabled"] = deviceContext.watchdog.enabled;
@@ -339,6 +355,116 @@ namespace
         commandStatusPending = true;
     }
 
+
+
+    void setMachineRuntimeStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_machine_runtime";
+        doc["status"] = "done";
+        doc["message"] = "Machine runtime returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject machine = doc["machine"].to<JsonObject>();
+        machine["state"] = machineRuntimeStateName();
+        machine["source"] = machineRuntimeSourceName();
+        machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["last_reason"] = machineRuntimeLastReason();
+        machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
+        machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
+        machine["observed_sec"] = machineRuntimeObservedSec();
+        machine["utilization_pct"] = machineRuntimeUtilizationPct();
+        machine["current_segment_sec"] = deviceContext.machineRuntime.currentSegmentSec;
+        machine["last_state_change_ms"] = deviceContext.machineRuntime.lastStateChangeMs;
+        machine["state_change_count"] = deviceContext.machineRuntime.stateChangeCount;
+        machine["run_start_count"] = deviceContext.machineRuntime.runStartCount;
+        machine["stop_start_count"] = deviceContext.machineRuntime.stopStartCount;
+        machine["longest_run_sec"] = deviceContext.machineRuntime.longestRunSec;
+        machine["longest_stop_sec"] = deviceContext.machineRuntime.longestStopSec;
+        machine["running_current_threshold"] = deviceContext.machineRuntime.runningCurrentThreshold;
+        machine["current"] = deviceContext.state.current;
+        machine["temperature"] = deviceContext.state.temperature;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setDailySummaryStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_daily_summary";
+        doc["status"] = "done";
+        doc["message"] = "Daily summary returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject summary = doc["daily_summary"].to<JsonObject>();
+        summary["date_source"] = "uptime_day";
+        summary["uptime_day_index"] = deviceContext.machineRuntime.uptimeDayIndex;
+        summary["machine_state"] = machineRuntimeStateName();
+        summary["runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
+        summary["stop_sec"] = deviceContext.machineRuntime.todayStopSec;
+        summary["observed_sec"] = machineRuntimeObservedSec();
+        summary["runtime_min"] = deviceContext.machineRuntime.todayRuntimeSec / 60;
+        summary["stop_min"] = deviceContext.machineRuntime.todayStopSec / 60;
+        summary["utilization_pct"] = machineRuntimeUtilizationPct();
+        summary["state_change_count"] = deviceContext.machineRuntime.stateChangeCount;
+        summary["run_start_count"] = deviceContext.machineRuntime.runStartCount;
+        summary["stop_start_count"] = deviceContext.machineRuntime.stopStartCount;
+        summary["longest_run_sec"] = deviceContext.machineRuntime.longestRunSec;
+        summary["longest_stop_sec"] = deviceContext.machineRuntime.longestStopSec;
+        summary["report_ready_for_n8n"] = true;
+
+        JsonObject ai = doc["ai_report_hint"].to<JsonObject>();
+        ai["language"] = "tr";
+        ai["audience"] = "workshop_owner";
+        ai["message_type"] = "daily_factorybox_summary";
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setMachineStateStatus(const String& requestId, const char* status, const char* message)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "set_machine_state";
+        doc["status"] = status;
+        doc["message"] = message;
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+
+        JsonObject machine = doc["machine"].to<JsonObject>();
+        machine["state"] = machineRuntimeStateName();
+        machine["source"] = machineRuntimeSourceName();
+        machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
+        machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
+        machine["utilization_pct"] = machineRuntimeUtilizationPct();
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setMachineCounterResetStatus(const String& requestId)
+    {
+        resetMachineRuntimeCounters();
+        setCommandStatus(requestId, "reset_machine_runtime", "done", "Machine runtime counters reset");
+    }
 
     void setWatchdogStatus(const String& requestId)
     {
@@ -425,6 +551,24 @@ namespace
         if (command == "get_reliability")
         {
             setFieldReliabilityStatus(requestId);
+            return;
+        }
+
+        if (command == "get_machine_runtime")
+        {
+            setMachineRuntimeStatus(requestId);
+            return;
+        }
+
+        if (command == "get_daily_summary")
+        {
+            setDailySummaryStatus(requestId);
+            return;
+        }
+
+        if (command == "reset_machine_runtime")
+        {
+            setMachineCounterResetStatus(requestId);
             return;
         }
 
@@ -521,6 +665,37 @@ void handleCommandJson(const char* json)
 
     String command = doc["command"].as<String>();
     String requestId = readOptionalString(doc, "request_id");
+
+    if (command == "set_machine_state")
+    {
+        String state = readOptionalString(doc, "state");
+
+        if (state.length() == 0)
+        {
+            setMachineStateStatus(requestId, "rejected", "Missing machine state. Use RUNNING, STOPPED or AUTO");
+            return;
+        }
+
+        String normalized = state;
+        normalized.toUpperCase();
+        normalized.trim();
+
+        if (normalized == "AUTO")
+        {
+            clearMachineRuntimeManualOverride();
+            setMachineStateStatus(requestId, "done", "Machine state returned to AUTO mode");
+            return;
+        }
+
+        if (!setMachineRuntimeStateFromString(state, "MANUAL_COMMAND"))
+        {
+            setMachineStateStatus(requestId, "rejected", "Invalid machine state. Use RUNNING, STOPPED or AUTO");
+            return;
+        }
+
+        setMachineStateStatus(requestId, "done", "Machine state updated");
+        return;
+    }
 
     if (command == "set_log_level")
     {

@@ -4,6 +4,7 @@
 #include "app_version.h"
 #include "production_manager.h"
 #include "field_reliability_manager.h"
+#include "machine_runtime_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -56,6 +57,11 @@ namespace
         doc["field_reliability_score"] = fieldReliabilityScore();
         doc["wifi_drop_events"] = deviceContext.fieldReliability.wifiDropEvents;
         doc["mqtt_drop_events"] = deviceContext.fieldReliability.mqttDropEvents;
+        doc["machine_state"] = machineRuntimeStateName();
+        doc["machine_today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
+        doc["machine_today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
+        doc["machine_utilization_pct"] = machineRuntimeUtilizationPct();
+        doc["machine_manual_override"] = deviceContext.machineRuntime.manualOverride;
 
         heartbeatPayload = "";
         serializeJson(doc, heartbeatPayload);

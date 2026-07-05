@@ -12,6 +12,7 @@ void publishCommandStatus(const char* payload);
 void publishConfigStatus(const char* payload);
 void publishHeartbeat(const char* payload);
 void publishOtaStatus(const char* payload);
+void publishMachineStatus(const char* payload);
 
 bool hasIncomingConfigPayload();
 String takeIncomingConfigPayload();
