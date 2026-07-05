@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 2.0.0
+Firmware version: 2.7.0
 Build type: production
 Hardware revision: prototype
 ```
@@ -38,6 +38,8 @@ Hardware revision: prototype
 - Boot diagnostics command
 - Field reliability layer
 - Remote reliability check command
+- FactoryBox One machine runtime tracker
+- Digital input runtime driver for DI1
 
 ## Architecture principle
 
@@ -156,7 +158,7 @@ PlatformIO > esp32dev > Platform > Monitor
 Expected boot output:
 
 ```text
-MiaDeviceOS v2.0.0
+MiaDeviceOS v2.7.0
 Model: MiaDeviceOS-LaserMonitor
 Build: production
 Device ID: laser01
@@ -190,6 +192,7 @@ mia/site01/laser01/telemetry
 mia/site01/laser01/heartbeat
 mia/site01/laser01/alarm
 mia/site01/laser01/ota/status
+mia/site01/laser01/machine/status
 ```
 
 All topic definitions are centralized in:
@@ -601,4 +604,114 @@ longest_run_sec overflow koruması
 state geçişinde segment istatistiğini güvenli kapatma
 last_state_change_ms için güvenli elapsed hesaplama
 Firmware 2.2.1
+```
+
+
+## v2.7 Digital Input Runtime Driver
+
+v2.7 ile FactoryBox One, makine çalışma bilgisini DI1 dijital girişinden alabilecek hale geldi.
+
+Varsayılan güvenli davranış:
+
+```text
+Makine runtime giriş kaynağı başlangıçta AUTO_CURRENT olarak kalır.
+DI1 test veya saha kurulumunda komutla aktif edilir.
+```
+
+Yeni altyapı:
+
+```text
+DigitalInputManager
+DI1 debounce okuma
+DI1 simulation test modu
+Machine Runtime için DI1 input source
+```
+
+DI1 varsayılan pin:
+
+```text
+GPIO27
+INPUT_PULLUP
+Active LOW
+```
+
+Yani kuru kontak / röle çıkışı DI1'i GND'ye çekerse DI1 aktif sayılır.
+
+Yeni komutlar:
+
+```text
+get_digital_inputs
+set_di1_simulation
+set_machine_input_source
+```
+
+### get_digital_inputs
+
+```json
+{
+  "command": "get_digital_inputs",
+  "request_id": "di-001"
+}
+```
+
+### set_machine_input_source
+
+DI1'i makine runtime kaynağı yapmak için:
+
+```json
+{
+  "command": "set_machine_input_source",
+  "request_id": "di-src-001",
+  "source": "DI1"
+}
+```
+
+Tekrar akım simülasyonuna dönmek için:
+
+```json
+{
+  "command": "set_machine_input_source",
+  "request_id": "di-src-002",
+  "source": "AUTO_CURRENT"
+}
+```
+
+### set_di1_simulation
+
+DI1 aktif simülasyonu:
+
+```json
+{
+  "command": "set_di1_simulation",
+  "request_id": "di-sim-001",
+  "enabled": true,
+  "active": true
+}
+```
+
+DI1 pasif simülasyonu:
+
+```json
+{
+  "command": "set_di1_simulation",
+  "request_id": "di-sim-002",
+  "enabled": true,
+  "active": false
+}
+```
+
+Simülasyonu kapatmak için:
+
+```json
+{
+  "command": "set_di1_simulation",
+  "request_id": "di-sim-003",
+  "enabled": false
+}
+```
+
+Detaylar:
+
+```text
+docs/DIGITAL_INPUT_RUNTIME_DRIVER.md
 ```

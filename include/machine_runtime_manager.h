@@ -10,8 +10,10 @@ const char* machineRuntimeStateName();
 const char* machineRuntimeStateName(MachineRuntimeState state);
 const char* machineRuntimeSourceName();
 const char* machineRuntimeLastReason();
+const char* machineRuntimeInputSourceModeName();
 
 bool setMachineRuntimeStateFromString(const String& state, const char* reason);
+bool setMachineRuntimeInputSourceFromString(const String& source);
 void clearMachineRuntimeManualOverride();
 void resetMachineRuntimeCounters();
 

@@ -3,6 +3,7 @@
 #include "app_version.h"
 #include "device_context.h"
 #include "log_manager.h"
+#include "digital_input_manager.h"
 
 #include <ArduinoJson.h>
 
@@ -15,6 +16,11 @@ namespace
 
     MachineRuntimeState desiredStateFromSensor()
     {
+        if (deviceContext.machineRuntime.useDigitalInput1ForRuntime)
+        {
+            return digitalInputDi1Active() ? MachineRuntimeState::Running : MachineRuntimeState::Stopped;
+        }
+
         if (deviceContext.state.current >= deviceContext.machineRuntime.runningCurrentThreshold)
         {
             return MachineRuntimeState::Running;
@@ -110,7 +116,10 @@ namespace
         JsonObject machine = doc["machine"].to<JsonObject>();
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
+        machine["input_source"] = machineRuntimeInputSourceModeName();
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["di1_active"] = digitalInputDi1Active();
+        machine["di1_source"] = digitalInputDi1SourceName();
         machine["last_reason"] = machineRuntimeLastReason();
         machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
@@ -194,6 +203,7 @@ void setupMachineRuntimeManager()
     deviceContext.machineRuntime.state = MachineRuntimeState::Unknown;
     deviceContext.machineRuntime.previousState = MachineRuntimeState::Unknown;
     deviceContext.machineRuntime.manualOverride = false;
+    deviceContext.machineRuntime.useDigitalInput1ForRuntime = false;
     deviceContext.machineRuntime.stateSource = "AUTO_CURRENT";
     deviceContext.machineRuntime.lastStateReason = "BOOT";
     deviceContext.machineRuntime.startedAtMs = now;
@@ -242,7 +252,12 @@ void updateMachineRuntimeManager()
 
         if (desiredState != deviceContext.machineRuntime.state)
         {
-            transitionToState(desiredState, "AUTO_CURRENT_THRESHOLD", "AUTO_CURRENT", false);
+            transitionToState(
+                desiredState,
+                deviceContext.machineRuntime.useDigitalInput1ForRuntime ? "DI1_SIGNAL" : "AUTO_CURRENT_THRESHOLD",
+                machineRuntimeInputSourceModeName(),
+                false
+            );
             updateSegmentStats(now);
         }
     }
@@ -289,6 +304,11 @@ const char* machineRuntimeLastReason()
     return deviceContext.machineRuntime.lastStateReason;
 }
 
+const char* machineRuntimeInputSourceModeName()
+{
+    return deviceContext.machineRuntime.useDigitalInput1ForRuntime ? "DI1" : "AUTO_CURRENT";
+}
+
 bool setMachineRuntimeStateFromString(const String& state, const char* reason)
 {
     MachineRuntimeState parsedState;
@@ -314,8 +334,48 @@ void clearMachineRuntimeManualOverride()
     updateSegmentStats(now);
 
     deviceContext.machineRuntime.manualOverride = false;
-    transitionToState(desiredStateFromSensor(), "MANUAL_OVERRIDE_CLEARED", "AUTO_CURRENT", false);
+    transitionToState(desiredStateFromSensor(), "MANUAL_OVERRIDE_CLEARED", machineRuntimeInputSourceModeName(), false);
     updateSegmentStats(now);
+}
+
+
+bool setMachineRuntimeInputSourceFromString(const String& source)
+{
+    String normalized = source;
+    normalized.toUpperCase();
+    normalized.trim();
+
+    bool useDi1 = false;
+
+    if (normalized == "DI1" || normalized == "DIGITAL_INPUT_1" || normalized == "DIGITAL_INPUT")
+    {
+        useDi1 = true;
+    }
+    else if (normalized == "AUTO_CURRENT" || normalized == "CURRENT" || normalized == "CURRENT_SENSOR")
+    {
+        useDi1 = false;
+    }
+    else
+    {
+        return false;
+    }
+
+    unsigned long now = millis();
+    accumulateRuntime(now);
+    updateSegmentStats(now);
+
+    deviceContext.machineRuntime.useDigitalInput1ForRuntime = useDi1;
+    deviceContext.machineRuntime.manualOverride = false;
+
+    transitionToState(
+        desiredStateFromSensor(),
+        useDi1 ? "INPUT_SOURCE_DI1" : "INPUT_SOURCE_AUTO_CURRENT",
+        machineRuntimeInputSourceModeName(),
+        false
+    );
+
+    updateSegmentStats(now);
+    return true;
 }
 
 void resetMachineRuntimeCounters()
@@ -367,7 +427,11 @@ String buildMachineRuntimeJson()
     JsonObject machine = doc["machine"].to<JsonObject>();
     machine["state"] = machineRuntimeStateName();
     machine["source"] = machineRuntimeSourceName();
+    machine["input_source"] = machineRuntimeInputSourceModeName();
     machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+    machine["di1_active"] = digitalInputDi1Active();
+    machine["di1_source"] = digitalInputDi1SourceName();
+    machine["di1_simulation_enabled"] = digitalInputDi1SimulationEnabled();
     machine["last_reason"] = machineRuntimeLastReason();
     machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
     machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
@@ -402,6 +466,8 @@ String buildDailySummaryJson()
     summary["date_source"] = "uptime_day";
     summary["uptime_day_index"] = deviceContext.machineRuntime.uptimeDayIndex;
     summary["machine_state"] = machineRuntimeStateName();
+    summary["input_source"] = machineRuntimeInputSourceModeName();
+    summary["di1_active"] = digitalInputDi1Active();
     summary["runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
     summary["stop_sec"] = deviceContext.machineRuntime.todayStopSec;
     summary["observed_sec"] = machineRuntimeObservedSec();

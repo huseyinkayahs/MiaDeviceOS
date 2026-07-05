@@ -17,6 +17,7 @@ struct MachineRuntimeContext
     MachineRuntimeState previousState = MachineRuntimeState::Unknown;
 
     bool manualOverride = false;
+    bool useDigitalInput1ForRuntime = false;
     const char* stateSource = "AUTO_CURRENT";
     const char* lastStateReason = "BOOT";
 

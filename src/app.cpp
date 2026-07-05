@@ -24,6 +24,7 @@
 #include "watchdog_manager.h"
 #include "field_reliability_manager.h"
 #include "machine_runtime_manager.h"
+#include "digital_input_manager.h"
 
 namespace
 {
@@ -139,6 +140,10 @@ void appSetup()
 
     updateSensors();
 
+    setupDigitalInputManager();
+
+    updateDigitalInputManager();
+
     setupMachineRuntimeManager();
 
     setupDisplay();
@@ -182,6 +187,8 @@ void appLoop()
     }
 
     updateSensors();
+
+    updateDigitalInputManager();
 
     updateMachineRuntimeManager();
 

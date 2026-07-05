@@ -9,6 +9,7 @@
 #include "watchdog_manager.h"
 #include "field_reliability_manager.h"
 #include "machine_runtime_manager.h"
+#include "digital_input_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -170,13 +171,26 @@ namespace
         JsonObject machine = doc["machine_runtime"].to<JsonObject>();
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
+        machine["input_source"] = machineRuntimeInputSourceModeName();
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["di1_active"] = digitalInputDi1Active();
+        machine["di1_source"] = digitalInputDi1SourceName();
+        machine["di1_simulation_enabled"] = digitalInputDi1SimulationEnabled();
         machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
         machine["observed_sec"] = machineRuntimeObservedSec();
         machine["utilization_pct"] = machineRuntimeUtilizationPct();
         machine["state_change_count"] = deviceContext.machineRuntime.stateChangeCount;
         machine["current_segment_sec"] = deviceContext.machineRuntime.currentSegmentSec;
+
+        JsonObject digitalInputs = doc["digital_inputs"].to<JsonObject>();
+        JsonObject di1 = digitalInputs["di1"].to<JsonObject>();
+        di1["pin"] = deviceContext.digitalInput.di1Pin;
+        di1["active"] = deviceContext.digitalInput.di1Active;
+        di1["state"] = digitalInputDi1StateName();
+        di1["source"] = digitalInputDi1SourceName();
+        di1["simulation_enabled"] = deviceContext.digitalInput.di1SimulationEnabled;
+        di1["change_count"] = deviceContext.digitalInput.di1ChangeCount;
 
         JsonObject alarm = doc["alarm"].to<JsonObject>();
         alarm["active"] = deviceContext.alarm.active;
@@ -304,6 +318,8 @@ namespace
         health["machine_utilization_pct"] = machineRuntimeUtilizationPct();
         health["machine_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         health["machine_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
+        health["machine_input_source"] = machineRuntimeInputSourceModeName();
+        health["di1_active"] = digitalInputDi1Active();
 
         JsonObject watchdog = health["watchdog"].to<JsonObject>();
         watchdog["enabled"] = deviceContext.watchdog.enabled;
@@ -373,7 +389,11 @@ namespace
         JsonObject machine = doc["machine"].to<JsonObject>();
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
+        machine["input_source"] = machineRuntimeInputSourceModeName();
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["di1_active"] = digitalInputDi1Active();
+        machine["di1_source"] = digitalInputDi1SourceName();
+        machine["di1_simulation_enabled"] = digitalInputDi1SimulationEnabled();
         machine["last_reason"] = machineRuntimeLastReason();
         machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
@@ -412,6 +432,8 @@ namespace
         summary["date_source"] = "uptime_day";
         summary["uptime_day_index"] = deviceContext.machineRuntime.uptimeDayIndex;
         summary["machine_state"] = machineRuntimeStateName();
+        summary["input_source"] = machineRuntimeInputSourceModeName();
+        summary["di1_active"] = digitalInputDi1Active();
         summary["runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         summary["stop_sec"] = deviceContext.machineRuntime.todayStopSec;
         summary["observed_sec"] = machineRuntimeObservedSec();
@@ -450,10 +472,104 @@ namespace
         JsonObject machine = doc["machine"].to<JsonObject>();
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
+        machine["input_source"] = machineRuntimeInputSourceModeName();
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["di1_active"] = digitalInputDi1Active();
+        machine["di1_source"] = digitalInputDi1SourceName();
+        machine["di1_simulation_enabled"] = digitalInputDi1SimulationEnabled();
         machine["today_runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         machine["today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
         machine["utilization_pct"] = machineRuntimeUtilizationPct();
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+
+    void setMachineInputSourceStatus(const String& requestId, const char* status, const char* message)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "set_machine_input_source";
+        doc["status"] = status;
+        doc["message"] = message;
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+
+        JsonObject machine = doc["machine"].to<JsonObject>();
+        machine["state"] = machineRuntimeStateName();
+        machine["source"] = machineRuntimeSourceName();
+        machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+        machine["di1_active"] = digitalInputDi1Active();
+        machine["di1_source"] = digitalInputDi1SourceName();
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setDigitalInputsStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_digital_inputs";
+        doc["status"] = "done";
+        doc["message"] = "Digital inputs returned";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject digitalInputs = doc["digital_inputs"].to<JsonObject>();
+        JsonObject di1 = digitalInputs["di1"].to<JsonObject>();
+        di1["pin"] = deviceContext.digitalInput.di1Pin;
+        di1["raw_level"] = deviceContext.digitalInput.di1StableLevel ? "HIGH" : "LOW";
+        di1["active"] = deviceContext.digitalInput.di1Active;
+        di1["state"] = digitalInputDi1StateName();
+        di1["source"] = digitalInputDi1SourceName();
+        di1["active_high"] = deviceContext.digitalInput.di1ActiveHigh;
+        di1["pullup"] = deviceContext.digitalInput.di1UsePullup;
+        di1["debounce_ms"] = deviceContext.digitalInput.debounceMs;
+        di1["change_count"] = deviceContext.digitalInput.di1ChangeCount;
+        di1["last_change_ms"] = deviceContext.digitalInput.lastStableChangeMs;
+        di1["simulation_enabled"] = deviceContext.digitalInput.di1SimulationEnabled;
+        di1["simulated_active"] = deviceContext.digitalInput.di1SimulatedActive;
+        di1["last_reason"] = deviceContext.digitalInput.lastReason;
+
+        JsonObject machine = doc["machine"].to<JsonObject>();
+        machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["state"] = machineRuntimeStateName();
+        machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setDi1SimulationStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "set_di1_simulation";
+        doc["status"] = "done";
+        doc["message"] = "DI1 simulation updated";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+
+        JsonObject digitalInputs = doc["digital_inputs"].to<JsonObject>();
+        JsonObject di1 = digitalInputs["di1"].to<JsonObject>();
+        di1["active"] = deviceContext.digitalInput.di1Active;
+        di1["state"] = digitalInputDi1StateName();
+        di1["source"] = digitalInputDi1SourceName();
+        di1["simulation_enabled"] = deviceContext.digitalInput.di1SimulationEnabled;
+        di1["simulated_active"] = deviceContext.digitalInput.di1SimulatedActive;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -551,6 +667,12 @@ namespace
         if (command == "get_reliability")
         {
             setFieldReliabilityStatus(requestId);
+            return;
+        }
+
+        if (command == "get_digital_inputs")
+        {
+            setDigitalInputsStatus(requestId);
             return;
         }
 
@@ -665,6 +787,52 @@ void handleCommandJson(const char* json)
 
     String command = doc["command"].as<String>();
     String requestId = readOptionalString(doc, "request_id");
+
+
+    if (command == "set_machine_input_source")
+    {
+        String source = readOptionalString(doc, "source");
+
+        if (source.length() == 0)
+        {
+            setMachineInputSourceStatus(requestId, "rejected", "Missing source. Use AUTO_CURRENT or DI1");
+            return;
+        }
+
+        if (!setMachineRuntimeInputSourceFromString(source))
+        {
+            setMachineInputSourceStatus(requestId, "rejected", "Invalid source. Use AUTO_CURRENT or DI1");
+            return;
+        }
+
+        setMachineInputSourceStatus(requestId, "done", "Machine input source updated");
+        return;
+    }
+
+    if (command == "set_di1_simulation")
+    {
+        bool enabled = false;
+        bool active = false;
+
+        if (doc["enabled"].is<bool>())
+        {
+            enabled = doc["enabled"].as<bool>();
+        }
+        else
+        {
+            setCommandStatus(requestId, command, "rejected", "Missing enabled boolean");
+            return;
+        }
+
+        if (doc["active"].is<bool>())
+        {
+            active = doc["active"].as<bool>();
+        }
+
+        setDigitalInputDi1Simulation(enabled, active);
+        setDi1SimulationStatus(requestId);
+        return;
+    }
 
     if (command == "set_machine_state")
     {

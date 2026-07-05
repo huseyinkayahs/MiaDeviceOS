@@ -11,6 +11,7 @@
 #include "watchdog_context.h"
 #include "field_reliability_context.h"
 #include "machine_runtime_context.h"
+#include "digital_input_context.h"
 
 struct DeviceContext
 {
@@ -35,6 +36,8 @@ struct DeviceContext
     FieldReliabilityContext fieldReliability;
 
     MachineRuntimeContext machineRuntime;
+
+    DigitalInputContext digitalInput;
 };
 
 extern DeviceContext deviceContext;

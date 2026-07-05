@@ -5,6 +5,7 @@
 #include "production_manager.h"
 #include "field_reliability_manager.h"
 #include "machine_runtime_manager.h"
+#include "digital_input_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -62,6 +63,9 @@ namespace
         doc["machine_today_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
         doc["machine_utilization_pct"] = machineRuntimeUtilizationPct();
         doc["machine_manual_override"] = deviceContext.machineRuntime.manualOverride;
+        doc["machine_input_source"] = machineRuntimeInputSourceModeName();
+        doc["di1_active"] = digitalInputDi1Active();
+        doc["di1_source"] = digitalInputDi1SourceName();
 
         heartbeatPayload = "";
         serializeJson(doc, heartbeatPayload);

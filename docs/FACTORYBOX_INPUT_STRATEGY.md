@@ -122,3 +122,8 @@ MachineInputSource
 ```
 
 For now, planning is enough. The next code sprint should only start after the pilot wiring decision is clear.
+
+
+## v2.7 Notu
+
+DI1 dijital giriş sürücüsü eklendi. Firmware artık `set_machine_input_source` komutu ile Machine Runtime kaynağını `DI1` veya `AUTO_CURRENT` olarak değiştirebilir. Fiziksel bağlantı olmadan test için `set_di1_simulation` komutu kullanılabilir.
