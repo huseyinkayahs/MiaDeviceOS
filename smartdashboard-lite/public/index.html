@@ -84,17 +84,32 @@
       </div>
     </section>
 
-    <section class="panel">
-      <h3>Komutlar</h3>
+    <section class="panel safety-panel">
+      <div>
+        <h3>Güvenli Cihaz Kontrolü</h3>
+        <p>Bu bölümdeki işlemler cihaz davranışını değiştirir. DI1 / AUTO_CURRENT seçimi kalıcıdır; restart sonrası korunur.</p>
+      </div>
       <div class="buttons">
         <button data-action="refresh">Tüm Verileri Yenile</button>
+        <button data-source="AUTO_CURRENT">AUTO_CURRENT seç</button>
+        <button data-source="DI1">DI1 seç</button>
+        <button class="danger" data-action="restart">Restart</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Okuma Komutları</h3>
+      <div class="buttons">
+        <button data-command="get_config">get_config</button>
         <button data-command="get_health">get_health</button>
         <button data-command="get_machine_runtime">get_machine_runtime</button>
         <button data-command="get_daily_summary">get_daily_summary</button>
         <button data-command="get_digital_inputs">get_digital_inputs</button>
-        <button data-source="AUTO_CURRENT">AUTO_CURRENT seç</button>
-        <button data-source="DI1">DI1 seç</button>
-        <button class="danger" data-action="restart">Restart</button>
+        <button data-command="get_runtime_settings">get_runtime_settings</button>
+        <button data-command="get_reliability">get_reliability</button>
+        <button data-command="get_watchdog">get_watchdog</button>
+        <button data-command="get_boot_diagnostics">get_boot_diagnostics</button>
+        <button data-command="get_diagnostics">get_diagnostics</button>
       </div>
     </section>
 
@@ -110,6 +125,25 @@
       <div>
         <h3>Son MQTT Mesajları</h3>
         <pre id="rawMessages">Bekleniyor...</pre>
+      </div>
+    </section>
+
+    <section class="panel detail-grid">
+      <div>
+        <h3>Diagnostics</h3>
+        <pre id="diagnosticsData">Bekleniyor...</pre>
+      </div>
+      <div>
+        <h3>Reliability</h3>
+        <pre id="reliabilityData">Bekleniyor...</pre>
+      </div>
+      <div>
+        <h3>Runtime Settings</h3>
+        <pre id="runtimeSettingsData">Bekleniyor...</pre>
+      </div>
+      <div>
+        <h3>Digital Inputs</h3>
+        <pre id="digitalInputsData">Bekleniyor...</pre>
       </div>
     </section>
   </main>

@@ -110,6 +110,23 @@ button.danger { background: var(--bad); }
   grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
 }
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.safety-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+.safety-panel p {
+  margin: 6px 0 0;
+  color: var(--warn);
+}
 pre {
   margin: 0;
   max-height: 360px;
@@ -143,8 +160,8 @@ pre {
 .toast.error { background: var(--bad); }
 
 @media (max-width: 900px) {
-  .topbar, .hero-card { flex-direction: column; align-items: flex-start; }
-  .grid, .three-col, .status-grid { grid-template-columns: 1fr; }
+  .topbar, .hero-card, .safety-panel { flex-direction: column; align-items: flex-start; }
+  .grid, .three-col, .status-grid, .detail-grid { grid-template-columns: 1fr; }
   .status-grid .wide { grid-column: span 1; }
   .hero-card h2 { font-size: 40px; }
 }

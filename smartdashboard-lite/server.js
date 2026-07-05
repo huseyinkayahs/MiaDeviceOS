@@ -14,6 +14,20 @@ const BASE_TOPIC = process.env.MQTT_BASE_TOPIC || 'mia/site01/laser01';
 const DEVICE_ID = process.env.DEVICE_ID || 'laser01';
 const DEVICE_ONLINE_TIMEOUT_SEC = Number(process.env.DEVICE_ONLINE_TIMEOUT_SEC || 90);
 
+const ALLOWED_COMMANDS = new Set([
+  'get_config',
+  'get_health',
+  'get_machine_runtime',
+  'get_daily_summary',
+  'get_digital_inputs',
+  'get_runtime_settings',
+  'get_diagnostics',
+  'get_reliability',
+  'get_watchdog',
+  'get_boot_diagnostics',
+  'get_log_level',
+]);
+
 const topics = {
   command: `${BASE_TOPIC}/command`,
   commandStatus: `${BASE_TOPIC}/command/status`,
@@ -46,6 +60,8 @@ const state = {
   watchdog: null,
   digitalInputs: null,
   runtimeSettings: null,
+  bootDiagnostics: null,
+  logLevel: null,
   config: null,
   rawMessages: [],
   commandHistory: [],
@@ -147,6 +163,16 @@ function applyCommandStatus(message) {
   }
   if (message.command === 'get_config') {
     state.config = enriched;
+  }
+  if (message.command === 'get_boot_diagnostics' && message.boot) {
+    state.bootDiagnostics = withReceivedAt(message.boot);
+  }
+  if (message.command === 'get_log_level') {
+    state.logLevel = withReceivedAt({
+      level: message.log_level,
+      level_value: message.log_level_value,
+      persistent: message.persistent,
+    });
   }
   if (message.command === 'set_machine_input_source' && message.machine) {
     state.machineRuntime = withReceivedAt({
@@ -258,6 +284,7 @@ function sendCommand(command, extra = {}) {
 
 function requestSnapshot() {
   const commands = [
+    'get_config',
     'get_machine_runtime',
     'get_daily_summary',
     'get_health',
@@ -265,6 +292,8 @@ function requestSnapshot() {
     'get_runtime_settings',
     'get_reliability',
     'get_watchdog',
+    'get_boot_diagnostics',
+    'get_diagnostics',
   ];
 
   commands.forEach((command, index) => {
@@ -289,6 +318,9 @@ app.post('/api/refresh', (_req, res) => {
 
 app.post('/api/command/:command', (req, res) => {
   const command = req.params.command;
+  if (!ALLOWED_COMMANDS.has(command)) {
+    return res.status(400).json({ ok: false, message: 'Command is not allowed from dashboard' });
+  }
   const payload = sendCommand(command, req.body || {});
   res.json({ ok: true, payload });
 });

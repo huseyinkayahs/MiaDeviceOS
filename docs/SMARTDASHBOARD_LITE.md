@@ -92,3 +92,25 @@ Buton disabled / gönderiliyor durumu
 ## Güvenlik Notu
 
 Bu panel lokal pilot/test panelidir. Production kullanıcı yönetimi, yetkilendirme ve internet üzerinden erişim kapsam dışıdır.
+
+
+## v2.13 Device Controls
+
+SmartDashboard Lite cihaz kontrol bölümü güvenli hale getirildi.
+
+Eklenenler:
+
+```text
+DI1 / AUTO_CURRENT seçimi için onay penceresi
+Restart için daha açıklayıcı onay penceresi
+get_config butonu
+get_diagnostics butonu
+get_reliability butonu
+get_watchdog butonu
+get_boot_diagnostics butonu
+get_runtime_settings butonu
+Diagnostics / Reliability / Runtime Settings / Digital Inputs detay panelleri
+Dashboard üzerinden izin verilen komut listesi
+```
+
+Not: DI1 / AUTO_CURRENT seçimi cihazda kalıcıdır ve restart sonrası korunur.

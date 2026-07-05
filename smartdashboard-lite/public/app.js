@@ -69,6 +69,26 @@ async function postJson(url, body = {}) {
   return result;
 }
 
+function confirmInputSource(source) {
+  const currentSource = currentState?.machineRuntime?.input_source
+    || currentState?.runtimeSettings?.machine_input_source
+    || 'bilinmiyor';
+
+  if (source === 'DI1') {
+    return window.confirm(
+      `Makine kaynağı DI1 yapılacak.\n\n` +
+      `Bu seçim restart sonrası da korunur. DI1 fiziksel olarak bağlı değilse makine STOPPED görünebilir.\n\n` +
+      `Mevcut kaynak: ${currentSource}\nDevam edilsin mi?`
+    );
+  }
+
+  return window.confirm(
+    `Makine kaynağı AUTO_CURRENT yapılacak.\n\n` +
+    `Bu seçim restart sonrası da korunur. Simüle akım yüksekse makine RUNNING görünür.\n\n` +
+    `Mevcut kaynak: ${currentSource}\nDevam edilsin mi?`
+  );
+}
+
 function render(state) {
   currentState = state;
 
@@ -111,6 +131,10 @@ function render(state) {
   setText('lastCommand', pretty(command));
   setText('rawMessages', pretty((state.rawMessages || []).slice(0, 10)));
   setText('commandHistory', pretty((state.commandHistory || []).slice(0, 10)));
+  setText('diagnosticsData', pretty(state.diagnostics || {}));
+  setText('reliabilityData', pretty(state.reliability || {}));
+  setText('runtimeSettingsData', pretty(state.runtimeSettings || {}));
+  setText('digitalInputsData', pretty(state.digitalInputs || {}));
 }
 
 socket.on('state', render);
@@ -140,6 +164,11 @@ document.addEventListener('click', async (event) => {
       showToast(`${command} gönderildi`, 'ok');
     }
     if (source) {
+      const ok = confirmInputSource(source);
+      if (!ok) {
+        showToast('İşlem iptal edildi', 'info');
+        return;
+      }
       await postJson(`/api/machine/input-source/${source}`);
       showToast(`${source} seçildi`, 'ok');
     }
@@ -148,7 +177,7 @@ document.addEventListener('click', async (event) => {
       showToast('Tüm veriler yenileniyor', 'ok');
     }
     if (action === 'restart') {
-      const ok = window.confirm('Cihaz restart edilsin mi?');
+      const ok = window.confirm('Cihaz restart edilsin mi?\n\nCihaz birkaç saniye offline görünebilir.');
       if (ok) {
         await postJson('/api/device/restart');
         showToast('Restart komutu gönderildi', 'ok');
