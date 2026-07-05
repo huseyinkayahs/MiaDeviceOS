@@ -262,3 +262,29 @@ Pano bağlantısı elektrikçi ile yapılır.
 ## Sonuç
 
 Bu sprint ile FactoryBox One gerçek makine sinyaline bir adım daha yaklaştı.
+
+---
+
+## v2.8 Persistence Update
+
+The selected machine input source is now persistent.
+
+If `DI1` is selected using `set_machine_input_source`, the device keeps DI1 mode after restart.
+
+If `AUTO_CURRENT` is selected, the device keeps AUTO_CURRENT mode after restart.
+
+Related command:
+
+```json
+{
+  "command": "get_runtime_settings",
+  "request_id": "runtime-settings-001"
+}
+```
+
+Expected fields:
+
+```json
+"machine_input_source": "DI1",
+"machine_input_source_persistent": true
+```

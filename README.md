@@ -7,7 +7,7 @@ Current target device:
 ```text
 Device model: MiaDeviceOS-LaserMonitor
 Device ID: laser01
-Firmware version: 2.7.0
+Firmware version: 2.8.1
 Build type: production
 Hardware revision: prototype
 ```
@@ -40,6 +40,7 @@ Hardware revision: prototype
 - Remote reliability check command
 - FactoryBox One machine runtime tracker
 - Digital input runtime driver for DI1
+- Persistent machine input source memory
 
 ## Architecture principle
 
@@ -99,6 +100,7 @@ docs/WATCHDOG_BOOT_DIAGNOSTICS.md
 docs/FIELD_RELIABILITY.md
 docs/FINAL_SMOKE_TEST.md
 docs/FIELD_TEST_CHECKLIST.md
+docs/INPUT_SOURCE_PERSISTENCE.md
 docs/RELEASE_NOTES_v2.0.md
 ```
 
@@ -539,6 +541,7 @@ Important docs:
 ```text
 docs/FINAL_SMOKE_TEST.md
 docs/FIELD_TEST_CHECKLIST.md
+docs/INPUT_SOURCE_PERSISTENCE.md
 docs/RELEASE_NOTES_v2.0.md
 ```
 

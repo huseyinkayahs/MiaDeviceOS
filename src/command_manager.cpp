@@ -172,6 +172,7 @@ namespace
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
         machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["input_source_persistent"] = true;
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
         machine["di1_active"] = digitalInputDi1Active();
         machine["di1_source"] = digitalInputDi1SourceName();
@@ -279,6 +280,8 @@ namespace
         runtimeSettings["log_level"] = currentLogLevelName();
         runtimeSettings["log_level_value"] = static_cast<int>(getLogLevel());
         runtimeSettings["log_level_persistent"] = true;
+        runtimeSettings["machine_input_source"] = machineRuntimeInputSourceModeName();
+        runtimeSettings["machine_input_source_persistent"] = true;
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -390,6 +393,7 @@ namespace
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
         machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["input_source_persistent"] = true;
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
         machine["di1_active"] = digitalInputDi1Active();
         machine["di1_source"] = digitalInputDi1SourceName();
@@ -433,6 +437,7 @@ namespace
         summary["uptime_day_index"] = deviceContext.machineRuntime.uptimeDayIndex;
         summary["machine_state"] = machineRuntimeStateName();
         summary["input_source"] = machineRuntimeInputSourceModeName();
+        summary["input_source_persistent"] = true;
         summary["di1_active"] = digitalInputDi1Active();
         summary["runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
         summary["stop_sec"] = deviceContext.machineRuntime.todayStopSec;
@@ -473,6 +478,7 @@ namespace
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
         machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["input_source_persistent"] = true;
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
         machine["di1_active"] = digitalInputDi1Active();
         machine["di1_source"] = digitalInputDi1SourceName();
@@ -503,6 +509,7 @@ namespace
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
         machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["input_source_persistent"] = true;
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
         machine["di1_active"] = digitalInputDi1Active();
         machine["di1_source"] = digitalInputDi1SourceName();
@@ -805,7 +812,13 @@ void handleCommandJson(const char* json)
             return;
         }
 
-        setMachineInputSourceStatus(requestId, "done", "Machine input source updated");
+        if (!saveRuntimeMachineInputSource(machineRuntimeInputSourceModeName()))
+        {
+            setMachineInputSourceStatus(requestId, "failed", "Machine input source updated in memory but failed to persist");
+            return;
+        }
+
+        setMachineInputSourceStatus(requestId, "done", "Machine input source updated and persisted");
         return;
     }
 

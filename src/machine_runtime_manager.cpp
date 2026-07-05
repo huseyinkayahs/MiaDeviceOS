@@ -4,6 +4,7 @@
 #include "device_context.h"
 #include "log_manager.h"
 #include "digital_input_manager.h"
+#include "runtime_settings_manager.h"
 
 #include <ArduinoJson.h>
 
@@ -117,6 +118,7 @@ namespace
         machine["state"] = machineRuntimeStateName();
         machine["source"] = machineRuntimeSourceName();
         machine["input_source"] = machineRuntimeInputSourceModeName();
+        machine["input_source_persistent"] = true;
         machine["manual_override"] = deviceContext.machineRuntime.manualOverride;
         machine["di1_active"] = digitalInputDi1Active();
         machine["di1_source"] = digitalInputDi1SourceName();
@@ -203,8 +205,13 @@ void setupMachineRuntimeManager()
     deviceContext.machineRuntime.state = MachineRuntimeState::Unknown;
     deviceContext.machineRuntime.previousState = MachineRuntimeState::Unknown;
     deviceContext.machineRuntime.manualOverride = false;
-    deviceContext.machineRuntime.useDigitalInput1ForRuntime = false;
-    deviceContext.machineRuntime.stateSource = "AUTO_CURRENT";
+
+    String persistedInputSource = loadRuntimeMachineInputSource("AUTO_CURRENT");
+    persistedInputSource.toUpperCase();
+    persistedInputSource.trim();
+
+    deviceContext.machineRuntime.useDigitalInput1ForRuntime = (persistedInputSource == "DI1");
+    deviceContext.machineRuntime.stateSource = machineRuntimeInputSourceModeName();
     deviceContext.machineRuntime.lastStateReason = "BOOT";
     deviceContext.machineRuntime.startedAtMs = now;
     deviceContext.machineRuntime.lastUpdateMs = now;
@@ -219,8 +226,15 @@ void setupMachineRuntimeManager()
     machineStatusPayloadPending = false;
     machineStatusPayload = "";
 
-    transitionToState(desiredStateFromSensor(), "BOOT_AUTO_CURRENT", "AUTO_CURRENT", false);
+    transitionToState(
+        desiredStateFromSensor(),
+        deviceContext.machineRuntime.useDigitalInput1ForRuntime ? "BOOT_PERSISTED_DI1" : "BOOT_PERSISTED_AUTO_CURRENT",
+        machineRuntimeInputSourceModeName(),
+        false
+    );
 
+    logPrint(LOG_LEVEL_INFO, "Machine runtime input source: ");
+    logPrintln(LOG_LEVEL_INFO, machineRuntimeInputSourceModeName());
     logPrintln(LOG_LEVEL_INFO, "Machine runtime tracker basladi.");
 }
 
@@ -467,6 +481,7 @@ String buildDailySummaryJson()
     summary["uptime_day_index"] = deviceContext.machineRuntime.uptimeDayIndex;
     summary["machine_state"] = machineRuntimeStateName();
     summary["input_source"] = machineRuntimeInputSourceModeName();
+    summary["input_source_persistent"] = true;
     summary["di1_active"] = digitalInputDi1Active();
     summary["runtime_sec"] = deviceContext.machineRuntime.todayRuntimeSec;
     summary["stop_sec"] = deviceContext.machineRuntime.todayStopSec;
