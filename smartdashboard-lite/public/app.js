@@ -98,6 +98,7 @@ function render(state) {
   const alarm = state.lastAlarm || {};
   const reliability = state.reliability || state.health || {};
   const command = state.lastCommandStatus || {};
+  const temperatureSensor = state.temperatureSensor || state.diagnostics?.sensor?.temperature_sensor || {};
 
   setPill('mqttStatus', state.mqttConnected, 'MQTT bağlı', 'MQTT bağlı değil');
   setPill('deviceStatus', state.deviceOnline, 'Cihaz online', 'Cihaz bekleniyor');
@@ -122,6 +123,25 @@ function render(state) {
   setText('firmwareVersion', command.firmware_version || state.lastHeartbeat?.firmware_version || state.config?.device?.firmware_version || '—');
   setText('reliabilityScore', reliability.score ?? reliability.field_reliability_score ?? '—');
 
+  const rawTemperature = temperatureSensor.temperature_c
+    ?? state.lastTelemetry?.temperature
+    ?? state.lastHeartbeat?.temperature
+    ?? state.health?.temperature_c;
+  const numericTemperature = Number(rawTemperature);
+  const hasTemperature = rawTemperature !== null && rawTemperature !== undefined && Number.isFinite(numericTemperature);
+  setText('temperatureC', hasTemperature ? `${numericTemperature.toFixed(1)} °C` : '—');
+
+  const temperatureConnected = temperatureSensor.connected
+    ?? state.lastTelemetry?.temperature_sensor_connected
+    ?? state.lastHeartbeat?.temperature_sensor_connected
+    ?? state.health?.temperature_sensor_connected;
+  setText('temperatureSensorStatus', temperatureConnected === true ? 'DS18B20 bağlı' : 'Sensör bekleniyor');
+  const temperatureCard = document.getElementById('temperatureCard');
+  if (temperatureCard) {
+    temperatureCard.classList.toggle('sensor-ok', temperatureConnected === true);
+    temperatureCard.classList.toggle('sensor-bad', temperatureConnected === false);
+  }
+
   setText('lastUpdateTime', formatTime(state.lastUpdatedAt));
   setText('lastMqttTime', `${formatTime(state.lastMqttMessageAt)} (${secondsAgo(state.lastMqttMessageAt)})`);
   setText('lastCommandSent', state.lastCommandSent?.command || '—');
@@ -135,6 +155,7 @@ function render(state) {
   setText('reliabilityData', pretty(state.reliability || {}));
   setText('runtimeSettingsData', pretty(state.runtimeSettings || {}));
   setText('digitalInputsData', pretty(state.digitalInputs || {}));
+  setText('temperatureSensorData', pretty(state.temperatureSensor || {}));
 }
 
 socket.on('state', render);

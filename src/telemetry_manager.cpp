@@ -3,6 +3,7 @@
 #include "device_context.h"
 #include "mqtt_manager.h"
 #include "app_version.h"
+#include "sensor_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -34,12 +35,14 @@ if (now - lastTelemetrySent < intervalMs)
     doc["platform_name"] = MIA_PLATFORM_NAME;
     doc["current"] = deviceContext.state.current;
     doc["temperature"] = deviceContext.state.temperature;
+    doc["temperature_sensor_connected"] = temperatureSensorConnected();
+    doc["temperature_sensor_valid"] = temperatureSensorHasValidReading();
     doc["wifi_rssi"] = deviceContext.state.wifiRSSI;
     doc["uptime_ms"] = now;
     doc["wifi_connected"] = deviceContext.state.wifiConnected;
     doc["mqtt_connected"] = deviceContext.state.mqttConnected;
 
-    char buffer[384];
+    char buffer[512];
     serializeJson(doc, buffer);
 
     publishTelemetry(buffer);

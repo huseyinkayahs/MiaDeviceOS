@@ -10,6 +10,7 @@
 #include "field_reliability_manager.h"
 #include "machine_runtime_manager.h"
 #include "digital_input_manager.h"
+#include "sensor_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -111,6 +112,38 @@ namespace
             default:
                 return "NONE";
         }
+    }
+
+
+    void fillTemperatureSensorStatus(JsonObject sensor)
+    {
+        const bool valid = temperatureSensorHasValidReading();
+        const bool connected = temperatureSensorConnected();
+        const float temperatureC = temperatureSensorValueC();
+
+        sensor["type"] = temperatureSensorTypeName();
+        sensor["connected"] = connected;
+        sensor["valid"] = valid;
+
+        if (valid)
+        {
+            sensor["temperature_c"] = temperatureC;
+        }
+        else
+        {
+            sensor["temperature_c"] = nullptr;
+        }
+
+        sensor["unit"] = "C";
+        sensor["data_pin"] = temperatureSensorDataPin();
+        sensor["resolution_bits"] = temperatureSensorResolutionBits();
+        sensor["read_interval_ms"] = temperatureSensorReadIntervalMs();
+        sensor["last_read_ms"] = temperatureSensorLastReadMs();
+        sensor["read_count"] = temperatureSensorReadCount();
+        sensor["error_count"] = temperatureSensorErrorCount();
+        sensor["temperature_limit_c"] = deviceContext.config.temperatureLimit;
+        sensor["over_limit"] = valid && temperatureC > deviceContext.config.temperatureLimit;
+        sensor["pullup_required"] = true;
     }
 
     void setDiagnosticsStatus(const String& requestId)
@@ -217,7 +250,10 @@ namespace
 
         JsonObject sensor = doc["sensor"].to<JsonObject>();
         sensor["current"] = deviceContext.state.current;
+        sensor["current_simulated"] = true;
         sensor["temperature"] = deviceContext.state.temperature;
+        JsonObject temperatureSensor = sensor["temperature_sensor"].to<JsonObject>();
+        fillTemperatureSensorStatus(temperatureSensor);
 
         commandStatusPayload = "";
         serializeJson(doc, commandStatusPayload);
@@ -323,6 +359,12 @@ namespace
         health["machine_stop_sec"] = deviceContext.machineRuntime.todayStopSec;
         health["machine_input_source"] = machineRuntimeInputSourceModeName();
         health["di1_active"] = digitalInputDi1Active();
+        health["temperature_c"] = temperatureSensorValueC();
+        health["temperature_sensor_connected"] = temperatureSensorConnected();
+        health["temperature_sensor_valid"] = temperatureSensorHasValidReading();
+        health["temperature_over_limit"] =
+            temperatureSensorHasValidReading() &&
+            temperatureSensorValueC() > deviceContext.config.temperatureLimit;
 
         JsonObject watchdog = health["watchdog"].to<JsonObject>();
         watchdog["enabled"] = deviceContext.watchdog.enabled;
@@ -558,6 +600,30 @@ namespace
         commandStatusPending = true;
     }
 
+
+    void setTemperatureStatus(const String& requestId)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+        doc["command"] = "get_temperature";
+        doc["status"] = "done";
+        doc["message"] = temperatureSensorConnected()
+            ? "Temperature returned"
+            : "Temperature sensor unavailable";
+        doc["uptime_ms"] = millis();
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+
+        JsonObject sensor = doc["temperature_sensor"].to<JsonObject>();
+        fillTemperatureSensorStatus(sensor);
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
     void setDi1SimulationStatus(const String& requestId)
     {
         JsonDocument doc;
@@ -680,6 +746,12 @@ namespace
         if (command == "get_digital_inputs")
         {
             setDigitalInputsStatus(requestId);
+            return;
+        }
+
+        if (command == "get_temperature")
+        {
+            setTemperatureStatus(requestId);
             return;
         }
 

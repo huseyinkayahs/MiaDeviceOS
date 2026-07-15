@@ -56,6 +56,11 @@
         <span class="label">Reliability</span>
         <strong id="reliabilityScore">—</strong>
       </article>
+      <article class="card" id="temperatureCard">
+        <span class="label">Sıcaklık</span>
+        <strong id="temperatureC">—</strong>
+        <small id="temperatureSensorStatus">Sensör bekleniyor</small>
+      </article>
     </section>
 
     <section class="panel status-panel">
@@ -105,6 +110,7 @@
         <button data-command="get_machine_runtime">get_machine_runtime</button>
         <button data-command="get_daily_summary">get_daily_summary</button>
         <button data-command="get_digital_inputs">get_digital_inputs</button>
+        <button data-command="get_temperature">get_temperature</button>
         <button data-command="get_runtime_settings">get_runtime_settings</button>
         <button data-command="get_reliability">get_reliability</button>
         <button data-command="get_watchdog">get_watchdog</button>
@@ -144,6 +150,10 @@
       <div>
         <h3>Digital Inputs</h3>
         <pre id="digitalInputsData">Bekleniyor...</pre>
+      </div>
+      <div>
+        <h3>Temperature Sensor</h3>
+        <pre id="temperatureSensorData">Bekleniyor...</pre>
       </div>
     </section>
   </main>

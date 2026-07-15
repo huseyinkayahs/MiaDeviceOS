@@ -6,6 +6,7 @@
 #include "field_reliability_manager.h"
 #include "machine_runtime_manager.h"
 #include "digital_input_manager.h"
+#include "sensor_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -44,6 +45,8 @@ namespace
         doc["alarm_active"] = deviceContext.alarm.active;
         doc["current"] = deviceContext.state.current;
         doc["temperature"] = deviceContext.state.temperature;
+        doc["temperature_sensor_connected"] = temperatureSensorConnected();
+        doc["temperature_sensor_valid"] = temperatureSensorHasValidReading();
         doc["wifi_reconnect_count"] = deviceContext.state.wifiReconnectCount;
         doc["mqtt_reconnect_count"] = deviceContext.state.mqttReconnectCount;
         doc["mqtt_connect_fail_count"] = deviceContext.state.mqttConnectFailCount;

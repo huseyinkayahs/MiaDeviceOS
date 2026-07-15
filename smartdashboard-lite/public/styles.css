@@ -80,6 +80,9 @@ main { max-width: 1240px; margin: 0 auto; padding: 0 24px 40px; }
 }
 
 .card strong { display: block; font-size: 28px; margin-top: 10px; }
+.card small { display: block; margin-top: 8px; color: var(--muted); font-weight: 700; }
+.card.sensor-ok { border-color: #86efac; }
+.card.sensor-bad { border-color: #fca5a5; }
 .panel { margin-top: 20px; }
 .panel h3 { margin-top: 0; }
 

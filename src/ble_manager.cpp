@@ -2,6 +2,7 @@
 
 #include "app_version.h"
 #include "device_context.h"
+#include "sensor_manager.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -79,6 +80,8 @@ namespace
         doc["alarm_active"] = deviceContext.alarm.active;
         doc["current"] = deviceContext.state.current;
         doc["temperature"] = deviceContext.state.temperature;
+        doc["temperature_sensor_connected"] = temperatureSensorConnected();
+        doc["temperature_sensor_valid"] = temperatureSensorHasValidReading();
         doc["ble_client_connected"] = deviceContext.ble.clientConnected;
         doc["ble_service_authenticated"] = deviceContext.ble.serviceAuthenticated;
         doc["ble_command_count"] = deviceContext.ble.commandCount;

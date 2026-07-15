@@ -1,0 +1,31 @@
+FACTORYBOX v3.1 - DS18B20 SICAKLIK SENSORU
+
+1) Bu ZIP icindeki dosyalari mevcut MiaDeviceOS proje ana klasorunun ustune kopyalayin.
+2) Windows "Dosyalari hedefte degistir" sorusuna onay verin.
+3) VS Code > PlatformIO > PROJECT TASKS > esp32dev > General > Build.
+4) Build SUCCESS olursa Upload.
+5) Upload SUCCESS olursa Monitor.
+
+Beklenen seri port satirlari:
+- MiaDeviceOS v3.1.0
+- DS18B20 sensor bulundu.
+- Sicaklik: xx.xx C
+
+MQTT test topic:
+mia/site01/laser01/command
+
+MQTT test payload:
+{"command":"get_temperature","request_id":"temperature-test-001"}
+
+Cevap topic:
+mia/site01/laser01/command/status
+
+Dashboard testi:
+- Eski dashboard terminalini Ctrl+C ile kapatin.
+- smartdashboard-lite klasorunde npm.cmd start calistirin.
+- http://localhost:3000 acin.
+- Sicaklik karti ve get_temperature butonu gorunmelidir.
+
+Not:
+- include/secrets.h, smartdashboard-lite/.env ve node_modules bu pakete eklenmemistir.
+- Mevcut gizli ayarlariniz korunur.

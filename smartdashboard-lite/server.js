@@ -20,6 +20,7 @@ const ALLOWED_COMMANDS = new Set([
   'get_machine_runtime',
   'get_daily_summary',
   'get_digital_inputs',
+  'get_temperature',
   'get_runtime_settings',
   'get_diagnostics',
   'get_reliability',
@@ -59,6 +60,7 @@ const state = {
   reliability: null,
   watchdog: null,
   digitalInputs: null,
+  temperatureSensor: null,
   runtimeSettings: null,
   bootDiagnostics: null,
   logLevel: null,
@@ -148,6 +150,7 @@ function applyCommandStatus(message) {
     if (message.digital_inputs) state.digitalInputs = withReceivedAt(message.digital_inputs);
     if (message.field_reliability) state.reliability = withReceivedAt(message.field_reliability);
     if (message.watchdog) state.watchdog = withReceivedAt(message.watchdog);
+    if (message.sensor?.temperature_sensor) state.temperatureSensor = withReceivedAt(message.sensor.temperature_sensor);
   }
   if (message.command === 'get_reliability' && message.field_reliability) {
     state.reliability = withReceivedAt(message.field_reliability);
@@ -157,6 +160,9 @@ function applyCommandStatus(message) {
   }
   if (message.command === 'get_digital_inputs' && message.digital_inputs) {
     state.digitalInputs = withReceivedAt(message.digital_inputs);
+  }
+  if (message.command === 'get_temperature' && message.temperature_sensor) {
+    state.temperatureSensor = withReceivedAt(message.temperature_sensor);
   }
   if (message.command === 'get_runtime_settings' && message.runtime_settings) {
     state.runtimeSettings = withReceivedAt(message.runtime_settings);
@@ -246,10 +252,30 @@ mqttClient.on('message', (topic, buffer) => {
     applyCommandStatus(payload);
   } else if (topic === topics.heartbeat) {
     state.lastHeartbeat = withReceivedAt(payload);
+    if (payload && Object.prototype.hasOwnProperty.call(payload, 'temperature')) {
+      state.temperatureSensor = withReceivedAt({
+        ...(state.temperatureSensor || {}),
+        type: state.temperatureSensor?.type || 'DS18B20',
+        connected: payload.temperature_sensor_connected,
+        valid: payload.temperature_sensor_valid,
+        temperature_c: payload.temperature,
+        unit: 'C',
+      });
+    }
   } else if (topic === topics.alarm) {
     state.lastAlarm = withReceivedAt(payload);
   } else if (topic === topics.telemetry) {
     state.lastTelemetry = withReceivedAt(payload);
+    if (payload && Object.prototype.hasOwnProperty.call(payload, 'temperature')) {
+      state.temperatureSensor = withReceivedAt({
+        ...(state.temperatureSensor || {}),
+        type: state.temperatureSensor?.type || 'DS18B20',
+        connected: payload.temperature_sensor_connected,
+        valid: payload.temperature_sensor_valid,
+        temperature_c: payload.temperature,
+        unit: 'C',
+      });
+    }
   } else if (topic === topics.machineStatus) {
     state.machineRuntime = withReceivedAt(payload.machine || payload);
   }
@@ -289,6 +315,7 @@ function requestSnapshot() {
     'get_daily_summary',
     'get_health',
     'get_digital_inputs',
+    'get_temperature',
     'get_runtime_settings',
     'get_reliability',
     'get_watchdog',
