@@ -1,0 +1,10 @@
+FACTORYBOX v3.2.1 DI1 CARD HOTFIX
+
+1. Bu ZIP'i mevcut proje ana klasörünün üzerine çıkarın.
+2. "Dosyaları hedefte değiştir" seçeneğini onaylayın.
+3. Açık dashboard terminalinde Ctrl+C yapın.
+4. smartdashboard-lite klasöründe npm.cmd start çalıştırın.
+5. Tarayıcıda Ctrl+F5 yapın.
+6. IN1 bağlantısını takıp çıkarın. DI1 ACTIVE/INACTIVE canlı değişmelidir.
+
+Not: Firmware değişmedi. PlatformIO Build/Upload gerekmez.

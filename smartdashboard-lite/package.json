@@ -1,7 +1,7 @@
 {
   "name": "smartdashboard-lite",
-  "version": "0.4.0",
-  "description": "SmartDashboard Lite with FactoryBox One temperature sensor integration",
+  "version": "0.5.1",
+  "description": "SmartDashboard Lite with live DI1 event updates and DI1 card hotfix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

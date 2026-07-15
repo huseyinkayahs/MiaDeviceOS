@@ -9,6 +9,40 @@
 
 namespace
 {
+    bool digitalInputStatusPayloadPending = false;
+    String digitalInputStatusPayload;
+
+    void prepareDigitalInputStatusPayload(const char* eventName)
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["event"] = eventName;
+        doc["firmware_version"] = MIA_FIRMWARE_VERSION;
+        doc["platform_name"] = MIA_PLATFORM_NAME;
+        doc["uptime_ms"] = millis();
+
+        JsonObject digitalInputs = doc["digital_inputs"].to<JsonObject>();
+        JsonObject di1 = digitalInputs["di1"].to<JsonObject>();
+        di1["pin"] = deviceContext.digitalInput.di1Pin;
+        di1["raw_level"] = deviceContext.digitalInput.di1StableLevel ? "HIGH" : "LOW";
+        di1["active"] = deviceContext.digitalInput.di1Active;
+        di1["state"] = deviceContext.digitalInput.di1Active ? "ACTIVE" : "INACTIVE";
+        di1["source"] = deviceContext.digitalInput.di1SimulationEnabled ? "SIMULATION" : "GPIO";
+        di1["active_high"] = deviceContext.digitalInput.di1ActiveHigh;
+        di1["pullup"] = deviceContext.digitalInput.di1UsePullup;
+        di1["debounce_ms"] = deviceContext.digitalInput.debounceMs;
+        di1["change_count"] = deviceContext.digitalInput.di1ChangeCount;
+        di1["last_change_ms"] = deviceContext.digitalInput.lastStableChangeMs;
+        di1["simulation_enabled"] = deviceContext.digitalInput.di1SimulationEnabled;
+        di1["simulated_active"] = deviceContext.digitalInput.di1SimulatedActive;
+        di1["last_reason"] = deviceContext.digitalInput.lastReason;
+
+        digitalInputStatusPayload = "";
+        serializeJson(doc, digitalInputStatusPayload);
+        digitalInputStatusPayloadPending = true;
+    }
+
     bool activeFromLevel(bool level)
     {
         if (deviceContext.digitalInput.di1ActiveHigh)
@@ -48,6 +82,7 @@ namespace
         if (deviceContext.digitalInput.di1PreviousActive != deviceContext.digitalInput.di1Active)
         {
             deviceContext.digitalInput.di1ChangeCount++;
+            prepareDigitalInputStatusPayload("DI1_STATE_CHANGED");
 
             if (shouldLog(LOG_LEVEL_INFO))
             {
@@ -178,5 +213,21 @@ String buildDigitalInputJson()
 
     String payload;
     serializeJson(doc, payload);
+    return payload;
+}
+
+
+bool hasDigitalInputStatusPayload()
+{
+    return digitalInputStatusPayloadPending;
+}
+
+String takeDigitalInputStatusPayload()
+{
+    String payload = digitalInputStatusPayload;
+
+    digitalInputStatusPayload = "";
+    digitalInputStatusPayloadPending = false;
+
     return payload;
 }

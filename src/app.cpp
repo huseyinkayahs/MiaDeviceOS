@@ -79,6 +79,12 @@ namespace
             String machineStatusPayload = takeMachineStatusPayload();
             publishMachineStatus(machineStatusPayload.c_str());
         }
+
+        if (hasDigitalInputStatusPayload())
+        {
+            String digitalInputStatusPayload = takeDigitalInputStatusPayload();
+            publishDigitalInputStatus(digitalInputStatusPayload.c_str());
+        }
     }
 }
 

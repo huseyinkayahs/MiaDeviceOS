@@ -36,6 +36,7 @@ const topics = {
   alarm: `${BASE_TOPIC}/alarm`,
   telemetry: `${BASE_TOPIC}/telemetry`,
   machineStatus: `${BASE_TOPIC}/machine/status`,
+  digitalInputStatus: `${BASE_TOPIC}/digital-input/status`,
 };
 
 const state = {
@@ -116,6 +117,26 @@ function safeJsonParse(input) {
 function withReceivedAt(message) {
   if (!message || typeof message !== 'object') return message;
   return { ...message, receivedAt: nowIso() };
+}
+
+function updateLiveDi1(active, source = 'GPIO') {
+  if (typeof active !== 'boolean') return;
+
+  const receivedAt = nowIso();
+  const previousInputs = state.digitalInputs || {};
+  const previousDi1 = previousInputs.di1 || {};
+
+  state.digitalInputs = {
+    ...previousInputs,
+    di1: {
+      ...previousDi1,
+      active,
+      state: active ? 'ACTIVE' : 'INACTIVE',
+      source: source || previousDi1.source || 'GPIO',
+      receivedAt,
+    },
+    receivedAt,
+  };
 }
 
 function applyCommandStatus(message) {
@@ -217,6 +238,7 @@ mqttClient.on('connect', () => {
     topics.alarm,
     topics.telemetry,
     topics.machineStatus,
+    topics.digitalInputStatus,
   ], (error) => {
     if (error) {
       state.lastCommandError = `MQTT subscribe error: ${error.message}`;
@@ -252,6 +274,9 @@ mqttClient.on('message', (topic, buffer) => {
     applyCommandStatus(payload);
   } else if (topic === topics.heartbeat) {
     state.lastHeartbeat = withReceivedAt(payload);
+    if (payload && Object.prototype.hasOwnProperty.call(payload, 'di1_active')) {
+      updateLiveDi1(Boolean(payload.di1_active), payload.di1_source || 'GPIO');
+    }
     if (payload && Object.prototype.hasOwnProperty.call(payload, 'temperature')) {
       state.temperatureSensor = withReceivedAt({
         ...(state.temperatureSensor || {}),
@@ -277,7 +302,13 @@ mqttClient.on('message', (topic, buffer) => {
       });
     }
   } else if (topic === topics.machineStatus) {
-    state.machineRuntime = withReceivedAt(payload.machine || payload);
+    const machinePayload = payload.machine || payload;
+    state.machineRuntime = withReceivedAt(machinePayload);
+    if (machinePayload && Object.prototype.hasOwnProperty.call(machinePayload, 'di1_active')) {
+      updateLiveDi1(Boolean(machinePayload.di1_active), machinePayload.di1_source || 'GPIO');
+    }
+  } else if (topic === topics.digitalInputStatus) {
+    state.digitalInputs = withReceivedAt(payload.digital_inputs || payload);
   }
 
   publishState();

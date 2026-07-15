@@ -382,6 +382,38 @@ void publishMachineStatus(const char* payload)
     }
 }
 
+void publishDigitalInputStatus(const char* payload)
+{
+    if (!client.connected())
+    {
+        if (shouldLog(LOG_LEVEL_WARN))
+        {
+            Serial.print("MQTT bagli degil. Digital input status gonderilmedi: ");
+            Serial.println(payload);
+        }
+        return;
+    }
+
+    bool published = client.publish(
+        MiaTopics::DIGITAL_INPUT_STATUS,
+        payload
+    );
+
+    if (published)
+    {
+        if (shouldLog(LOG_LEVEL_INFO))
+        {
+            Serial.print("Digital input status gonderildi: ");
+            Serial.println(payload);
+        }
+    }
+    else if (shouldLog(LOG_LEVEL_WARN))
+    {
+        Serial.print("Digital input status gonderilemedi: ");
+        Serial.println(payload);
+    }
+}
+
 bool hasIncomingConfigPayload()
 {
     return incomingConfigPending;

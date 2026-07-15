@@ -21,6 +21,7 @@ namespace MiaTopics
     constexpr const char* HEARTBEAT = MIA_TOPIC_BASE "/heartbeat";
     constexpr const char* OTA_STATUS = MIA_TOPIC_BASE "/ota/status";
     constexpr const char* MACHINE_STATUS = MIA_TOPIC_BASE "/machine/status";
+    constexpr const char* DIGITAL_INPUT_STATUS = MIA_TOPIC_BASE "/digital-input/status";
 
     constexpr const char* TEST = "mia/test";
 }

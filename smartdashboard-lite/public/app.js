@@ -118,7 +118,16 @@ function render(state) {
 
   setText('runtimeMin', `${minutes(machine.today_runtime_sec ?? daily.runtime_sec ?? state.health?.machine_runtime_sec)} dk`);
   setText('stopMin', `${minutes(machine.today_stop_sec ?? daily.stop_sec ?? state.health?.machine_stop_sec)} dk`);
-  setText('di1State', di1.state || (state.health?.di1_active ? 'ACTIVE' : 'INACTIVE'));
+
+  const liveDi1Active = machine.di1_active
+    ?? state.lastHeartbeat?.di1_active
+    ?? di1.active
+    ?? state.health?.di1_active;
+  const liveDi1State = typeof liveDi1Active === 'boolean'
+    ? (liveDi1Active ? 'ACTIVE' : 'INACTIVE')
+    : (di1.state || '—');
+  setText('di1State', liveDi1State);
+
   setText('alarmState', alarm.event || (state.health?.alarm_active ? 'ALARM' : 'NORMAL'));
   setText('firmwareVersion', command.firmware_version || state.lastHeartbeat?.firmware_version || state.config?.device?.firmware_version || '—');
   setText('reliabilityScore', reliability.score ?? reliability.field_reliability_score ?? '—');

@@ -1,0 +1,11 @@
+FACTORYBOX ONE v3.2 - CANLI DI1 GUNCELLEMESI
+
+1. Bu ZIP dosyasini mevcut proje ana klasorunun uzerine cikarin.
+2. "Dosyalari hedefte degistir" secenegini onaylayin.
+3. PlatformIO > PROJECT TASKS > esp32dev > General > Build
+4. Build SUCCESS ise Upload yapin.
+5. Dashboard terminalini Ctrl+C ile kapatip npm.cmd start ile yeniden baslatin.
+6. PC817 girisini baglayip cikarin. DI1 ve makine durumu otomatik degismelidir.
+
+Yeni MQTT topic:
+mia/site01/laser01/digital-input/status
