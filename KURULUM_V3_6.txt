@@ -1,0 +1,85 @@
+# V3.6 SmartAI Daily Report From Database
+
+Bu paket v3.5.1 üzerine kopyalanır.
+
+## Amaç
+
+PostgreSQL'de biriken FactoryBox verilerinden günlük üretim raporu üretmek.
+
+## Eklenen Özellikler
+
+- SmartAI lokal kural motoru
+- Günlük üretim raporu API endpoint'i
+- Dashboard içinde SmartAI rapor alanı
+- Sistem sağlık skoru
+- Bulgular
+- Öneriler
+- İstenirse ai_reports tablosuna kayıt denemesi
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test
+
+Tarayıcıda aç:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report
+```
+
+Dashboard:
+
+```text
+http://localhost:3100
+```
+
+## Beklenen Sonuç
+
+API çıktısında şunlar görünmeli:
+
+```text
+status: ok
+ai_engine: SmartAI Local Rule Engine
+health_score
+summary
+findings
+recommendations
+```
+
+## Veritabanına Rapor Kaydetme
+
+Normal dashboard refresh sırasında kayıt yapılmaz.
+
+Kayıt denemesi için ayrıca şu URL açılır:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report?save=true
+```
+
+## Not
+
+Bu sprintte gerçek bulut AI kullanılmaz.
+Bu ilk aşama lokal SmartAI kural motorudur.
+Sonraki sprintte OpenAI / local LLM / rapor geçmişi genişletilebilir.

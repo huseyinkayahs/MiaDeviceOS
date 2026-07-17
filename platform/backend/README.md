@@ -44,3 +44,30 @@ GET /api/machines/laser01/daily-summary
 GET /api/machines/laser01/alarms
 GET /api/machines/laser01/events
 ```
+
+
+## v3.6 SmartAI Daily Report
+
+Yeni endpoint:
+
+```text
+GET /api/machines/laser01/ai/daily-report
+```
+
+Tarayıcı:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report
+```
+
+Veritabanına kayıt denemesi için:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report?save=true
+```
+
+Dashboard:
+
+```text
+http://localhost:3100
+```

@@ -1,0 +1,64 @@
+
+# V3.6.1 SmartAI Time Format Hotfix
+
+Bu paket v3.6 üzerine kopyalanır.
+
+## Sorun
+
+SmartAI raporunda `runtime_sec` 60 saniyenin altında olduğunda metinde `0 dakika` görünüyordu.
+
+Örnek:
+
+```text
+runtime_sec: 56
+Bugünkü çalışma süresi 0 dakika
+```
+
+## Düzeltme
+
+Süre formatlama fonksiyonu güncellendi.
+
+Yeni davranış:
+
+```text
+56 saniye
+1 dakika 20 saniye
+2 saat 15 dakika
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report
+```
+
+Beklenen metin:
+
+```text
+Bugünkü çalışma süresi 56 saniye
+```

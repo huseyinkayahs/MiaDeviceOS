@@ -1,0 +1,70 @@
+
+# V3.6.2 Dashboard Time Format Hotfix
+
+Bu paket v3.6.1 üzerine kopyalanır.
+
+## Sorun
+
+Dashboard Günlük Özet kartında 60 saniyenin altındaki süreler doğru görünmüyordu.
+
+Yanlış görünüm:
+
+```text
+Runtime: 0s 0dk
+Stop: 0s 0dk
+```
+
+## Düzeltme
+
+Dashboard süre formatlama fonksiyonu güncellendi.
+
+Yeni görünüm:
+
+```text
+Runtime: 56 sn
+Stop: 0 sn
+```
+
+Daha uzun sürelerde:
+
+```text
+1 dk 20 sn
+2 sa 15 dk
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Tarayıcı
+
+Açık sayfada Ctrl + F5 yap:
+
+```text
+http://localhost:3100
+```
+
+## Beklenen Sonuç
+
+Günlük Özet kartında runtime artık 60 saniye altı değerleri de gösterir.

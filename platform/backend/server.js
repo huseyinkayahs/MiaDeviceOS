@@ -193,11 +193,301 @@ async function handleMessage(topic, buffer) {
   } catch (e) { console.error('MQTT save error:', topic, e.message); }
 }
 
+
+function pct(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return Math.round(num * 10) / 10;
+}
+
+function secondsToHuman(seconds) {
+  const s = Number(seconds || 0);
+  if (!Number.isFinite(s) || s <= 0) return '0 saniye';
+
+  if (s < 60) {
+    return `${s} saniye`;
+  }
+
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+
+  const parts = [];
+  if (h > 0) parts.push(`${h} saat`);
+  if (m > 0) parts.push(`${m} dakika`);
+  if (sec > 0 && h === 0) parts.push(`${sec} saniye`);
+
+  return parts.join(' ');
+}
+
+function healthScoreFromData(summary, activeAlarmCount, latestTelemetry) {
+  let score = 100;
+
+  const utilization = Number(summary?.utilization_pct ?? 0);
+  const temp = Number(latestTelemetry?.temperature_c ?? 0);
+  const rssi = Number(latestTelemetry?.wifi_rssi ?? -50);
+
+  if (utilization < 30) score -= 25;
+  else if (utilization < 60) score -= 12;
+
+  if (activeAlarmCount > 0) score -= Math.min(35, activeAlarmCount * 15);
+
+  if (temp >= 35) score -= 12;
+  else if (temp >= 30) score -= 5;
+
+  if (rssi < -75) score -= 10;
+  else if (rssi < -65) score -= 5;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function buildSmartAiReport(machineCode, status, telemetryRows, alarmRows, summaryRows) {
+  const latestState = status?.latest_state || {};
+  const latestTelemetry = status?.latest_telemetry || {};
+  const summary = status?.calculated_today_summary || status?.latest_daily_summary || summaryRows?.[0] || {};
+  const activeAlarms = alarmRows.filter(a => a.status === 'active');
+  const clearedAlarms = alarmRows.filter(a => a.status === 'cleared');
+
+  const runtimeSec = Number(summary.runtime_sec || 0);
+  const stopSec = Number(summary.stop_sec || 0);
+  const utilizationPct = pct(summary.utilization_pct ?? 0);
+  const score = healthScoreFromData(summary, activeAlarms.length, latestTelemetry);
+
+  const findings = [];
+  const recommendations = [];
+
+  if (latestState.state) {
+    findings.push(`Makine son durumda ${latestState.state} görünüyor. Kaynak: ${latestState.source || 'bilinmiyor'}.`);
+  } else {
+    findings.push('Makine state bilgisi henüz oluşmamış.');
+  }
+
+  findings.push(`Bugünkü çalışma süresi ${secondsToHuman(runtimeSec)}, duruş süresi ${secondsToHuman(stopSec)}.`);
+  findings.push(`Günlük kullanım oranı yaklaşık %${utilizationPct ?? 0}.`);
+
+  if (latestTelemetry.temperature_c !== null && latestTelemetry.temperature_c !== undefined) {
+    findings.push(`Son sıcaklık değeri ${latestTelemetry.temperature_c} °C.`);
+  }
+
+  if (latestTelemetry.current_amp !== null && latestTelemetry.current_amp !== undefined) {
+    findings.push(`Son akım değeri ${latestTelemetry.current_amp} A.`);
+  }
+
+  if (latestTelemetry.wifi_rssi !== null && latestTelemetry.wifi_rssi !== undefined) {
+    findings.push(`WiFi sinyal seviyesi ${latestTelemetry.wifi_rssi} dBm.`);
+  }
+
+  if (activeAlarms.length > 0) {
+    findings.push(`${activeAlarms.length} adet aktif alarm var. En kritik görünen alarm: ${activeAlarms[0].alarm_type}.`);
+    recommendations.push('Aktif alarm temizlenmeden üretim performansı doğru yorumlanmamalı.');
+    recommendations.push('Alarm devam ediyorsa eşik değerleri ve sensör okuması kontrol edilmeli.');
+  } else {
+    findings.push('Aktif alarm görünmüyor.');
+    recommendations.push('Alarm listesi temiz olduğu için günlük üretim analizi güvenilir görünüyor.');
+  }
+
+  if (utilizationPct !== null && utilizationPct < 60) {
+    recommendations.push('Kullanım oranı düşük. Planlı duruş, operatör bekleme veya iş emri boşluğu ayrıştırılmalı.');
+  } else if (utilizationPct !== null && utilizationPct >= 80) {
+    recommendations.push('Kullanım oranı iyi görünüyor. Bu seviyenin sürdürülebilirliği takip edilmeli.');
+  }
+
+  if (Number(latestTelemetry.temperature_c || 0) >= 30) {
+    recommendations.push('Sıcaklık 30 °C ve üzerindeyse ortam havalandırması veya pano içi sıcaklık takip edilmeli.');
+  }
+
+  if (Number(latestTelemetry.wifi_rssi || -50) < -65) {
+    recommendations.push('WiFi sinyali zayıflarsa veri kayıpları yaşanabilir. Router konumu veya anten kontrol edilmeli.');
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push('Sistem normal görünüyor. Veri toplamaya devam edilmeli.');
+  }
+
+  const summaryText = [
+    `SmartAI günlük özet: ${machineCode} için sistem skoru ${score}/100.`,
+    `Makine durumu ${latestState.state || 'bilinmiyor'}, günlük kullanım oranı %${utilizationPct ?? 0}.`,
+    activeAlarms.length > 0 ? `Dikkat: ${activeAlarms.length} aktif alarm var.` : 'Aktif alarm bulunmuyor.'
+  ].join(' ');
+
+  return {
+    machine_code: machineCode,
+    report_type: 'daily_production',
+    generated_at: new Date().toISOString(),
+    health_score: score,
+    summary: summaryText,
+    findings,
+    recommendations,
+    raw: {
+      latest_state: latestState,
+      latest_telemetry: latestTelemetry,
+      latest_daily_summary: summary,
+      active_alarm_count: activeAlarms.length,
+      cleared_alarm_count: clearedAlarms.length,
+      telemetry_sample_count: telemetryRows.length,
+      alarm_sample_count: alarmRows.length,
+      summary_sample_count: summaryRows.length
+    }
+  };
+}
+
+async function getMachineSmartAiData(machineCode) {
+  const status = await one(
+    `SELECT mo.*, row_to_json(ls.*) latest_state, row_to_json(lt.*) latest_telemetry,
+      (SELECT row_to_json(s.*) FROM (SELECT summary_date,runtime_sec,stop_sec,observed_sec,utilization_pct,longest_run_sec,longest_stop_sec,run_start_count,stop_start_count FROM daily_machine_summaries d WHERE d.machine_id=mo.machine_id ORDER BY summary_date DESC LIMIT 1) s) latest_daily_summary
+      FROM v_machine_overview mo
+      LEFT JOIN v_latest_machine_state ls ON ls.machine_id=mo.machine_id
+      LEFT JOIN v_latest_device_telemetry lt ON lt.machine_id=mo.machine_id
+      WHERE mo.machine_code=$1
+      LIMIT 1`,
+    [machineCode]
+  );
+
+  if (!status) return null;
+
+  const telemetry = await pool.query(
+    `SELECT event_ts,current_amp,temperature_c,wifi_rssi,uptime_ms,alarm_active
+     FROM telemetry_events
+     WHERE machine_id=$1
+     ORDER BY event_ts DESC
+     LIMIT 50`,
+    [status.machine_id]
+  );
+
+  const alarms = await pool.query(
+    `SELECT alarm_type,severity,status,started_at,cleared_at,message
+     FROM alarms
+     WHERE machine_id=$1
+     ORDER BY started_at DESC
+     LIMIT 50`,
+    [status.machine_id]
+  );
+
+  const summaries = await pool.query(
+    `SELECT summary_date,runtime_sec,stop_sec,observed_sec,utilization_pct,longest_run_sec,longest_stop_sec,run_start_count,stop_start_count
+     FROM daily_machine_summaries
+     WHERE machine_id=$1
+     ORDER BY summary_date DESC
+     LIMIT 7`,
+    [status.machine_id]
+  );
+
+  status.calculated_today_summary = await getCalculatedTodayRuntime(status.machine_id);
+
+  return {
+    status,
+    telemetryRows: telemetry.rows,
+    alarmRows: alarms.rows,
+    summaryRows: summaries.rows
+  };
+}
+
+
+async function getCalculatedTodayRuntime(machineId) {
+  const row = await one(
+    `
+    WITH events AS (
+      SELECT
+        state,
+        started_at,
+        COALESCE(ended_at, now()) AS ended_at
+      FROM machine_state_events
+      WHERE machine_id = $1
+        AND started_at < (CURRENT_DATE + INTERVAL '1 day')
+        AND COALESCE(ended_at, now()) >= CURRENT_DATE
+    ),
+    clipped AS (
+      SELECT
+        state,
+        GREATEST(started_at, CURRENT_DATE) AS start_ts,
+        LEAST(ended_at, CURRENT_DATE + INTERVAL '1 day') AS end_ts
+      FROM events
+    ),
+    totals AS (
+      SELECT
+        COALESCE(SUM(EXTRACT(EPOCH FROM (end_ts - start_ts))) FILTER (WHERE state = 'RUNNING'), 0)::int AS runtime_sec,
+        COALESCE(SUM(EXTRACT(EPOCH FROM (end_ts - start_ts))) FILTER (WHERE state = 'STOPPED'), 0)::int AS stop_sec
+      FROM clipped
+      WHERE end_ts > start_ts
+    )
+    SELECT
+      runtime_sec,
+      stop_sec,
+      (runtime_sec + stop_sec)::int AS observed_sec,
+      CASE
+        WHEN (runtime_sec + stop_sec) > 0
+        THEN ROUND((runtime_sec::numeric / (runtime_sec + stop_sec)) * 100, 1)
+        ELSE 0
+      END AS utilization_pct
+    FROM totals
+    `,
+    [machineId]
+  );
+
+  return row || {
+    runtime_sec: 0,
+    stop_sec: 0,
+    observed_sec: 0,
+    utilization_pct: 0
+  };
+}
+
+
+async function saveSmartAiReportIfPossible(machineId, report) {
+  const table = await one(`SELECT to_regclass('public.ai_reports') AS table_name`);
+  if (!table || !table.table_name) {
+    return { saved: false, reason: 'ai_reports table not found' };
+  }
+
+  const cols = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema='public'
+       AND table_name='ai_reports'`
+  );
+
+  const columnNames = new Set(cols.rows.map(r => r.column_name));
+
+  try {
+    if (columnNames.has('machine_id') && columnNames.has('report_type') && columnNames.has('report_text')) {
+      await pool.query(
+        `INSERT INTO ai_reports(machine_id,report_type,report_text,raw_payload)
+         VALUES($1,$2,$3,$4::jsonb)`,
+        [machineId, report.report_type, report.summary, JSON.stringify(report)]
+      );
+      return { saved: true, mode: 'report_text' };
+    }
+
+    if (columnNames.has('machine_id') && columnNames.has('report_type') && columnNames.has('summary')) {
+      await pool.query(
+        `INSERT INTO ai_reports(machine_id,report_type,summary,raw_payload)
+         VALUES($1,$2,$3,$4::jsonb)`,
+        [machineId, report.report_type, report.summary, JSON.stringify(report)]
+      );
+      return { saved: true, mode: 'summary' };
+    }
+
+    if (columnNames.has('machine_id') && columnNames.has('raw_payload')) {
+      await pool.query(
+        `INSERT INTO ai_reports(machine_id,raw_payload)
+         VALUES($1,$2::jsonb)`,
+        [machineId, JSON.stringify(report)]
+      );
+      return { saved: true, mode: 'raw_payload' };
+    }
+
+    return { saved: false, reason: 'ai_reports schema not compatible' };
+  } catch (error) {
+    return { saved: false, reason: error.message };
+  }
+}
+
+
 app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.5.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.6.4', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -207,12 +497,38 @@ app.get('/api/machines/:code/status', async (req,res)=>{
     (SELECT json_agg(a ORDER BY a.started_at DESC) FROM (SELECT alarm_type,severity,status,started_at,cleared_at,message FROM alarms a WHERE a.machine_id=mo.machine_id ORDER BY started_at DESC LIMIT 5) a) recent_alarms,
     (SELECT row_to_json(s.*) FROM (SELECT summary_date,runtime_sec,stop_sec,observed_sec,utilization_pct,longest_run_sec,longest_stop_sec,run_start_count,stop_start_count FROM daily_machine_summaries d WHERE d.machine_id=mo.machine_id ORDER BY summary_date DESC LIMIT 1) s) latest_daily_summary
     FROM v_machine_overview mo LEFT JOIN v_latest_machine_state ls ON ls.machine_id=mo.machine_id LEFT JOIN v_latest_device_telemetry lt ON lt.machine_id=mo.machine_id WHERE mo.machine_code=$1 LIMIT 1`, [req.params.code]);
-  if (!r) return res.status(404).json({status:'not_found'}); res.json(r);
+  if (!r) return res.status(404).json({status:'not_found'}); r.calculated_today_summary = await getCalculatedTodayRuntime(r.machine_id); res.json(r);
 });
 app.get('/api/machines/:code/telemetry/latest', async (req,res)=>{ const r=await pool.query('SELECT t.* FROM telemetry_events t JOIN machines m ON m.id=t.machine_id WHERE m.code=$1 ORDER BY t.event_ts DESC LIMIT 20',[req.params.code]); res.json(r.rows); });
 app.get('/api/machines/:code/daily-summary', async (req,res)=>{ const r=await pool.query('SELECT d.* FROM daily_machine_summaries d JOIN machines m ON m.id=d.machine_id WHERE m.code=$1 ORDER BY d.summary_date DESC LIMIT 30',[req.params.code]); res.json(r.rows); });
 app.get('/api/machines/:code/alarms', async (req,res)=>{ const r=await pool.query('SELECT a.* FROM alarms a JOIN machines m ON m.id=a.machine_id WHERE m.code=$1 ORDER BY a.started_at DESC LIMIT 50',[req.params.code]); res.json(r.rows); });
 app.get('/api/machines/:code/events', async (req,res)=>{ const r=await pool.query(`SELECT 'machine_state' event_group,state event_type,started_at event_ts,raw_payload FROM machine_state_events e JOIN machines m ON m.id=e.machine_id WHERE m.code=$1 UNION ALL SELECT 'vision',event_type,event_ts,raw_payload FROM vision_events e JOIN machines m ON m.id=e.machine_id WHERE m.code=$1 UNION ALL SELECT 'workflow',event_type,event_ts,raw_payload FROM workflow_events e JOIN machines m ON m.id=e.machine_id WHERE m.code=$1 ORDER BY event_ts DESC LIMIT 50`,[req.params.code]); res.json(r.rows); });
+
+
+app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
+  try {
+    const data = await getMachineSmartAiData(req.params.code);
+    if (!data) return res.status(404).json({status:'not_found', machine_code:req.params.code});
+
+    const report = buildSmartAiReport(req.params.code, data.status, data.telemetryRows, data.alarmRows, data.summaryRows);
+
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const saveResult = shouldSave
+      ? await saveSmartAiReportIfPossible(data.status.machine_id, report)
+      : { saved:false, reason:'save query not requested' };
+
+    res.json({
+      status:'ok',
+      ai_engine:'SmartAI Local Rule Engine',
+      version:'3.6.4',
+      saved_to_database: saveResult,
+      report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
 
 async function start() {
   await pool.query('SELECT 1');
@@ -222,6 +538,6 @@ async function start() {
   client.on('close',()=>{ mqttConnected=false; });
   client.on('error',(e)=> console.error('MQTT error:', e.message));
   client.on('message', handleMessage);
-  app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend MVP: http://localhost:${PORT}`));
+  app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });

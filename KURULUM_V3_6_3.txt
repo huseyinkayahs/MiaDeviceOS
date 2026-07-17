@@ -1,0 +1,78 @@
+
+# V3.6.3 Live Runtime Dashboard Fix
+
+Bu paket v3.6.2 üzerine kopyalanır.
+
+## Sorun
+
+Dashboard Günlük Özet kartındaki Runtime değeri `daily_summary` snapshot verisini gösteriyordu.
+
+Bu yüzden cihaz çalışmaya devam etse bile değer sabit kalıyordu.
+
+Örnek:
+
+```text
+Runtime: 56 sn
+```
+
+Ama gerçek canlı çalışma süresi `latest_state.duration_sec` içinde artıyordu.
+
+## Düzeltme
+
+Dashboard Günlük Özet kartı artık canlı state bilgisini de kullanır.
+
+Yeni mantık:
+
+```text
+Makine RUNNING ise:
+  Runtime = max(daily_summary.runtime_sec, latest_state.duration_sec)
+
+Makine STOPPED ise:
+  Stop = max(daily_summary.stop_sec, latest_state.duration_sec)
+
+Utilization:
+  Runtime / (Runtime + Stop)
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Tarayıcı
+
+Dashboard açıkken:
+
+```text
+Ctrl + F5
+```
+
+Adres:
+
+```text
+http://localhost:3100
+```
+
+## Beklenen Sonuç
+
+Makine RUNNING ise Günlük Özet kartındaki Runtime artık sabit kalmaz, artan canlı süreyi gösterir.
