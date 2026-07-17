@@ -1,0 +1,41 @@
+services:
+  factorybox-postgres:
+    image: postgres:16-alpine
+    container_name: factorybox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: factorybox
+      POSTGRES_USER: factorybox
+      POSTGRES_PASSWORD: factorybox_dev_pass
+      TZ: Europe/Istanbul
+    ports:
+      - "5433:5432"
+    volumes:
+      - factorybox_pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+      - ./queries:/app/queries:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U factorybox -d factorybox"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  factorybox-pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: factorybox-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@factorybox.com
+      PGADMIN_DEFAULT_PASSWORD: factorybox_admin
+      TZ: Europe/Istanbul
+    ports:
+      - "5050:80"
+    depends_on:
+      factorybox-postgres:
+        condition: service_healthy
+    volumes:
+      - factorybox_pgadmin:/var/lib/pgadmin
+
+volumes:
+  factorybox_pgdata:
+  factorybox_pgadmin:

@@ -1,0 +1,70 @@
+# V3.4 Central Database and Data Model
+
+Bu sprintte amaç, FactoryBox / Mia BusinessOS platformu için ilk merkezi PostgreSQL veri tabanı modelini hazırlamaktır.
+
+## Eklenen Dosyalar
+
+- docs/V3_4_CENTRAL_DATABASE_DATA_MODEL.md
+- platform/database/README.md
+- platform/database/docker-compose.yml
+- platform/database/migrations/001_initial_schema.sql
+- platform/database/migrations/002_demo_seed.sql
+- platform/database/queries/001_basic_checks.sql
+
+## Kurulum
+
+1. ZIP dosyasını proje ana klasörünün üzerine çıkar.
+2. “Dosyaları hedefte değiştir” seçeneğini onayla.
+3. Bu sprintte ESP32 firmware değişmedi.
+4. PlatformIO Build / Upload gerekmez.
+5. Docker Desktop açık olmalı.
+
+## PostgreSQL Test
+
+PowerShell’de proje ana klasöründeyken:
+
+```powershell
+cd platform\database
+docker compose up -d
+```
+
+Sonra kontrol:
+
+```powershell
+docker ps
+```
+
+Tabloları kontrol etmek için:
+
+```powershell
+docker exec -it factorybox-postgres psql -U factorybox -d factorybox -c "\dt"
+```
+
+Temel test sorguları:
+
+```powershell
+docker exec -it factorybox-postgres psql -U factorybox -d factorybox -f /app/queries/001_basic_checks.sql
+```
+
+## PgAdmin
+
+Tarayıcı:
+
+http://localhost:5050
+
+Giriş:
+
+- Email: admin@factorybox.local
+- Password: factorybox_admin
+
+PgAdmin içinde yeni server eklerken:
+
+- Host: factorybox-postgres
+- Port: 5432
+- Database: factorybox
+- User: factorybox
+- Password: factorybox_dev_pass
+
+## Not
+
+PostgreSQL portu dışarıya 5433 olarak açıldı. Böylece bilgisayarda başka PostgreSQL varsa çakışma ihtimali azalır.
