@@ -1,0 +1,30 @@
+
+# V3.5.1 Alarm Duplicate Hotfix - Düzeltilmiş Paket
+
+Önceki hotfix paketinde sadece doküman dosyaları vardı.
+Bu düzeltilmiş paket gerçek `platform/backend/server.js` dosyasını içerir.
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Kontrol
+
+PowerShell:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+Select-String -Path .\server.js -Pattern "existingActiveAlarm"
+```
+
+Çıktı içinde `existingActiveAlarm` görünmeli.
+
+## Yeniden Başlatma
+
+```powershell
+npm.cmd start
+```

@@ -1,0 +1,58 @@
+# V3.5 Platform Backend MVP
+
+Bu sprintte v3.5, v3.6 ve v3.7 kapsamı birleştirilmiştir.
+
+## Amaç
+
+FactoryBox cihazından gelen MQTT mesajlarını dinleyen, PostgreSQL’e kaydeden ve dashboard/API üzerinden gösteren ilk platform backend MVP’yi oluşturmak.
+
+## Eklenen Dosyalar
+
+- docs/V3_5_PLATFORM_BACKEND_MVP.md
+- KURULUM_V3_5.txt
+- platform/backend/package.json
+- platform/backend/.env.example
+- platform/backend/.gitignore
+- platform/backend/README.md
+- platform/backend/server.js
+- platform/backend/public/index.html
+- platform/backend/public/styles.css
+- platform/backend/public/app.js
+
+## Ön Koşul
+
+PostgreSQL çalışıyor olmalı:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\database"
+docker compose up -d
+```
+
+## Backend Kurulum
+
+Yeni PowerShell aç:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+copy .env.example .env
+npm.cmd install
+npm.cmd start
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+## Test API
+
+```text
+http://localhost:3100/api/health
+http://localhost:3100/api/machines
+http://localhost:3100/api/machines/laser01/status
+```
+
+## Not
+
+Bu sprintte ESP32 firmware değişmez. Mevcut SmartDashboard Lite korunur.
