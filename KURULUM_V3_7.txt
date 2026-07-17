@@ -1,0 +1,145 @@
+
+# V3.7 SmartAI Telegram Daily Report
+
+Bu paket v3.6.4 üzerine kopyalanır.
+
+## Amaç
+
+SmartAI günlük üretim raporunu Telegram'a gönderilebilir hazır mesaja dönüştürmek ve n8n workflow ile otomatik göndermek.
+
+## Eklenenler
+
+- Telegram mesaj formatı
+- Yeni backend API endpoint
+- n8n workflow JSON export
+- Kurulum dokümanı
+- Sprint dokümanı
+
+## Yeni API Endpoint
+
+```text
+GET /api/machines/laser01/ai/daily-report/telegram
+```
+
+Test adresi:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report/telegram
+```
+
+Kaydederek üretmek için:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report/telegram?save=1
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer 3100 port hatası alırsan:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## API Test
+
+Tarayıcıda aç:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report/telegram
+```
+
+Beklenen alanlar:
+
+```text
+status: ok
+version: 3.7.0
+telegram_text
+report
+```
+
+## n8n Workflow
+
+Dosya:
+
+```text
+platform/n8n/workflows/FactoryBox_SmartAI_Daily_Telegram_Report.json
+```
+
+n8n içine import edilir.
+
+Workflow akışı:
+
+```text
+Schedule Trigger
+↓
+HTTP Request
+↓
+Telegram Send Message
+```
+
+## Önemli Not
+
+Eğer n8n Docker içinde çalışıyorsa backend adresi:
+
+```text
+http://host.docker.internal:3100/api/machines/laser01/ai/daily-report/telegram?save=1
+```
+
+Eğer n8n Windows üzerinde lokal çalışıyorsa:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report/telegram?save=1
+```
+
+## Telegram Node Ayarı
+
+Telegram node içinde:
+
+```text
+Chat ID: kendi chat id
+Text: {{$json.telegram_text}}
+```
+
+Credential olarak mevcut Telegram Bot credential seçilir.
+
+## Test
+
+Önce workflow'u manual çalıştır.
+
+Telegram'a şu tarz mesaj gelmeli:
+
+```text
+🏭 FactoryBox SmartAI Günlük Üretim Raporu
+
+Makine: laser01
+Skor: 85/100
+
+Özet
+...
+```

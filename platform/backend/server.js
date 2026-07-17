@@ -487,7 +487,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.6.4', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.7.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -505,29 +505,128 @@ app.get('/api/machines/:code/alarms', async (req,res)=>{ const r=await pool.quer
 app.get('/api/machines/:code/events', async (req,res)=>{ const r=await pool.query(`SELECT 'machine_state' event_group,state event_type,started_at event_ts,raw_payload FROM machine_state_events e JOIN machines m ON m.id=e.machine_id WHERE m.code=$1 UNION ALL SELECT 'vision',event_type,event_ts,raw_payload FROM vision_events e JOIN machines m ON m.id=e.machine_id WHERE m.code=$1 UNION ALL SELECT 'workflow',event_type,event_ts,raw_payload FROM workflow_events e JOIN machines m ON m.id=e.machine_id WHERE m.code=$1 ORDER BY event_ts DESC LIMIT 50`,[req.params.code]); res.json(r.rows); });
 
 
+
+function formatTelegramLine(label, value) {
+  if (value === null || value === undefined || value === '') return `${label}: -`;
+  return `${label}: ${value}`;
+}
+
+function buildTelegramDailyReportText(report) {
+  const raw = report.raw || {};
+  const state = raw.latest_state || {};
+  const telemetry = raw.latest_telemetry || {};
+  const summary = raw.latest_daily_summary || {};
+
+  const lines = [];
+
+  lines.push('🏭 FactoryBox SmartAI Günlük Üretim Raporu');
+  lines.push('');
+  lines.push(`Makine: ${report.machine_code}`);
+  lines.push(`Skor: ${report.health_score}/100`);
+  lines.push('');
+  lines.push('📌 Özet');
+  lines.push(report.summary || '-');
+  lines.push('');
+  lines.push('⚙️ Durum');
+  lines.push(formatTelegramLine('Makine', state.state || '-'));
+  lines.push(formatTelegramLine('Kaynak', state.source || '-'));
+  lines.push(formatTelegramLine('Runtime', secondsToHuman(summary.runtime_sec || 0)));
+  lines.push(formatTelegramLine('Stop', secondsToHuman(summary.stop_sec || 0)));
+  lines.push(formatTelegramLine('Utilization', `${summary.utilization_pct ?? 0}%`));
+  lines.push('');
+  lines.push('🌡️ Son Telemetry');
+  lines.push(formatTelegramLine('Sıcaklık', telemetry.temperature_c !== undefined && telemetry.temperature_c !== null ? `${telemetry.temperature_c} °C` : '-'));
+  lines.push(formatTelegramLine('Akım', telemetry.current_amp !== undefined && telemetry.current_amp !== null ? `${telemetry.current_amp} A` : '-'));
+  lines.push(formatTelegramLine('WiFi RSSI', telemetry.wifi_rssi !== undefined && telemetry.wifi_rssi !== null ? `${telemetry.wifi_rssi} dBm` : '-'));
+  lines.push('');
+  lines.push('🔎 Bulgular');
+  (report.findings || []).slice(0, 6).forEach((item) => lines.push(`• ${item}`));
+  lines.push('');
+  lines.push('✅ Öneriler');
+  (report.recommendations || []).slice(0, 5).forEach((item) => lines.push(`• ${item}`));
+  lines.push('');
+  lines.push(`Rapor zamanı: ${new Date(report.generated_at).toLocaleString('tr-TR')}`);
+
+  return lines.join('\n');
+}
+
+async function createSmartAiDailyReport(machineCode, save) {
+  const data = await getMachineSmartAiData(machineCode);
+
+  if (!data) {
+    return null;
+  }
+
+  const report = buildSmartAiReport(
+    machineCode,
+    data.status,
+    data.telemetryRows,
+    data.alarmRows,
+    data.summaryRows
+  );
+
+  const telegram_text = buildTelegramDailyReportText(report);
+  const saveResult = save
+    ? await saveSmartAiReportIfPossible(data.status.machine_id, {
+        ...report,
+        telegram_text
+      })
+    : { saved:false, reason:'save query not requested' };
+
+  return {
+    machine_id: data.status.machine_id,
+    report,
+    telegram_text,
+    saveResult
+  };
+}
+
+
+
 app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
   try {
-    const data = await getMachineSmartAiData(req.params.code);
-    if (!data) return res.status(404).json({status:'not_found', machine_code:req.params.code});
-
-    const report = buildSmartAiReport(req.params.code, data.status, data.telemetryRows, data.alarmRows, data.summaryRows);
-
     const shouldSave = req.query.save === 'true' || req.query.save === '1';
-    const saveResult = shouldSave
-      ? await saveSmartAiReportIfPossible(data.status.machine_id, report)
-      : { saved:false, reason:'save query not requested' };
+    const result = await createSmartAiDailyReport(req.params.code, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
 
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.6.4',
-      saved_to_database: saveResult,
-      report
+      version:'3.7.0',
+      saved_to_database: result.saveResult,
+      report: result.report
     });
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
   }
 });
+
+app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createSmartAiDailyReport(req.params.code, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    res.json({
+      status:'ok',
+      ai_engine:'SmartAI Local Rule Engine',
+      version:'3.7.0',
+      machine_code: req.params.code,
+      saved_to_database: result.saveResult,
+      telegram_text: result.telegram_text,
+      report: result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
 
 
 async function start() {
