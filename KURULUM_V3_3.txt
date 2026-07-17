@@ -1,0 +1,14 @@
+# V3.3 Platform System Architecture
+
+Bu pakette firmware veya dashboard kodu yoktur.
+
+## Kurulum
+
+1. ZIP dosyasını proje ana klasörünün üzerine çıkar.
+2. "Dosyaları hedefte değiştir" seçeneğini onayla.
+3. Build gerekmez.
+4. docs/V3_3_PLATFORM_SYSTEM_ARCHITECTURE.md dosyasını kontrol et.
+
+## Eklenen Dosya
+
+- docs/V3_3_PLATFORM_SYSTEM_ARCHITECTURE.md
