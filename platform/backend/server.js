@@ -523,7 +523,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.9.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.0.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -631,7 +631,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.9.0',
+      version:'4.0.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -652,7 +652,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.9.0',
+      version:'4.0.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -702,7 +702,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.9.0',
+      version:'4.0.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -746,7 +746,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.9.0',
+      version:'4.0.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -784,7 +784,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'3.9.0',
+        version:'4.0.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -799,7 +799,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.9.0',
+      version:'4.0.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -839,7 +839,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.9.0',
+      version:'4.0.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -890,7 +890,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.9.0',
+      version:'4.0.0',
       machine_code:req.params.code,
       report
     });
@@ -955,7 +955,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.9.0',
+      version:'4.0.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -964,6 +964,291 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
     res.status(500).json({status:'error', message:e.message});
   }
 });
+
+
+
+function machineSiteScore(machine) {
+  if (machine.latest_report && machine.latest_report.health_score !== null && machine.latest_report.health_score !== undefined) {
+    const score = Number(machine.latest_report.health_score);
+    if (Number.isFinite(score)) return score;
+  }
+
+  let score = 90;
+
+  if (!machine.latest_telemetry) score -= 15;
+  if (!machine.latest_state || !machine.latest_state.state) score -= 10;
+  if (machine.latest_state && machine.latest_state.state !== 'RUNNING') score -= 10;
+  if (Number(machine.active_alarm_count || 0) > 0) score -= 15;
+
+  const temp = Number(machine.latest_telemetry?.temperature_c);
+  if (Number.isFinite(temp) && temp >= 30) score -= 5;
+
+  const rssi = Number(machine.latest_telemetry?.wifi_rssi);
+  if (Number.isFinite(rssi) && rssi < -65) score -= 5;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function buildSiteTelegramDailyReportText(report) {
+  const lines = [];
+  lines.push('🏭 FactoryBox Günlük Yönetici Raporu');
+  lines.push('');
+  lines.push(`Site: ${report.site.name} (${report.site.code})`);
+  lines.push(`Genel Skor: ${report.overall_score}/100`);
+  lines.push('');
+  lines.push('📌 Özet');
+  lines.push(report.summary);
+  lines.push('');
+  lines.push('⚙️ Makine Durumu');
+  lines.push(`Toplam makine: ${report.machine_count}`);
+  lines.push(`Çalışan: ${report.running_count}`);
+  lines.push(`Duruşta/Bilinmiyor: ${report.not_running_count}`);
+  lines.push(`Aktif alarm: ${report.active_alarm_total}`);
+  lines.push('');
+  lines.push('🔎 Bulgular');
+  report.findings.forEach(x => lines.push(`• ${x}`));
+  lines.push('');
+  lines.push('✅ Öneriler');
+  report.recommendations.forEach(x => lines.push(`• ${x}`));
+  lines.push('');
+  lines.push('🧾 Makine Özeti');
+  report.machines.forEach(m => {
+    lines.push(`• ${m.machine_code}: ${m.state || '-'} | Skor ${m.score}/100 | Alarm ${m.active_alarm_count}`);
+  });
+  lines.push('');
+  lines.push(`Rapor zamanı: ${new Date(report.generated_at).toLocaleString('tr-TR')}`);
+  return lines.join('\n');
+}
+
+async function getSiteReportCenterRows(siteCode) {
+  await ensureAiReportsHistorySchema();
+
+  const site = await one(
+    `SELECT id, code, name, status FROM sites WHERE code=$1 LIMIT 1`,
+    [siteCode]
+  );
+
+  if (!site) return null;
+
+  const machines = await pool.query(
+    `SELECT id, code, name, machine_type, status FROM machines WHERE site_id=$1 ORDER BY code`,
+    [site.id]
+  );
+
+  const rows = [];
+  for (const m of machines.rows) {
+    const device = await one(
+      `SELECT device_uid, model, firmware_version, status, last_seen_at FROM devices WHERE machine_id=$1 ORDER BY updated_at DESC LIMIT 1`,
+      [m.id]
+    );
+    const latestState = await one(
+      `SELECT state, source, started_at, ended_at, duration_sec FROM machine_state_events WHERE machine_id=$1 ORDER BY started_at DESC LIMIT 1`,
+      [m.id]
+    );
+    const latestTelemetry = await one(
+      `SELECT event_ts, current_amp, temperature_c, wifi_rssi, alarm_active FROM telemetry_events WHERE machine_id=$1 ORDER BY event_ts DESC LIMIT 1`,
+      [m.id]
+    );
+    const activeAlarms = await one(
+      `SELECT COUNT(*)::int AS count FROM alarms WHERE machine_id=$1 AND status='active'`,
+      [m.id]
+    );
+    const latestReport = await one(
+      `SELECT id::text AS id, report_type, report_date, health_score, summary, created_at FROM ai_reports WHERE machine_id=$1 ORDER BY created_at DESC LIMIT 1`,
+      [m.id]
+    );
+
+    rows.push({
+      machine_code:m.code,
+      machine_name:m.name,
+      machine_type:m.machine_type,
+      machine_status:m.status,
+      device:device || null,
+      latest_state:latestState || null,
+      latest_telemetry:latestTelemetry || null,
+      active_alarm_count:Number(activeAlarms?.count || 0),
+      latest_report:latestReport || null
+    });
+  }
+
+  return {
+    site:{ code:site.code, name:site.name, status:site.status },
+    machines:rows
+  };
+}
+
+function buildSiteDailyReport(center) {
+  const machines = center.machines || [];
+  const enriched = machines.map(m => {
+    const score = machineSiteScore(m);
+    return {
+      machine_code:m.machine_code,
+      machine_name:m.machine_name,
+      machine_type:m.machine_type,
+      state:m.latest_state?.state || null,
+      source:m.latest_state?.source || null,
+      temperature_c:m.latest_telemetry?.temperature_c ?? null,
+      current_amp:m.latest_telemetry?.current_amp ?? null,
+      wifi_rssi:m.latest_telemetry?.wifi_rssi ?? null,
+      active_alarm_count:Number(m.active_alarm_count || 0),
+      latest_report_id:m.latest_report?.id || null,
+      latest_report_score:m.latest_report?.health_score ?? null,
+      score
+    };
+  });
+
+  const machineCount = enriched.length;
+  const runningCount = enriched.filter(m => m.state === 'RUNNING').length;
+  const notRunningCount = machineCount - runningCount;
+  const activeAlarmTotal = enriched.reduce((sum, m) => sum + Number(m.active_alarm_count || 0), 0);
+  const machinesWithoutReport = enriched.filter(m => !m.latest_report_id).length;
+  const overallScore = machineCount
+    ? Math.round(enriched.reduce((sum, m) => sum + Number(m.score || 0), 0) / machineCount)
+    : 0;
+
+  const findings = [];
+  const recommendations = [];
+
+  findings.push(`${center.site.name} için ${machineCount} makine rapora dahil edildi.`);
+  findings.push(`${runningCount} makine çalışıyor, ${notRunningCount} makine duruşta veya bilinmiyor.`);
+  findings.push(`Toplam aktif alarm sayısı ${activeAlarmTotal}.`);
+
+  if (machinesWithoutReport > 0) {
+    findings.push(`${machinesWithoutReport} makinede henüz SmartAI makine raporu yok.`);
+    recommendations.push('Raporu olmayan makineler için günlük makine raporu üretimi planlanmalı.');
+  }
+
+  if (activeAlarmTotal > 0) {
+    recommendations.push('Aktif alarm olan makineler öncelikli kontrol edilmeli.');
+  }
+
+  if (overallScore >= 80) {
+    recommendations.push('Genel saha skoru iyi görünüyor. Mevcut çalışma performansı takip edilmeli.');
+  } else if (overallScore >= 60) {
+    recommendations.push('Genel saha skoru orta seviyede. Alarm ve duruş nedenleri ayrıştırılmalı.');
+  } else {
+    recommendations.push('Genel saha skoru düşük. Operasyon, bakım ve bağlantı sorunları birlikte incelenmeli.');
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push('Sistem normal görünüyor. Veri toplamaya devam edilmeli.');
+  }
+
+  const summary = [
+    `${center.site.name} günlük yönetici özeti: genel skor ${overallScore}/100.`,
+    `${machineCount} makinenin ${runningCount} tanesi çalışıyor.`,
+    activeAlarmTotal > 0 ? `${activeAlarmTotal} aktif alarm var.` : 'Aktif alarm görünmüyor.'
+  ].join(' ');
+
+  return {
+    site: center.site,
+    report_type:'site_daily_production',
+    generated_at:new Date().toISOString(),
+    overall_score:overallScore,
+    machine_count:machineCount,
+    running_count:runningCount,
+    not_running_count:notRunningCount,
+    active_alarm_total:activeAlarmTotal,
+    machines_without_report:machinesWithoutReport,
+    summary,
+    findings,
+    recommendations,
+    machines:enriched
+  };
+}
+
+async function saveSiteSmartAiReportIfPossible(report) {
+  await ensureAiReportsHistorySchema();
+
+  const telegramText = report.telegram_text || buildSiteTelegramDailyReportText(report);
+  const saved = await one(
+    `
+    INSERT INTO ai_reports
+      (machine_id, report_type, report_date, health_score, summary, summary_text, report_text, telegram_text, report_json, raw_payload, created_at)
+    VALUES
+      (NULL, $1, CURRENT_DATE, $2, $3, $3, $3, $4, $5::jsonb, $5::jsonb, now())
+    RETURNING id, report_date, created_at
+    `,
+    [
+      report.report_type,
+      Number(report.overall_score || 0),
+      report.summary,
+      telegramText,
+      JSON.stringify(report)
+    ]
+  );
+
+  return {
+    saved:true,
+    report_id:saved.id,
+    report_date:saved.report_date,
+    created_at:saved.created_at
+  };
+}
+
+async function createSiteDailyReport(siteCode, save) {
+  const center = await getSiteReportCenterRows(siteCode);
+  if (!center) return null;
+
+  const report = buildSiteDailyReport(center);
+  const telegram_text = buildSiteTelegramDailyReportText(report);
+  const reportWithTelegram = {...report, telegram_text};
+  const saveResult = save
+    ? await saveSiteSmartAiReportIfPossible(reportWithTelegram)
+    : {saved:false, reason:'save query not requested'};
+
+  return {
+    report:reportWithTelegram,
+    telegram_text,
+    saveResult
+  };
+}
+
+app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createSiteDailyReport(req.params.siteCode, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    res.json({
+      status:'ok',
+      ai_engine:'SmartAI Site Rule Engine',
+      version:'4.0.0',
+      site_code:req.params.siteCode,
+      saved_to_database:result.saveResult,
+      report:result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createSiteDailyReport(req.params.siteCode, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    res.json({
+      status:'ok',
+      ai_engine:'SmartAI Site Rule Engine',
+      version:'4.0.0',
+      site_code:req.params.siteCode,
+      saved_to_database:result.saveResult,
+      telegram_text:result.telegram_text,
+      report:result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
 
 async function start() {
   await pool.query('SELECT 1');

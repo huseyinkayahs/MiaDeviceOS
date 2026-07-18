@@ -128,6 +128,54 @@ function renderHistory(history) {
   `).join('');
 }
 
+
+
+function renderSiteDailyReport(siteDaily) {
+  const el = document.getElementById('siteDailyReport');
+  const telegramEl = document.getElementById('siteTelegramPreview');
+  if (!el) return;
+
+  const report = siteDaily.report || {};
+  const machines = report.machines || [];
+
+  el.innerHTML = `
+    <div class="site-score-row">
+      <div>
+        <p class="label">Genel Fabrika Skoru</p>
+        <strong class="${Number(report.overall_score) >= 75 ? 'ok' : 'alarm'}">${esc(report.overall_score ?? '-')} / 100</strong>
+      </div>
+      <div>
+        <p class="label">Makine</p>
+        <strong>${esc(report.running_count ?? 0)} / ${esc(report.machine_count ?? 0)}</strong>
+      </div>
+      <div>
+        <p class="label">Aktif Alarm</p>
+        <strong class="${Number(report.active_alarm_total || 0) > 0 ? 'alarm' : 'ok'}">${esc(report.active_alarm_total ?? 0)}</strong>
+      </div>
+    </div>
+    <p class="ai-summary">${esc(report.summary || '-')}</p>
+    <h3>Makine Bazlı Özet</h3>
+    <div class="machine-table">
+      ${machines.length ? machines.map(m => `
+        <div class="machine-row">
+          <strong>${esc(m.machine_code)}</strong>
+          <span>${esc(m.state || '-')}</span>
+          <span>${esc(m.score ?? '-')} / 100</span>
+          <span>${esc(m.active_alarm_count ?? 0)} alarm</span>
+        </div>
+      `).join('') : '<span class="muted">Makine bulunamadı.</span>'}
+    </div>
+    <h3>Bulgular</h3>
+    <ul>${(report.findings || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <h3>Öneriler</h3>
+    <ul>${(report.recommendations || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+  `;
+
+  if (telegramEl) {
+    telegramEl.textContent = siteDaily.report?.telegram_text || 'Telegram metni için /api/sites/site01/ai/daily-report/telegram endpointini kullan.';
+  }
+}
+
 function renderReportCenter(center) {
   const el = document.getElementById('multiMachineStatus');
   if (!el) return;
@@ -186,6 +234,7 @@ async function refresh(forceDetail = false) {
     const ai = await getJson(`/api/machines/${machineCode}/ai/daily-report`);
     const history = await getJson(`/api/machines/${machineCode}/ai/reports?limit=10`);
     const center = await getJson(`/api/sites/${siteCode}/ai/report-center`);
+    const siteDaily = await getJson(`/api/sites/${siteCode}/ai/daily-report`);
 
     window.lastHistory = history;
 
@@ -227,6 +276,7 @@ async function refresh(forceDetail = false) {
 
     renderHistory(history);
     renderReportCenter(center);
+    renderSiteDailyReport(siteDaily);
 
     if (!selectedReportId && history.reports && history.reports[0]) {
       selectedReportId = String(history.reports[0].id);

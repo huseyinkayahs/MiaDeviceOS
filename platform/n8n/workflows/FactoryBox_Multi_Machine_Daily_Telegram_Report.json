@@ -1,0 +1,87 @@
+{
+  "name": "FactoryBox - Multi Machine Daily Telegram Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 5 18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-multi-machine-daily",
+      "name": "Daily 18:05",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3100/api/sites/site01/ai/daily-report/telegram?save=1",
+        "options": {}
+      },
+      "id": "get-site-daily-report",
+      "name": "Get Site Daily Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{$json.telegram_text}}",
+        "additionalFields": {}
+      },
+      "id": "send-telegram-site-report",
+      "name": "Send Site Telegram Report",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        740,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "FactoryBox Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 18:05": {
+      "main": [
+        [
+          {
+            "node": "Get Site Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Site Daily Report": {
+      "main": [
+        [
+          {
+            "node": "Send Site Telegram Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

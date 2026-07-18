@@ -1,0 +1,130 @@
+
+# V4.0 Multi Machine Daily Report
+
+Bu paket v3.9.0 üzerine kopyalanır.
+
+## Amaç
+
+Aynı site altındaki tüm makineleri tek günlük yönetici raporunda toplamak.
+
+## Eklenenler
+
+```text
+Site günlük rapor endpointi
+Site Telegram rapor endpointi
+Genel fabrika skoru
+Makine bazlı skorlar
+Dashboard Multi-Machine Günlük Yönetici Raporu alanı
+n8n Telegram workflow taslağı
+Site rapor index migration dosyası
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 — Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.0.0
+```
+
+## Test 2 — Site Günlük Rapor
+
+```text
+http://localhost:3100/api/sites/site01/ai/daily-report
+```
+
+Beklenen:
+
+```text
+status: ok
+version: 4.0.0
+report.overall_score
+report.machines
+```
+
+## Test 3 — Telegram Formatı
+
+```text
+http://localhost:3100/api/sites/site01/ai/daily-report/telegram
+```
+
+Beklenen:
+
+```text
+telegram_text
+Genel Skor
+Makine Özeti
+```
+
+## Test 4 — Kaydetme
+
+```text
+http://localhost:3100/api/sites/site01/ai/daily-report/telegram?save=1
+```
+
+Beklenen:
+
+```text
+saved_to_database.saved: true
+report_id
+```
+
+## Test 5 — Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen:
+
+```text
+Multi-Machine Günlük Yönetici Raporu
+Genel Fabrika Skoru
+Makine Bazlı Özet
+Telegram Önizleme
+```
+
+## n8n Workflow
+
+Import dosyası:
+
+```text
+platform/n8n/workflows/FactoryBox_Multi_Machine_Daily_Telegram_Report.json
+```
+
+HTTP node URL:
+
+```text
+http://host.docker.internal:3100/api/sites/site01/ai/daily-report/telegram?save=1
+```
