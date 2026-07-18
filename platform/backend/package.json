@@ -1,6 +1,6 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "3.8.2",
+  "version": "3.9.0",
   "description": "FactoryBox / Mia BusinessOS Platform Backend MVP",
   "main": "server.js",
   "scripts": { "start": "node server.js", "dev": "node server.js" },

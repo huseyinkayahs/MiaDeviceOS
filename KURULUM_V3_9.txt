@@ -1,0 +1,137 @@
+
+# V3.9 SmartAI Report Center
+
+Bu paket v3.8.2 üzerine kopyalanır.
+
+## Amaç
+
+3 sprint tek pakette birleştirildi:
+
+```text
+1) SmartAI rapor detay ekranı
+2) Demo rapor temizleme
+3) Report history dashboard geliştirme
+4) Multi-machine rapor merkezi altyapısı
+```
+
+## Yeni Backend Endpointleri
+
+Rapor detay:
+
+```text
+GET /api/machines/laser01/ai/reports/:id
+```
+
+Demo raporları kontrol:
+
+```text
+GET /api/machines/laser01/ai/reports/cleanup-demo
+```
+
+Demo raporları temizle:
+
+```text
+GET /api/machines/laser01/ai/reports/cleanup-demo?confirm=1
+```
+
+Multi-machine hazırlık:
+
+```text
+GET /api/sites/site01/ai/report-center
+```
+
+## Dashboard Yenilikleri
+
+```text
+Rapora tıklayınca detay açılır
+Bulgular ve öneriler geçmiş raporda görünür
+Telegram mesajı geçmiş raporda görünür
+Demo raporları temizle butonu eklendi
+Multi-machine hazırlık alanı eklendi
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Önce çalışan backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Port doluysa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 — Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 3.9.0
+```
+
+## Test 2 — Rapor Geçmişi
+
+```text
+http://localhost:3100/api/machines/laser01/ai/reports
+```
+
+## Test 3 — Rapor Detayı
+
+Önce `/ai/reports` içinden bir `id` al.
+
+```text
+http://localhost:3100/api/machines/laser01/ai/reports/43
+```
+
+## Test 4 — Multi-Machine Hazırlık
+
+```text
+http://localhost:3100/api/sites/site01/ai/report-center
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda:
+
+```text
+Ctrl + F5
+```
+
+Beklenen:
+
+```text
+SmartAI Rapor Geçmişi
+Rapor Detayı
+Multi-Machine Hazırlık
+Demo raporları temizle
+```

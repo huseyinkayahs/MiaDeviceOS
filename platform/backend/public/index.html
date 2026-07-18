@@ -2,15 +2,15 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox Platform Backend + SmartAI MVP</title>
+  <title>FactoryBox SmartAI Report Center</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 </head>
 <body>
 <header>
   <div>
-    <h1>FactoryBox Platform Backend + SmartAI MVP</h1>
-    <p>MQTT → PostgreSQL → API → SmartAI → Dashboard</p>
+    <h1>FactoryBox SmartAI Report Center</h1>
+    <p>MQTT → PostgreSQL → API → SmartAI → Report History → Dashboard</p>
   </div>
   <div id="serviceStatus" class="badge">Bağlanıyor...</div>
 </header>
@@ -61,6 +61,31 @@
     <ul id="aiRecommendations"></ul>
   </section>
 
+  <section class="card wide report-center">
+    <div class="section-title-row">
+      <div>
+        <h2>SmartAI Rapor Geçmişi</h2>
+        <p class="muted">Rapora tıkla; detay, bulgular, öneriler ve ham veri aşağıda açılır.</p>
+      </div>
+      <div>
+        <button id="cleanupDemoReports" class="secondary-btn">Demo raporları temizle</button>
+        <p id="cleanupStatus" class="mini-status"></p>
+      </div>
+    </div>
+    <div id="aiHistory">Yükleniyor...</div>
+  </section>
+
+  <section class="card wide report-detail-card">
+    <h2>Rapor Detayı</h2>
+    <div id="reportDetail"><span class="muted">Detay görmek için geçmişten bir rapora tıkla.</span></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Multi-Machine Hazırlık</h2>
+    <p class="muted">v4.0 çoklu makine yönetici raporu için altyapı görünümü.</p>
+    <div id="multiMachineStatus">Yükleniyor...</div>
+  </section>
+
   <section class="card wide">
     <h2>Son Alarmlar</h2>
     <div id="alarms">Yükleniyor...</div>
@@ -70,10 +95,6 @@
     <h2>API Sağlık Durumu</h2>
     <pre id="healthJson">{}</pre>
   </section>
-  <section class="card wide">
-      <h2>SmartAI Rapor Geçmişi</h2>
-      <div id="aiHistory">Yükleniyor...</div>
-    </section>
 </main>
 
 <script src="/app.js"></script>

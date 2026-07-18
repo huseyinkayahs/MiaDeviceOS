@@ -523,7 +523,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.8.2', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.9.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -631,7 +631,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.8.2',
+      version:'3.9.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -652,7 +652,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.8.2',
+      version:'3.9.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -702,7 +702,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.8.2',
+      version:'3.9.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -746,7 +746,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'3.8.2',
+      version:'3.9.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -755,6 +755,215 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
   }
 });
 
+
+
+app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const machine = await one(
+      `SELECT id, code FROM machines WHERE code=$1 LIMIT 1`,
+      [req.params.code]
+    );
+
+    if (!machine) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    const demoWhere = `
+      machine_id=$1 AND (
+        health_score IS NULL OR
+        COALESCE(summary,'') ILIKE '%demo rapor%' OR
+        COALESCE(summary_text,'') ILIKE '%demo rapor%' OR
+        COALESCE(report_text,'') ILIKE '%demo rapor%' OR
+        COALESCE(report_type,'') ILIKE '%demo%'
+      )
+    `;
+
+    if (String(req.query.confirm || '') !== '1') {
+      const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
+      return res.json({
+        status:'ok',
+        version:'3.9.0',
+        machine_code:req.params.code,
+        dry_run:true,
+        demo_report_count:Number(c?.count || 0),
+        message:'Silmek için ?confirm=1 ekleyin.'
+      });
+    }
+
+    const deleted = await pool.query(
+      `DELETE FROM ai_reports WHERE ${demoWhere} RETURNING id`,
+      [machine.id]
+    );
+
+    res.json({
+      status:'ok',
+      version:'3.9.0',
+      machine_code:req.params.code,
+      deleted_count:deleted.rowCount,
+      deleted_ids:deleted.rows.map(r => String(r.id))
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const machine = await one(
+      `SELECT id, code FROM machines WHERE code=$1 LIMIT 1`,
+      [req.params.code]
+    );
+
+    if (!machine) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    const deleted = await pool.query(
+      `
+      DELETE FROM ai_reports
+      WHERE machine_id=$1 AND (
+        health_score IS NULL OR
+        COALESCE(summary,'') ILIKE '%demo rapor%' OR
+        COALESCE(summary_text,'') ILIKE '%demo rapor%' OR
+        COALESCE(report_text,'') ILIKE '%demo rapor%' OR
+        COALESCE(report_type,'') ILIKE '%demo%'
+      )
+      RETURNING id
+      `,
+      [machine.id]
+    );
+
+    res.json({
+      status:'ok',
+      version:'3.9.0',
+      machine_code:req.params.code,
+      deleted_count:deleted.rowCount,
+      deleted_ids:deleted.rows.map(r => String(r.id))
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const machine = await one(
+      `SELECT id, code FROM machines WHERE code=$1 LIMIT 1`,
+      [req.params.code]
+    );
+
+    if (!machine) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    const report = await one(
+      `
+      SELECT
+        id::text AS id,
+        report_type,
+        report_date,
+        health_score,
+        summary,
+        summary_text,
+        report_text,
+        telegram_text,
+        report_json,
+        raw_payload,
+        created_at
+      FROM ai_reports
+      WHERE machine_id=$1
+        AND id::text=$2
+      LIMIT 1
+      `,
+      [machine.id, String(req.params.id)]
+    );
+
+    if (!report) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code, report_id:String(req.params.id)});
+    }
+
+    res.json({
+      status:'ok',
+      version:'3.9.0',
+      machine_code:req.params.code,
+      report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const site = await one(
+      `SELECT id, code, name, status FROM sites WHERE code=$1 LIMIT 1`,
+      [req.params.siteCode]
+    );
+
+    if (!site) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    const machines = await pool.query(
+      `SELECT id, code, name, machine_type, status FROM machines WHERE site_id=$1 ORDER BY code`,
+      [site.id]
+    );
+
+    const rows = [];
+    for (const m of machines.rows) {
+      const device = await one(
+        `SELECT device_uid, model, firmware_version, status, last_seen_at FROM devices WHERE machine_id=$1 ORDER BY updated_at DESC LIMIT 1`,
+        [m.id]
+      );
+      const latestState = await one(
+        `SELECT state, source, started_at, ended_at, duration_sec FROM machine_state_events WHERE machine_id=$1 ORDER BY started_at DESC LIMIT 1`,
+        [m.id]
+      );
+      const latestTelemetry = await one(
+        `SELECT event_ts, current_amp, temperature_c, wifi_rssi, alarm_active FROM telemetry_events WHERE machine_id=$1 ORDER BY event_ts DESC LIMIT 1`,
+        [m.id]
+      );
+      const activeAlarms = await one(
+        `SELECT COUNT(*)::int AS count FROM alarms WHERE machine_id=$1 AND status='active'`,
+        [m.id]
+      );
+      const latestReport = await one(
+        `SELECT id::text AS id, report_type, report_date, health_score, summary, created_at FROM ai_reports WHERE machine_id=$1 ORDER BY created_at DESC LIMIT 1`,
+        [m.id]
+      );
+
+      rows.push({
+        machine_code:m.code,
+        machine_name:m.name,
+        machine_type:m.machine_type,
+        machine_status:m.status,
+        device:device || null,
+        latest_state:latestState || null,
+        latest_telemetry:latestTelemetry || null,
+        active_alarm_count:Number(activeAlarms?.count || 0),
+        latest_report:latestReport || null
+      });
+    }
+
+    res.json({
+      status:'ok',
+      version:'3.9.0',
+      site:{ code:site.code, name:site.name, status:site.status },
+      machine_count:rows.length,
+      machines:rows
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
 
 async function start() {
   await pool.query('SELECT 1');
