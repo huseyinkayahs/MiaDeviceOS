@@ -1,0 +1,103 @@
+
+# V3.8.2 ai_reports Legacy Schema Compatibility Fix
+
+Bu paket v3.8.1 üzerine kopyalanır.
+
+## Sorun
+
+Kayıt testinde şu hata görüldü:
+
+```text
+null value in column "summary_text" of relation "ai_reports" violates not-null constraint
+```
+
+Neden:
+
+Eski veritabanı şemasında `ai_reports.summary_text` kolonu `NOT NULL` kalmıştı.
+v3.8.1 yeni kayıtları `summary` kolonuna yazıyordu, ama `summary_text` boş kaldığı için PostgreSQL kayıt kabul etmedi.
+
+## Düzeltme
+
+Backend başlangıcında:
+
+```text
+summary_text kolonu varsa NOT NULL kaldırılır
+report_text kolonu varsa NOT NULL kaldırılır
+summary_text / summary boş kayıtlar doldurulur
+```
+
+Kayıt sırasında:
+
+```text
+summary
+summary_text
+report_text
+```
+
+alanlarının hepsi aynı özet metni ile doldurulur.
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Önce backend terminalinde:
+
+```text
+Ctrl + C
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test
+
+Önce:
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 3.8.2
+```
+
+Sonra:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report/telegram?save=1
+```
+
+Beklenen:
+
+```text
+saved_to_database.saved: true
+report_id
+```
+
+Sonra:
+
+```text
+http://localhost:3100/api/machines/laser01/ai/reports
+```

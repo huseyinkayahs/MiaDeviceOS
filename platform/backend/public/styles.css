@@ -28,3 +28,25 @@
   align-items: center;
   gap: 12px;
 }
+
+
+.history-row {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.history-row strong {
+  font-size: 18px;
+  display: inline-block;
+  min-width: 90px;
+}
+
+.history-row span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.history-row p {
+  margin-top: 6px;
+  line-height: 1.45;
+}

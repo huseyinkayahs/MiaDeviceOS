@@ -1,0 +1,99 @@
+
+# V3.8.1 SmartAI Report History Route Restore Hotfix
+
+Bu paket v3.8 paketindeki eksik API route sorununu düzeltir.
+
+## Sorun
+
+Önceki v3.8 paketinden sonra:
+
+```text
+Cannot GET /api/health
+```
+
+göründü. Sebep: server.js içinde eski ana API route'ları yanlışlıkla düşmüştü.
+
+## Düzeltme
+
+Bu paket v3.7.0 tam backend dosyasını baz alır ve üzerine şunları ekler:
+
+```text
+ai_reports schema helper
+SmartAI report save fix
+/api/machines/laser01/ai/reports
+/api/machines/laser01/ai/reports/latest
+Dashboard SmartAI Rapor Geçmişi
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+Önce çalışan 3100 portunu kapat:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+```
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 3.8.1
+```
+
+## Test 2 — Save
+
+```text
+http://localhost:3100/api/machines/laser01/ai/daily-report/telegram?save=1
+```
+
+Beklenen:
+
+```text
+saved_to_database.saved: true
+report_id
+```
+
+## Test 3 — History
+
+```text
+http://localhost:3100/api/machines/laser01/ai/reports
+```
+
+Beklenen:
+
+```text
+status: ok
+count: 1 veya daha fazla
+reports: [...]
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.

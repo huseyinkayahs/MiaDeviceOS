@@ -45,6 +45,7 @@ async function refresh() {
     const st = await getJson(`/api/machines/${machineCode}/status`);
     const alarms = await getJson(`/api/machines/${machineCode}/alarms`);
     const ai = await getJson(`/api/machines/${machineCode}/ai/daily-report`);
+    const history = await getJson(`/api/machines/${machineCode}/ai/reports?limit=5`);
 
     document.getElementById('serviceStatus').textContent = 'Çalışıyor';
     document.getElementById('backendStatus').textContent = h.status;
@@ -81,6 +82,20 @@ async function refresh() {
     document.getElementById('aiSummary').textContent = report.summary || 'Rapor oluşturulamadı.';
     fillList('aiFindings', report.findings);
     fillList('aiRecommendations', report.recommendations);
+
+    const historyEl = document.getElementById('aiHistory');
+    if (historyEl) {
+      historyEl.innerHTML = (history.reports || []).length
+        ? history.reports.map(r => `
+            <div class="history-row">
+              <strong>${r.health_score ?? '-'} / 100</strong>
+              <span>${new Date(r.created_at).toLocaleString('tr-TR')}</span>
+              <p>${r.summary || '-'}</p>
+            </div>
+          `).join('')
+        : '<span class="muted">Henüz kayıtlı SmartAI raporu yok. Önce /ai/daily-report/telegram?save=1 çalıştır.</span>';
+    }
+
 
     document.getElementById('healthJson').textContent = JSON.stringify(h, null, 2);
   } catch (e) {

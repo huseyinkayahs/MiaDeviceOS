@@ -62,6 +62,7 @@ async function ensureEntities() {
 
 async function seen(payload={}) {
   const { device } = await ensureEntities();
+  await ensureAiReportsHistorySchema();
   await pool.query(`UPDATE devices SET last_seen_at=now(), status='online', firmware_version=COALESCE($2, firmware_version), updated_at=now() WHERE id=$1`, [device.id, payload.firmware_version || null]);
 }
 
@@ -433,61 +434,96 @@ async function getCalculatedTodayRuntime(machineId) {
 }
 
 
-async function saveSmartAiReportIfPossible(machineId, report) {
-  const table = await one(`SELECT to_regclass('public.ai_reports') AS table_name`);
-  if (!table || !table.table_name) {
-    return { saved: false, reason: 'ai_reports table not found' };
-  }
 
-  const cols = await pool.query(
-    `SELECT column_name
-     FROM information_schema.columns
-     WHERE table_schema='public'
-       AND table_name='ai_reports'`
-  );
+async function ensureAiReportsHistorySchema() {
+  await pool.query(`
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-  const columnNames = new Set(cols.rows.map(r => r.column_name));
+    CREATE TABLE IF NOT EXISTS ai_reports (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      machine_id uuid,
+      report_type text NOT NULL DEFAULT 'daily_production',
+      report_date date NOT NULL DEFAULT CURRENT_DATE,
+      health_score integer,
+      summary text,
+      telegram_text text,
+      report_json jsonb,
+      raw_payload jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
 
-  try {
-    if (columnNames.has('machine_id') && columnNames.has('report_type') && columnNames.has('report_text')) {
-      await pool.query(
-        `INSERT INTO ai_reports(machine_id,report_type,report_text,raw_payload)
-         VALUES($1,$2,$3,$4::jsonb)`,
-        [machineId, report.report_type, report.summary, JSON.stringify(report)]
-      );
-      return { saved: true, mode: 'report_text' };
-    }
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS machine_id uuid;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS report_type text NOT NULL DEFAULT 'daily_production';
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS report_date date NOT NULL DEFAULT CURRENT_DATE;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS health_score integer;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS summary text;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS summary_text text;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS report_text text;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS telegram_text text;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS report_json jsonb;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS raw_payload jsonb;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 
-    if (columnNames.has('machine_id') && columnNames.has('report_type') && columnNames.has('summary')) {
-      await pool.query(
-        `INSERT INTO ai_reports(machine_id,report_type,summary,raw_payload)
-         VALUES($1,$2,$3,$4::jsonb)`,
-        [machineId, report.report_type, report.summary, JSON.stringify(report)]
-      );
-      return { saved: true, mode: 'summary' };
-    }
+    ALTER TABLE ai_reports ALTER COLUMN summary_text DROP NOT NULL;
+    ALTER TABLE ai_reports ALTER COLUMN report_text DROP NOT NULL;
 
-    if (columnNames.has('machine_id') && columnNames.has('raw_payload')) {
-      await pool.query(
-        `INSERT INTO ai_reports(machine_id,raw_payload)
-         VALUES($1,$2::jsonb)`,
-        [machineId, JSON.stringify(report)]
-      );
-      return { saved: true, mode: 'raw_payload' };
-    }
+    UPDATE ai_reports
+    SET summary_text = COALESCE(summary_text, summary, report_text, 'SmartAI report')
+    WHERE summary_text IS NULL;
 
-    return { saved: false, reason: 'ai_reports schema not compatible' };
-  } catch (error) {
-    return { saved: false, reason: error.message };
-  }
+    UPDATE ai_reports
+    SET summary = COALESCE(summary, summary_text, report_text, 'SmartAI report')
+    WHERE summary IS NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_machine_created
+    ON ai_reports(machine_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_machine_date
+    ON ai_reports(machine_id, report_date DESC);
+  `);
 }
 
+async function saveSmartAiReportIfPossible(machineId, report) {
+  await ensureAiReportsHistorySchema();
+
+  const reportJson = report.report_json || report;
+  const summary = report.summary || reportJson.summary || null;
+  const telegramText = report.telegram_text || reportJson.telegram_text || null;
+  const healthScoreRaw = report.health_score ?? reportJson.health_score ?? null;
+  const healthScore = Number(healthScoreRaw);
+  const reportType = report.report_type || reportJson.report_type || 'daily_production';
+
+  const saved = await one(
+    `
+    INSERT INTO ai_reports
+      (machine_id, report_type, report_date, health_score, summary, summary_text, report_text, telegram_text, report_json, raw_payload, created_at)
+    VALUES
+      ($1, $2, CURRENT_DATE, $3, $4, $4, $4, $5, $6::jsonb, $6::jsonb, now())
+    RETURNING id, report_date, created_at
+    `,
+    [
+      machineId,
+      reportType,
+      Number.isFinite(healthScore) ? healthScore : null,
+      summary,
+      telegramText,
+      JSON.stringify(reportJson)
+    ]
+  );
+
+  return {
+    saved: true,
+    report_id: saved.id,
+    report_date: saved.report_date,
+    created_at: saved.created_at
+  };
+}
 
 app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.7.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'3.8.2', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -595,7 +631,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.7.0',
+      version:'3.8.2',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -616,7 +652,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'3.7.0',
+      version:'3.8.2',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -627,6 +663,97 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
   }
 });
 
+
+
+
+app.get('/api/machines/:code/ai/reports', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const machine = await one(
+      `SELECT id, code FROM machines WHERE code=$1 LIMIT 1`,
+      [req.params.code]
+    );
+
+    if (!machine) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        report_type,
+        report_date,
+        health_score,
+        summary,
+        telegram_text,
+        created_at,
+        report_json
+      FROM ai_reports
+      WHERE machine_id=$1
+      ORDER BY created_at DESC
+      LIMIT $2
+      `,
+      [machine.id, limit]
+    );
+
+    res.json({
+      status:'ok',
+      version:'3.8.2',
+      machine_code:req.params.code,
+      count: result.rows.length,
+      reports: result.rows
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const machine = await one(
+      `SELECT id, code FROM machines WHERE code=$1 LIMIT 1`,
+      [req.params.code]
+    );
+
+    if (!machine) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    const report = await one(
+      `
+      SELECT
+        id,
+        report_type,
+        report_date,
+        health_score,
+        summary,
+        telegram_text,
+        created_at,
+        report_json
+      FROM ai_reports
+      WHERE machine_id=$1
+      ORDER BY created_at DESC
+      LIMIT 1
+      `,
+      [machine.id]
+    );
+
+    res.json({
+      status:'ok',
+      version:'3.8.2',
+      machine_code:req.params.code,
+      report: report || null
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
 
 
 async function start() {
