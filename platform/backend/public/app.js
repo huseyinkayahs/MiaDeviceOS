@@ -136,6 +136,88 @@ function renderHistory(history) {
 
 
 
+
+
+function renderOpenAiStatus(status) {
+  const el = document.getElementById('openAiStatus');
+  if (!el) return;
+
+  const cfg = status.openai || {};
+  el.innerHTML = `
+    <div class="machine-row">
+      <strong>Configured</strong>
+      <span class="${cfg.configured ? 'ok' : 'alarm'}">${cfg.configured ? 'yes' : 'no'}</span>
+      <span>Enabled: ${cfg.enabled ? 'yes' : 'no'}</span>
+      <span>Model: ${esc(cfg.model || '-')}</span>
+    </div>
+  `;
+}
+
+function renderOpenAiReport(result) {
+  const el = document.getElementById('openAiReportPreview');
+  if (!el) return;
+
+  if (!result || !result.report) {
+    el.innerHTML = '<span class="muted">OpenAI raporu henüz oluşturulmadı.</span>';
+    return;
+  }
+
+  const r = result.report;
+  el.innerHTML = `
+    <div class="detail-head">
+      <div>
+        <p class="label">AI Engine</p>
+        <strong>${esc(r.ai_engine || '-')}</strong>
+      </div>
+      <div>
+        <p class="label">Skor</p>
+        <strong class="${Number(r.overall_score) >= 75 ? 'ok' : 'alarm'}">${esc(r.overall_score ?? '-')} / 100</strong>
+      </div>
+      <div>
+        <p class="label">OpenAI</p>
+        <span class="${result.openai?.ok ? 'ok' : 'alarm'}">${result.openai?.ok ? 'ok' : (result.openai?.reason || 'fallback')}</span>
+      </div>
+    </div>
+    <p class="ai-summary">${esc(r.summary || '-')}</p>
+    ${r.executive_comment ? `<h3>AI Yorumu</h3><p class="detail-summary">${esc(r.executive_comment)}</p>` : ''}
+    <div class="detail-grid">
+      <div>
+        <h3>Bulgular</h3>
+        <ul>${(r.findings || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <h3>Öneriler</h3>
+        <ul>${(r.recommendations || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      </div>
+    </div>
+    ${(r.risks || []).length ? `<h3>Riskler</h3><ul>${r.risks.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${(r.action_items || []).length ? `<h3>Aksiyonlar</h3><ul>${r.action_items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${result.telegram_text ? `<h3>Telegram Mesajı</h3><pre>${esc(result.telegram_text)}</pre>` : ''}
+  `;
+}
+
+async function createOpenAiReport() {
+  const statusEl = document.getElementById('openAiActionStatus');
+  const btn = document.getElementById('createOpenAiReport');
+  if (statusEl) statusEl.textContent = 'OpenAI SmartAI raporu oluşturuluyor...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const result = await getJson(`/api/sites/${siteCode}/ai/openai-report/telegram?save=1`);
+    if (statusEl) {
+      statusEl.textContent = result.saved_to_database?.saved
+        ? `Kaydedildi. Report ID: ${result.saved_to_database.report_id}`
+        : `Kaydedilmedi: ${result.saved_to_database?.reason || result.openai?.reason || 'bilinmeyen durum'}`;
+    }
+    renderOpenAiReport(result);
+    await refresh(true);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = e.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function updatePdfLinks(siteReports) {
   const latest = (siteReports.reports || [])[0];
 
@@ -395,6 +477,7 @@ async function refresh(forceDetail = false) {
     const deviceInfo = await getJson(`/api/machines/${machineCode}/device-info`);
     const siteDaily = await getJson(`/api/sites/${siteCode}/ai/daily-report`);
     const siteReports = await getJson(`/api/sites/${siteCode}/ai/reports?limit=5`);
+    const openAiStatus = await getJson('/api/ai/openai/status');
 
     window.lastHistory = history;
 
@@ -439,6 +522,7 @@ async function refresh(forceDetail = false) {
     renderDeviceInfo(deviceInfo);
     renderSiteDailyReport(siteDaily);
     renderSiteReportHistory(siteReports);
+    renderOpenAiStatus(openAiStatus);
     updatePdfLinks(siteReports);
 
     if (!selectedReportId && history.reports && history.reports[0]) {
@@ -470,6 +554,9 @@ if (cleanupBtn) cleanupBtn.addEventListener('click', cleanupDemoReports);
 
 const createSiteReportBtn = document.getElementById('createSiteReport');
 if (createSiteReportBtn) createSiteReportBtn.addEventListener('click', createAndSaveSiteReport);
+
+const createOpenAiReportBtn = document.getElementById('createOpenAiReport');
+if (createOpenAiReportBtn) createOpenAiReportBtn.addEventListener('click', createOpenAiReport);
 
 refresh(true);
 setInterval(() => refresh(false), 5000);

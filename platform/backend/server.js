@@ -648,7 +648,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.3.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.4.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -756,7 +756,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.3.0',
+      version:'4.4.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -777,7 +777,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.3.0',
+      version:'4.4.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -827,7 +827,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -871,7 +871,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -909,7 +909,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.3.0',
+        version:'4.4.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -924,7 +924,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -964,7 +964,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1015,7 +1015,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       machine_code:req.params.code,
       report
     });
@@ -1080,7 +1080,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -1131,7 +1131,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       device:row
     });
   } catch(e) {
@@ -1176,7 +1176,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       device:row
     });
   } catch(e) {
@@ -1433,7 +1433,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.3.0',
+      version:'4.4.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -1455,7 +1455,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.3.0',
+      version:'4.4.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -1506,7 +1506,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -1550,7 +1550,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -1601,7 +1601,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.3.0',
+      version:'4.4.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -1745,7 +1745,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.3.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.4.0
     </div>
   </main>
 </body>
@@ -1856,6 +1856,313 @@ app.get('/api/sites/:siteCode/ai/daily-report/print', async (req,res)=>{
     res.send(siteReportPrintHtml(result.report.site || {code:req.params.siteCode, name:req.params.siteCode}, report));
   } catch(e) {
     res.status(500).send(h(e.message));
+  }
+});
+
+
+
+
+function openAiConfig() {
+  return {
+    enabled: Boolean(process.env.OPENAI_API_KEY) && String(process.env.SMARTAI_OPENAI_ENABLED || 'true').toLowerCase() !== 'false',
+    configured: Boolean(process.env.OPENAI_API_KEY),
+    model: process.env.OPENAI_MODEL || 'gpt-5-mini'
+  };
+}
+
+function extractOpenAiText(data) {
+  if (!data) return '';
+
+  if (typeof data.output_text === 'string') {
+    return data.output_text;
+  }
+
+  const chunks = [];
+  if (Array.isArray(data.output)) {
+    for (const item of data.output) {
+      if (typeof item?.content === 'string') chunks.push(item.content);
+      if (Array.isArray(item?.content)) {
+        for (const c of item.content) {
+          if (typeof c?.text === 'string') chunks.push(c.text);
+          if (typeof c?.content === 'string') chunks.push(c.content);
+          if (typeof c?.output_text === 'string') chunks.push(c.output_text);
+        }
+      }
+    }
+  }
+
+  return chunks.join('\n').trim();
+}
+
+function parseJsonFromText(text) {
+  if (!text) return null;
+
+  let clean = String(text).trim();
+  clean = clean.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+
+  try {
+    return JSON.parse(clean);
+  } catch {}
+
+  const first = clean.indexOf('{');
+  const last = clean.lastIndexOf('}');
+  if (first >= 0 && last > first) {
+    try {
+      return JSON.parse(clean.slice(first, last + 1));
+    } catch {}
+  }
+
+  return null;
+}
+
+function buildOpenAiPrompt(baseReport) {
+  const compact = {
+    site: baseReport.site,
+    overall_score: baseReport.overall_score,
+    machine_count: baseReport.machine_count,
+    running_count: baseReport.running_count,
+    not_running_count: baseReport.not_running_count,
+    active_alarm_total: baseReport.active_alarm_total,
+    machines_without_report: baseReport.machines_without_report,
+    summary: baseReport.summary,
+    findings: baseReport.findings,
+    recommendations: baseReport.recommendations,
+    machines: baseReport.machines
+  };
+
+  return [
+    'Sen FactoryBox üretim takip platformu için Türkçe yönetici raporu yazan bir endüstriyel üretim analistisin.',
+    'Verilen JSON verisini kullan. Uydurma veri ekleme. Kısa, net, yönetici seviyesinde yaz.',
+    'Sadece geçerli JSON döndür. Markdown kullanma.',
+    'JSON şeması:',
+    '{',
+    '  "summary": "2-3 cümlelik yönetici özeti",',
+    '  "executive_comment": "tek paragraf yönetici yorumu",',
+    '  "findings": ["bulgu 1", "bulgu 2"],',
+    '  "recommendations": ["öneri 1", "öneri 2"],',
+    '  "risks": ["risk 1", "risk 2"],',
+    '  "action_items": ["aksiyon 1", "aksiyon 2"]',
+    '}',
+    'Veri:',
+    JSON.stringify(compact, null, 2)
+  ].join('\n');
+}
+
+async function callOpenAiForSiteReport(baseReport) {
+  const cfg = openAiConfig();
+
+  if (!cfg.configured) {
+    return {
+      ok:false,
+      reason:'OPENAI_API_KEY not configured',
+      model:cfg.model,
+      parsed:null,
+      raw_text:null
+    };
+  }
+
+  if (!cfg.enabled) {
+    return {
+      ok:false,
+      reason:'SMARTAI_OPENAI_ENABLED=false',
+      model:cfg.model,
+      parsed:null,
+      raw_text:null
+    };
+  }
+
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method:'POST',
+    headers:{
+      'Authorization':`Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      model:cfg.model,
+      input:buildOpenAiPrompt(baseReport)
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok:false,
+      reason:data?.error?.message || `OpenAI API error ${response.status}`,
+      model:cfg.model,
+      parsed:null,
+      raw_text:null,
+      raw_response:data
+    };
+  }
+
+  const text = extractOpenAiText(data);
+  const parsed = parseJsonFromText(text);
+
+  return {
+    ok:Boolean(parsed),
+    reason:parsed ? null : 'OpenAI response could not be parsed as JSON',
+    model:cfg.model,
+    parsed,
+    raw_text:text,
+    raw_response_id:data?.id || null
+  };
+}
+
+function normalizeAiArray(value, fallback = []) {
+  return Array.isArray(value)
+    ? value.map(x => String(x)).filter(Boolean).slice(0, 8)
+    : fallback;
+}
+
+function buildOpenAiTelegramSiteReportText(report) {
+  const lines = [];
+  lines.push('🏭 FactoryBox OpenAI SmartAI Yönetici Raporu');
+  lines.push('');
+  lines.push(`Site: ${report.site.name} (${report.site.code})`);
+  lines.push(`Genel Skor: ${report.overall_score}/100`);
+  lines.push(`AI Engine: ${report.ai_engine}`);
+  if (report.openai_model) lines.push(`Model: ${report.openai_model}`);
+  lines.push('');
+  lines.push('📌 Yönetici Özeti');
+  lines.push(report.summary);
+  if (report.executive_comment) {
+    lines.push('');
+    lines.push('🧠 AI Yorumu');
+    lines.push(report.executive_comment);
+  }
+  lines.push('');
+  lines.push('⚙️ Durum');
+  lines.push(`Toplam makine: ${report.machine_count}`);
+  lines.push(`Çalışan: ${report.running_count}`);
+  lines.push(`Duruşta/Bilinmiyor: ${report.not_running_count}`);
+  lines.push(`Aktif alarm: ${report.active_alarm_total}`);
+  lines.push('');
+  lines.push('🔎 Bulgular');
+  report.findings.forEach(x => lines.push(`• ${x}`));
+  lines.push('');
+  lines.push('✅ Öneriler');
+  report.recommendations.forEach(x => lines.push(`• ${x}`));
+  if (report.risks && report.risks.length) {
+    lines.push('');
+    lines.push('⚠️ Riskler');
+    report.risks.forEach(x => lines.push(`• ${x}`));
+  }
+  if (report.action_items && report.action_items.length) {
+    lines.push('');
+    lines.push('📍 Aksiyonlar');
+    report.action_items.forEach(x => lines.push(`• ${x}`));
+  }
+  lines.push('');
+  lines.push(`Rapor zamanı: ${new Date(report.generated_at).toLocaleString('tr-TR')}`);
+  return lines.join('\n');
+}
+
+async function createOpenAiSiteReport(siteCode, save) {
+  const base = await createSiteDailyReport(siteCode, false);
+  if (!base) return null;
+
+  const baseReport = base.report;
+  const ai = await callOpenAiForSiteReport(baseReport);
+
+  const upgraded = {
+    ...baseReport,
+    ai_engine: ai.ok ? 'OpenAI Responses API + FactoryBox Rules' : 'FactoryBox Rules Fallback',
+    openai_enabled: openAiConfig().enabled,
+    openai_configured: openAiConfig().configured,
+    openai_model: ai.model,
+    openai_status: ai.ok ? 'ok' : 'fallback',
+    openai_reason: ai.reason,
+    openai_response_id: ai.raw_response_id || null,
+    generated_at:new Date().toISOString(),
+    summary: ai.parsed?.summary || baseReport.summary,
+    executive_comment: ai.parsed?.executive_comment || null,
+    findings: normalizeAiArray(ai.parsed?.findings, baseReport.findings),
+    recommendations: normalizeAiArray(ai.parsed?.recommendations, baseReport.recommendations),
+    risks: normalizeAiArray(ai.parsed?.risks, []),
+    action_items: normalizeAiArray(ai.parsed?.action_items, []),
+    base_rule_report: baseReport
+  };
+
+  const telegram_text = buildOpenAiTelegramSiteReportText(upgraded);
+  const reportWithTelegram = {...upgraded, telegram_text};
+
+  const saveResult = save
+    ? await saveSiteSmartAiReportIfPossible(reportWithTelegram)
+    : {saved:false, reason:'save query not requested'};
+
+  return {
+    report:reportWithTelegram,
+    telegram_text,
+    saveResult,
+    openai: {
+      ok:ai.ok,
+      reason:ai.reason,
+      model:ai.model,
+      configured:openAiConfig().configured,
+      enabled:openAiConfig().enabled
+    }
+  };
+}
+
+app.get('/api/ai/openai/status', async (req,res)=>{
+  const cfg = openAiConfig();
+  res.json({
+    status:'ok',
+    version:'4.4.0',
+    openai:{
+      configured:cfg.configured,
+      enabled:cfg.enabled,
+      model:cfg.model,
+      api_key_present:cfg.configured
+    }
+  });
+});
+
+app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createOpenAiSiteReport(req.params.siteCode, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    res.json({
+      status:'ok',
+      ai_engine:result.report.ai_engine,
+      version:'4.4.0',
+      site_code:req.params.siteCode,
+      openai:result.openai,
+      saved_to_database:result.saveResult,
+      report:result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createOpenAiSiteReport(req.params.siteCode, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    res.json({
+      status:'ok',
+      ai_engine:result.report.ai_engine,
+      version:'4.4.0',
+      site_code:req.params.siteCode,
+      openai:result.openai,
+      saved_to_database:result.saveResult,
+      telegram_text:result.telegram_text,
+      report:result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
   }
 });
 

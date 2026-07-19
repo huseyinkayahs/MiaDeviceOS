@@ -83,3 +83,16 @@
 .print-link:hover {
   text-decoration: underline;
 }
+
+
+.openai-card {
+  border-color: #c7d8ff;
+}
+
+.openai-card .detail-summary {
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  line-height: 1.5;
+}

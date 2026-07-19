@@ -1,0 +1,129 @@
+
+# V4.4 OpenAI SmartAI Upgrade
+
+Bu paket v4.3.0 üzerine kopyalanır.
+
+## Amaç
+
+Kural bazlı SmartAI site raporunu OpenAI destekli daha doğal yönetici yorumuna yükseltmek.
+
+## Eklenenler
+
+```text
+OpenAI status endpoint
+OpenAI destekli site raporu endpointi
+OpenAI Telegram format endpointi
+Dashboard OpenAI SmartAI Upgrade alanı
+OpenAI Raporu Oluştur + Kaydet butonu
+Rule fallback mekanizması
+.env OpenAI örnek dosyası
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## .env Ayarı
+
+Backend klasöründeki `.env` dosyana ekle:
+
+```text
+OPENAI_API_KEY=BURAYA_API_KEY
+OPENAI_MODEL=gpt-5-mini
+SMARTAI_OPENAI_ENABLED=true
+```
+
+API key'i asla GitHub'a gönderme.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.4.0
+```
+
+## Test 2 - OpenAI Status
+
+```text
+http://localhost:3100/api/ai/openai/status
+```
+
+Beklenen:
+
+```text
+openai.configured: true/false
+openai.enabled: true/false
+openai.model
+```
+
+## Test 3 - OpenAI Site Raporu
+
+```text
+http://localhost:3100/api/sites/site01/ai/openai-report
+```
+
+## Test 4 - OpenAI Telegram + Save
+
+```text
+http://localhost:3100/api/sites/site01/ai/openai-report/telegram?save=1
+```
+
+Beklenen:
+
+```text
+status: ok
+ai_engine: OpenAI Responses API + FactoryBox Rules
+saved_to_database.saved: true
+```
+
+API key yoksa beklenen:
+
+```text
+ai_engine: FactoryBox Rules Fallback
+openai.reason: OPENAI_API_KEY not configured
+```
+
+Bu hata değildir; sistem güvenli fallback çalıştırır.
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen yeni alan:
+
+```text
+OpenAI SmartAI Upgrade
+OpenAI Durumu
+OpenAI Raporu Oluştur + Kaydet
+OpenAI Rapor Önizleme
+```
