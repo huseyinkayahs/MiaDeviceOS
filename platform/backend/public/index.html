@@ -16,6 +16,29 @@
 </header>
 
 <main>
+
+  <section class="card wide saas-card">
+    <div class="section-title-row">
+      <div>
+        <h2>SaaS Foundation</h2>
+        <p class="muted">v4.6: Kullanıcı giriş altyapısı, müşteri/tenant yapısı ve dashboard erişim ayrımı temeli.</p>
+      </div>
+      <div>
+        <a class="secondary-btn link-btn" href="/login.html">Login Ekranı</a>
+        <button id="logoutBtn" class="secondary-btn">Logout</button>
+      </div>
+    </div>
+
+    <div class="saas-grid">
+      <div><p class="label">Auth Mode</p><strong id="authMode">-</strong></div>
+      <div><p class="label">User</p><strong id="authUser">-</strong></div>
+      <div><p class="label">Customer</p><strong id="tenantCustomer">-</strong></div>
+      <div><p class="label">Site</p><strong id="tenantSite">-</strong></div>
+    </div>
+
+    <div id="tenantContext" class="tenant-context">Yükleniyor...</div>
+  </section>
+
   <section class="grid">
     <div class="card">
       <h2>Servis</h2>

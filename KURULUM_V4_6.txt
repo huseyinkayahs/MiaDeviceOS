@@ -1,0 +1,153 @@
+
+# V4.6 SaaS Foundation Pack
+
+Bu paket v4.5.0 üzerine kopyalanır.
+
+## Amaç
+
+FactoryBox'ı tek atölye panelinden çok müşterili SaaS altyapısına hazırlamak.
+
+Bu sprintte 3 sprint birleştirildi:
+
+```text
+1) User Login altyapısı
+2) Customer / Tenant yapısı
+3) Dashboard erişim ayrımı temeli
+```
+
+## Eklenenler
+
+```text
+Login ekranı
+Auth API endpointleri
+Token tabanlı API erişim temeli
+Customer / Tenant context endpointleri
+Site erişim kontrolü temeli
+Dashboard SaaS Foundation kartı
+Auth .env örnek dosyası
+SaaS database migration dosyası
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Başlangıç Modu
+
+Bu paket güvenli geçiş için varsayılan olarak auth kapalı gelir:
+
+```text
+AUTH_ENABLED=false
+```
+
+Böylece mevcut dashboard bozulmaz.
+
+## Login'i Açmak İçin
+
+Backend `.env` dosyana ekle:
+
+```text
+AUTH_ENABLED=true
+FACTORYBOX_ADMIN_EMAIL=admin@factorybox.local
+FACTORYBOX_ADMIN_PASSWORD=FactoryBox123!
+FACTORYBOX_ADMIN_ROLE=owner
+AUTH_SESSION_HOURS=12
+```
+
+İstersen admin email ve şifreyi değiştir.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.6.0
+```
+
+## Test 2 - Auth Status
+
+```text
+http://localhost:3100/api/auth/status
+```
+
+Beklenen:
+
+```text
+auth.enabled: true/false
+admin_configured: true/false
+```
+
+## Test 3 - Tenant Context
+
+```text
+http://localhost:3100/api/tenant/context
+```
+
+AUTH_ENABLED=false ise local dev context döner.
+
+AUTH_ENABLED=true ise login token gerekir.
+
+## Test 4 - Login Ekranı
+
+```text
+http://localhost:3100/login.html
+```
+
+AUTH_ENABLED=true ise .env içindeki admin bilgileriyle giriş yap.
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen yeni alan:
+
+```text
+SaaS Foundation
+Auth Mode
+User
+Customer
+Site
+Login Ekranı
+Logout
+```
+
+## Önemli Not
+
+Bu sprint production seviyesinde tam kullanıcı yetkilendirme değildir.
+
+Bu sprintin amacı:
+
+```text
+SaaS mimarisinin ilk temelini atmak
+çok müşteri / çok site ayrımı için altyapıyı hazırlamak
+sonraki sprintlerde role-based access, tenant yönetimi ve kullanıcı ekranlarına geçmek
+```

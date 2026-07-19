@@ -5,6 +5,7 @@ const cors = require('cors');
 const mqtt = require('mqtt');
 const { Pool } = require('pg');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = Number(process.env.PORT || 3100);
 const CFG = {
@@ -38,6 +39,7 @@ let mqttConnected = false;
 let lastMqttMessageAt = null;
 let lastMqttTopic = null;
 let ids = null;
+const authSessions = new Map();
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
 const b = (v) => typeof v === 'boolean' ? v : (v === 'true' || v === '1' ? true : (v === 'false' || v === '0' ? false : null));
@@ -645,11 +647,402 @@ async function saveSmartAiReportIfPossible(machineId, report) {
   };
 }
 
+
+
+function authConfig() {
+  return {
+    enabled: String(process.env.AUTH_ENABLED || 'false').toLowerCase() === 'true',
+    sessionHours: Number(process.env.AUTH_SESSION_HOURS || 12),
+    adminEmail: process.env.FACTORYBOX_ADMIN_EMAIL || '',
+    adminPassword: process.env.FACTORYBOX_ADMIN_PASSWORD || '',
+    defaultRole: process.env.FACTORYBOX_ADMIN_ROLE || 'owner'
+  };
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function makeUserId() {
+  return `usr_${crypto.randomBytes(12).toString('hex')}`;
+}
+
+function makeSalt() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(String(password || ''), String(salt || ''), 120000, 32, 'sha256').toString('hex');
+}
+
+function verifyPassword(password, salt, expectedHash) {
+  if (!expectedHash || !salt) return false;
+  const actual = hashPassword(password, salt);
+  return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expectedHash));
+}
+
+function publicUser(row) {
+  if (!row) return null;
+  return {
+    id:row.id,
+    email:row.email,
+    full_name:row.full_name,
+    role:row.role,
+    status:row.status,
+    default_customer_code:row.default_customer_code,
+    default_site_code:row.default_site_code
+  };
+}
+
+function bearerToken(req) {
+  const header = req.headers.authorization || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+function getSession(req) {
+  const token = bearerToken(req);
+  if (!token) return null;
+  const session = authSessions.get(token);
+  if (!session) return null;
+  if (Date.now() > session.expires_at) {
+    authSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+async function ensureSaasFoundation() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_users (
+      id text PRIMARY KEY,
+      email text UNIQUE NOT NULL,
+      password_hash text NOT NULL,
+      password_salt text NOT NULL,
+      full_name text,
+      role text NOT NULL DEFAULT 'owner',
+      status text NOT NULL DEFAULT 'active',
+      default_customer_code text,
+      default_site_code text,
+      last_login_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_user_tenant_access (
+      id bigserial PRIMARY KEY,
+      user_email text NOT NULL,
+      customer_code text NOT NULL,
+      site_code text,
+      access_role text NOT NULL DEFAULT 'owner',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE(user_email, customer_code, site_code)
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_app_user_tenant_access_email
+    ON app_user_tenant_access(user_email)
+  `);
+
+  const cfg = authConfig();
+
+  if (cfg.adminEmail && cfg.adminPassword) {
+    const salt = makeSalt();
+    const passwordHash = hashPassword(cfg.adminPassword, salt);
+    const existing = await one(`SELECT id FROM app_users WHERE lower(email)=lower($1) LIMIT 1`, [cfg.adminEmail]);
+    const id = existing?.id || makeUserId();
+
+    await pool.query(
+      `
+      INSERT INTO app_users(id,email,password_hash,password_salt,full_name,role,status,default_customer_code,default_site_code)
+      VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8)
+      ON CONFLICT(email) DO UPDATE SET
+        password_hash=EXCLUDED.password_hash,
+        password_salt=EXCLUDED.password_salt,
+        role=EXCLUDED.role,
+        status='active',
+        default_customer_code=EXCLUDED.default_customer_code,
+        default_site_code=EXCLUDED.default_site_code,
+        updated_at=now()
+      `,
+      [id, cfg.adminEmail, passwordHash, salt, 'FactoryBox Admin', cfg.defaultRole, CFG.customerCode, CFG.siteCode]
+    );
+
+    await pool.query(
+      `
+      INSERT INTO app_user_tenant_access(user_email,customer_code,site_code,access_role)
+      VALUES($1,$2,$3,$4)
+      ON CONFLICT(user_email,customer_code,site_code) DO UPDATE SET access_role=EXCLUDED.access_role
+      `,
+      [cfg.adminEmail, CFG.customerCode, CFG.siteCode, cfg.defaultRole]
+    );
+  }
+}
+
+async function getTenantContextForUser(user) {
+  if (!user) {
+    return {
+      auth_enabled:false,
+      user:null,
+      current_customer:{code:CFG.customerCode, name:CFG.customerName},
+      current_site:{code:CFG.siteCode, name:CFG.siteName},
+      customers:[{code:CFG.customerCode, name:CFG.customerName, role:'owner'}],
+      sites:[{code:CFG.siteCode, name:CFG.siteName, customer_code:CFG.customerCode, role:'owner'}]
+    };
+  }
+
+  const access = await pool.query(
+    `
+    SELECT a.customer_code, a.site_code, a.access_role,
+           c.name AS customer_name,
+           s.name AS site_name
+    FROM app_user_tenant_access a
+    LEFT JOIN customers c ON c.code=a.customer_code
+    LEFT JOIN sites s ON s.code=a.site_code AND s.customer_id=c.id
+    WHERE lower(a.user_email)=lower($1)
+    ORDER BY a.customer_code, a.site_code NULLS FIRST
+    `,
+    [user.email]
+  );
+
+  const customers = [];
+  const customerSeen = new Set();
+  const sites = [];
+
+  for (const row of access.rows) {
+    if (!customerSeen.has(row.customer_code)) {
+      customerSeen.add(row.customer_code);
+      customers.push({
+        code:row.customer_code,
+        name:row.customer_name || row.customer_code,
+        role:row.access_role
+      });
+    }
+
+    if (row.site_code) {
+      sites.push({
+        code:row.site_code,
+        name:row.site_name || row.site_code,
+        customer_code:row.customer_code,
+        role:row.access_role
+      });
+    }
+  }
+
+  return {
+    auth_enabled:true,
+    user:publicUser(user),
+    current_customer:customers[0] || {code:user.default_customer_code || CFG.customerCode, name:user.default_customer_code || CFG.customerName},
+    current_site:sites[0] || {code:user.default_site_code || CFG.siteCode, name:user.default_site_code || CFG.siteName, customer_code:user.default_customer_code || CFG.customerCode},
+    customers,
+    sites
+  };
+}
+
+function authRequired(req, res, next) {
+  const cfg = authConfig();
+
+  if (!cfg.enabled) {
+    return next();
+  }
+
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({
+      status:'unauthorized',
+      message:'Login required',
+      login_url:'/login.html'
+    });
+  }
+
+  req.user = session.user;
+  req.tenant = session.tenant;
+  return next();
+}
+
+function siteAccessRequired(req, res, next) {
+  const cfg = authConfig();
+
+  if (!cfg.enabled || !req.user) {
+    return next();
+  }
+
+  const siteCode = req.params.siteCode;
+  const allowedSites = req.tenant?.sites || [];
+  const hasAccess = allowedSites.some(s => s.code === siteCode) || req.user.role === 'system_admin';
+
+  if (!hasAccess) {
+    return res.status(403).json({
+      status:'forbidden',
+      message:'User does not have access to this site',
+      site_code:siteCode
+    });
+  }
+
+  return next();
+}
+
+app.get('/api/auth/status', async (req,res)=>{
+  const cfg = authConfig();
+  res.json({
+    status:'ok',
+    version:'4.6.0',
+    auth:{
+      enabled:cfg.enabled,
+      admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
+      session_hours:cfg.sessionHours
+    }
+  });
+});
+
+app.get('/api/auth/me', async (req,res)=>{
+  const cfg = authConfig();
+  const session = getSession(req);
+
+  if (!cfg.enabled) {
+    return res.json({
+      status:'ok',
+      version:'4.6.0',
+      authenticated:false,
+      auth_enabled:false,
+      user:null,
+      tenant:await getTenantContextForUser(null)
+    });
+  }
+
+  if (!session) {
+    return res.json({
+      status:'ok',
+      version:'4.6.0',
+      authenticated:false,
+      auth_enabled:true,
+      user:null,
+      tenant:null
+    });
+  }
+
+  res.json({
+    status:'ok',
+    version:'4.6.0',
+    authenticated:true,
+    auth_enabled:true,
+    user:publicUser(session.user),
+    tenant:session.tenant,
+    expires_at:new Date(session.expires_at).toISOString()
+  });
+});
+
+app.post('/api/auth/login', async (req,res)=>{
+  try {
+    const cfg = authConfig();
+
+    if (!cfg.enabled) {
+      return res.json({
+        status:'ok',
+        version:'4.6.0',
+        authenticated:true,
+        auth_enabled:false,
+        token:null,
+        message:'AUTH_ENABLED=false, login bypassed for local development'
+      });
+    }
+
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+
+    if (!email || !password) {
+      return res.status(400).json({status:'error', message:'Email and password required'});
+    }
+
+    const user = await one(
+      `SELECT * FROM app_users WHERE lower(email)=lower($1) AND status='active' LIMIT 1`,
+      [email]
+    );
+
+    if (!user || !verifyPassword(password, user.password_salt, user.password_hash)) {
+      return res.status(401).json({status:'unauthorized', message:'Invalid email or password'});
+    }
+
+    const tenant = await getTenantContextForUser(user);
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + (cfg.sessionHours * 60 * 60 * 1000);
+
+    authSessions.set(token, {
+      token,
+      user,
+      tenant,
+      created_at:Date.now(),
+      expires_at:expiresAt
+    });
+
+    await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [user.id]);
+
+    res.json({
+      status:'ok',
+      version:'4.6.0',
+      authenticated:true,
+      token,
+      user:publicUser(user),
+      tenant,
+      expires_at:new Date(expiresAt).toISOString()
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.post('/api/auth/logout', async (req,res)=>{
+  const token = bearerToken(req);
+  if (token) authSessions.delete(token);
+  res.json({status:'ok', version:'4.6.0', logged_out:true});
+});
+
+app.use('/api', (req,res,next)=>{
+  if (req.path.startsWith('/auth/')) return next();
+  if (req.path === '/health') return next();
+  return authRequired(req,res,next);
+});
+
+app.use('/api/sites/:siteCode', siteAccessRequired);
+
+app.get('/api/tenant/context', async (req,res)=>{
+  try {
+    const session = getSession(req);
+    const context = await getTenantContextForUser(session?.user || null);
+    res.json({
+      status:'ok',
+      version:'4.6.0',
+      tenant:context
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/tenant/customers', async (req,res)=>{
+  try {
+    const session = getSession(req);
+    const context = await getTenantContextForUser(session?.user || null);
+    res.json({
+      status:'ok',
+      version:'4.6.0',
+      customers:context.customers,
+      sites:context.sites
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
 app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.5.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.6.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -757,7 +1150,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.5.0',
+      version:'4.6.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -778,7 +1171,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.5.0',
+      version:'4.6.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -828,7 +1221,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -872,7 +1265,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -910,7 +1303,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.5.0',
+        version:'4.6.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -925,7 +1318,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -965,7 +1358,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1016,7 +1409,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       machine_code:req.params.code,
       report
     });
@@ -1081,7 +1474,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -1132,7 +1525,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       device:row
     });
   } catch(e) {
@@ -1177,7 +1570,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       device:row
     });
   } catch(e) {
@@ -1434,7 +1827,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -1456,7 +1849,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -1507,7 +1900,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -1551,7 +1944,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -1602,7 +1995,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.5.0',
+      version:'4.6.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -1746,7 +2139,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.5.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.6.0
     </div>
   </main>
 </body>
@@ -2110,7 +2503,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'4.5.0',
+    version:'4.6.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -2132,7 +2525,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2155,7 +2548,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2265,7 +2658,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.5.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.6.0</p>
   </div>
 </body>
 </html>`;
@@ -2286,7 +2679,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'4.5.0',
+    version:'4.6.0',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -2341,7 +2734,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -2381,7 +2774,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -2422,7 +2815,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.5.0',
+      version:'4.6.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2438,6 +2831,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 async function start() {
   await pool.query('SELECT 1');
   await ensureEntities();
+  await ensureSaasFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });

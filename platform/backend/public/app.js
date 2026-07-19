@@ -37,8 +37,26 @@ function fmtDate(v) {
   return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
 }
 
+function authToken() {
+  return localStorage.getItem('factorybox_auth_token') || '';
+}
+
+function authHeaders(extra = {}) {
+  const token = authToken();
+  return token ? {...extra, Authorization:`Bearer ${token}`} : extra;
+}
+
 async function getJson(url, options = {}) {
-  const res = await fetch(url, options);
+  const headers = authHeaders(options.headers || {});
+  const res = await fetch(url, {...options, headers});
+
+  if (res.status === 401) {
+    const msg = `${url} 401 - login required`;
+    const serviceStatus = document.getElementById('serviceStatus');
+    if (serviceStatus) serviceStatus.textContent = 'Login gerekli';
+    throw new Error(msg);
+  }
+
   if (!res.ok) throw new Error(`${url} ${res.status}`);
   return res.json();
 }
@@ -139,6 +157,46 @@ function renderHistory(history) {
 
 
 
+
+
+
+function renderTenantContext(context) {
+  const el = document.getElementById('tenantContext');
+  if (!el) return;
+
+  const tenant = context.tenant || context || {};
+  const user = tenant.user || null;
+  const customer = tenant.current_customer || {};
+  const site = tenant.current_site || {};
+  const customers = tenant.customers || [];
+  const sites = tenant.sites || [];
+
+  document.getElementById('authMode').textContent = tenant.auth_enabled ? 'AUTH_ENABLED=true' : 'Local dev / auth kapalı';
+  document.getElementById('authUser').textContent = user ? `${user.email} (${user.role})` : 'Login yok / local dev';
+  document.getElementById('tenantCustomer').textContent = customer.code ? `${customer.name || customer.code} (${customer.code})` : '-';
+  document.getElementById('tenantSite').textContent = site.code ? `${site.name || site.code} (${site.code})` : '-';
+
+  el.innerHTML = `
+    <div class="tenant-list">
+      <div>
+        <p class="label">Müşteriler</p>
+        ${customers.length ? customers.map(c => `<span class="mini-pill">${esc(c.code)} · ${esc(c.role || '-')}</span>`).join('') : '<span class="muted">Müşteri yok</span>'}
+      </div>
+      <div>
+        <p class="label">Siteler</p>
+        ${sites.length ? sites.map(s => `<span class="mini-pill">${esc(s.code)} · ${esc(s.customer_code || '-')}</span>`).join('') : '<span class="muted">Site yok</span>'}
+      </div>
+    </div>
+  `;
+}
+
+async function logout() {
+  try {
+    await getJson('/api/auth/logout', {method:'POST'});
+  } catch {}
+  localStorage.removeItem('factorybox_auth_token');
+  window.location.href = '/login.html';
+}
 
 function renderEmailStatus(status) {
   const el = document.getElementById('emailStatus');
@@ -569,6 +627,7 @@ async function cleanupDemoReports() {
 async function refresh(forceDetail = false) {
   try {
     const h = await getJson('/api/health');
+    const tenantContext = await getJson('/api/tenant/context');
     const st = await getJson(`/api/machines/${machineCode}/status`);
     const alarms = await getJson(`/api/machines/${machineCode}/alarms`);
     const ai = await getJson(`/api/machines/${machineCode}/ai/daily-report`);
@@ -581,6 +640,8 @@ async function refresh(forceDetail = false) {
     const emailStatus = await getJson('/api/email/status');
 
     window.lastHistory = history;
+
+    renderTenantContext(tenantContext);
 
     document.getElementById('serviceStatus').textContent = 'Çalışıyor';
     document.getElementById('backendStatus').textContent = h.status;
@@ -672,3 +733,7 @@ if (createAndEmailSiteReportBtn) createAndEmailSiteReportBtn.addEventListener('c
 
 const createAndEmailOpenAiReportBtn = document.getElementById('createAndEmailOpenAiReport');
 if (createAndEmailOpenAiReportBtn) createAndEmailOpenAiReportBtn.addEventListener('click', createAndEmailOpenAiReport);
+
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) logoutBtn.addEventListener('click', logout);

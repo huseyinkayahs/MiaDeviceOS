@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>FactoryBox Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body class="login-body">
+  <main class="login-shell">
+    <section class="card login-card">
+      <h1>FactoryBox Login</h1>
+      <p class="muted">v4.6 SaaS Foundation Pack</p>
+
+      <label>E-posta</label>
+      <input id="email" type="email" placeholder="admin@factorybox.local" autocomplete="username">
+
+      <label>Şifre</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
+
+      <button id="loginBtn" class="primary-btn">Giriş Yap</button>
+      <p id="loginStatus" class="mini-status"></p>
+
+      <hr>
+      <p class="muted">
+        AUTH_ENABLED=false ise login zorunlu değildir. AUTH_ENABLED=true olduğunda API erişimi için token gerekir.
+      </p>
+      <a href="/" class="secondary-btn link-btn">Dashboard’a Dön</a>
+    </section>
+  </main>
+
+  <script>
+    async function login() {
+      const status = document.getElementById('loginStatus');
+      const btn = document.getElementById('loginBtn');
+      status.textContent = 'Giriş deneniyor...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            email:document.getElementById('email').value.trim(),
+            password:document.getElementById('password').value
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || `Login failed ${res.status}`);
+
+        if (data.token) {
+          localStorage.setItem('factorybox_auth_token', data.token);
+        }
+
+        status.textContent = 'Giriş başarılı. Dashboard açılıyor...';
+        setTimeout(() => { window.location.href = '/'; }, 700);
+      } catch(e) {
+        status.textContent = e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
