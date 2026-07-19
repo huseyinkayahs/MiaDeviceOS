@@ -219,3 +219,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.signup-card {
+  border-color: #d8d7ff;
+}
+
+.login-card .link-btn {
+  text-align: center;
+}

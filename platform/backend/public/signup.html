@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>FactoryBox Sign Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body class="login-body">
+  <main class="login-shell">
+    <section class="card login-card signup-card">
+      <h1>FactoryBox Hesap Oluştur</h1>
+      <p class="muted">v4.6.1 Sign Up / Customer Onboarding Pack</p>
+
+      <label>Ad Soyad</label>
+      <input id="fullName" type="text" placeholder="Hüseyin Kaya" autocomplete="name">
+
+      <label>E-posta</label>
+      <input id="email" type="email" placeholder="info@firma.com" autocomplete="username">
+
+      <label>Şifre</label>
+      <input id="password" type="password" placeholder="En az 8 karakter" autocomplete="new-password">
+
+      <label>Firma / Müşteri Adı</label>
+      <input id="customerName" type="text" placeholder="Mia Creative Art">
+
+      <label>Site / Atölye Adı</label>
+      <input id="siteName" type="text" placeholder="Merkez Atölye">
+
+      <button id="signupBtn" class="primary-btn">Hesap Oluştur</button>
+      <p id="signupStatus" class="mini-status"></p>
+
+      <hr>
+      <p class="muted">Kayıt ekranı sadece SIGNUP_ENABLED=true olduğunda çalışır.</p>
+      <a href="/login.html" class="secondary-btn link-btn">Login’e Dön</a>
+      <a href="/" class="secondary-btn link-btn">Dashboard’a Dön</a>
+    </section>
+  </main>
+
+  <script>
+    async function signup() {
+      const status = document.getElementById('signupStatus');
+      const btn = document.getElementById('signupBtn');
+      status.textContent = 'Hesap oluşturuluyor...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            full_name:document.getElementById('fullName').value.trim(),
+            email:document.getElementById('email').value.trim(),
+            password:document.getElementById('password').value,
+            customer_name:document.getElementById('customerName').value.trim(),
+            site_name:document.getElementById('siteName').value.trim()
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || `Sign up failed ${res.status}`);
+        if (data.token) localStorage.setItem('factorybox_auth_token', data.token);
+        status.textContent = 'Hesap oluşturuldu. Dashboard açılıyor...';
+        setTimeout(() => { window.location.href = '/'; }, 700);
+      } catch(e) {
+        status.textContent = e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('signupBtn').addEventListener('click', signup);
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') signup();
+    });
+  </script>
+</body>
+</html>

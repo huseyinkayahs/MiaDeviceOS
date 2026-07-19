@@ -653,6 +653,7 @@ function authConfig() {
   return {
     enabled: String(process.env.AUTH_ENABLED || 'false').toLowerCase() === 'true',
     sessionHours: Number(process.env.AUTH_SESSION_HOURS || 12),
+    signupEnabled: String(process.env.SIGNUP_ENABLED || 'false').toLowerCase() === 'true',
     adminEmail: process.env.FACTORYBOX_ADMIN_EMAIL || '',
     adminPassword: process.env.FACTORYBOX_ADMIN_PASSWORD || '',
     defaultRole: process.env.FACTORYBOX_ADMIN_ROLE || 'owner'
@@ -711,6 +712,139 @@ function getSession(req) {
   }
   return session;
 }
+
+
+
+function slugCode(value, fallback) {
+  const raw = String(value || fallback || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 42);
+
+  return raw || fallback || `tenant-${Date.now()}`;
+}
+
+async function uniqueCode(tableName, baseCode, extra = {}) {
+  let code = baseCode;
+  let i = 1;
+
+  while (true) {
+    let row;
+    if (tableName === 'customers') {
+      row = await one(`SELECT id FROM customers WHERE code=$1 LIMIT 1`, [code]);
+    } else if (tableName === 'sites') {
+      row = await one(`SELECT id FROM sites WHERE customer_id=$1 AND code=$2 LIMIT 1`, [extra.customer_id, code]);
+    } else {
+      throw new Error('Unsupported uniqueCode table');
+    }
+
+    if (!row) return code;
+
+    i += 1;
+    code = `${baseCode}-${i}`;
+  }
+}
+
+function defaultSiteName(customerName) {
+  return `${customerName || 'Yeni Müşteri'} Ana Atölye`;
+}
+
+async function createSignupOwner({email, password, fullName, customerName, siteName}) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const cleanPassword = String(password || '');
+  const cleanFullName = String(fullName || '').trim() || normalizedEmail;
+  const cleanCustomerName = String(customerName || '').trim();
+  const cleanSiteName = String(siteName || '').trim() || defaultSiteName(cleanCustomerName);
+
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    throw new Error('Valid email required');
+  }
+
+  if (cleanPassword.length < 8) {
+    throw new Error('Password must be at least 8 characters');
+  }
+
+  if (!cleanCustomerName) {
+    throw new Error('Customer / company name required');
+  }
+
+  const existingUser = await one(
+    `SELECT id FROM app_users WHERE lower(email)=lower($1) LIMIT 1`,
+    [normalizedEmail]
+  );
+
+  if (existingUser) {
+    const err = new Error('Email already registered');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const customerBaseCode = slugCode(cleanCustomerName, 'customer');
+  const customerCode = await uniqueCode('customers', customerBaseCode);
+
+  const customer = await one(
+    `
+    INSERT INTO customers(code,name,status)
+    VALUES($1,$2,'trial')
+    RETURNING id, code, name, status
+    `,
+    [customerCode, cleanCustomerName]
+  );
+
+  const siteBaseCode = slugCode(cleanSiteName, 'site01');
+  const siteCode = await uniqueCode('sites', siteBaseCode, {customer_id:customer.id});
+
+  const site = await one(
+    `
+    INSERT INTO sites(customer_id,code,name,location,status)
+    VALUES($1,$2,$3,'','trial')
+    RETURNING id, code, name, status
+    `,
+    [customer.id, siteCode, cleanSiteName]
+  );
+
+  const salt = makeSalt();
+  const passwordHash = hashPassword(cleanPassword, salt);
+  const userId = makeUserId();
+
+  const user = await one(
+    `
+    INSERT INTO app_users(
+      id,email,password_hash,password_salt,full_name,role,status,default_customer_code,default_site_code
+    )
+    VALUES($1,$2,$3,$4,$5,'owner','active',$6,$7)
+    RETURNING *
+    `,
+    [userId, normalizedEmail, passwordHash, salt, cleanFullName, customer.code, site.code]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO app_user_tenant_access(user_email,customer_code,site_code,access_role)
+    VALUES($1,$2,$3,'owner')
+    ON CONFLICT(user_email,customer_code,site_code) DO UPDATE SET access_role='owner'
+    `,
+    [user.email, customer.code, site.code]
+  );
+
+  return {
+    user,
+    customer,
+    site,
+    tenant:await getTenantContextForUser(user)
+  };
+}
+
 
 async function ensureSaasFoundation() {
   await pool.query(`
@@ -889,11 +1023,12 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'4.6.0',
+    version:'4.6.1',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
-      session_hours:cfg.sessionHours
+      session_hours:cfg.sessionHours,
+      signup_enabled:cfg.signupEnabled
     }
   });
 });
@@ -905,7 +1040,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -916,7 +1051,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -926,7 +1061,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'4.6.0',
+    version:'4.6.1',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -935,6 +1070,64 @@ app.get('/api/auth/me', async (req,res)=>{
   });
 });
 
+
+
+app.post('/api/auth/signup', async (req,res)=>{
+  try {
+    const cfg = authConfig();
+
+    if (!cfg.signupEnabled) {
+      return res.status(403).json({
+        status:'disabled',
+        version:'4.6.1',
+        message:'SIGNUP_ENABLED=false'
+      });
+    }
+
+    await ensureSaasFoundation();
+
+    const created = await createSignupOwner({
+      email:req.body?.email,
+      password:req.body?.password,
+      fullName:req.body?.full_name,
+      customerName:req.body?.customer_name,
+      siteName:req.body?.site_name
+    });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + (cfg.sessionHours * 60 * 60 * 1000);
+
+    authSessions.set(token, {
+      token,
+      user:created.user,
+      tenant:created.tenant,
+      created_at:Date.now(),
+      expires_at:expiresAt
+    });
+
+    await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [created.user.id]);
+
+    res.status(201).json({
+      status:'ok',
+      version:'4.6.1',
+      authenticated:true,
+      token,
+      user:publicUser(created.user),
+      customer:created.customer,
+      site:created.site,
+      tenant:created.tenant,
+      expires_at:new Date(expiresAt).toISOString()
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({
+      status:'error',
+      version:'4.6.1',
+      message:e.message
+    });
+  }
+});
+
+
 app.post('/api/auth/login', async (req,res)=>{
   try {
     const cfg = authConfig();
@@ -942,7 +1135,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'4.6.0',
+        version:'4.6.1',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -982,7 +1175,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -997,7 +1190,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'4.6.0', logged_out:true});
+  res.json({status:'ok', version:'4.6.1', logged_out:true});
 });
 
 app.use('/api', (req,res,next)=>{
@@ -1014,7 +1207,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       tenant:context
     });
   } catch(e) {
@@ -1028,7 +1221,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       customers:context.customers,
       sites:context.sites
     });
@@ -1042,7 +1235,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.6.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.6.1', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -1150,7 +1343,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.6.0',
+      version:'4.6.1',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -1171,7 +1364,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.6.0',
+      version:'4.6.1',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -1221,7 +1414,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -1265,7 +1458,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       machine_code:req.params.code,
       report: report || null
     });
@@ -1303,7 +1496,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.6.0',
+        version:'4.6.1',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -1318,7 +1511,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1358,7 +1551,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1409,7 +1602,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       machine_code:req.params.code,
       report
     });
@@ -1474,7 +1667,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -1525,7 +1718,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       device:row
     });
   } catch(e) {
@@ -1570,7 +1763,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       device:row
     });
   } catch(e) {
@@ -1827,7 +2020,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -1849,7 +2042,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -1900,7 +2093,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -1944,7 +2137,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -1995,7 +2188,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.6.0',
+      version:'4.6.1',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -2139,7 +2332,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.6.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.6.1
     </div>
   </main>
 </body>
@@ -2503,7 +2696,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'4.6.0',
+    version:'4.6.1',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -2525,7 +2718,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2548,7 +2741,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2658,7 +2851,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.6.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.6.1</p>
   </div>
 </body>
 </html>`;
@@ -2679,7 +2872,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'4.6.0',
+    version:'4.6.1',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -2734,7 +2927,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -2774,7 +2967,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -2815,7 +3008,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.6.0',
+      version:'4.6.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

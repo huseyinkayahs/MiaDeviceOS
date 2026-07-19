@@ -1,0 +1,105 @@
+
+# V4.6.1 Sign Up / Customer Onboarding Pack
+
+Bu paket v4.6.0 üzerine kopyalanır.
+
+## Amaç
+
+Login altyapısının üzerine kontrollü kayıt ol / müşteri onboarding ekranı eklemek.
+
+## Eklenenler
+
+```text
+Kayıt Ol ekranı
+POST /api/auth/signup
+Yeni customer oluşturma
+Yeni site oluşturma
+İlk kullanıcıyı owner yapma
+SIGNUP_ENABLED=true/false ayarı
+Login ekranına Hesap Oluştur linki
+Dashboard’da Sign Up durumu
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## .env Ayarı
+
+Backend `.env` dosyana ekle:
+
+```text
+AUTH_ENABLED=true
+SIGNUP_ENABLED=true
+FACTORYBOX_ADMIN_EMAIL=admin@factorybox.local
+FACTORYBOX_ADMIN_PASSWORD=FactoryBox123!
+FACTORYBOX_ADMIN_ROLE=owner
+AUTH_SESSION_HOURS=12
+```
+
+Sign up test bittikten sonra istersen kapat:
+
+```text
+SIGNUP_ENABLED=false
+```
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.6.1
+```
+
+## Test 2 - Auth Status
+
+```text
+http://localhost:3100/api/auth/status
+```
+
+Beklenen:
+
+```text
+signup_enabled: true
+```
+
+## Test 3 - Sign Up Ekranı
+
+```text
+http://localhost:3100/signup.html
+```
+
+Örnek kayıt:
+
+```text
+Ad Soyad: Hüseyin Kaya
+E-posta: info+test@miacreativeart.com
+Şifre: FactoryBox123!
+Firma: Mia Creative Art Test
+Site: Merkez Atölye
+```
+
+## Test 4 - Login
+
+```text
+http://localhost:3100/login.html
+```
+
+Yeni oluşturduğun e-posta ve şifre ile giriş yap.

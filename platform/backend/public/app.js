@@ -628,6 +628,7 @@ async function refresh(forceDetail = false) {
   try {
     const h = await getJson('/api/health');
     const tenantContext = await getJson('/api/tenant/context');
+    const authStatus = await getJson('/api/auth/status');
     const st = await getJson(`/api/machines/${machineCode}/status`);
     const alarms = await getJson(`/api/machines/${machineCode}/alarms`);
     const ai = await getJson(`/api/machines/${machineCode}/ai/daily-report`);
@@ -642,6 +643,8 @@ async function refresh(forceDetail = false) {
     window.lastHistory = history;
 
     renderTenantContext(tenantContext);
+    const signupEl = document.getElementById('authSignup');
+    if (signupEl) signupEl.textContent = authStatus.auth?.signup_enabled ? 'enabled' : 'disabled';
 
     document.getElementById('serviceStatus').textContent = 'Çalışıyor';
     document.getElementById('backendStatus').textContent = h.status;
