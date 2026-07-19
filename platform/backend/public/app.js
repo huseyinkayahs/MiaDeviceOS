@@ -138,6 +138,106 @@ function renderHistory(history) {
 
 
 
+
+
+function renderEmailStatus(status) {
+  const el = document.getElementById('emailStatus');
+  if (!el) return;
+
+  const cfg = status.email || {};
+  el.innerHTML = `
+    <div class="machine-row">
+      <strong>SMTP</strong>
+      <span class="${cfg.configured ? 'ok' : 'alarm'}">${cfg.configured ? 'configured' : 'missing'}</span>
+      <span>Enabled: ${cfg.enabled ? 'yes' : 'no'}</span>
+      <span>Port: ${esc(cfg.port ?? '-')}</span>
+    </div>
+  `;
+}
+
+async function sendLatestReportEmail() {
+  const statusEl = document.getElementById('emailActionStatus');
+  const toInput = document.getElementById('reportEmailTo');
+  const btn = document.getElementById('sendLatestReportEmail');
+  const to = toInput ? toInput.value.trim() : '';
+
+  if (statusEl) statusEl.textContent = 'Son site raporu e-posta ile gönderiliyor...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const query = to ? `?to=${encodeURIComponent(to)}` : '';
+    const result = await getJson(`/api/sites/${siteCode}/ai/reports/latest/email${query}`);
+    if (statusEl) {
+      statusEl.textContent = result.email?.sent
+        ? `Gönderildi. Message ID: ${result.email.message_id || '-'}`
+        : `Gönderilemedi: ${result.email?.reason || 'bilinmeyen hata'}`;
+    }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = e.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function createAndEmailSiteReport() {
+  const statusEl = document.getElementById('emailActionStatus');
+  const toInput = document.getElementById('reportEmailTo');
+  const btn = document.getElementById('createAndEmailSiteReport');
+  const to = toInput ? toInput.value.trim() : '';
+
+  if (statusEl) statusEl.textContent = 'Yeni site raporu oluşturuluyor, kaydediliyor ve e-posta gönderiliyor...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const qs = new URLSearchParams({save:'1'});
+    if (to) qs.set('to', to);
+    const result = await getJson(`/api/sites/${siteCode}/ai/daily-report/email?${qs.toString()}`);
+    if (statusEl) {
+      statusEl.textContent = result.email?.sent
+        ? `Gönderildi. Report ID: ${result.saved_to_database?.report_id || '-'}`
+        : `Gönderilemedi: ${result.email?.reason || 'bilinmeyen hata'}`;
+    }
+    await refresh(true);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = e.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function createAndEmailOpenAiReport() {
+  const statusEl = document.getElementById('emailActionStatus');
+  const toInput = document.getElementById('reportEmailTo');
+  const btn = document.getElementById('createAndEmailOpenAiReport');
+  const to = toInput ? toInput.value.trim() : '';
+
+  if (statusEl) statusEl.textContent = 'OpenAI raporu oluşturuluyor, kaydediliyor ve e-posta gönderiliyor...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const qs = new URLSearchParams({save:'1'});
+    if (to) qs.set('to', to);
+    const result = await getJson(`/api/sites/${siteCode}/ai/openai-report/email?${qs.toString()}`);
+    if (statusEl) {
+      statusEl.textContent = result.email?.sent
+        ? `Gönderildi. Report ID: ${result.saved_to_database?.report_id || '-'}`
+        : `Gönderilemedi: ${result.email?.reason || result.openai?.reason || 'bilinmeyen hata'}`;
+    }
+    if (result.report) {
+      renderOpenAiReport({
+        report:result.report,
+        openai:result.openai,
+        telegram_text:result.report.telegram_text
+      });
+    }
+    await refresh(true);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = e.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function renderOpenAiStatus(status) {
   const el = document.getElementById('openAiStatus');
   if (!el) return;
@@ -478,6 +578,7 @@ async function refresh(forceDetail = false) {
     const siteDaily = await getJson(`/api/sites/${siteCode}/ai/daily-report`);
     const siteReports = await getJson(`/api/sites/${siteCode}/ai/reports?limit=5`);
     const openAiStatus = await getJson('/api/ai/openai/status');
+    const emailStatus = await getJson('/api/email/status');
 
     window.lastHistory = history;
 
@@ -523,6 +624,7 @@ async function refresh(forceDetail = false) {
     renderSiteDailyReport(siteDaily);
     renderSiteReportHistory(siteReports);
     renderOpenAiStatus(openAiStatus);
+    renderEmailStatus(emailStatus);
     updatePdfLinks(siteReports);
 
     if (!selectedReportId && history.reports && history.reports[0]) {
@@ -560,3 +662,13 @@ if (createOpenAiReportBtn) createOpenAiReportBtn.addEventListener('click', creat
 
 refresh(true);
 setInterval(() => refresh(false), 5000);
+
+
+const sendLatestReportEmailBtn = document.getElementById('sendLatestReportEmail');
+if (sendLatestReportEmailBtn) sendLatestReportEmailBtn.addEventListener('click', sendLatestReportEmail);
+
+const createAndEmailSiteReportBtn = document.getElementById('createAndEmailSiteReport');
+if (createAndEmailSiteReportBtn) createAndEmailSiteReportBtn.addEventListener('click', createAndEmailSiteReport);
+
+const createAndEmailOpenAiReportBtn = document.getElementById('createAndEmailOpenAiReport');
+if (createAndEmailOpenAiReportBtn) createAndEmailOpenAiReportBtn.addEventListener('click', createAndEmailOpenAiReport);

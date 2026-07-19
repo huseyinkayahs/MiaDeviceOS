@@ -109,6 +109,28 @@
 
 
 
+
+  <section class="card wide email-card">
+    <div class="section-title-row">
+      <div>
+        <h2>Email Report Delivery</h2>
+        <p class="muted">v4.5: Site / fabrika raporlarını SMTP üzerinden yöneticiye e-posta olarak gönderir.</p>
+      </div>
+    </div>
+
+    <h3>E-posta Durumu</h3>
+    <div id="emailStatus">Yükleniyor...</div>
+
+    <h3>Alıcı</h3>
+    <div class="email-form-row">
+      <input id="reportEmailTo" type="email" placeholder="boş bırakılırsa REPORT_EMAIL_TO kullanılır">
+      <button id="sendLatestReportEmail" class="secondary-btn">Son Raporu Mail Gönder</button>
+      <button id="createAndEmailSiteReport" class="secondary-btn">Yeni Rapor + Mail</button>
+      <button id="createAndEmailOpenAiReport" class="secondary-btn">OpenAI Rapor + Mail</button>
+    </div>
+    <p id="emailActionStatus" class="mini-status"></p>
+  </section>
+
   <section class="card wide openai-card">
     <div class="section-title-row">
       <div>

@@ -96,3 +96,29 @@
   padding: 12px;
   line-height: 1.5;
 }
+
+
+.email-card {
+  border-color: #d7e7d8;
+}
+
+.email-form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.email-form-row input {
+  min-width: 320px;
+  flex: 1;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.email-form-row button:disabled {
+  opacity: .6;
+  cursor: wait;
+}

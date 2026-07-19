@@ -1,0 +1,138 @@
+
+# V4.5 Email Report Delivery
+
+Bu paket v4.4.0 üzerine kopyalanır.
+
+## Amaç
+
+Site / fabrika raporlarını e-posta ile göndermek.
+
+## Eklenenler
+
+```text
+Email status endpoint
+Son site raporunu e-posta gönderme endpointi
+Yeni site raporu üret + kaydet + e-posta gönderme endpointi
+OpenAI raporu üret + kaydet + e-posta gönderme endpointi
+Dashboard Email Report Delivery alanı
+SMTP .env örnek dosyası
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Önemli
+
+Bu sprint `nodemailer` dependency ekler.
+
+Bu yüzden backend klasöründe bir kere çalıştır:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd install
+```
+
+## .env Ayarı
+
+Backend `.env` dosyana ekle:
+
+```text
+EMAIL_REPORTS_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=mailadresin@gmail.com
+SMTP_PASS=uygulama_sifresi
+SMTP_FROM=mailadresin@gmail.com
+REPORT_EMAIL_TO=alicimail@example.com
+```
+
+Gmail kullanılıyorsa normal hesap şifresi değil, uygulama şifresi gerekir.
+
+## Backend Yeniden Başlatma
+
+```powershell
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.5.0
+```
+
+## Test 2 - Email Status
+
+```text
+http://localhost:3100/api/email/status
+```
+
+Beklenen:
+
+```text
+email.configured: true
+email.enabled: true
+```
+
+## Test 3 - Son Raporu Mail Gönder
+
+```text
+http://localhost:3100/api/sites/site01/ai/reports/latest/email
+```
+
+Alıcıyı URL ile vermek istersen:
+
+```text
+http://localhost:3100/api/sites/site01/ai/reports/latest/email?to=alicimail@example.com
+```
+
+## Test 4 - Yeni Rapor + Mail
+
+```text
+http://localhost:3100/api/sites/site01/ai/daily-report/email?save=1
+```
+
+## Test 5 - OpenAI Rapor + Mail
+
+```text
+http://localhost:3100/api/sites/site01/ai/openai-report/email?save=1
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen yeni alan:
+
+```text
+Email Report Delivery
+E-posta Durumu
+Son Raporu Mail Gönder
+Yeni Rapor + Mail
+OpenAI Rapor + Mail
+```

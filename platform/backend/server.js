@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const nodemailer = require('nodemailer');
 const cors = require('cors');
 const mqtt = require('mqtt');
 const { Pool } = require('pg');
@@ -648,7 +649,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.4.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.5.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -756,7 +757,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.4.0',
+      version:'4.5.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -777,7 +778,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.4.0',
+      version:'4.5.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -827,7 +828,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -871,7 +872,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -909,7 +910,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.4.0',
+        version:'4.5.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -924,7 +925,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -964,7 +965,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1015,7 +1016,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       machine_code:req.params.code,
       report
     });
@@ -1080,7 +1081,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -1131,7 +1132,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       device:row
     });
   } catch(e) {
@@ -1176,7 +1177,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       device:row
     });
   } catch(e) {
@@ -1433,7 +1434,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.4.0',
+      version:'4.5.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -1455,7 +1456,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.4.0',
+      version:'4.5.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -1506,7 +1507,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -1550,7 +1551,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -1601,7 +1602,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.4.0',
+      version:'4.5.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -1745,7 +1746,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.4.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.5.0
     </div>
   </main>
 </body>
@@ -2109,7 +2110,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'4.4.0',
+    version:'4.5.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -2131,7 +2132,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.4.0',
+      version:'4.5.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2154,11 +2155,278 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.4.0',
+      version:'4.5.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
+      report:result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
+
+
+function emailConfig() {
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secureEnv = String(process.env.SMTP_SECURE || '').toLowerCase();
+
+  return {
+    enabled: String(process.env.EMAIL_REPORTS_ENABLED || 'true').toLowerCase() !== 'false',
+    host: process.env.SMTP_HOST || '',
+    port,
+    secure: secureEnv === 'true' || port === 465,
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || '',
+    defaultTo: process.env.REPORT_EMAIL_TO || '',
+    configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && (process.env.SMTP_FROM || process.env.SMTP_USER))
+  };
+}
+
+function splitEmails(value) {
+  return String(value || '')
+    .split(',')
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+
+function stripHtml(html) {
+  return String(html || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function emailSubjectForReport(site, report, prefix = 'FactoryBox Günlük Rapor') {
+  const score = report.health_score ?? report.overall_score ?? report.report_json?.overall_score ?? '-';
+  const siteName = site?.name || site?.code || 'site';
+  const date = new Date(report.created_at || report.generated_at || Date.now()).toLocaleDateString('tr-TR');
+  return `${prefix} - ${siteName} - Skor ${score}/100 - ${date}`;
+}
+
+async function sendReportEmail({to, subject, html, text}) {
+  const cfg = emailConfig();
+
+  if (!cfg.enabled) {
+    return {sent:false, reason:'EMAIL_REPORTS_ENABLED=false'};
+  }
+
+  if (!cfg.configured) {
+    return {sent:false, reason:'SMTP settings not configured'};
+  }
+
+  const recipients = splitEmails(to || cfg.defaultTo);
+  if (!recipients.length) {
+    return {sent:false, reason:'Recipient email not configured'};
+  }
+
+  const transporter = nodemailer.createTransport({
+    host:cfg.host,
+    port:cfg.port,
+    secure:cfg.secure,
+    auth:{
+      user:cfg.user,
+      pass:cfg.pass
+    }
+  });
+
+  const info = await transporter.sendMail({
+    from:cfg.from,
+    to:recipients.join(','),
+    subject,
+    text:text || stripHtml(html),
+    html
+  });
+
+  return {
+    sent:true,
+    message_id:info.messageId || null,
+    accepted:info.accepted || [],
+    rejected:info.rejected || [],
+    to:recipients
+  };
+}
+
+function emailShellHtml(title, bodyHtml) {
+  return `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>${h(title)}</title>
+</head>
+<body style="margin:0;padding:0;background:#eef3f8;font-family:Arial,Helvetica,sans-serif;color:#102033;">
+  <div style="max-width:980px;margin:0 auto;padding:24px;">
+    <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
+      ${bodyHtml}
+    </div>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.5.0</p>
+  </div>
+</body>
+</html>`;
+}
+
+function siteReportEmailHtml(site, report) {
+  const printHtml = siteReportPrintHtml(site, report);
+  const bodyMatch = printHtml.match(/<main class="page">([\s\S]*?)<\/main>/i);
+  const body = bodyMatch ? bodyMatch[1] : printHtml;
+  const cleaned = body
+    .replace(/<section class="top">/g, '<section>')
+    .replace(/class="[^"]*"/g, '')
+    .replace(/<button[\s\S]*?<\/button>/gi, '');
+  return emailShellHtml('FactoryBox Günlük Yönetici Raporu', cleaned);
+}
+
+app.get('/api/email/status', async (req,res)=>{
+  const cfg = emailConfig();
+  res.json({
+    status:'ok',
+    version:'4.5.0',
+    email:{
+      enabled:cfg.enabled,
+      configured:cfg.configured,
+      host:cfg.host ? 'set' : 'missing',
+      port:cfg.port,
+      secure:cfg.secure,
+      from:cfg.from ? 'set' : 'missing',
+      default_to:cfg.defaultTo ? 'set' : 'missing'
+    }
+  });
+});
+
+app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const site = await one(
+      `SELECT id, code, name, status FROM sites WHERE code=$1 LIMIT 1`,
+      [req.params.siteCode]
+    );
+
+    if (!site) return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+
+    const report = await one(
+      `
+      SELECT
+        id::text AS id,
+        report_type,
+        report_date,
+        health_score,
+        summary,
+        telegram_text,
+        report_json,
+        raw_payload,
+        created_at
+      FROM ai_reports
+      WHERE machine_id IS NULL
+        AND report_type='site_daily_production'
+      ORDER BY created_at DESC
+      LIMIT 1
+      `
+    );
+
+    if (!report) return res.status(404).json({status:'not_found', reason:'no saved site report'});
+
+    const html = siteReportEmailHtml(site, report);
+    const result = await sendReportEmail({
+      to:req.query.to,
+      subject:emailSubjectForReport(site, report),
+      html
+    });
+
+    res.json({
+      status:result.sent ? 'ok' : 'not_sent',
+      version:'4.5.0',
+      site_code:req.params.siteCode,
+      report_id:report.id,
+      email:result
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createSiteDailyReport(req.params.siteCode, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    const report = {
+      id:result.saveResult?.report_id || 'generated',
+      report_type:result.report.report_type,
+      report_date:result.saveResult?.report_date || new Date().toISOString(),
+      health_score:result.report.overall_score,
+      summary:result.report.summary,
+      telegram_text:result.telegram_text,
+      report_json:result.report,
+      raw_payload:result.report,
+      created_at:result.saveResult?.created_at || result.report.generated_at
+    };
+
+    const html = siteReportEmailHtml(result.report.site, report);
+    const email = await sendReportEmail({
+      to:req.query.to,
+      subject:emailSubjectForReport(result.report.site, report),
+      html
+    });
+
+    res.json({
+      status:email.sent ? 'ok' : 'not_sent',
+      version:'4.5.0',
+      site_code:req.params.siteCode,
+      saved_to_database:result.saveResult,
+      email,
+      report:result.report
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createOpenAiSiteReport(req.params.siteCode, shouldSave);
+
+    if (!result) {
+      return res.status(404).json({status:'not_found', site_code:req.params.siteCode});
+    }
+
+    const report = {
+      id:result.saveResult?.report_id || 'generated',
+      report_type:result.report.report_type || 'site_daily_production',
+      report_date:result.saveResult?.report_date || new Date().toISOString(),
+      health_score:result.report.overall_score,
+      summary:result.report.summary,
+      telegram_text:result.telegram_text,
+      report_json:result.report,
+      raw_payload:result.report,
+      created_at:result.saveResult?.created_at || result.report.generated_at
+    };
+
+    const html = siteReportEmailHtml(result.report.site, report);
+    const email = await sendReportEmail({
+      to:req.query.to,
+      subject:emailSubjectForReport(result.report.site, report, 'FactoryBox OpenAI SmartAI Raporu'),
+      html
+    });
+
+    res.json({
+      status:email.sent ? 'ok' : 'not_sent',
+      version:'4.5.0',
+      site_code:req.params.siteCode,
+      openai:result.openai,
+      saved_to_database:result.saveResult,
+      email,
       report:result.report
     });
   } catch(e) {
