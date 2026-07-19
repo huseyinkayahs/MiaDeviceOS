@@ -132,6 +132,124 @@ function renderHistory(history) {
 
 
 
+
+
+function renderSiteReportHistory(siteReports) {
+  const el = document.getElementById('siteReportHistory');
+  if (!el) return;
+
+  const reports = siteReports.reports || [];
+  el.innerHTML = reports.length
+    ? reports.map(r => `
+        <button class="history-row site-report-history-row" data-site-report-id="${esc(r.id)}">
+          <div class="history-score">${esc(r.health_score ?? '-')} / 100</div>
+          <div class="history-meta">
+            <strong>${esc(fmtDate(r.created_at))}</strong>
+            <p>${esc(r.summary || '-')}</p>
+          </div>
+        </button>
+      `).join('')
+    : '<span class="muted">Henüz kayıtlı site raporu yok. “Site Raporu Oluştur + Kaydet” butonuna bas.</span>';
+
+  const latest = reports[0];
+  const latestEl = document.getElementById('latestSiteReport');
+  if (latestEl) {
+    latestEl.innerHTML = latest
+      ? `<strong>${esc(latest.health_score ?? '-')} / 100</strong><span>${esc(fmtDate(latest.created_at))}</span><p>${esc(latest.summary || '-')}</p>`
+      : '<span class="muted">Kayıtlı site raporu yok.</span>';
+  }
+}
+
+function renderSiteReportDetail(report) {
+  const el = document.getElementById('siteReportDetail');
+  if (!el) return;
+
+  if (!report) {
+    el.innerHTML = '<span class="muted">Detay görmek için site rapor geçmişinden bir kayda tıkla.</span>';
+    return;
+  }
+
+  const payload = report.report_json || report.raw_payload || {};
+  const machines = payload.machines || [];
+  const findings = payload.findings || [];
+  const recommendations = payload.recommendations || [];
+
+  el.innerHTML = `
+    <div class="detail-head">
+      <div>
+        <p class="label">Site Rapor ID</p>
+        <strong>${esc(report.id)}</strong>
+      </div>
+      <div>
+        <p class="label">Genel Skor</p>
+        <strong class="${Number(report.health_score) >= 75 ? 'ok' : 'alarm'}">${esc(report.health_score ?? '-')} / 100</strong>
+      </div>
+      <div>
+        <p class="label">Tarih</p>
+        <span>${esc(fmtDate(report.created_at))}</span>
+      </div>
+    </div>
+    <p class="detail-summary">${esc(report.summary || payload.summary || '-')}</p>
+    <h3>Makine Özeti</h3>
+    <div class="machine-table">
+      ${machines.length ? machines.map(m => `
+        <div class="machine-row">
+          <strong>${esc(m.machine_code)}</strong>
+          <span>${esc(m.state || '-')}</span>
+          <span>${esc(m.score ?? '-')} / 100</span>
+          <span>${esc(m.active_alarm_count ?? 0)} alarm</span>
+        </div>
+      `).join('') : '<span class="muted">Makine verisi yok.</span>'}
+    </div>
+    <div class="detail-grid">
+      <div>
+        <h3>Bulgular</h3>
+        <ul>${findings.length ? findings.map(x => `<li>${esc(x)}</li>`).join('') : '<li>Veri yok</li>'}</ul>
+      </div>
+      <div>
+        <h3>Öneriler</h3>
+        <ul>${recommendations.length ? recommendations.map(x => `<li>${esc(x)}</li>`).join('') : '<li>Veri yok</li>'}</ul>
+      </div>
+    </div>
+    ${report.telegram_text ? `<h3>Telegram Mesajı</h3><pre>${esc(report.telegram_text)}</pre>` : ''}
+  `;
+}
+
+async function showSiteReportDetail(id) {
+  if (!id) return;
+
+  const el = document.getElementById('siteReportDetail');
+  if (el) el.innerHTML = '<span class="muted">Site rapor detayı yükleniyor...</span>';
+
+  try {
+    const data = await getJson(`/api/sites/${siteCode}/ai/reports/${encodeURIComponent(id)}`);
+    renderSiteReportDetail(data.report);
+  } catch(e) {
+    if (el) el.innerHTML = `<span class="alarm">${esc(e.message)}</span>`;
+  }
+}
+
+async function createAndSaveSiteReport() {
+  const statusEl = document.getElementById('siteReportActionStatus');
+  const btn = document.getElementById('createSiteReport');
+  if (statusEl) statusEl.textContent = 'Site raporu oluşturuluyor ve kaydediliyor...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const result = await getJson(`/api/sites/${siteCode}/ai/daily-report/telegram?save=1`);
+    if (statusEl) {
+      statusEl.textContent = result.saved_to_database?.saved
+        ? `Kaydedildi. Report ID: ${result.saved_to_database.report_id}`
+        : `Kaydedilemedi: ${result.saved_to_database?.reason || 'bilinmeyen hata'}`;
+    }
+    await refresh(true);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = e.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function renderDeviceInfo(deviceInfo) {
   const device = deviceInfo.device || {};
   const setText = (id, value) => {
@@ -257,6 +375,7 @@ async function refresh(forceDetail = false) {
     const center = await getJson(`/api/sites/${siteCode}/ai/report-center`);
     const deviceInfo = await getJson(`/api/machines/${machineCode}/device-info`);
     const siteDaily = await getJson(`/api/sites/${siteCode}/ai/daily-report`);
+    const siteReports = await getJson(`/api/sites/${siteCode}/ai/reports?limit=5`);
 
     window.lastHistory = history;
 
@@ -300,6 +419,7 @@ async function refresh(forceDetail = false) {
     renderReportCenter(center);
     renderDeviceInfo(deviceInfo);
     renderSiteDailyReport(siteDaily);
+    renderSiteReportHistory(siteReports);
 
     if (!selectedReportId && history.reports && history.reports[0]) {
       selectedReportId = String(history.reports[0].id);
@@ -320,10 +440,16 @@ async function refresh(forceDetail = false) {
 document.addEventListener('click', (e) => {
   const row = e.target.closest('[data-report-id]');
   if (row) showReportDetail(row.dataset.reportId);
+
+  const siteRow = e.target.closest('[data-site-report-id]');
+  if (siteRow) showSiteReportDetail(siteRow.dataset.siteReportId);
 });
 
 const cleanupBtn = document.getElementById('cleanupDemoReports');
 if (cleanupBtn) cleanupBtn.addEventListener('click', cleanupDemoReports);
+
+const createSiteReportBtn = document.getElementById('createSiteReport');
+if (createSiteReportBtn) createSiteReportBtn.addEventListener('click', createAndSaveSiteReport);
 
 refresh(true);
 setInterval(() => refresh(false), 5000);

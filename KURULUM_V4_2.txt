@@ -1,0 +1,133 @@
+
+# V4.2 Smart Report Automation Pack
+
+Bu paket v4.1.0 üzerine kopyalanır.
+
+## Amaç
+
+Multi-machine site raporunu otomasyona hazır hale getirmek, site rapor geçmişini eklemek ve dashboard’dan rapor üretip kaydetmeyi sağlamak.
+
+## Eklenenler
+
+```text
+Site rapor geçmişi API
+Site rapor detay API
+Dashboard’dan site raporu oluştur + kaydet butonu
+Son site raporu görünümü
+Site rapor geçmişi görünümü
+Site rapor detay görünümü
+n8n Smart Report Automation workflow
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 — Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.2.0
+```
+
+## Test 2 — Site raporu oluştur ve kaydet
+
+```text
+http://localhost:3100/api/sites/site01/ai/daily-report/telegram?save=1
+```
+
+Beklenen:
+
+```text
+saved_to_database.saved: true
+report_id
+```
+
+## Test 3 — Site rapor geçmişi
+
+```text
+http://localhost:3100/api/sites/site01/ai/reports
+```
+
+Beklenen:
+
+```text
+status: ok
+version: 4.2.0
+count: 1 veya daha fazla
+reports: [...]
+```
+
+## Test 4 — Son site raporu
+
+```text
+http://localhost:3100/api/sites/site01/ai/reports/latest
+```
+
+## Test 5 — Site rapor detayı
+
+Örnek:
+
+```text
+http://localhost:3100/api/sites/site01/ai/reports/44
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen yeni alan:
+
+```text
+Site Rapor Otomasyonu
+Site Raporu Oluştur + Kaydet
+Son Site Raporu
+Site Rapor Geçmişi
+Site Rapor Detayı
+```
+
+## n8n Workflow
+
+Import dosyası:
+
+```text
+platform/n8n/workflows/FactoryBox_Smart_Report_Automation_Pack.json
+```
+
+HTTP node URL:
+
+```text
+http://host.docker.internal:3100/api/sites/site01/ai/daily-report/telegram?save=1
+```
+
+Telegram node içinde Chat ID ve credential kontrol edilmeli.
