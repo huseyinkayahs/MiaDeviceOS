@@ -130,6 +130,27 @@ function renderHistory(history) {
 
 
 
+
+
+function renderDeviceInfo(deviceInfo) {
+  const device = deviceInfo.device || {};
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value ?? '-';
+  };
+
+  setText('deviceUid', device.device_uid || '-');
+  setText('deviceModel', device.model || '-');
+  setText('deviceFirmware', device.firmware_version || '-');
+  setText('devicePlatform', device.platform_name || '-');
+  setText('deviceBuildType', device.build_type || '-');
+  setText('deviceStatus', device.status || '-');
+  setText('deviceLastSeen', fmtDate(device.last_seen_at));
+
+  const statusEl = document.getElementById('deviceStatus');
+  if (statusEl) statusEl.className = device.status === 'online' ? 'ok' : 'alarm';
+}
+
 function renderSiteDailyReport(siteDaily) {
   const el = document.getElementById('siteDailyReport');
   const telegramEl = document.getElementById('siteTelegramPreview');
@@ -234,6 +255,7 @@ async function refresh(forceDetail = false) {
     const ai = await getJson(`/api/machines/${machineCode}/ai/daily-report`);
     const history = await getJson(`/api/machines/${machineCode}/ai/reports?limit=10`);
     const center = await getJson(`/api/sites/${siteCode}/ai/report-center`);
+    const deviceInfo = await getJson(`/api/machines/${machineCode}/device-info`);
     const siteDaily = await getJson(`/api/sites/${siteCode}/ai/daily-report`);
 
     window.lastHistory = history;
@@ -276,6 +298,7 @@ async function refresh(forceDetail = false) {
 
     renderHistory(history);
     renderReportCenter(center);
+    renderDeviceInfo(deviceInfo);
     renderSiteDailyReport(siteDaily);
 
     if (!selectedReportId && history.reports && history.reports[0]) {

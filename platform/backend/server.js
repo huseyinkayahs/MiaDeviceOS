@@ -60,12 +60,134 @@ async function ensureEntities() {
   return ids;
 }
 
-async function seen(payload={}) {
-  const { device } = await ensureEntities();
-  await ensureAiReportsHistorySchema();
-  await pool.query(`UPDATE devices SET last_seen_at=now(), status='online', firmware_version=COALESCE($2, firmware_version), updated_at=now() WHERE id=$1`, [device.id, payload.firmware_version || null]);
+async function ensureDeviceInfoSyncSchema() {
+  await pool.query(`
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS platform_name text;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS build_type text;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS firmware_build text;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS raw_device_info jsonb;
+  `);
 }
 
+function firstValue(...values) {
+  for (const value of values) {
+    if (value !== null && value !== undefined && value !== '') return value;
+  }
+  return null;
+}
+
+function extractDeviceInfo(payload = {}) {
+  const info = payload.device_info || payload.device || payload.info || {};
+  const firmware = payload.firmware || info.firmware || {};
+
+  return {
+    device_uid: firstValue(
+      payload.device_uid,
+      payload.device_id,
+      payload.deviceId,
+      info.device_uid,
+      info.device_id,
+      info.uid,
+      info.id,
+      CFG.deviceUid
+    ),
+    firmware_version: firstValue(
+      payload.firmware_version,
+      payload.firmwareVersion,
+      firmware.version,
+      firmware.firmware_version,
+      info.firmware_version,
+      info.firmwareVersion,
+      payload.version
+    ),
+    model: firstValue(
+      payload.model,
+      payload.device_model,
+      payload.deviceModel,
+      info.model,
+      info.device_model,
+      info.deviceModel,
+      CFG.deviceModel
+    ),
+    platform_name: firstValue(
+      payload.platform_name,
+      payload.platformName,
+      payload.platform,
+      info.platform_name,
+      info.platformName,
+      info.platform
+    ),
+    build_type: firstValue(
+      payload.build_type,
+      payload.buildType,
+      info.build_type,
+      info.buildType
+    ),
+    firmware_build: firstValue(
+      payload.firmware_build,
+      payload.build,
+      payload.build_id,
+      info.firmware_build,
+      info.build,
+      firmware.build
+    )
+  };
+}
+
+async function syncDeviceInfoFromPayload(payload = {}, source = 'mqtt') {
+  const { device } = await ensureEntities();
+  await ensureDeviceInfoSyncSchema();
+  await ensureDeviceInfoSyncSchema();
+
+  const info = extractDeviceInfo(payload);
+  const raw = JSON.stringify({ source, ...payload });
+
+  const row = await one(
+    `
+    UPDATE devices
+    SET
+      device_uid = COALESCE($2, device_uid),
+      firmware_version = COALESCE($3, firmware_version),
+      model = COALESCE($4, model),
+      platform_name = COALESCE($5, platform_name),
+      build_type = COALESCE($6, build_type),
+      firmware_build = COALESCE($7, firmware_build),
+      raw_device_info = COALESCE($8::jsonb, raw_device_info),
+      status = 'online',
+      last_seen_at = now(),
+      updated_at = now()
+    WHERE id=$1
+    RETURNING
+      id,
+      device_uid,
+      model,
+      firmware_version,
+      platform_name,
+      build_type,
+      firmware_build,
+      status,
+      last_seen_at,
+      updated_at,
+      raw_device_info
+    `,
+    [
+      device.id,
+      info.device_uid,
+      info.firmware_version,
+      info.model,
+      info.platform_name,
+      info.build_type,
+      info.firmware_build,
+      raw
+    ]
+  );
+
+  return row;
+}
+
+async function seen(payload={}) {
+  await syncDeviceInfoFromPayload(payload, 'seen');
+}
 async function telemetry(payload, source) {
   const { machine, device } = await ensureEntities();
   const temp = payload.temperature_sensor?.temperature_c ?? payload.temperature_c ?? payload.temperature;
@@ -175,6 +297,9 @@ async function commandStatus(payload) {
   if (payload.command === 'get_daily_summary' && payload.status === 'done') await dailySummary(payload);
   if (payload.command === 'get_temperature' && payload.status === 'done') await telemetry(payload, 'command_status_get_temperature');
   if (payload.command === 'get_machine_runtime' && payload.status === 'done') await machineState(payload, 'command_status_get_machine_runtime');
+  if (['get_device_info','get_info','get_status','get_health','get_diagnostics'].includes(payload.command) && payload.status === 'done') {
+    await syncDeviceInfoFromPayload(payload, `command_status_${payload.command}`);
+  }
   await seen(payload);
 }
 
@@ -523,7 +648,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.0.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.1.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -631,7 +756,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.0.0',
+      version:'4.1.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -652,7 +777,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.0.0',
+      version:'4.1.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -702,7 +827,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.0.0',
+      version:'4.1.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -746,7 +871,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.0.0',
+      version:'4.1.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -784,7 +909,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.0.0',
+        version:'4.1.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -799,7 +924,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.0.0',
+      version:'4.1.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -839,7 +964,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.0.0',
+      version:'4.1.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -890,7 +1015,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.0.0',
+      version:'4.1.0',
       machine_code:req.params.code,
       report
     });
@@ -920,7 +1045,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
     const rows = [];
     for (const m of machines.rows) {
       const device = await one(
-        `SELECT device_uid, model, firmware_version, status, last_seen_at FROM devices WHERE machine_id=$1 ORDER BY updated_at DESC LIMIT 1`,
+        `SELECT device_uid, model, firmware_version, platform_name, build_type, firmware_build, status, last_seen_at, raw_device_info FROM devices WHERE machine_id=$1 ORDER BY updated_at DESC LIMIT 1`,
         [m.id]
       );
       const latestState = await one(
@@ -955,7 +1080,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.0.0',
+      version:'4.1.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -966,6 +1091,98 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 });
 
 
+
+
+
+app.get('/api/machines/:code/device-info', async (req,res)=>{
+  try {
+    await ensureDeviceInfoSyncSchema();
+
+    const row = await one(
+      `
+      SELECT
+        m.code AS machine_code,
+        m.name AS machine_name,
+        d.id::text AS device_id,
+        d.device_uid,
+        d.model,
+        d.firmware_version,
+        d.platform_name,
+        d.build_type,
+        d.firmware_build,
+        d.status,
+        d.last_seen_at,
+        d.updated_at,
+        d.mqtt_base_topic,
+        d.raw_device_info,
+        EXTRACT(EPOCH FROM(now() - d.last_seen_at))::int AS last_seen_age_sec
+      FROM machines m
+      JOIN devices d ON d.machine_id=m.id
+      WHERE m.code=$1
+      ORDER BY d.updated_at DESC
+      LIMIT 1
+      `,
+      [req.params.code]
+    );
+
+    if (!row) {
+      return res.status(404).json({status:'not_found', machine_code:req.params.code});
+    }
+
+    res.json({
+      status:'ok',
+      version:'4.1.0',
+      device:row
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/devices/:uid/info', async (req,res)=>{
+  try {
+    await ensureDeviceInfoSyncSchema();
+
+    const row = await one(
+      `
+      SELECT
+        d.id::text AS device_id,
+        d.device_uid,
+        d.model,
+        d.firmware_version,
+        d.platform_name,
+        d.build_type,
+        d.firmware_build,
+        d.status,
+        d.last_seen_at,
+        d.updated_at,
+        d.mqtt_base_topic,
+        d.raw_device_info,
+        m.code AS machine_code,
+        m.name AS machine_name,
+        EXTRACT(EPOCH FROM(now() - d.last_seen_at))::int AS last_seen_age_sec
+      FROM devices d
+      LEFT JOIN machines m ON m.id=d.machine_id
+      WHERE d.device_uid=$1
+      ORDER BY d.updated_at DESC
+      LIMIT 1
+      `,
+      [req.params.uid]
+    );
+
+    if (!row) {
+      return res.status(404).json({status:'not_found', device_uid:req.params.uid});
+    }
+
+    res.json({
+      status:'ok',
+      version:'4.1.0',
+      device:row
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
 
 function machineSiteScore(machine) {
   if (machine.latest_report && machine.latest_report.health_score !== null && machine.latest_report.health_score !== undefined) {
@@ -1038,7 +1255,7 @@ async function getSiteReportCenterRows(siteCode) {
   const rows = [];
   for (const m of machines.rows) {
     const device = await one(
-      `SELECT device_uid, model, firmware_version, status, last_seen_at FROM devices WHERE machine_id=$1 ORDER BY updated_at DESC LIMIT 1`,
+      `SELECT device_uid, model, firmware_version, platform_name, build_type, firmware_build, status, last_seen_at, raw_device_info FROM devices WHERE machine_id=$1 ORDER BY updated_at DESC LIMIT 1`,
       [m.id]
     );
     const latestState = await one(
@@ -1216,7 +1433,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.0.0',
+      version:'4.1.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -1238,7 +1455,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.0.0',
+      version:'4.1.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,

@@ -1,0 +1,123 @@
+
+# V4.1 Device Info Sync
+
+Bu paket v4.0.0 üzerine kopyalanır.
+
+## Amaç
+
+Database içindeki eski device firmware bilgisini gerçek MQTT / command status payloadlarından gelen bilgilerle güncellemek.
+
+## Eklenenler
+
+```text
+Device info schema genişletme
+MQTT payloadlarından firmware/model/platform/build sync
+Device info API endpointleri
+Dashboard Device Info kartı
+Multi-machine report center içinde doğru device alanları
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 — Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.1.0
+```
+
+## Test 2 — Device Info
+
+```text
+http://localhost:3100/api/machines/laser01/device-info
+```
+
+Beklenen:
+
+```text
+status: ok
+version: 4.1.0
+device.device_uid
+device.model
+device.firmware_version
+device.status
+device.last_seen_at
+```
+
+## Test 3 — Device UID Endpoint
+
+```text
+http://localhost:3100/api/devices/laser01/info
+```
+
+## Test 4 — MQTT Sync
+
+Cihazdan heartbeat / telemetry / command/status geldikçe backend otomatik olarak devices tablosunu günceller.
+
+Özellikle şu payload alanları yakalanır:
+
+```text
+firmware_version
+firmwareVersion
+model
+device_model
+platform_name
+build_type
+firmware_build
+device_uid
+device_id
+```
+
+## Test 5 — Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen yeni kart:
+
+```text
+Device Info
+Device UID
+Model
+Firmware
+Platform
+Build Type
+Status
+Son Görülme
+```
+
+## Not
+
+Eğer firmware hâlâ eski görünüyorsa, cihazdan firmware_version içeren bir MQTT mesajı gelmemiş demektir.
+Bu durumda MQTT Explorer’dan cihazın get_device_info / get_health / get_diagnostics gibi komutlarından biri gönderilip command/status cevabı beklenebilir.
