@@ -648,7 +648,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.2.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.3.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -756,7 +756,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.2.0',
+      version:'4.3.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -777,7 +777,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.2.0',
+      version:'4.3.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -827,7 +827,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -871,7 +871,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -909,7 +909,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.2.0',
+        version:'4.3.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -924,7 +924,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -964,7 +964,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1015,7 +1015,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       machine_code:req.params.code,
       report
     });
@@ -1080,7 +1080,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -1131,7 +1131,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       device:row
     });
   } catch(e) {
@@ -1176,7 +1176,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       device:row
     });
   } catch(e) {
@@ -1433,7 +1433,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.2.0',
+      version:'4.3.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -1455,7 +1455,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.2.0',
+      version:'4.3.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -1506,7 +1506,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -1550,7 +1550,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -1601,12 +1601,261 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.2.0',
+      version:'4.3.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
+
+
+function h(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function fmtPrintDate(value) {
+  if (!value) return '-';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
+}
+
+function siteReportPrintHtml(site, report) {
+  const payload = report.report_json || report.raw_payload || report || {};
+  const machines = payload.machines || [];
+  const findings = payload.findings || [];
+  const recommendations = payload.recommendations || [];
+  const score = report.health_score ?? payload.overall_score ?? '-';
+  const summary = report.summary || payload.summary || '-';
+  const createdAt = report.created_at || payload.generated_at || new Date().toISOString();
+  const reportId = report.id || 'generated';
+  const telegramText = report.telegram_text || payload.telegram_text || '';
+
+  const machineRows = machines.length
+    ? machines.map(m => `
+      <tr>
+        <td>${h(m.machine_code)}</td>
+        <td>${h(m.state || '-')}</td>
+        <td>${h(m.score ?? '-')} / 100</td>
+        <td>${h(m.active_alarm_count ?? 0)}</td>
+        <td>${h(m.temperature_c ?? '-')}</td>
+        <td>${h(m.wifi_rssi ?? '-')}</td>
+      </tr>
+    `).join('')
+    : `<tr><td colspan="6">Makine verisi yok.</td></tr>`;
+
+  return `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>FactoryBox Site Raporu - ${h(site.code)} - ${h(reportId)}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #102033; margin: 0; background: #eef3f8; }
+    .page { max-width: 980px; margin: 24px auto; background: #fff; padding: 34px; border-radius: 18px; box-shadow: 0 8px 26px rgba(16,32,51,.10); }
+    .top { display: flex; justify-content: space-between; gap: 18px; border-bottom: 2px solid #dfe7f2; padding-bottom: 18px; margin-bottom: 22px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin-top: 28px; border-bottom: 1px solid #dfe7f2; padding-bottom: 8px; font-size: 19px; }
+    h3 { margin-top: 20px; font-size: 16px; }
+    .muted { color: #6b7788; }
+    .score { font-size: 34px; font-weight: 800; color: #0f8a5f; text-align: right; }
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+    .card { border: 1px solid #dfe7f2; border-radius: 14px; padding: 14px; background: #f8fbff; }
+    .card span { display:block; color:#6b7788; font-size:12px; text-transform:uppercase; margin-bottom:6px; }
+    .card strong { font-size: 20px; }
+    .summary { font-size: 18px; line-height: 1.55; background: #f8fbff; border: 1px solid #dfe7f2; border-radius: 14px; padding: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid #dfe7f2; text-align: left; padding: 10px; vertical-align: top; }
+    th { background: #f8fbff; }
+    li { margin: 8px 0; line-height: 1.45; }
+    pre { white-space: pre-wrap; background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 12px; overflow: auto; }
+    .actions { position: sticky; top: 0; background: #eef3f8; padding: 12px; text-align: right; }
+    .btn { border: 0; background: #123d64; color: white; padding: 11px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    .btn.secondary { background: #fff; color: #123d64; border: 1px solid #dfe7f2; }
+    .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #dfe7f2; color: #6b7788; font-size: 12px; }
+    @media print {
+      body { background: #fff; }
+      .actions { display: none; }
+      .page { margin: 0; max-width: none; border-radius: 0; box-shadow: none; padding: 20mm; }
+      .cards { grid-template-columns: repeat(4, 1fr); }
+      h2 { break-after: avoid; }
+      table, pre, .summary { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions">
+    <button class="btn" onclick="window.print()">PDF Olarak Kaydet / Yazdır</button>
+    <button class="btn secondary" onclick="window.close()">Kapat</button>
+  </div>
+
+  <main class="page">
+    <section class="top">
+      <div>
+        <h1>FactoryBox Günlük Yönetici Raporu</h1>
+        <p class="muted">Site: ${h(site.name || site.code)} (${h(site.code)})</p>
+        <p class="muted">Rapor ID: ${h(reportId)} - Tarih: ${h(fmtPrintDate(createdAt))}</p>
+      </div>
+      <div>
+        <div class="score">${h(score)} / 100</div>
+        <p class="muted">Genel Fabrika Skoru</p>
+      </div>
+    </section>
+
+    <section class="cards">
+      <div class="card"><span>Toplam Makine</span><strong>${h(payload.machine_count ?? machines.length ?? 0)}</strong></div>
+      <div class="card"><span>Çalışan</span><strong>${h(payload.running_count ?? '-')}</strong></div>
+      <div class="card"><span>Duruş/Bilinmiyor</span><strong>${h(payload.not_running_count ?? '-')}</strong></div>
+      <div class="card"><span>Aktif Alarm</span><strong>${h(payload.active_alarm_total ?? '-')}</strong></div>
+    </section>
+
+    <h2>Özet</h2>
+    <p class="summary">${h(summary)}</p>
+
+    <h2>Makine Bazlı Özet</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Makine</th>
+          <th>Durum</th>
+          <th>Skor</th>
+          <th>Alarm</th>
+          <th>Sıcaklık</th>
+          <th>RSSI</th>
+        </tr>
+      </thead>
+      <tbody>${machineRows}</tbody>
+    </table>
+
+    <h2>Bulgular</h2>
+    <ul>${findings.length ? findings.map(x => `<li>${h(x)}</li>`).join('') : '<li>Veri yok</li>'}</ul>
+
+    <h2>Öneriler</h2>
+    <ul>${recommendations.length ? recommendations.map(x => `<li>${h(x)}</li>`).join('') : '<li>Veri yok</li>'}</ul>
+
+    ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
+
+    <div class="footer">
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.3.0
+    </div>
+  </main>
+</body>
+</html>`;
+}
+
+app.get('/api/sites/:siteCode/ai/reports/latest/print', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const site = await one(
+      `SELECT id, code, name, status FROM sites WHERE code=$1 LIMIT 1`,
+      [req.params.siteCode]
+    );
+
+    if (!site) return res.status(404).send('Site bulunamadı.');
+
+    const report = await one(
+      `
+      SELECT
+        id::text AS id,
+        report_type,
+        report_date,
+        health_score,
+        summary,
+        telegram_text,
+        report_json,
+        raw_payload,
+        created_at
+      FROM ai_reports
+      WHERE machine_id IS NULL
+        AND report_type='site_daily_production'
+      ORDER BY created_at DESC
+      LIMIT 1
+      `
+    );
+
+    if (!report) return res.status(404).send('Kayıtlı site raporu yok.');
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(siteReportPrintHtml(site, report));
+  } catch(e) {
+    res.status(500).send(h(e.message));
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/reports/:id/print', async (req,res)=>{
+  try {
+    await ensureAiReportsHistorySchema();
+
+    const site = await one(
+      `SELECT id, code, name, status FROM sites WHERE code=$1 LIMIT 1`,
+      [req.params.siteCode]
+    );
+
+    if (!site) return res.status(404).send('Site bulunamadı.');
+
+    const report = await one(
+      `
+      SELECT
+        id::text AS id,
+        report_type,
+        report_date,
+        health_score,
+        summary,
+        telegram_text,
+        report_json,
+        raw_payload,
+        created_at
+      FROM ai_reports
+      WHERE id::text=$1
+        AND machine_id IS NULL
+        AND report_type='site_daily_production'
+      LIMIT 1
+      `,
+      [String(req.params.id)]
+    );
+
+    if (!report) return res.status(404).send('Rapor bulunamadı.');
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(siteReportPrintHtml(site, report));
+  } catch(e) {
+    res.status(500).send(h(e.message));
+  }
+});
+
+app.get('/api/sites/:siteCode/ai/daily-report/print', async (req,res)=>{
+  try {
+    const shouldSave = req.query.save === 'true' || req.query.save === '1';
+    const result = await createSiteDailyReport(req.params.siteCode, shouldSave);
+
+    if (!result) return res.status(404).send('Site raporu oluşturulamadı.');
+
+    const report = {
+      id: result.saveResult?.report_id || 'generated',
+      report_type: result.report.report_type,
+      report_date: result.saveResult?.report_date || new Date().toISOString(),
+      health_score: result.report.overall_score,
+      summary: result.report.summary,
+      telegram_text: result.telegram_text,
+      report_json: result.report,
+      raw_payload: result.report,
+      created_at: result.saveResult?.created_at || result.report.generated_at
+    };
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(siteReportPrintHtml(result.report.site || {code:req.params.siteCode, name:req.params.siteCode}, report));
+  } catch(e) {
+    res.status(500).send(h(e.message));
   }
 });
 

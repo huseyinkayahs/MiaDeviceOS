@@ -1,0 +1,139 @@
+
+# V4.3 PDF Report Export
+
+Bu paket v4.2.0 üzerine kopyalanır.
+
+## Amaç
+
+Site / fabrika günlük raporunu PDF olarak kaydetmeye uygun yazdırma/export ekranı eklemek.
+
+## Önemli Not
+
+Bu sprint sunucu tarafında ağır PDF kütüphanesi kullanmaz.
+PDF çıktısı tarayıcının yazdırma sistemiyle alınır:
+
+```text
+PDF / Yazdır ekranı açılır
+↓
+Tarayıcıda Yazdır
+↓
+Hedef: PDF olarak kaydet
+```
+
+Bu yöntem Türkçe karakterler ve sayfa düzeni için daha güvenli ve hafiftir.
+
+## Eklenen Endpointler
+
+Son kayıtlı site raporu PDF/Yazdır ekranı:
+
+```text
+GET /api/sites/site01/ai/reports/latest/print
+```
+
+Belirli site raporu PDF/Yazdır ekranı:
+
+```text
+GET /api/sites/site01/ai/reports/:id/print
+```
+
+Yeni site raporu üret + kaydet + PDF/Yazdır ekranı:
+
+```text
+GET /api/sites/site01/ai/daily-report/print?save=1
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+Eğer port hatası olursa:
+
+```powershell
+netstat -ano | findstr :3100
+taskkill /PID <PID> /F
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.3.0
+```
+
+## Test 2 - Son Site Raporu PDF/Yazdır
+
+```text
+http://localhost:3100/api/sites/site01/ai/reports/latest/print
+```
+
+Beklenen:
+
+```text
+FactoryBox Günlük Yönetici Raporu
+PDF Olarak Kaydet / Yazdır butonu
+```
+
+## Test 3 - Yeni Rapor Üret + PDF
+
+```text
+http://localhost:3100/api/sites/site01/ai/daily-report/print?save=1
+```
+
+Beklenen:
+
+```text
+Yeni site raporu oluşturulur
+Veritabanına kaydedilir
+PDF/Yazdır ekranı açılır
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen butonlar:
+
+```text
+Son Site Raporu PDF / Yazdır
+Yeni Rapor Üret + PDF
+Rapor detayında PDF / Yazdır
+```
+
+## PDF Kaydetme
+
+Açılan print/export sayfasında:
+
+```text
+PDF Olarak Kaydet / Yazdır
+```
+
+butonuna bas.
+
+Sonra tarayıcı yazdırma penceresinde:
+
+```text
+Hedef: PDF olarak kaydet
+```

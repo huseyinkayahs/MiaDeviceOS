@@ -58,3 +58,28 @@
   opacity: .6;
   cursor: wait;
 }
+
+
+.pdf-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 16px;
+}
+
+.link-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.print-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--blue);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.print-link:hover {
+  text-decoration: underline;
+}

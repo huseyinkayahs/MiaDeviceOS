@@ -134,6 +134,24 @@ function renderHistory(history) {
 
 
 
+
+
+function updatePdfLinks(siteReports) {
+  const latest = (siteReports.reports || [])[0];
+
+  const latestLink = document.getElementById('latestSitePdf');
+  if (latestLink) {
+    latestLink.href = latest
+      ? `/api/sites/${siteCode}/ai/reports/latest/print`
+      : `/api/sites/${siteCode}/ai/daily-report/print?save=1`;
+  }
+
+  const newReportPdf = document.getElementById('newSitePdf');
+  if (newReportPdf) {
+    newReportPdf.href = `/api/sites/${siteCode}/ai/daily-report/print?save=1`;
+  }
+}
+
 function renderSiteReportHistory(siteReports) {
   const el = document.getElementById('siteReportHistory');
   if (!el) return;
@@ -179,6 +197,7 @@ function renderSiteReportDetail(report) {
       <div>
         <p class="label">Site Rapor ID</p>
         <strong>${esc(report.id)}</strong>
+        <p><a class="print-link" id="reportPdfLink" href="/api/sites/${siteCode}/ai/reports/${encodeURIComponent(report.id)}/print" target="_blank">PDF / Yazdır</a></p>
       </div>
       <div>
         <p class="label">Genel Skor</p>
@@ -420,6 +439,7 @@ async function refresh(forceDetail = false) {
     renderDeviceInfo(deviceInfo);
     renderSiteDailyReport(siteDaily);
     renderSiteReportHistory(siteReports);
+    updatePdfLinks(siteReports);
 
     if (!selectedReportId && history.reports && history.reports[0]) {
       selectedReportId = String(history.reports[0].id);
