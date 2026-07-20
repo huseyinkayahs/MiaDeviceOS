@@ -228,3 +228,15 @@
 .login-card .link-btn {
   text-align: center;
 }
+
+
+.admin-card { border-color: #d5e2ff; }
+.admin-count-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+.admin-count-grid > div { background: #f8fbff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.admin-count-grid strong { font-size: 26px; }
+.admin-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.admin-table { width: 100%; border-collapse: collapse; min-width: 850px; }
+.admin-table th, .admin-table td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.admin-table th { background: #f8fbff; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+.admin-table tr:last-child td { border-bottom: 0; }
+@media (max-width: 900px) { .admin-count-grid { grid-template-columns: 1fr 1fr; } }

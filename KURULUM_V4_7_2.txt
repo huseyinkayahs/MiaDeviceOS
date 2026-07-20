@@ -1,0 +1,65 @@
+
+# V4.7.2 Admin Panel Loading Fix
+
+Bu paket v4.7.1 üzerine kopyalanır.
+
+## Düzeltilen Hata
+
+Admin panel v4.7.1 olarak açılıyor fakat listeler "Yükleniyor..." durumunda kalıyordu.
+
+## Yapılan Düzeltme
+
+```text
+admin.html temiz şekilde yeniden düzenlendi
+DOMContentLoaded ile güvenli başlatma eklendi
+Yenile butonu event bağlantısı düzeltildi
+Her admin endpoint ayrı ayrı yükleniyor
+Bir endpoint hata verse bile diğerleri yüklenmeye devam ediyor
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.7.2
+```
+
+Admin panel:
+
+```text
+http://localhost:3100/admin.html
+```
+
+Tarayıcıda Ctrl + F5 yap.
+
+Beklenen:
+
+```text
+Admin panel çalışıyor.
+Kullanıcılar tablosu
+Customers / Tenants tablosu
+Sites / Atölyeler tablosu
+Tenant Access tablosu
+```

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>FactoryBox SaaS Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body>
+<header>
+  <div>
+    <h1>FactoryBox SaaS Admin Panel</h1>
+    <p>Users → Customers → Sites → Tenant Access</p>
+  </div>
+  <div>
+    <a class="secondary-btn link-btn" href="/">Dashboard</a>
+    <a class="secondary-btn link-btn" href="/login.html">Login</a>
+  </div>
+</header>
+
+<main>
+  <section class="card wide admin-card">
+    <div class="section-title-row">
+      <div>
+        <h2>Admin Overview</h2>
+        <p class="muted">v4.7.2: Signup ile oluşan kullanıcı, müşteri ve site kayıtlarını yönetmek için ilk admin görünümü.</p>
+      </div>
+      <button id="refreshAdmin" class="secondary-btn">Yenile</button>
+    </div>
+
+    <div id="adminStatus" class="mini-status">Yükleniyor...</div>
+    <div id="adminCounts" class="admin-count-grid"></div>
+  </section>
+
+  <section class="card wide admin-card">
+    <h2>Kullanıcılar</h2>
+    <div id="usersTable">Yükleniyor...</div>
+  </section>
+
+  <section class="card wide admin-card">
+    <h2>Customers / Tenants</h2>
+    <div id="customersTable">Yükleniyor...</div>
+  </section>
+
+  <section class="card wide admin-card">
+    <h2>Sites / Atölyeler</h2>
+    <div id="sitesTable">Yükleniyor...</div>
+  </section>
+
+  <section class="card wide admin-card">
+    <h2>Tenant Access</h2>
+    <div id="tenantAccessTable">Yükleniyor...</div>
+  </section>
+</main>
+
+<script>
+(function () {
+  function authToken() {
+    return localStorage.getItem('factorybox_auth_token') || '';
+  }
+
+  function esc(v) {
+    return String(v ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function fmtDate(v) {
+    if (!v) return '-';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
+  }
+
+  async function getJson(url) {
+    const token = authToken();
+    const res = await fetch(url, {
+      headers: token ? {Authorization: `Bearer ${token}`} : {}
+    });
+
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {}
+
+    if (res.status === 401) {
+      throw new Error('Login gerekli. Önce login ekranından giriş yap.');
+    }
+
+    if (res.status === 403) {
+      throw new Error('Admin yetkisi gerekli.');
+    }
+
+    if (!res.ok) {
+      throw new Error(body?.message || `${url} ${res.status}`);
+    }
+
+    return body;
+  }
+
+  function table(headers, rows) {
+    if (!rows || !rows.length) return '<span class="muted">Kayıt yok.</span>';
+
+    return `
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr>${headers.map(h => `<th>${esc(h.label)}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>${headers.map(h => `<td>${esc(h.value(row))}</td>`).join('')}</tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function setError(id, message) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<span class="alarm">${esc(message)}</span>`;
+  }
+
+  function renderCounts(counts) {
+    const el = document.getElementById('adminCounts');
+    if (!el) return;
+
+    const items = [
+      ['Users', counts.users],
+      ['Customers', counts.customers],
+      ['Sites', counts.sites],
+      ['Machines', counts.machines],
+      ['Devices', counts.devices],
+      ['Tenant Access', counts.tenant_access],
+      ['AI Reports', counts.ai_reports],
+      ['Active Alarms', counts.active_alarms]
+    ];
+
+    el.innerHTML = items.map(([label, value]) => `
+      <div>
+        <p class="label">${esc(label)}</p>
+        <strong>${esc(value ?? 0)}</strong>
+      </div>
+    `).join('');
+  }
+
+  function renderUsers(data) {
+    document.getElementById('usersTable').innerHTML = table([
+      {label:'Email', value:r=>r.email},
+      {label:'Ad', value:r=>r.full_name},
+      {label:'Rol', value:r=>r.role},
+      {label:'Status', value:r=>r.status},
+      {label:'Customer', value:r=>r.default_customer_code},
+      {label:'Site', value:r=>r.default_site_code},
+      {label:'Son Login', value:r=>fmtDate(r.last_login_at)},
+      {label:'Oluşturma', value:r=>fmtDate(r.created_at)}
+    ], data.users || []);
+  }
+
+  function renderCustomers(data) {
+    document.getElementById('customersTable').innerHTML = table([
+      {label:'Code', value:r=>r.code},
+      {label:'Name', value:r=>r.name},
+      {label:'Status', value:r=>r.status},
+      {label:'Sites', value:r=>r.site_count},
+      {label:'Machines', value:r=>r.machine_count},
+      {label:'Users', value:r=>r.user_count},
+      {label:'Created', value:r=>fmtDate(r.created_at)}
+    ], data.customers || []);
+  }
+
+  function renderSites(data) {
+    document.getElementById('sitesTable').innerHTML = table([
+      {label:'Code', value:r=>r.code},
+      {label:'Name', value:r=>r.name},
+      {label:'Customer', value:r=>r.customer_code},
+      {label:'Location', value:r=>r.location},
+      {label:'Status', value:r=>r.status},
+      {label:'Machines', value:r=>r.machine_count},
+      {label:'Devices', value:r=>r.device_count},
+      {label:'Created', value:r=>fmtDate(r.created_at)}
+    ], data.sites || []);
+  }
+
+  function renderTenantAccess(data) {
+    document.getElementById('tenantAccessTable').innerHTML = table([
+      {label:'User', value:r=>r.user_email},
+      {label:'Name', value:r=>r.full_name},
+      {label:'User Role', value:r=>r.user_role},
+      {label:'Customer', value:r=>r.customer_code},
+      {label:'Site', value:r=>r.site_code || '*'},
+      {label:'Access Role', value:r=>r.access_role},
+      {label:'Created', value:r=>fmtDate(r.created_at)}
+    ], data.access || []);
+  }
+
+  async function loadAdmin() {
+    const status = document.getElementById('adminStatus');
+    const refreshBtn = document.getElementById('refreshAdmin');
+
+    status.textContent = 'Yükleniyor...';
+    if (refreshBtn) refreshBtn.disabled = true;
+
+    const tasks = [
+      ['overview', '/api/admin/overview', data => renderCounts(data.counts || {}), 'adminCounts'],
+      ['users', '/api/admin/users', renderUsers, 'usersTable'],
+      ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
+      ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
+      ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable']
+    ];
+
+    const errors = [];
+
+    for (const [name, url, renderer, targetId] of tasks) {
+      try {
+        const data = await getJson(url);
+        renderer(data);
+      } catch(e) {
+        errors.push(`${name}: ${e.message}`);
+        setError(targetId, e.message);
+      }
+    }
+
+    status.textContent = errors.length
+      ? `Kısmi hata: ${errors.join(' | ')}`
+      : 'Admin panel çalışıyor.';
+
+    if (refreshBtn) refreshBtn.disabled = false;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('refreshAdmin');
+    if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
+    loadAdmin();
+  });
+})();
+</script>
+</body>
+</html>
