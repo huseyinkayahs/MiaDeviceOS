@@ -1023,7 +1023,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'4.8.0',
+    version:'4.9.1',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1040,7 +1040,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1051,7 +1051,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1061,7 +1061,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'4.8.0',
+    version:'4.9.1',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1079,12 +1079,13 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'4.8.0',
+        version:'4.9.1',
         message:'SIGNUP_ENABLED=false'
       });
     }
 
     await ensureSaasFoundation();
+  await ensureAuditLogSchema();
 
     const created = await createSignupOwner({
       email:req.body?.email,
@@ -1109,7 +1110,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1121,7 +1122,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'4.8.0',
+      version:'4.9.1',
       message:e.message
     });
   }
@@ -1135,7 +1136,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'4.8.0',
+        version:'4.9.1',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -1175,7 +1176,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -1190,7 +1191,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'4.8.0', logged_out:true});
+  res.json({status:'ok', version:'4.9.1', logged_out:true});
 });
 
 
@@ -1234,12 +1235,13 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
         (SELECT count(*)::int FROM app_users) AS users,
         (SELECT count(*)::int FROM app_user_tenant_access) AS tenant_access,
         (SELECT count(*)::int FROM ai_reports) AS ai_reports,
-        (SELECT count(*)::int FROM alarms WHERE status='active') AS active_alarms
+        (SELECT count(*)::int FROM alarms WHERE status='active') AS active_alarms,
+        (SELECT count(*)::int FROM admin_audit_logs) AS audit_logs
     `);
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       counts
     });
   } catch(e) {
@@ -1268,7 +1270,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       count:result.rows.length,
       users:result.rows
     });
@@ -1302,7 +1304,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       count:result.rows.length,
       customers:result.rows
     });
@@ -1337,7 +1339,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       count:result.rows.length,
       sites:result.rows
     });
@@ -1370,7 +1372,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       count:result.rows.length,
       access:result.rows
     });
@@ -1380,6 +1382,90 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 });
 
 
+
+
+
+
+async function ensureAuditLogSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id bigserial PRIMARY KEY,
+      actor_user_id text,
+      actor_email text,
+      actor_role text,
+      action text NOT NULL,
+      entity_type text NOT NULL,
+      entity_id text,
+      old_values jsonb,
+      new_values jsonb,
+      metadata jsonb,
+      ip_address text,
+      user_agent text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at
+    ON admin_audit_logs(created_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_entity
+    ON admin_audit_logs(entity_type, entity_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor_email
+    ON admin_audit_logs(actor_email)
+  `);
+}
+
+function reqIp(req) {
+  return String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+}
+
+async function writeAuditLog(req, {action, entity_type, entity_id, old_values, new_values, metadata}) {
+  try {
+    await ensureAuditLogSchema();
+
+    const actor = req.user || getSession(req)?.user || null;
+
+    await pool.query(
+      `
+      INSERT INTO admin_audit_logs(
+        actor_user_id,
+        actor_email,
+        actor_role,
+        action,
+        entity_type,
+        entity_id,
+        old_values,
+        new_values,
+        metadata,
+        ip_address,
+        user_agent
+      )
+      VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10,$11)
+      `,
+      [
+        actor?.id || null,
+        actor?.email || null,
+        actor?.role || null,
+        action,
+        entity_type,
+        String(entity_id || ''),
+        JSON.stringify(old_values || null),
+        JSON.stringify(new_values || null),
+        JSON.stringify(metadata || null),
+        reqIp(req),
+        req.headers['user-agent'] || null
+      ]
+    );
+  } catch(e) {
+    console.error('Audit log write failed:', e.message);
+  }
+}
 
 
 function validateChoice(value, allowed, label) {
@@ -1392,9 +1478,57 @@ function validateChoice(value, allowed, label) {
   return clean;
 }
 
+
+
+app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
+  try {
+    await ensureAuditLogSchema();
+
+    const limit = Math.min(Math.max(Number(req.query.limit || 50), 1), 200);
+
+    const result = await pool.query(
+      `
+      SELECT
+        id::text,
+        actor_user_id,
+        actor_email,
+        actor_role,
+        action,
+        entity_type,
+        entity_id,
+        old_values,
+        new_values,
+        metadata,
+        ip_address,
+        user_agent,
+        created_at
+      FROM admin_audit_logs
+      ORDER BY created_at DESC
+      LIMIT $1
+      `,
+      [limit]
+    );
+
+    res.json({
+      status:'ok',
+      version:'4.9.1',
+      count:result.rows.length,
+      logs:result.rows
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
 app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['active','inactive','suspended'], 'status');
+    const oldUser = await one(
+      `SELECT id,email,full_name,role,status,default_customer_code,default_site_code FROM app_users WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
     const user = await one(
       `
       UPDATE app_users
@@ -1409,9 +1543,18 @@ app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
       return res.status(404).json({status:'not_found', user_id:req.params.id});
     }
 
+    await writeAuditLog(req, {
+      action:'update_user_status',
+      entity_type:'user',
+      entity_id:user.id,
+      old_values:oldUser,
+      new_values:user,
+      metadata:{changed_field:'status', old_status:oldUser?.status, new_status:user.status}
+    });
+
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       action:'update_user_status',
       user
     });
@@ -1423,6 +1566,11 @@ app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
 app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
   try {
     const role = validateChoice(req.body?.role, ['viewer','operator','admin','owner','system_admin'], 'role');
+    const oldUser = await one(
+      `SELECT id,email,full_name,role,status,default_customer_code,default_site_code FROM app_users WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
     const user = await one(
       `
       UPDATE app_users
@@ -1446,9 +1594,18 @@ app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
       [role === 'viewer' ? 'viewer' : role === 'operator' ? 'operator' : 'owner', user.email]
     );
 
+    await writeAuditLog(req, {
+      action:'update_user_role',
+      entity_type:'user',
+      entity_id:user.id,
+      old_values:oldUser,
+      new_values:user,
+      metadata:{changed_field:'role', old_role:oldUser?.role, new_role:user.role}
+    });
+
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       action:'update_user_role',
       user
     });
@@ -1460,6 +1617,11 @@ app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
 app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['trial','pilot','active','inactive','suspended'], 'status');
+    const oldCustomer = await one(
+      `SELECT id::text, code, name, status, created_at, updated_at FROM customers WHERE code=$1 LIMIT 1`,
+      [req.params.code]
+    );
+
     const customer = await one(
       `
       UPDATE customers
@@ -1474,9 +1636,18 @@ app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
       return res.status(404).json({status:'not_found', customer_code:req.params.code});
     }
 
+    await writeAuditLog(req, {
+      action:'update_customer_status',
+      entity_type:'customer',
+      entity_id:customer.code,
+      old_values:oldCustomer,
+      new_values:customer,
+      metadata:{changed_field:'status', old_status:oldCustomer?.status, new_status:customer.status}
+    });
+
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       action:'update_customer_status',
       customer
     });
@@ -1488,6 +1659,17 @@ app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
 app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['trial','pilot','active','inactive','suspended'], 'status');
+    const oldSite = await one(
+      `
+      SELECT s.id::text, s.code, s.name, s.location, s.status, c.code AS customer_code, c.name AS customer_name, s.created_at, s.updated_at
+      FROM sites s
+      JOIN customers c ON c.id=s.customer_id
+      WHERE c.code=$1 AND s.code=$2
+      LIMIT 1
+      `,
+      [req.params.customerCode, req.params.siteCode]
+    );
+
     const site = await one(
       `
       UPDATE sites s
@@ -1505,9 +1687,18 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, asyn
       return res.status(404).json({status:'not_found', customer_code:req.params.customerCode, site_code:req.params.siteCode});
     }
 
+    await writeAuditLog(req, {
+      action:'update_site_status',
+      entity_type:'site',
+      entity_id:`${site.customer_code}/${site.code}`,
+      old_values:oldSite,
+      new_values:site,
+      metadata:{changed_field:'status', old_status:oldSite?.status, new_status:site.status}
+    });
+
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       action:'update_site_status',
       site
     });
@@ -1531,7 +1722,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       tenant:context
     });
   } catch(e) {
@@ -1545,7 +1736,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       customers:context.customers,
       sites:context.sites
     });
@@ -1559,7 +1750,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.8.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.9.1', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -1667,7 +1858,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.8.0',
+      version:'4.9.1',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -1688,7 +1879,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.8.0',
+      version:'4.9.1',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -1738,7 +1929,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -1782,7 +1973,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       machine_code:req.params.code,
       report: report || null
     });
@@ -1820,7 +2011,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.8.0',
+        version:'4.9.1',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -1835,7 +2026,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1875,7 +2066,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1926,7 +2117,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       machine_code:req.params.code,
       report
     });
@@ -1991,7 +2182,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -2042,7 +2233,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       device:row
     });
   } catch(e) {
@@ -2087,7 +2278,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       device:row
     });
   } catch(e) {
@@ -2344,7 +2535,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -2366,7 +2557,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -2417,7 +2608,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -2461,7 +2652,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -2512,7 +2703,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.8.0',
+      version:'4.9.1',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -2656,7 +2847,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.8.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.9.1
     </div>
   </main>
 </body>
@@ -3020,7 +3211,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'4.8.0',
+    version:'4.9.1',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -3042,7 +3233,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3065,7 +3256,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3175,7 +3366,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.8.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.9.1</p>
   </div>
 </body>
 </html>`;
@@ -3196,7 +3387,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'4.8.0',
+    version:'4.9.1',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -3251,7 +3442,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -3291,7 +3482,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -3332,7 +3523,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.8.0',
+      version:'4.9.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

@@ -1,0 +1,76 @@
+
+# V4.9.1 Audit Save Message Fix
+
+Bu paket v4.9.0 üzerine kopyalanır.
+
+## Amaç
+
+Audit log çalışıyor olmasına rağmen admin panelde Kaydet butonuna basınca "Kaydedildi" mesajının görünmemesi düzeltildi.
+
+## Kök Sebep
+
+Kayıt başarılı olduktan sonra admin panel yeniden yükleniyordu.
+
+```text
+Kaydedildi mesajı yazılıyor
+Hemen ardından loadAdmin çalışıyor
+Mesaj "Admin panel çalışıyor" ile eziliyordu
+```
+
+## Düzeltme
+
+Mesaj sırası değiştirildi.
+
+```text
+Önce admin panel yeniden yüklenir
+Sonra "Kaydedildi. Activity history güncellendi." mesajı gösterilir
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.9.1
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html
+```
+
+Ctrl + F5 yap.
+
+## Test 3 - Kaydet Mesajı
+
+Admin panelde customer veya site status değiştir ve Kaydet'e bas.
+
+Beklenen:
+
+```text
+Kaydedildi. Activity history güncellendi.
+```
+
+Audit log sayısı da artmaya devam etmeli.

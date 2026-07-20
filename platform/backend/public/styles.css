@@ -258,3 +258,15 @@
   opacity: .6;
   cursor: wait;
 }
+
+
+#auditLogTable .admin-table {
+  min-width: 1100px;
+}
+
+#auditLogTable td {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,80 @@
+
+# V4.9 Audit Log / Activity History Pack
+
+Bu paket v4.8.0 üzerine kopyalanır.
+
+## Amaç
+
+Admin panelde yapılan değişiklikleri kayıt altına almak.
+
+## Eklenenler
+
+```text
+admin_audit_logs tablosu
+GET /api/admin/audit-logs
+Kullanıcı rol/status değişikliğinde audit kayıt
+Customer status değişikliğinde audit kayıt
+Site status değişikliğinde audit kayıt
+Admin panelde Activity History bölümü
+Overview içinde Audit Logs sayacı
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.9.0
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html
+```
+
+Beklenen yeni bölüm:
+
+```text
+Activity History / Audit Log
+```
+
+## Test 3 - Audit Log
+
+Admin panelde bir customer veya site status değiştir ve Kaydet’e bas.
+
+Beklenen:
+
+```text
+Kaydedildi. Activity history güncellendi.
+Activity History bölümünde yeni kayıt
+```
+
+## Test 4 - API
+
+```text
+http://localhost:3100/api/admin/audit-logs
+```
+
+Bu API linkini direkt tarayıcıdan açarsan AUTH_ENABLED=true iken token gitmez. Admin panel üzerinden test etmek daha doğru.

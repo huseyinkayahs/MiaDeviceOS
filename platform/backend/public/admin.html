@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Sites → Tenant Access → Management Actions</p>
+    <p>Users → Customers → Sites → Tenant Access → Management Actions → Audit Log</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v4.8: Kullanıcı, müşteri ve site yönetimi için ilk güvenli aksiyonlar.</p>
+        <p class="muted">v4.9.1: Yönetim aksiyonları artık activity history / audit log olarak kayıt altına alınır.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -34,25 +34,31 @@
 
   <section class="card wide admin-card">
     <h2>Kullanıcılar</h2>
-    <p class="muted">Rol veya status değiştirip “Kaydet”e bas.</p>
+    <p class="muted">Rol veya status değiştirip “Kaydet”e bas. Değişiklik audit log’a yazılır.</p>
     <div id="usersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Customers / Tenants</h2>
-    <p class="muted">Customer status değiştirilebilir.</p>
+    <p class="muted">Customer status değiştirilebilir. Değişiklik audit log’a yazılır.</p>
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Sites / Atölyeler</h2>
-    <p class="muted">Site status değiştirilebilir.</p>
+    <p class="muted">Site status değiştirilebilir. Değişiklik audit log’a yazılır.</p>
     <div id="sitesTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Tenant Access</h2>
     <div id="tenantAccessTable">Yükleniyor...</div>
+  </section>
+
+  <section class="card wide admin-card">
+    <h2>Activity History / Audit Log</h2>
+    <p class="muted">Son yönetim aksiyonları: kim, neyi, ne zaman değiştirdi?</p>
+    <div id="auditLogTable">Yükleniyor...</div>
   </section>
 </main>
 
@@ -75,6 +81,15 @@
     if (!v) return '-';
     const d = new Date(v);
     return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
+  }
+
+  function compactJson(v) {
+    if (!v) return '-';
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
   }
 
   async function apiJson(url, options = {}) {
@@ -158,7 +173,8 @@
       ['Devices', counts.devices],
       ['Tenant Access', counts.tenant_access],
       ['AI Reports', counts.ai_reports],
-      ['Active Alarms', counts.active_alarms]
+      ['Active Alarms', counts.active_alarms],
+      ['Audit Logs', counts.audit_logs]
     ];
 
     el.innerHTML = items.map(([label, value]) => `
@@ -223,6 +239,18 @@
     ], data.access || []);
   }
 
+  function renderAuditLogs(data) {
+    document.getElementById('auditLogTable').innerHTML = table([
+      {label:'Tarih', value:r=>fmtDate(r.created_at)},
+      {label:'Actor', value:r=>r.actor_email || '-'},
+      {label:'Role', value:r=>r.actor_role || '-'},
+      {label:'Action', value:r=>r.action},
+      {label:'Entity', value:r=>`${r.entity_type}:${r.entity_id}`},
+      {label:'Old', value:r=>compactJson(r.old_values)},
+      {label:'New', value:r=>compactJson(r.new_values)}
+    ], data.logs || []);
+  }
+
   async function loadAdmin() {
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
@@ -235,7 +263,8 @@
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
-      ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable']
+      ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable'],
+      ['audit-logs', '/api/admin/audit-logs?limit=50', renderAuditLogs, 'auditLogTable']
     ];
 
     const errors = [];
@@ -311,8 +340,8 @@
       if (action === 'save-customer') await saveCustomer(button);
       if (action === 'save-site') await saveSite(button);
 
-      status.textContent = 'Kaydedildi.';
       await loadAdmin();
+      status.textContent = 'Kaydedildi. Activity history güncellendi.';
     } catch(err) {
       status.textContent = err.message;
     } finally {
