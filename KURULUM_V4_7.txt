@@ -1,0 +1,103 @@
+# V4.7 SaaS Admin Panel Pack
+
+Bu paket v4.6.1 üzerine kopyalanır.
+
+## Amaç
+
+Signup ile oluşan kullanıcı, customer, site ve tenant access kayıtlarını dashboard üzerinden görmeye başlamak.
+
+## Eklenenler
+
+```text
+Admin panel ekranı
+GET /api/admin/overview
+GET /api/admin/users
+GET /api/admin/customers
+GET /api/admin/sites
+GET /api/admin/tenant-access
+Dashboard’a Admin Panel linki
+Admin listeleri için yardımcı index migration
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.7.0
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html
+```
+
+AUTH_ENABLED=true ise önce login yap:
+
+```text
+http://localhost:3100/login.html
+```
+
+Admin kullanıcı:
+
+```text
+admin@factorybox.local
+FactoryBox123!
+```
+
+veya signup ile oluşturduğun owner kullanıcı.
+
+## Test 3 - API
+
+```text
+http://localhost:3100/api/admin/overview
+```
+
+Beklenen:
+
+```text
+status: ok
+version: 4.7.0
+counts
+```
+
+## Dashboard
+
+```text
+http://localhost:3100
+```
+
+Ctrl + F5 yap.
+
+Beklenen:
+
+```text
+SaaS Foundation kartında Admin Panel linki
+```
+
+## Not
+
+Bu sprint yönetim ekranının ilk sürümüdür. Silme/düzenleme işlemi yoktur.
+Sadece güvenli listeleme ve görünürlük sağlar.

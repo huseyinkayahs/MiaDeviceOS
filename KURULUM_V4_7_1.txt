@@ -1,0 +1,71 @@
+
+# V4.7.1 Admin Sites Query Hotfix
+
+Bu paket v4.7.0 üzerine kopyalanır.
+
+## Düzeltilen Hata
+
+Admin panelde şu hata görülüyordu:
+
+```text
+/api/admin/sites 500
+```
+
+Sebep:
+
+```text
+devices tablosu site_id üzerinden değil, machine_id üzerinden bağlanmalıydı.
+```
+
+## Yapılan Düzeltme
+
+```text
+LEFT JOIN devices d ON d.machine_id=m.id
+```
+
+Ayrıca admin panelde bir endpoint hata verirse artık tüm panel kilitlenmez; diğer listeler yüklenmeye devam eder.
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.7.1
+```
+
+Admin panel:
+
+```text
+http://localhost:3100/admin.html
+```
+
+Beklenen:
+
+```text
+Admin panel çalışıyor.
+Kullanıcılar listesi
+Customers / Tenants listesi
+Sites / Atölyeler listesi
+Tenant Access listesi
+```
