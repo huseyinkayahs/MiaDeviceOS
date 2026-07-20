@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>FactoryBox Davet Kabul</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <h1>FactoryBox Davet Kabul</h1>
+    <p id="inviteInfo" class="muted">Davet kontrol ediliyor...</p>
+
+    <form id="inviteForm" style="display:none;">
+      <label>
+        Email
+        <input id="email" type="email" disabled>
+      </label>
+
+      <label>
+        Ad Soyad
+        <input id="fullName" type="text" placeholder="Ad Soyad">
+      </label>
+
+      <label>
+        Şifre
+        <input id="password" type="password" placeholder="En az 6 karakter" required>
+      </label>
+
+      <button type="submit" class="primary-btn">Daveti Kabul Et</button>
+    </form>
+
+    <p id="inviteMessage" class="mini-status"></p>
+
+    <p class="auth-links">
+      <a href="/login.html">Login ekranına dön</a>
+    </p>
+  </main>
+
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+
+  function esc(v) {
+    return String(v ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  async function apiJson(url, options = {}) {
+    const headers = options.body ? {'Content-Type':'application/json'} : {};
+    const res = await fetch(url, {...options, headers});
+    let body = null;
+    try { body = await res.json(); } catch {}
+    if (!res.ok) throw new Error(body?.message || `${url} ${res.status}`);
+    return body;
+  }
+
+  async function loadInvite() {
+    const info = document.getElementById('inviteInfo');
+    const form = document.getElementById('inviteForm');
+
+    if (!token) {
+      info.textContent = 'Davet token bulunamadı.';
+      return;
+    }
+
+    try {
+      const data = await apiJson(`/api/invites/${encodeURIComponent(token)}`);
+      const invite = data.invite;
+
+      if (invite.expired) {
+        info.textContent = 'Bu davetin süresi dolmuş.';
+        return;
+      }
+
+      if (invite.status !== 'pending') {
+        info.textContent = `Bu davet ${invite.status} durumunda.`;
+        return;
+      }
+
+      info.innerHTML = `
+        <strong>${esc(invite.email)}</strong> için davet hazır.<br>
+        Role: <strong>${esc(invite.role)}</strong><br>
+        Customer: <strong>${esc(invite.customer_code)}</strong><br>
+        Site: <strong>${esc(invite.site_code || '*')}</strong>
+      `;
+
+      document.getElementById('email').value = invite.email;
+      document.getElementById('fullName').value = invite.full_name || '';
+      form.style.display = 'block';
+    } catch(e) {
+      info.textContent = e.message;
+    }
+  }
+
+  document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const message = document.getElementById('inviteMessage');
+    message.textContent = 'Davet kabul ediliyor...';
+
+    try {
+      const full_name = document.getElementById('fullName').value.trim();
+      const password = document.getElementById('password').value;
+
+      const data = await apiJson(`/api/invites/${encodeURIComponent(token)}/accept`, {
+        method:'POST',
+        body:JSON.stringify({full_name, password})
+      });
+
+      localStorage.setItem('factorybox_auth_token', data.token);
+      message.textContent = 'Davet kabul edildi. Dashboard açılıyor...';
+      setTimeout(() => location.href = '/', 800);
+    } catch(err) {
+      message.textContent = err.message;
+    }
+  });
+
+  loadInvite();
+})();
+</script>
+</body>
+</html>

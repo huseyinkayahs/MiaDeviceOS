@@ -1,0 +1,82 @@
+
+# V5.0.1 Invite Accept bcrypt Fix
+
+Bu paket v5.0.0 üzerine kopyalanır.
+
+## Düzeltilen Hata
+
+Davet kabul ekranında şifre girip "Daveti Kabul Et" butonuna basınca şu hata oluşuyordu:
+
+```text
+bcrypt is not defined
+```
+
+## Kök Sebep
+
+Davet kabul endpoint'i şifre hashlemek için `bcrypt.hash(...)` kullanıyordu fakat backend içinde bcrypt import edilmemişti.
+
+## Düzeltme
+
+Backend'e bcrypt import eklendi.
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Önemli
+
+Eğer backend başlatırken paket eksik hatası alırsan şunu çalıştır:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd install
+```
+
+Sonra backend'i yeniden başlat:
+
+```powershell
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.0.1
+```
+
+## Test 2 - Davet Kabul
+
+Aynı davet linkini tekrar aç:
+
+```text
+http://localhost:3100/invite.html?token=...
+```
+
+Şifre gir ve Daveti Kabul Et.
+
+Beklenen:
+
+```text
+Davet kabul edildi. Dashboard açılıyor...
+```
+
+Admin panelde beklenen:
+
+```text
+Invites status: accepted
+Users içinde yeni kullanıcı
+Tenant Access içinde yeni erişim
+Activity History içinde accept_user_invite
+```

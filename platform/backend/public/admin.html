@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Sites → Tenant Access → Management Actions → Audit Log</p>
+    <p>Users → Customers → Sites → Tenant Access → Invite User → Audit Log</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,13 +23,52 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v4.9.1: Yönetim aksiyonları artık activity history / audit log olarak kayıt altına alınır.</p>
+        <p class="muted">v5.0.3: Admin panelden kullanıcı daveti ve tenant access verme.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
 
     <div id="adminStatus" class="mini-status">Yükleniyor...</div>
     <div id="adminCounts" class="admin-count-grid"></div>
+  </section>
+
+  <section class="card wide admin-card">
+    <h2>Invite User / Tenant Access</h2>
+    <p class="muted">Yeni kullanıcıya customer/site erişimi ver ve davet linki oluştur.</p>
+
+    <div class="admin-form-grid">
+      <label>
+        Email
+        <input id="inviteEmail" type="email" placeholder="ornek@firma.com">
+      </label>
+      <label>
+        Ad Soyad
+        <input id="inviteFullName" type="text" placeholder="Ad Soyad">
+      </label>
+      <label>
+        Role
+        <select id="inviteRole">
+          <option value="viewer">viewer</option>
+          <option value="operator">operator</option>
+          <option value="admin">admin</option>
+          <option value="owner">owner</option>
+        </select>
+      </label>
+      <label>
+        Customer Code
+        <input id="inviteCustomerCode" type="text" placeholder="örn: mia-creative-art">
+      </label>
+      <label>
+        Site Code
+        <input id="inviteSiteCode" type="text" placeholder="boş bırakılırsa tüm customer">
+      </label>
+      <div class="admin-form-actions">
+        <button id="createInviteBtn" class="primary-btn">Davet Oluştur</button>
+      </div>
+    </div>
+
+    <div id="inviteResult" class="mini-status muted"></div>
+    <div id="invitesTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
@@ -64,6 +103,9 @@
 
 <script>
 (function () {
+  let lastCustomers = [];
+  let lastSites = [];
+
   function authToken() {
     return localStorage.getItem('factorybox_auth_token') || '';
   }
@@ -172,6 +214,7 @@
       ['Machines', counts.machines],
       ['Devices', counts.devices],
       ['Tenant Access', counts.tenant_access],
+      ['Invites', counts.invites],
       ['AI Reports', counts.ai_reports],
       ['Active Alarms', counts.active_alarms],
       ['Audit Logs', counts.audit_logs]
@@ -200,7 +243,13 @@
   }
 
   function renderCustomers(data) {
-    const rows = (data.customers || []).map(x => ({...x, __kind:'customer'}));
+    lastCustomers = data.customers || [];
+    const customerInput = document.getElementById('inviteCustomerCode');
+    if (customerInput && !customerInput.value && lastCustomers.length === 1) {
+      customerInput.value = lastCustomers[0].code;
+    }
+
+    const rows = lastCustomers.map(x => ({...x, __kind:'customer'}));
     document.getElementById('customersTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
       {label:'Name', value:r=>r.name},
@@ -214,7 +263,8 @@
   }
 
   function renderSites(data) {
-    const rows = (data.sites || []).map(x => ({...x, __kind:'site'}));
+    lastSites = data.sites || [];
+    const rows = lastSites.map(x => ({...x, __kind:'site'}));
     document.getElementById('sitesTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
       {label:'Name', value:r=>r.name},
@@ -251,6 +301,20 @@
     ], data.logs || []);
   }
 
+  function renderInvites(data) {
+    document.getElementById('invitesTable').innerHTML = table([
+      {label:'Email', value:r=>r.email},
+      {label:'Ad', value:r=>r.full_name || '-'},
+      {label:'Role', value:r=>r.role},
+      {label:'Customer', value:r=>r.customer_code},
+      {label:'Site', value:r=>r.site_code || '*'},
+      {label:'Status', value:r=>r.status},
+      {label:'Expires', value:r=>fmtDate(r.expires_at)},
+      {label:'Link', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="copy-invite" data-url="${esc(r.invite_url)}">Kopyala</button>`},
+      {label:'İptal', html:true, value:r=>r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="cancel-invite" data-id="${esc(r.id)}">İptal</button>` : '-'}
+    ], data.invites || []);
+  }
+
   async function loadAdmin() {
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
@@ -260,6 +324,7 @@
 
     const tasks = [
       ['overview', '/api/admin/overview', data => renderCounts(data.counts || {}), 'adminCounts'],
+      ['invites', '/api/admin/invites?limit=100', renderInvites, 'invitesTable'],
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
@@ -326,6 +391,44 @@
     });
   }
 
+  async function createInvite() {
+    const email = document.getElementById('inviteEmail').value.trim();
+    const full_name = document.getElementById('inviteFullName').value.trim();
+    const role = document.getElementById('inviteRole').value;
+    const customer_code = document.getElementById('inviteCustomerCode').value.trim();
+    const site_code = document.getElementById('inviteSiteCode').value.trim();
+
+    const data = await apiJson('/api/admin/invites', {
+      method:'POST',
+      body:JSON.stringify({email, full_name, role, customer_code, site_code})
+    });
+
+    const result = document.getElementById('inviteResult');
+    const url = data.invite.invite_url;
+    result.innerHTML = `Davet oluşturuldu: <code>${esc(url)}</code>`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      result.innerHTML += ' <strong>Link kopyalandı.</strong>';
+    } catch {}
+
+    document.getElementById('inviteEmail').value = '';
+    document.getElementById('inviteFullName').value = '';
+  }
+
+  async function cancelInvite(button) {
+    await apiJson(`/api/admin/invites/${encodeURIComponent(button.dataset.id)}/cancel`, {
+      method:'POST'
+    });
+  }
+
+  async function copyInvite(button) {
+    const url = button.dataset.url;
+    const absolute = url.startsWith('http') ? url : `${location.origin}${url}`;
+    await navigator.clipboard.writeText(absolute);
+    document.getElementById('inviteResult').innerHTML = `Davet linki kopyalandı: <code>${esc(absolute)}</code>`;
+  }
+
   async function handleAction(e) {
     const button = e.target.closest('[data-action]');
     if (!button) return;
@@ -333,15 +436,37 @@
     const status = document.getElementById('adminStatus');
     const action = button.dataset.action;
     button.disabled = true;
-    status.textContent = 'Kaydediliyor...';
+    status.textContent = 'İşlem yapılıyor...';
 
     try {
-      if (action === 'save-user') await saveUser(button);
-      if (action === 'save-customer') await saveCustomer(button);
-      if (action === 'save-site') await saveSite(button);
+      if (action === 'save-user') {
+        await saveUser(button);
+        await loadAdmin();
+        status.textContent = 'Kaydedildi. Activity history güncellendi.';
+      }
 
-      await loadAdmin();
-      status.textContent = 'Kaydedildi. Activity history güncellendi.';
+      if (action === 'save-customer') {
+        await saveCustomer(button);
+        await loadAdmin();
+        status.textContent = 'Kaydedildi. Activity history güncellendi.';
+      }
+
+      if (action === 'save-site') {
+        await saveSite(button);
+        await loadAdmin();
+        status.textContent = 'Kaydedildi. Activity history güncellendi.';
+      }
+
+      if (action === 'copy-invite') {
+        await copyInvite(button);
+        status.textContent = 'Davet linki kopyalandı.';
+      }
+
+      if (action === 'cancel-invite') {
+        await cancelInvite(button);
+        await loadAdmin();
+        status.textContent = 'Davet iptal edildi. Activity history güncellendi.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -351,7 +476,23 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshAdmin');
+    const createInviteBtn = document.getElementById('createInviteBtn');
+
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
+    if (createInviteBtn) createInviteBtn.addEventListener('click', async () => {
+      createInviteBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Davet oluşturuluyor...';
+      try {
+        await createInvite();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = 'Davet oluşturuldu. Activity history güncellendi.';
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        createInviteBtn.disabled = false;
+      }
+    });
+
     document.body.addEventListener('click', handleAction);
     loadAdmin();
   });

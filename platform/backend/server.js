@@ -945,6 +945,7 @@ async function getTenantContextForUser(user) {
   const customers = [];
   const customerSeen = new Set();
   const sites = [];
+  const customerLevelAccess = [];
 
   for (const row of access.rows) {
     if (!customerSeen.has(row.customer_code)) {
@@ -963,6 +964,32 @@ async function getTenantContextForUser(user) {
         customer_code:row.customer_code,
         role:row.access_role
       });
+    } else {
+      customerLevelAccess.push(row);
+    }
+  }
+
+  for (const row of customerLevelAccess) {
+    const siteRows = await pool.query(
+      `
+      SELECT s.code, s.name, c.code AS customer_code
+      FROM sites s
+      JOIN customers c ON c.id=s.customer_id
+      WHERE c.code=$1
+      ORDER BY s.created_at ASC
+      `,
+      [row.customer_code]
+    );
+
+    for (const siteRow of siteRows.rows) {
+      if (!sites.some(s => s.code === siteRow.code && s.customer_code === siteRow.customer_code)) {
+        sites.push({
+          code:siteRow.code,
+          name:siteRow.name || siteRow.code,
+          customer_code:siteRow.customer_code,
+          role:row.access_role
+        });
+      }
     }
   }
 
@@ -997,33 +1024,57 @@ function authRequired(req, res, next) {
   return next();
 }
 
-function siteAccessRequired(req, res, next) {
-  const cfg = authConfig();
+async function siteAccessRequired(req, res, next) {
+  try {
+    const cfg = authConfig();
 
-  if (!cfg.enabled || !req.user) {
-    return next();
-  }
+    if (!cfg.enabled || !req.user) {
+      return next();
+    }
 
-  const siteCode = req.params.siteCode;
-  const allowedSites = req.tenant?.sites || [];
-  const hasAccess = allowedSites.some(s => s.code === siteCode) || req.user.role === 'system_admin';
+    const siteCode = req.params.siteCode;
+    const allowedSites = req.tenant?.sites || [];
+    const allowedCustomers = req.tenant?.customers || [];
+    const hasSiteAccess = allowedSites.some(s => s.code === siteCode);
+    const isSystemAdmin = req.user.role === 'system_admin';
 
-  if (!hasAccess) {
+    if (hasSiteAccess || isSystemAdmin) {
+      return next();
+    }
+
+    const siteOwner = await one(
+      `
+      SELECT c.code AS customer_code
+      FROM sites s
+      JOIN customers c ON c.id=s.customer_id
+      WHERE s.code=$1
+      LIMIT 1
+      `,
+      [siteCode]
+    );
+
+    const hasCustomerLevelAccess = siteOwner
+      && allowedCustomers.some(c => c.code === siteOwner.customer_code);
+
+    if (hasCustomerLevelAccess) {
+      return next();
+    }
+
     return res.status(403).json({
       status:'forbidden',
       message:'User does not have access to this site',
       site_code:siteCode
     });
+  } catch(e) {
+    return res.status(500).json({status:'error', message:e.message});
   }
-
-  return next();
 }
 
 app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'4.9.1',
+    version:'5.0.3',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1040,7 +1091,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1051,7 +1102,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1061,7 +1112,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'4.9.1',
+    version:'5.0.3',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1079,13 +1130,14 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'4.9.1',
+        version:'5.0.3',
         message:'SIGNUP_ENABLED=false'
       });
     }
 
     await ensureSaasFoundation();
   await ensureAuditLogSchema();
+  await ensureInviteSchema();
 
     const created = await createSignupOwner({
       email:req.body?.email,
@@ -1110,7 +1162,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1122,7 +1174,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'4.9.1',
+      version:'5.0.3',
       message:e.message
     });
   }
@@ -1136,7 +1188,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'4.9.1',
+        version:'5.0.3',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -1176,7 +1228,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -1191,7 +1243,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'4.9.1', logged_out:true});
+  res.json({status:'ok', version:'5.0.3', logged_out:true});
 });
 
 
@@ -1236,12 +1288,13 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
         (SELECT count(*)::int FROM app_user_tenant_access) AS tenant_access,
         (SELECT count(*)::int FROM ai_reports) AS ai_reports,
         (SELECT count(*)::int FROM alarms WHERE status='active') AS active_alarms,
-        (SELECT count(*)::int FROM admin_audit_logs) AS audit_logs
+        (SELECT count(*)::int FROM admin_audit_logs) AS audit_logs,
+        (SELECT count(*)::int FROM user_invites) AS invites
     `);
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       counts
     });
   } catch(e) {
@@ -1270,7 +1323,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       count:result.rows.length,
       users:result.rows
     });
@@ -1304,7 +1357,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       count:result.rows.length,
       customers:result.rows
     });
@@ -1339,7 +1392,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       count:result.rows.length,
       sites:result.rows
     });
@@ -1372,7 +1425,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       count:result.rows.length,
       access:result.rows
     });
@@ -1468,6 +1521,59 @@ async function writeAuditLog(req, {action, entity_type, entity_id, old_values, n
 }
 
 
+
+
+async function ensureInviteSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_invites (
+      id bigserial PRIMARY KEY,
+      invite_token text NOT NULL UNIQUE,
+      email text NOT NULL,
+      full_name text,
+      role text NOT NULL DEFAULT 'viewer',
+      customer_code text NOT NULL,
+      site_code text,
+      status text NOT NULL DEFAULT 'pending',
+      invited_by_email text,
+      accepted_user_id text,
+      accepted_at timestamptz,
+      expires_at timestamptz NOT NULL DEFAULT now() + interval '7 days',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_invites_email
+    ON user_invites(lower(email))
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_invites_token
+    ON user_invites(invite_token)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_invites_status
+    ON user_invites(status)
+  `);
+}
+
+function createInviteToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function publicInviteUrl(req, token) {
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3100';
+  return `${proto}://${host}/invite.html?token=${encodeURIComponent(token)}`;
+}
+
+
 function validateChoice(value, allowed, label) {
   const clean = String(value || '').trim();
   if (!allowed.includes(clean)) {
@@ -1478,6 +1584,382 @@ function validateChoice(value, allowed, label) {
   return clean;
 }
 
+
+
+
+
+app.get('/api/admin/invites', adminRequired, async (req,res)=>{
+  try {
+    await ensureInviteSchema();
+
+    const limit = Math.min(Math.max(Number(req.query.limit || 100), 1), 300);
+
+    const result = await pool.query(
+      `
+      SELECT
+        id::text,
+        invite_token,
+        email,
+        full_name,
+        role,
+        customer_code,
+        site_code,
+        status,
+        invited_by_email,
+        accepted_user_id,
+        accepted_at,
+        expires_at,
+        created_at,
+        updated_at
+      FROM user_invites
+      ORDER BY created_at DESC
+      LIMIT $1
+      `,
+      [limit]
+    );
+
+    res.json({
+      status:'ok',
+      version:'5.0.3',
+      count:result.rows.length,
+      invites:result.rows.map(row => ({
+        ...row,
+        invite_url:`/invite.html?token=${encodeURIComponent(row.invite_token)}`
+      }))
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.post('/api/admin/invites', adminRequired, async (req,res)=>{
+  try {
+    await ensureInviteSchema();
+
+    const email = normalizeEmail(req.body?.email);
+    const fullName = String(req.body?.full_name || '').trim();
+    const role = validateChoice(req.body?.role, ['viewer','operator','admin','owner'], 'role');
+    const customerCode = String(req.body?.customer_code || '').trim();
+    const siteCodeRaw = String(req.body?.site_code || '').trim();
+    const siteCode = siteCodeRaw || null;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({status:'error', message:'valid email is required'});
+    }
+
+    if (!customerCode) {
+      return res.status(400).json({status:'error', message:'customer_code is required'});
+    }
+
+    const customer = await one(
+      `SELECT id::text, code, name, status FROM customers WHERE code=$1 LIMIT 1`,
+      [customerCode]
+    );
+
+    if (!customer) {
+      return res.status(404).json({status:'not_found', message:'customer not found', customer_code:customerCode});
+    }
+
+    if (siteCode) {
+      const site = await one(
+        `
+        SELECT s.id::text, s.code, s.name
+        FROM sites s
+        JOIN customers c ON c.id=s.customer_id
+        WHERE c.code=$1 AND s.code=$2
+        LIMIT 1
+        `,
+        [customerCode, siteCode]
+      );
+
+      if (!site) {
+        return res.status(404).json({status:'not_found', message:'site not found', customer_code:customerCode, site_code:siteCode});
+      }
+    }
+
+    const token = createInviteToken();
+    const actor = req.user || getSession(req)?.user || null;
+
+    const invite = await one(
+      `
+      INSERT INTO user_invites(
+        invite_token,
+        email,
+        full_name,
+        role,
+        customer_code,
+        site_code,
+        status,
+        invited_by_email,
+        expires_at
+      )
+      VALUES($1,$2,$3,$4,$5,$6,'pending',$7,now() + interval '7 days')
+      RETURNING
+        id::text,
+        invite_token,
+        email,
+        full_name,
+        role,
+        customer_code,
+        site_code,
+        status,
+        invited_by_email,
+        accepted_user_id,
+        accepted_at,
+        expires_at,
+        created_at,
+        updated_at
+      `,
+      [token, email, fullName || null, role, customerCode, siteCode, actor?.email || null]
+    );
+
+    await writeAuditLog(req, {
+      action:'create_user_invite',
+      entity_type:'invite',
+      entity_id:invite.id,
+      old_values:null,
+      new_values:invite,
+      metadata:{email, role, customer_code:customerCode, site_code:siteCode}
+    });
+
+    res.json({
+      status:'ok',
+      version:'5.0.3',
+      action:'create_user_invite',
+      invite:{
+        ...invite,
+        invite_url:publicInviteUrl(req, token)
+      }
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', message:e.message});
+  }
+});
+
+app.post('/api/admin/invites/:id/cancel', adminRequired, async (req,res)=>{
+  try {
+    await ensureInviteSchema();
+
+    const oldInvite = await one(
+      `SELECT id::text, email, full_name, role, customer_code, site_code, status FROM user_invites WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
+    const invite = await one(
+      `
+      UPDATE user_invites
+      SET status='cancelled', updated_at=now()
+      WHERE id=$1 AND status='pending'
+      RETURNING id::text, email, full_name, role, customer_code, site_code, status, invited_by_email, accepted_user_id, accepted_at, expires_at, created_at, updated_at
+      `,
+      [req.params.id]
+    );
+
+    if (!invite) {
+      return res.status(404).json({status:'not_found', message:'pending invite not found', invite_id:req.params.id});
+    }
+
+    await writeAuditLog(req, {
+      action:'cancel_user_invite',
+      entity_type:'invite',
+      entity_id:invite.id,
+      old_values:oldInvite,
+      new_values:invite,
+      metadata:{email:invite.email}
+    });
+
+    res.json({
+      status:'ok',
+      version:'5.0.3',
+      action:'cancel_user_invite',
+      invite
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.get('/api/invites/:token', async (req,res)=>{
+  try {
+    await ensureInviteSchema();
+
+    const invite = await one(
+      `
+      SELECT
+        id::text,
+        email,
+        full_name,
+        role,
+        customer_code,
+        site_code,
+        status,
+        expires_at,
+        created_at
+      FROM user_invites
+      WHERE invite_token=$1
+      LIMIT 1
+      `,
+      [req.params.token]
+    );
+
+    if (!invite) {
+      return res.status(404).json({status:'not_found', message:'invite not found'});
+    }
+
+    const expired = new Date(invite.expires_at).getTime() < Date.now();
+
+    res.json({
+      status:'ok',
+      version:'5.0.3',
+      invite:{
+        ...invite,
+        expired
+      }
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+app.post('/api/invites/:token/accept', async (req,res)=>{
+  try {
+    await ensureInviteSchema();
+
+    const password = String(req.body?.password || '');
+    const fullNameInput = String(req.body?.full_name || '').trim();
+
+    if (password.length < 6) {
+      return res.status(400).json({status:'error', message:'password must be at least 6 characters'});
+    }
+
+    const invite = await one(
+      `
+      SELECT
+        id::text,
+        invite_token,
+        email,
+        full_name,
+        role,
+        customer_code,
+        site_code,
+        status,
+        expires_at
+      FROM user_invites
+      WHERE invite_token=$1
+      LIMIT 1
+      `,
+      [req.params.token]
+    );
+
+    if (!invite) {
+      return res.status(404).json({status:'not_found', message:'invite not found'});
+    }
+
+    if (invite.status !== 'pending') {
+      return res.status(400).json({status:'error', message:`invite is ${invite.status}`});
+    }
+
+    if (new Date(invite.expires_at).getTime() < Date.now()) {
+      await pool.query(`UPDATE user_invites SET status='expired', updated_at=now() WHERE id=$1`, [invite.id]);
+      return res.status(400).json({status:'error', message:'invite expired'});
+    }
+
+    const fullName = fullNameInput || invite.full_name || invite.email;
+    const salt = makeSalt();
+    const passwordHash = hashPassword(password, salt);
+
+    let user = await one(
+      `SELECT id::text, email, full_name, role, status FROM app_users WHERE lower(email)=lower($1) LIMIT 1`,
+      [invite.email]
+    );
+
+    if (user) {
+      user = await one(
+        `
+        UPDATE app_users
+        SET
+          full_name=COALESCE(NULLIF($2,''), full_name),
+          password_hash=$3,
+          password_salt=$4,
+          role=$5,
+          status='active',
+          default_customer_code=$6,
+          default_site_code=$7,
+          updated_at=now()
+        WHERE id=$1
+        RETURNING id::text, email, full_name, role, status, default_customer_code, default_site_code, created_at, updated_at
+        `,
+        [user.id, fullName, passwordHash, salt, invite.role, invite.customer_code, invite.site_code]
+      );
+    } else {
+      user = await one(
+        `
+        INSERT INTO app_users(id, email, full_name, password_hash, password_salt, role, status, default_customer_code, default_site_code)
+        VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8)
+        RETURNING id::text, email, full_name, role, status, default_customer_code, default_site_code, created_at, updated_at
+        `,
+        [makeUserId(), invite.email, fullName, passwordHash, salt, invite.role, invite.customer_code, invite.site_code]
+      );
+    }
+
+    await pool.query(
+      `
+      INSERT INTO app_user_tenant_access(user_email, customer_code, site_code, access_role)
+      VALUES($1,$2,$3,$4)
+      ON CONFLICT (user_email, customer_code, site_code)
+      DO UPDATE SET access_role=EXCLUDED.access_role
+      `,
+      [invite.email, invite.customer_code, invite.site_code, invite.role]
+    );
+
+    const acceptedInvite = await one(
+      `
+      UPDATE user_invites
+      SET status='accepted', accepted_user_id=$2, accepted_at=now(), updated_at=now()
+      WHERE id=$1
+      RETURNING id::text, email, full_name, role, customer_code, site_code, status, accepted_user_id, accepted_at, expires_at, created_at, updated_at
+      `,
+      [invite.id, user.id]
+    );
+
+    await writeAuditLog(req, {
+      action:'accept_user_invite',
+      entity_type:'invite',
+      entity_id:acceptedInvite.id,
+      old_values:invite,
+      new_values:{invite:acceptedInvite, user},
+      metadata:{email:invite.email, role:invite.role, customer_code:invite.customer_code, site_code:invite.site_code}
+    });
+
+    const tenant = await getTenantContextForUser(user);
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + (authConfig().sessionHours * 60 * 60 * 1000);
+
+    authSessions.set(sessionToken, {
+      token:sessionToken,
+      user,
+      tenant,
+      created_at:Date.now(),
+      expires_at:expiresAt
+    });
+
+    await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [user.id]);
+
+    res.json({
+      status:'ok',
+      version:'5.0.3',
+      action:'accept_user_invite',
+      authenticated:true,
+      token:sessionToken,
+      user:publicUser(user),
+      tenant,
+      invite:acceptedInvite,
+      expires_at:new Date(expiresAt).toISOString()
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
 
 
 app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
@@ -1511,7 +1993,7 @@ app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       count:result.rows.length,
       logs:result.rows
     });
@@ -1554,7 +2036,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       action:'update_user_status',
       user
     });
@@ -1605,7 +2087,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       action:'update_user_role',
       user
     });
@@ -1647,7 +2129,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       action:'update_customer_status',
       customer
     });
@@ -1698,7 +2180,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, asyn
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       action:'update_site_status',
       site
     });
@@ -1722,7 +2204,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       tenant:context
     });
   } catch(e) {
@@ -1736,7 +2218,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       customers:context.customers,
       sites:context.sites
     });
@@ -1750,7 +2232,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.9.1', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.0.3', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -1858,7 +2340,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.9.1',
+      version:'5.0.3',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -1879,7 +2361,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.9.1',
+      version:'5.0.3',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -1929,7 +2411,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -1973,7 +2455,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       machine_code:req.params.code,
       report: report || null
     });
@@ -2011,7 +2493,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.9.1',
+        version:'5.0.3',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -2026,7 +2508,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2066,7 +2548,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2117,7 +2599,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       machine_code:req.params.code,
       report
     });
@@ -2182,7 +2664,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -2233,7 +2715,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       device:row
     });
   } catch(e) {
@@ -2278,7 +2760,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       device:row
     });
   } catch(e) {
@@ -2535,7 +3017,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -2557,7 +3039,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -2608,7 +3090,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -2652,7 +3134,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -2703,7 +3185,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.9.1',
+      version:'5.0.3',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -2847,7 +3329,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.9.1
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.0.3
     </div>
   </main>
 </body>
@@ -3211,7 +3693,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'4.9.1',
+    version:'5.0.3',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -3233,7 +3715,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3256,7 +3738,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3366,7 +3848,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.9.1</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.0.3</p>
   </div>
 </body>
 </html>`;
@@ -3387,7 +3869,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'4.9.1',
+    version:'5.0.3',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -3442,7 +3924,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -3482,7 +3964,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -3523,7 +4005,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.9.1',
+      version:'5.0.3',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

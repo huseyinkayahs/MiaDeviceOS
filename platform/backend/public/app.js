@@ -1,5 +1,5 @@
 const machineCode = 'laser01';
-const siteCode = 'site01';
+let siteCode = 'site01';
 let selectedReportId = null;
 let detailBusy = false;
 
@@ -59,6 +59,18 @@ async function getJson(url, options = {}) {
 
   if (!res.ok) throw new Error(`${url} ${res.status}`);
   return res.json();
+}
+
+
+async function safeJson(url, fallback) {
+  try {
+    return await getJson(url);
+  } catch(e) {
+    const errors = window.dashboardLoadErrors || [];
+    errors.push(e.message);
+    window.dashboardLoadErrors = errors;
+    return fallback;
+  }
 }
 
 function fillList(id, items) {
@@ -625,34 +637,42 @@ async function cleanupDemoReports() {
 }
 
 async function refresh(forceDetail = false) {
+  window.dashboardLoadErrors = [];
+
   try {
     const h = await getJson('/api/health');
     const tenantContext = await getJson('/api/tenant/context');
     const authStatus = await getJson('/api/auth/status');
-    const st = await getJson(`/api/machines/${machineCode}/status`);
-    const alarms = await getJson(`/api/machines/${machineCode}/alarms`);
-    const ai = await getJson(`/api/machines/${machineCode}/ai/daily-report`);
-    const history = await getJson(`/api/machines/${machineCode}/ai/reports?limit=10`);
-    const center = await getJson(`/api/sites/${siteCode}/ai/report-center`);
-    const deviceInfo = await getJson(`/api/machines/${machineCode}/device-info`);
-    const siteDaily = await getJson(`/api/sites/${siteCode}/ai/daily-report`);
-    const siteReports = await getJson(`/api/sites/${siteCode}/ai/reports?limit=5`);
-    const openAiStatus = await getJson('/api/ai/openai/status');
-    const emailStatus = await getJson('/api/email/status');
-
-    window.lastHistory = history;
 
     renderTenantContext(tenantContext);
+
+    const tenant = tenantContext.tenant || tenantContext || {};
+    if (tenant.current_site && tenant.current_site.code) {
+      siteCode = tenant.current_site.code;
+    }
+
     const signupEl = document.getElementById('authSignup');
     if (signupEl) signupEl.textContent = authStatus.auth?.signup_enabled ? 'enabled' : 'disabled';
 
-    document.getElementById('serviceStatus').textContent = 'Çalışıyor';
     document.getElementById('backendStatus').textContent = h.status;
     document.getElementById('backendStatus').className = 'ok';
 
     document.getElementById('mqttStatus').textContent = h.mqtt_connected ? 'connected' : 'waiting';
     document.getElementById('mqttStatus').className = h.mqtt_connected ? 'ok' : 'muted';
     document.getElementById('lastMessage').textContent = h.last_mqtt_message_at || '-';
+
+    const st = await safeJson(`/api/machines/${machineCode}/status`, {});
+    const alarms = await safeJson(`/api/machines/${machineCode}/alarms`, []);
+    const ai = await safeJson(`/api/machines/${machineCode}/ai/daily-report`, {report:{summary:'Makine raporu yüklenemedi.', findings:[], recommendations:[]}});
+    const history = await safeJson(`/api/machines/${machineCode}/ai/reports?limit=10`, {reports:[]});
+    const center = await safeJson(`/api/sites/${siteCode}/ai/report-center`, {machines:[]});
+    const deviceInfo = await safeJson(`/api/machines/${machineCode}/device-info`, {device:{}});
+    const siteDaily = await safeJson(`/api/sites/${siteCode}/ai/daily-report`, {report:{summary:'Site raporu yüklenemedi.', machines:[]}});
+    const siteReports = await safeJson(`/api/sites/${siteCode}/ai/reports?limit=5`, {reports:[]});
+    const openAiStatus = await safeJson('/api/ai/openai/status', {openai:{}});
+    const emailStatus = await safeJson('/api/email/status', {email:{}});
+
+    window.lastHistory = history;
 
     document.getElementById('machineCode').textContent = st.machine_code || machineCode;
 
@@ -700,7 +720,18 @@ async function refresh(forceDetail = false) {
       await showReportDetail(selectedReportId);
     }
 
-    document.getElementById('healthJson').textContent = JSON.stringify(h, null, 2);
+    const errors = window.dashboardLoadErrors || [];
+    if (errors.length) {
+      document.getElementById('serviceStatus').textContent = 'Kısmi';
+      document.getElementById('healthJson').textContent = JSON.stringify({
+        health:h,
+        note:'Dashboard login bilgisi yüklendi. Bazı tenant/site verileri erişim veya veri eksikliği nedeniyle yüklenemedi.',
+        errors
+      }, null, 2);
+    } else {
+      document.getElementById('serviceStatus').textContent = 'Çalışıyor';
+      document.getElementById('healthJson').textContent = JSON.stringify(h, null, 2);
+    }
   } catch (e) {
     document.getElementById('serviceStatus').textContent = 'Hata';
     document.getElementById('healthJson').textContent = e.message;

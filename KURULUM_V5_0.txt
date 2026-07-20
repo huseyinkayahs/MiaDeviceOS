@@ -1,0 +1,114 @@
+
+# V5.0 Invite User / Tenant Access Pack
+
+Bu paket v4.9.1 üzerine kopyalanır.
+
+## Amaç
+
+Admin panelden yeni kullanıcı daveti oluşturmak ve kullanıcıya customer/site erişimi vermek.
+
+## Eklenenler
+
+```text
+user_invites database tablosu
+Admin panelde Invite User / Tenant Access bölümü
+Davet linki oluşturma
+Davet linki kopyalama
+Davet iptal etme
+Davet kabul ekranı
+Kullanıcı oluşturma veya mevcut kullanıcıyı güncelleme
+Tenant access otomatik verme
+Audit log kayıtları
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.0.0
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html
+```
+
+Ctrl + F5 yap.
+
+Beklenen yeni bölüm:
+
+```text
+Invite User / Tenant Access
+```
+
+## Test 3 - Davet Oluştur
+
+Admin panelden:
+
+```text
+Email
+Ad Soyad
+Role
+Customer Code
+Site Code
+```
+
+alanlarını doldur.
+
+Site Code boş bırakılırsa kullanıcı customer seviyesinde yetki alır.
+
+Beklenen:
+
+```text
+Davet oluşturuldu
+Link kopyalandı
+Invites sayısı artar
+Activity History altında create_user_invite görünür
+```
+
+## Test 4 - Daveti Kabul Et
+
+Davet linkini yeni sekmede aç:
+
+```text
+/invite.html?token=...
+```
+
+Şifre belirle ve daveti kabul et.
+
+Beklenen:
+
+```text
+Davet kabul edildi
+Dashboard açılır
+Yeni kullanıcı app_users içine yazılır
+app_user_tenant_access içine erişim yazılır
+Activity History altında accept_user_invite görünür
+```
+
+## Not
+
+Bu sprintte gerçek email gönderimi yapılmadı. Link admin panelde oluşturulur ve manuel paylaşılır.

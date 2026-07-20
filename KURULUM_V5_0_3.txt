@@ -1,0 +1,72 @@
+
+# V5.0.3 Invite Session Dashboard Fix
+
+Bu paket v5.0.2 üzerine kopyalanır.
+
+## Düzeltilen Durum
+
+Davet kabul edildikten sonra dashboard açılıyordu fakat SaaS Foundation alanları boş görünüyor ve üstte "Hata" yazıyordu.
+
+## Kök Sebep
+
+Dashboard tüm API çağrılarını bitirdikten sonra login/tenant bilgisini ekrana yazıyordu.
+
+Davetli kullanıcı customer/site yetkisiyle geldiğinde bazı site API'leri erişim/veri hatası verince ekran komple hata moduna geçiyor, bu yüzden login bilgisi de görünmüyordu.
+
+## Düzeltme
+
+```text
+Login/tenant bilgisi önce render edilir
+Dashboard siteCode tenant current_site üzerinden dinamik seçilir
+Bazı site/machine API çağrıları hata verirse tüm ekran bozulmaz
+Customer-level davetlerde tenant altındaki siteler genişletilir
+Site access kontrolü customer-level erişimi de dikkate alır
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.0.3
+```
+
+## Test 2 - Davetli Kullanıcı Dashboard
+
+Gizli sekmede davet kabul edildikten sonra dashboard açıldığında SaaS Foundation bölümünde şunlar görünmeli:
+
+```text
+AUTH_ENABLED=true
+USER: davet edilen email
+CUSTOMER: mia-demo
+SITE: varsa customer altındaki site
+```
+
+Üst durum bazı veri eksiklerinde şu olabilir:
+
+```text
+Kısmi
+```
+
+Bu normaldir. Login/tenant bilgisi görünüyorsa oturum açılmış demektir.

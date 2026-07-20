@@ -1,0 +1,81 @@
+
+# V5.0.2 Invite Accept User Insert Fix
+
+Bu paket v5.0.1 üzerine kopyalanır.
+
+## Düzeltilen Hata
+
+Davet kabul ekranında şu hata oluşuyordu:
+
+```text
+null value in column "id" of relation "app_users" violates not-null constraint
+```
+
+## Kök Sebep
+
+Davet kabul sırasında yeni kullanıcı oluşturulurken `app_users.id` alanı doldurulmuyordu.
+
+Aynı blokta ayrıca FactoryBox'ın mevcut şifre yapısı yerine bcrypt kullanılmaya çalışılmıştı.
+
+## Düzeltme
+
+```text
+app_users.id için makeUserId() kullanıldı
+password_salt alanı dolduruldu
+bcrypt yerine mevcut makeSalt() + hashPassword() yapısına dönüldü
+Davet kabul sonrası session/token oluşturma düzeltildi
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.0.2
+```
+
+## Test 2 - Davet Kabul
+
+Aynı davet linkini tekrar aç:
+
+```text
+http://localhost:3100/invite.html?token=...
+```
+
+Şifre gir ve Daveti Kabul Et.
+
+Beklenen:
+
+```text
+Davet kabul edildi. Dashboard açılıyor...
+```
+
+Admin panelde beklenen:
+
+```text
+Invites status: accepted
+Users içinde yeni kullanıcı
+Tenant Access içinde yeni erişim
+Activity History içinde accept_user_invite
+```
