@@ -1,0 +1,88 @@
+
+# V4.8 SaaS Management Actions Pack
+
+Bu paket v4.7.2 üzerine kopyalanır.
+
+## Amaç
+
+Admin panelden temel SaaS yönetim aksiyonlarını yapabilmek.
+
+## Eklenenler
+
+```text
+Kullanıcı rol değiştirme
+Kullanıcı aktif/pasif/suspended yapma
+Customer status değiştirme
+Site status değiştirme
+Admin panelde Kaydet butonları
+Management API endpointleri
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 4.8.0
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html
+```
+
+Beklenen:
+
+```text
+Kullanıcılar tablosunda rol/status seçimi
+Customers tablosunda status seçimi
+Sites tablosunda status seçimi
+Kaydet butonları
+```
+
+## Test 3 - Kullanıcı Status
+
+Admin panelde bir kullanıcı status değerini değiştir ve Kaydet’e bas.
+
+Beklenen:
+
+```text
+Kaydedildi.
+```
+
+## Test 4 - Customer/Site Status
+
+Customer veya site status değiştir ve Kaydet’e bas.
+
+Beklenen:
+
+```text
+Kaydedildi.
+```
+
+## Not
+
+Kendi aktif admin kullanıcını yanlışlıkla inactive yapma.
+Yaparsan tekrar .env admin bilgileriyle backend restart ederek admin kullanıcıyı yeniden active yapabilirsin.

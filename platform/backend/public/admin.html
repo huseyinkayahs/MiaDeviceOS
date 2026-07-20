@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Sites → Tenant Access</p>
+    <p>Users → Customers → Sites → Tenant Access → Management Actions</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v4.7.2: Signup ile oluşan kullanıcı, müşteri ve site kayıtlarını yönetmek için ilk admin görünümü.</p>
+        <p class="muted">v4.8: Kullanıcı, müşteri ve site yönetimi için ilk güvenli aksiyonlar.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -34,16 +34,19 @@
 
   <section class="card wide admin-card">
     <h2>Kullanıcılar</h2>
+    <p class="muted">Rol veya status değiştirip “Kaydet”e bas.</p>
     <div id="usersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Customers / Tenants</h2>
+    <p class="muted">Customer status değiştirilebilir.</p>
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Sites / Atölyeler</h2>
+    <p class="muted">Site status değiştirilebilir.</p>
     <div id="sitesTable">Yükleniyor...</div>
   </section>
 
@@ -74,11 +77,18 @@
     return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
   }
 
-  async function getJson(url) {
+  async function apiJson(url, options = {}) {
     const token = authToken();
-    const res = await fetch(url, {
-      headers: token ? {Authorization: `Bearer ${token}`} : {}
-    });
+    const headers = {
+      ...(options.headers || {}),
+      ...(token ? {Authorization: `Bearer ${token}`} : {})
+    };
+
+    if (options.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const res = await fetch(url, {...options, headers});
 
     let body = null;
     try {
@@ -100,6 +110,18 @@
     return body;
   }
 
+  function getJson(url) {
+    return apiJson(url);
+  }
+
+  function selectHtml(className, value, options) {
+    return `
+      <select class="${className}">
+        ${options.map(opt => `<option value="${esc(opt)}" ${String(value) === opt ? 'selected' : ''}>${esc(opt)}</option>`).join('')}
+      </select>
+    `;
+  }
+
   function table(headers, rows) {
     if (!rows || !rows.length) return '<span class="muted">Kayıt yok.</span>';
 
@@ -109,7 +131,9 @@
           <thead><tr>${headers.map(h => `<th>${esc(h.label)}</th>`).join('')}</tr></thead>
           <tbody>
             ${rows.map(row => `
-              <tr>${headers.map(h => `<td>${esc(h.value(row))}</td>`).join('')}</tr>
+              <tr data-kind="${esc(row.__kind || '')}" data-id="${esc(row.id || '')}" data-code="${esc(row.code || '')}" data-customer-code="${esc(row.customer_code || '')}">
+                ${headers.map(h => `<td>${h.html ? h.value(row) : esc(h.value(row))}</td>`).join('')}
+              </tr>
             `).join('')}
           </tbody>
         </table>
@@ -146,41 +170,45 @@
   }
 
   function renderUsers(data) {
+    const rows = (data.users || []).map(x => ({...x, __kind:'user'}));
     document.getElementById('usersTable').innerHTML = table([
       {label:'Email', value:r=>r.email},
       {label:'Ad', value:r=>r.full_name},
-      {label:'Rol', value:r=>r.role},
-      {label:'Status', value:r=>r.status},
+      {label:'Rol', html:true, value:r=>selectHtml('user-role-select', r.role, ['viewer','operator','admin','owner','system_admin'])},
+      {label:'Status', html:true, value:r=>selectHtml('user-status-select', r.status, ['active','inactive','suspended'])},
       {label:'Customer', value:r=>r.default_customer_code},
       {label:'Site', value:r=>r.default_site_code},
       {label:'Son Login', value:r=>fmtDate(r.last_login_at)},
-      {label:'Oluşturma', value:r=>fmtDate(r.created_at)}
-    ], data.users || []);
+      {label:'Aksiyon', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="save-user" data-id="${esc(r.id)}">Kaydet</button>`}
+    ], rows);
   }
 
   function renderCustomers(data) {
+    const rows = (data.customers || []).map(x => ({...x, __kind:'customer'}));
     document.getElementById('customersTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
       {label:'Name', value:r=>r.name},
-      {label:'Status', value:r=>r.status},
+      {label:'Status', html:true, value:r=>selectHtml('customer-status-select', r.status, ['trial','pilot','active','inactive','suspended'])},
       {label:'Sites', value:r=>r.site_count},
       {label:'Machines', value:r=>r.machine_count},
       {label:'Users', value:r=>r.user_count},
-      {label:'Created', value:r=>fmtDate(r.created_at)}
-    ], data.customers || []);
+      {label:'Created', value:r=>fmtDate(r.created_at)},
+      {label:'Aksiyon', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="save-customer" data-code="${esc(r.code)}">Kaydet</button>`}
+    ], rows);
   }
 
   function renderSites(data) {
+    const rows = (data.sites || []).map(x => ({...x, __kind:'site'}));
     document.getElementById('sitesTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
       {label:'Name', value:r=>r.name},
       {label:'Customer', value:r=>r.customer_code},
       {label:'Location', value:r=>r.location},
-      {label:'Status', value:r=>r.status},
+      {label:'Status', html:true, value:r=>selectHtml('site-status-select', r.status, ['trial','pilot','active','inactive','suspended'])},
       {label:'Machines', value:r=>r.machine_count},
       {label:'Devices', value:r=>r.device_count},
-      {label:'Created', value:r=>fmtDate(r.created_at)}
-    ], data.sites || []);
+      {label:'Aksiyon', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="save-site" data-code="${esc(r.code)}" data-customer-code="${esc(r.customer_code)}">Kaydet</button>`}
+    ], rows);
   }
 
   function renderTenantAccess(data) {
@@ -229,9 +257,73 @@
     if (refreshBtn) refreshBtn.disabled = false;
   }
 
+  async function saveUser(button) {
+    const tr = button.closest('tr');
+    const id = button.dataset.id;
+    const role = tr.querySelector('.user-role-select').value;
+    const status = tr.querySelector('.user-status-select').value;
+
+    await apiJson(`/api/admin/users/${encodeURIComponent(id)}/role`, {
+      method:'PATCH',
+      body:JSON.stringify({role})
+    });
+
+    await apiJson(`/api/admin/users/${encodeURIComponent(id)}/status`, {
+      method:'PATCH',
+      body:JSON.stringify({status})
+    });
+  }
+
+  async function saveCustomer(button) {
+    const tr = button.closest('tr');
+    const code = button.dataset.code;
+    const status = tr.querySelector('.customer-status-select').value;
+
+    await apiJson(`/api/admin/customers/${encodeURIComponent(code)}/status`, {
+      method:'PATCH',
+      body:JSON.stringify({status})
+    });
+  }
+
+  async function saveSite(button) {
+    const tr = button.closest('tr');
+    const code = button.dataset.code;
+    const customerCode = button.dataset.customerCode;
+    const status = tr.querySelector('.site-status-select').value;
+
+    await apiJson(`/api/admin/sites/${encodeURIComponent(customerCode)}/${encodeURIComponent(code)}/status`, {
+      method:'PATCH',
+      body:JSON.stringify({status})
+    });
+  }
+
+  async function handleAction(e) {
+    const button = e.target.closest('[data-action]');
+    if (!button) return;
+
+    const status = document.getElementById('adminStatus');
+    const action = button.dataset.action;
+    button.disabled = true;
+    status.textContent = 'Kaydediliyor...';
+
+    try {
+      if (action === 'save-user') await saveUser(button);
+      if (action === 'save-customer') await saveCustomer(button);
+      if (action === 'save-site') await saveSite(button);
+
+      status.textContent = 'Kaydedildi.';
+      await loadAdmin();
+    } catch(err) {
+      status.textContent = err.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshAdmin');
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
+    document.body.addEventListener('click', handleAction);
     loadAdmin();
   });
 })();

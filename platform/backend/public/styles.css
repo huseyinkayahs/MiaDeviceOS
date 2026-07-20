@@ -240,3 +240,21 @@
 .admin-table th { background: #f8fbff; color: var(--muted); font-size: 12px; text-transform: uppercase; }
 .admin-table tr:last-child td { border-bottom: 0; }
 @media (max-width: 900px) { .admin-count-grid { grid-template-columns: 1fr 1fr; } }
+
+
+.admin-table select {
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.mini-btn {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.mini-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}

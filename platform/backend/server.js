@@ -1023,7 +1023,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'4.7.2',
+    version:'4.8.0',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1040,7 +1040,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1051,7 +1051,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1061,7 +1061,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'4.7.2',
+    version:'4.8.0',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1079,7 +1079,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'4.7.2',
+        version:'4.8.0',
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -1109,7 +1109,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1121,7 +1121,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'4.7.2',
+      version:'4.8.0',
       message:e.message
     });
   }
@@ -1135,7 +1135,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'4.7.2',
+        version:'4.8.0',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -1175,7 +1175,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -1190,7 +1190,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'4.7.2', logged_out:true});
+  res.json({status:'ok', version:'4.8.0', logged_out:true});
 });
 
 
@@ -1239,7 +1239,7 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       counts
     });
   } catch(e) {
@@ -1268,7 +1268,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       count:result.rows.length,
       users:result.rows
     });
@@ -1302,7 +1302,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       count:result.rows.length,
       customers:result.rows
     });
@@ -1337,7 +1337,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       count:result.rows.length,
       sites:result.rows
     });
@@ -1370,12 +1370,149 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       count:result.rows.length,
       access:result.rows
     });
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
+
+
+function validateChoice(value, allowed, label) {
+  const clean = String(value || '').trim();
+  if (!allowed.includes(clean)) {
+    const err = new Error(`${label} must be one of: ${allowed.join(', ')}`);
+    err.statusCode = 400;
+    throw err;
+  }
+  return clean;
+}
+
+app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
+  try {
+    const status = validateChoice(req.body?.status, ['active','inactive','suspended'], 'status');
+    const user = await one(
+      `
+      UPDATE app_users
+      SET status=$1, updated_at=now()
+      WHERE id=$2
+      RETURNING id,email,full_name,role,status,default_customer_code,default_site_code,last_login_at,created_at,updated_at
+      `,
+      [status, req.params.id]
+    );
+
+    if (!user) {
+      return res.status(404).json({status:'not_found', user_id:req.params.id});
+    }
+
+    res.json({
+      status:'ok',
+      version:'4.8.0',
+      action:'update_user_status',
+      user
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', message:e.message});
+  }
+});
+
+app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
+  try {
+    const role = validateChoice(req.body?.role, ['viewer','operator','admin','owner','system_admin'], 'role');
+    const user = await one(
+      `
+      UPDATE app_users
+      SET role=$1, updated_at=now()
+      WHERE id=$2
+      RETURNING id,email,full_name,role,status,default_customer_code,default_site_code,last_login_at,created_at,updated_at
+      `,
+      [role, req.params.id]
+    );
+
+    if (!user) {
+      return res.status(404).json({status:'not_found', user_id:req.params.id});
+    }
+
+    await pool.query(
+      `
+      UPDATE app_user_tenant_access
+      SET access_role=$1
+      WHERE lower(user_email)=lower($2)
+      `,
+      [role === 'viewer' ? 'viewer' : role === 'operator' ? 'operator' : 'owner', user.email]
+    );
+
+    res.json({
+      status:'ok',
+      version:'4.8.0',
+      action:'update_user_role',
+      user
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', message:e.message});
+  }
+});
+
+app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
+  try {
+    const status = validateChoice(req.body?.status, ['trial','pilot','active','inactive','suspended'], 'status');
+    const customer = await one(
+      `
+      UPDATE customers
+      SET status=$1, updated_at=now()
+      WHERE code=$2
+      RETURNING id::text, code, name, status, created_at, updated_at
+      `,
+      [status, req.params.code]
+    );
+
+    if (!customer) {
+      return res.status(404).json({status:'not_found', customer_code:req.params.code});
+    }
+
+    res.json({
+      status:'ok',
+      version:'4.8.0',
+      action:'update_customer_status',
+      customer
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', message:e.message});
+  }
+});
+
+app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, async (req,res)=>{
+  try {
+    const status = validateChoice(req.body?.status, ['trial','pilot','active','inactive','suspended'], 'status');
+    const site = await one(
+      `
+      UPDATE sites s
+      SET status=$1, updated_at=now()
+      FROM customers c
+      WHERE s.customer_id=c.id
+        AND c.code=$2
+        AND s.code=$3
+      RETURNING s.id::text, s.code, s.name, s.location, s.status, c.code AS customer_code, c.name AS customer_name, s.created_at, s.updated_at
+      `,
+      [status, req.params.customerCode, req.params.siteCode]
+    );
+
+    if (!site) {
+      return res.status(404).json({status:'not_found', customer_code:req.params.customerCode, site_code:req.params.siteCode});
+    }
+
+    res.json({
+      status:'ok',
+      version:'4.8.0',
+      action:'update_site_status',
+      site
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', message:e.message});
   }
 });
 
@@ -1394,7 +1531,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       tenant:context
     });
   } catch(e) {
@@ -1408,7 +1545,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       customers:context.customers,
       sites:context.sites
     });
@@ -1422,7 +1559,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.7.2', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'4.8.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -1530,7 +1667,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.7.2',
+      version:'4.8.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -1551,7 +1688,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'4.7.2',
+      version:'4.8.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -1601,7 +1738,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -1645,7 +1782,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -1683,7 +1820,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'4.7.2',
+        version:'4.8.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -1698,7 +1835,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1738,7 +1875,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -1789,7 +1926,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       machine_code:req.params.code,
       report
     });
@@ -1854,7 +1991,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -1905,7 +2042,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       device:row
     });
   } catch(e) {
@@ -1950,7 +2087,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       device:row
     });
   } catch(e) {
@@ -2207,7 +2344,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -2229,7 +2366,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -2280,7 +2417,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -2324,7 +2461,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -2375,7 +2512,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'4.7.2',
+      version:'4.8.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -2519,7 +2656,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v4.7.2
+      FactoryBox / MiaDeviceOS - PDF Export View - v4.8.0
     </div>
   </main>
 </body>
@@ -2883,7 +3020,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'4.7.2',
+    version:'4.8.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -2905,7 +3042,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -2928,7 +3065,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3038,7 +3175,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.7.2</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v4.8.0</p>
   </div>
 </body>
 </html>`;
@@ -3059,7 +3196,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'4.7.2',
+    version:'4.8.0',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -3114,7 +3251,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -3154,7 +3291,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -3195,7 +3332,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'4.7.2',
+      version:'4.8.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
