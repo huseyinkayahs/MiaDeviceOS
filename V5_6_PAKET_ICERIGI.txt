@@ -1,0 +1,33 @@
+FactoryBox One v5.6.0 - Paket İçeriği
+
+Sprint Adı:
+v5.6.0 Audit Log / Security Activity Viewer Pack
+
+Dosyalar:
+
+platform/backend/server.js
+platform/backend/public/admin.html
+platform/backend/.env.auth.example
+platform/database/migrations/019_audit_log_security_activity_viewer.sql
+docs/V5_6_AUDIT_LOG_SECURITY_ACTIVITY_VIEWER_PACK.md
+KURULUM_V5_6.txt
+V5_6_PAKET_ICERIGI.txt
+
+Özellikler:
+
+- Admin panelde Security Activity / Audit Log bölümü
+- Audit log özet sayaçları
+- Action filtresi
+- Entity Type filtresi
+- Actor Email filtresi
+- Tarih aralığı filtresi
+- Serbest arama filtresi
+- CSV dışa aktarım
+- Login success log kaydı
+- Login failed log kaydı
+- Logout log kaydı
+- Signup owner created log kaydı
+- Audit log endpointlerinde filtre desteği
+- Audit log summary endpointi
+- Audit CSV export endpointi
+- Audit log sorguları için yeni indeksler

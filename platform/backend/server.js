@@ -44,7 +44,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.5.0';
+const APP_VERSION = '5.6.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -1816,7 +1816,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'5.5.0',
+    version:'5.6.0',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1825,7 +1825,8 @@ app.get('/api/auth/status', async (req,res)=>{
       password_reset_enabled:cfg.passwordResetEnabled,
       password_reset_token_minutes:cfg.passwordResetTokenMinutes,
       password_reset_email_configured:emailConfig().enabled && emailConfig().configured,
-      subscription_enforcement_enabled:subscriptionEnforcementEnabled()
+      subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
+      audit_export_enabled:auditExportEnabled()
     }
   });
 });
@@ -1837,7 +1838,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1848,7 +1849,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1858,7 +1859,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'5.5.0',
+    version:'5.6.0',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1874,7 +1875,7 @@ app.get('/api/auth/me', async (req,res)=>{
 app.post('/api/auth/forgot-password', async (req,res)=>{
   const genericResponse = {
     status:'ok',
-    version:'5.5.0',
+    version:'5.6.0',
     message:'If an active account exists for this email, a password reset link has been sent.'
   };
 
@@ -1883,7 +1884,7 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
     if (!cfg.passwordResetEnabled) {
       return res.status(503).json({
         status:'disabled',
-        version:'5.5.0',
+        version:'5.6.0',
         message:'Password reset is disabled'
       });
     }
@@ -1977,7 +1978,7 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
   try {
     const cfg = authConfig();
     if (!cfg.passwordResetEnabled) {
-      return res.status(503).json({status:'disabled', version:'5.5.0', valid:false});
+      return res.status(503).json({status:'disabled', version:'5.6.0', valid:false});
     }
 
     await ensurePasswordResetSchema();
@@ -1986,7 +1987,7 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
     if (!reset) {
       return res.status(400).json({
         status:'invalid',
-        version:'5.5.0',
+        version:'5.6.0',
         valid:false,
         message:'Reset link is invalid, expired, or already used'
       });
@@ -1994,13 +1995,13 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
 
     return res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       valid:true,
       email_hint:maskEmail(reset.email),
       expires_at:reset.expires_at
     });
   } catch(e) {
-    return res.status(500).json({status:'error', version:'5.5.0', valid:false, message:e.message});
+    return res.status(500).json({status:'error', version:'5.6.0', valid:false, message:e.message});
   }
 });
 
@@ -2009,7 +2010,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
   try {
     const cfg = authConfig();
     if (!cfg.passwordResetEnabled) {
-      return res.status(503).json({status:'disabled', version:'5.5.0', message:'Password reset is disabled'});
+      return res.status(503).json({status:'disabled', version:'5.6.0', message:'Password reset is disabled'});
     }
 
     const token = String(req.body?.token || '');
@@ -2026,7 +2027,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
       client = null;
       return res.status(400).json({
         status:'invalid',
-        version:'5.5.0',
+        version:'5.6.0',
         message:'Reset link is invalid, expired, or already used'
       });
     }
@@ -2065,7 +2066,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
 
     return res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       password_reset:true,
       sessions_revoked:revokedSessions,
       login_url:'/login.html'
@@ -2075,7 +2076,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
       try { await client.query('ROLLBACK'); } catch(_) {}
       client.release();
     }
-    return res.status(e.statusCode || 500).json({status:'error', version:'5.5.0', message:e.message});
+    return res.status(e.statusCode || 500).json({status:'error', version:'5.6.0', message:e.message});
   }
 });
 
@@ -2087,7 +2088,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'5.5.0',
+        version:'5.6.0',
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -2117,9 +2118,22 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [created.user.id]);
 
+    await writeAuditLog(req, {
+      action:'signup_owner_created',
+      entity_type:'user',
+      entity_id:created.user.id,
+      old_values:null,
+      new_values:{
+        user:publicUser(created.user),
+        customer:created.customer,
+        site:created.site
+      },
+      metadata:{customer_code:created.customer.code, site_code:created.site.code}
+    });
+
     res.status(201).json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -2132,7 +2146,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'5.5.0',
+      version:'5.6.0',
       message:e.message
     });
   }
@@ -2146,7 +2160,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'5.5.0',
+        version:'5.6.0',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -2167,6 +2181,14 @@ app.post('/api/auth/login', async (req,res)=>{
     );
 
     if (!user || !verifyPassword(password, user.password_salt, user.password_hash)) {
+      await writeAuditLog(req, {
+        action:'login_failed',
+        entity_type:'auth',
+        entity_id:email,
+        old_values:null,
+        new_values:null,
+        metadata:{email, reason:'invalid_credentials'}
+      });
       return res.status(401).json({status:'unauthorized', message:'Invalid email or password'});
     }
 
@@ -2184,9 +2206,18 @@ app.post('/api/auth/login', async (req,res)=>{
 
     await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [user.id]);
 
+    await writeAuditLog(req, {
+      action:'login_success',
+      entity_type:'user',
+      entity_id:user.id,
+      old_values:null,
+      new_values:{last_login_at:nowIso()},
+      metadata:{email:user.email, customer_code:tenant?.current_customer?.code || user.default_customer_code || null}
+    });
+
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -2203,8 +2234,21 @@ app.post('/api/auth/login', async (req,res)=>{
 
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
+  const session = token ? authSessions.get(token) : null;
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'5.5.0', logged_out:true});
+
+  if (session?.user) {
+    await writeAuditLog(req, {
+      action:'logout',
+      entity_type:'user',
+      entity_id:session.user.id,
+      old_values:null,
+      new_values:{logged_out:true},
+      metadata:{email:session.user.email}
+    });
+  }
+
+  res.json({status:'ok', version:APP_VERSION, logged_out:true});
 });
 
 
@@ -2218,14 +2262,14 @@ app.get('/api/subscription/current', authRequired, async (req,res)=>{
     if (!snapshot) {
       return res.status(404).json({
         status:'not_found',
-        version:'5.5.0',
+        version:'5.6.0',
         customer_code:customerCode
       });
     }
 
-    res.json({status:'ok', version:'5.5.0', ...snapshot});
+    res.json({status:'ok', version:'5.6.0', ...snapshot});
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
   }
 });
 
@@ -2237,7 +2281,7 @@ app.get('/api/subscription/access-check', authRequired, async (req,res)=>{
     if (!snapshot) {
       return res.status(404).json({
         status:'not_found',
-        version:'5.5.0',
+        version:'5.6.0',
         customer_code:customerCode,
         access:{allowed:false, reason:'subscription_not_found'}
       });
@@ -2245,14 +2289,14 @@ app.get('/api/subscription/access-check', authRequired, async (req,res)=>{
 
     res.status(snapshot.access.allowed ? 200 : 403).json({
       status:snapshot.access.allowed ? 'ok' : 'subscription_blocked',
-      version:'5.5.0',
+      version:'5.6.0',
       customer:snapshot.customer,
       subscription:snapshot.subscription,
       usage:snapshot.usage,
       access:snapshot.access
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
   }
 });
 
@@ -2330,6 +2374,9 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
         (SELECT count(*)::int FROM ai_reports) AS ai_reports,
         (SELECT count(*)::int FROM alarms WHERE status='active') AS active_alarms,
         (SELECT count(*)::int FROM admin_audit_logs) AS audit_logs,
+        (SELECT count(*)::int FROM admin_audit_logs WHERE created_at >= now() - interval '24 hours') AS audit_logs_24h,
+        (SELECT count(*)::int FROM admin_audit_logs WHERE action IN ('login_success','login_failed','logout','request_password_reset','reset_user_password','signup_owner_created')) AS security_events,
+        (SELECT count(*)::int FROM admin_audit_logs WHERE action='login_failed' AND created_at >= now() - interval '24 hours') AS failed_logins_24h,
         (SELECT count(*)::int FROM user_invites) AS invites,
         (SELECT count(*)::int FROM subscription_plans WHERE is_active=true) AS subscription_plans,
         (SELECT count(*)::int FROM tenant_subscriptions) AS subscriptions,
@@ -2340,8 +2387,9 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:APP_VERSION,
       subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
+      audit_export_enabled:auditExportEnabled(),
       counts
     });
   } catch(e) {
@@ -2356,7 +2404,7 @@ app.get('/api/admin/permissions', adminRequired, async (req,res)=>{
     const user = req.user || getSession(req)?.user || null;
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       role:user?.role || 'viewer',
       user:publicUser(user),
       permissions:publicPermissions(user),
@@ -2392,12 +2440,12 @@ app.get('/api/admin/subscription-plans', adminRequired, permissionRequired('VIEW
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:result.rows.length,
       plans:result.rows
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
   }
 });
 
@@ -2415,12 +2463,12 @@ app.get('/api/admin/subscriptions', adminRequired, permissionRequired('VIEW_BILL
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:subscriptions.length,
       subscriptions
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
   }
 });
 
@@ -2536,13 +2584,13 @@ app.patch('/api/admin/subscriptions/:customerCode', adminRequired, permissionReq
       metadata:{customer_code:customer.code, customer_name:customer.name}
     });
 
-    res.json({status:'ok', version:'5.5.0', ...snapshot});
+    res.json({status:'ok', version:'5.6.0', ...snapshot});
   } catch(e) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch(_) {}
       client.release();
     }
-    res.status(e.statusCode || 500).json({status:'error', version:'5.5.0', message:e.message});
+    res.status(e.statusCode || 500).json({status:'error', version:'5.6.0', message:e.message});
   }
 });
 
@@ -2567,7 +2615,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:result.rows.length,
       users:result.rows
     });
@@ -2601,7 +2649,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:result.rows.length,
       customers:result.rows
     });
@@ -2636,7 +2684,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:result.rows.length,
       sites:result.rows
     });
@@ -2669,7 +2717,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:result.rows.length,
       access:result.rows
     });
@@ -2715,6 +2763,16 @@ async function ensureAuditLogSchema() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor_email
     ON admin_audit_logs(actor_email)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_action_created_at
+    ON admin_audit_logs(action, created_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_entity_created_at
+    ON admin_audit_logs(entity_type, created_at DESC)
   `);
 }
 
@@ -3024,7 +3082,7 @@ app.get('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES'
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       count:result.rows.length,
       invites:result.rows.map(row => publicInvite(row, req))
     });
@@ -3170,7 +3228,7 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'create_user_invite',
       invite:publicInvite(invite, req),
       email:inviteEmailDelivery
@@ -3221,7 +3279,7 @@ app.post('/api/admin/invites/:id/email', adminRequired, permissionRequired('MANA
 
     res.json({
       status:delivery.email.sent ? 'ok' : 'not_sent',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'send_user_invite_email',
       invite:publicInvite(delivery.invite, req),
       email:delivery.email
@@ -3266,7 +3324,7 @@ app.post('/api/admin/invites/:id/cancel', adminRequired, permissionRequired('MAN
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'cancel_user_invite',
       invite
     });
@@ -3306,7 +3364,7 @@ app.get('/api/invites/:token', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       invite:{
         ...invite,
         expired
@@ -3458,7 +3516,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'accept_user_invite',
       authenticated:true,
       token:sessionToken,
@@ -3481,11 +3539,150 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 });
 
 
+function auditExportEnabled() {
+  return String(process.env.AUDIT_EXPORT_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function auditLimit(raw, fallback = 50, max = 500) {
+  const value = Number(raw || fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 1), max);
+}
+
+function parseAuditDate(value, endOfDay = false) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`)
+    : new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function buildAuditLogWhere(query = {}) {
+  const conditions = [];
+  const params = [];
+  const addParam = (value) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+
+  const action = String(query.action || '').trim();
+  if (action && action !== 'all') {
+    conditions.push(`action = ${addParam(action)}`);
+  }
+
+  const entityType = String(query.entity_type || '').trim();
+  if (entityType && entityType !== 'all') {
+    conditions.push(`entity_type = ${addParam(entityType)}`);
+  }
+
+  const actorEmail = normalizeEmail(query.actor_email || '');
+  if (actorEmail) {
+    conditions.push(`lower(actor_email) LIKE lower(${addParam(`%${actorEmail}%`)})`);
+  }
+
+  const q = String(query.q || '').trim();
+  if (q) {
+    const placeholder = addParam(`%${q}%`);
+    conditions.push(`(action ILIKE ${placeholder} OR entity_type ILIKE ${placeholder} OR entity_id ILIKE ${placeholder} OR actor_email ILIKE ${placeholder})`);
+  }
+
+  const fromDate = parseAuditDate(query.from || query.date_from, false);
+  if (fromDate) {
+    conditions.push(`created_at >= ${addParam(fromDate)}`);
+  }
+
+  const toDate = parseAuditDate(query.to || query.date_to, true);
+  if (toDate) {
+    conditions.push(`created_at <= ${addParam(toDate)}`);
+  }
+
+  return {
+    whereSql:conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    params,
+    filters:{
+      action:action || null,
+      entity_type:entityType || null,
+      actor_email:actorEmail || null,
+      q:q || null,
+      from:fromDate ? fromDate.toISOString() : null,
+      to:toDate ? toDate.toISOString() : null
+    }
+  };
+}
+
+function csvCell(value) {
+  const raw = value === null || value === undefined
+    ? ''
+    : (typeof value === 'object' ? JSON.stringify(value) : String(value));
+  return `"${raw.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+}
+
+app.get('/api/admin/audit-logs/summary', adminRequired, permissionRequired('AUDIT_VIEW'), async (req,res)=>{
+  try {
+    await ensureAuditLogSchema();
+    const {whereSql, params, filters} = buildAuditLogWhere(req.query);
+
+    const totals = await one(
+      `
+      SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS last_24h,
+        count(*) FILTER (WHERE created_at >= now() - interval '7 days')::int AS last_7d,
+        count(DISTINCT actor_email)::int AS actor_count,
+        max(created_at) AS latest_at
+      FROM admin_audit_logs
+      ${whereSql}
+      `,
+      params
+    );
+
+    const actions = await pool.query(
+      `
+      SELECT action, count(*)::int AS count
+      FROM admin_audit_logs
+      ${whereSql}
+      GROUP BY action
+      ORDER BY count DESC, action
+      LIMIT 12
+      `,
+      params
+    );
+
+    const entities = await pool.query(
+      `
+      SELECT entity_type, count(*)::int AS count
+      FROM admin_audit_logs
+      ${whereSql}
+      GROUP BY entity_type
+      ORDER BY count DESC, entity_type
+      LIMIT 12
+      `,
+      params
+    );
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      filters,
+      totals,
+      actions:actions.rows,
+      entities:entities.rows,
+      export_enabled:auditExportEnabled()
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
 app.get('/api/admin/audit-logs', adminRequired, permissionRequired('AUDIT_VIEW'), async (req,res)=>{
   try {
     await ensureAuditLogSchema();
 
-    const limit = Math.min(Math.max(Number(req.query.limit || 50), 1), 200);
+    const limit = auditLimit(req.query.limit, 50, 500);
+    const {whereSql, params, filters} = buildAuditLogWhere(req.query);
+    params.push(limit);
 
     const result = await pool.query(
       `
@@ -3504,20 +3701,80 @@ app.get('/api/admin/audit-logs', adminRequired, permissionRequired('AUDIT_VIEW')
         user_agent,
         created_at
       FROM admin_audit_logs
+      ${whereSql}
       ORDER BY created_at DESC
-      LIMIT $1
+      LIMIT $${params.length}
       `,
-      [limit]
+      params
     );
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:APP_VERSION,
+      filters,
       count:result.rows.length,
       logs:result.rows
     });
   } catch(e) {
-    res.status(500).json({status:'error', message:e.message});
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.get('/api/admin/audit-logs/export.csv', adminRequired, permissionRequired('AUDIT_VIEW'), async (req,res)=>{
+  try {
+    if (!auditExportEnabled()) {
+      return res.status(403).json({status:'disabled', version:APP_VERSION, message:'Audit CSV export is disabled'});
+    }
+
+    await ensureAuditLogSchema();
+
+    const limit = auditLimit(req.query.limit, 500, 5000);
+    const {whereSql, params, filters} = buildAuditLogWhere(req.query);
+    params.push(limit);
+
+    const result = await pool.query(
+      `
+      SELECT
+        id::text,
+        created_at,
+        actor_email,
+        actor_role,
+        action,
+        entity_type,
+        entity_id,
+        ip_address,
+        user_agent,
+        metadata,
+        old_values,
+        new_values
+      FROM admin_audit_logs
+      ${whereSql}
+      ORDER BY created_at DESC
+      LIMIT $${params.length}
+      `,
+      params
+    );
+
+    await writeAuditLog(req, {
+      action:'export_audit_logs',
+      entity_type:'audit_log',
+      entity_id:'csv',
+      old_values:null,
+      new_values:{exported_count:result.rows.length},
+      metadata:{filters, limit}
+    });
+
+    const headers = ['id','created_at','actor_email','actor_role','action','entity_type','entity_id','ip_address','user_agent','metadata','old_values','new_values'];
+    const lines = [headers.map(csvCell).join(',')];
+    for (const row of result.rows) {
+      lines.push(headers.map(h => csvCell(row[h])).join(','));
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="factorybox_audit_logs_${APP_VERSION}.csv"`);
+    res.send(`\uFEFF${lines.join('\n')}`);
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -3563,7 +3820,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANA
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'update_user_status',
       user
     });
@@ -3616,7 +3873,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'update_user_role',
       user
     });
@@ -3658,7 +3915,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, permissionRequired
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'update_customer_status',
       customer
     });
@@ -3709,7 +3966,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, perm
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       action:'update_site_status',
       site
     });
@@ -3768,7 +4025,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       tenant:context
     });
   } catch(e) {
@@ -3782,7 +4039,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       customers:context.customers,
       sites:context.sites
     });
@@ -3798,7 +4055,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.5.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.6.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -3906,7 +4163,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.5.0',
+      version:'5.6.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -3927,7 +4184,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.5.0',
+      version:'5.6.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -3977,7 +4234,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -4021,7 +4278,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -4059,7 +4316,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'5.5.0',
+        version:'5.6.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -4074,7 +4331,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -4114,7 +4371,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -4165,7 +4422,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       machine_code:req.params.code,
       report
     });
@@ -4230,7 +4487,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -4281,7 +4538,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       device:row
     });
   } catch(e) {
@@ -4326,7 +4583,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       device:row
     });
   } catch(e) {
@@ -4583,7 +4840,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -4605,7 +4862,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -4656,7 +4913,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -4700,7 +4957,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -4751,7 +5008,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.5.0',
+      version:'5.6.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -4895,7 +5152,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v5.5.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.6.0
     </div>
   </main>
 </body>
@@ -5259,7 +5516,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'5.5.0',
+    version:'5.6.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -5281,7 +5538,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5304,7 +5561,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5414,7 +5671,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.5.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.6.0</p>
   </div>
 </body>
 </html>`;
@@ -5435,7 +5692,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'5.5.0',
+    version:'5.6.0',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -5490,7 +5747,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -5530,7 +5787,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -5571,7 +5828,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.5.0',
+      version:'5.6.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Subscription Plans → Tenant Subscriptions → Sites → Permissions → Audit Log</p>
+    <p>Users → Customers → Subscriptions → Sites → Permissions → Security Activity</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.5.0: Abonelik erişim engeli ve gerçek kullanıcı quota kontrolü.</p>
+        <p class="muted">v5.6.0: Audit log filtreleme, güvenlik aktivite görünümü ve CSV dışa aktarma.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -118,8 +118,63 @@
   </section>
 
   <section id="auditSection" class="card wide admin-card">
-    <h2>Activity History / Audit Log</h2>
-    <p class="muted">AUDIT_VIEW yetkisi olan roller son yönetim aksiyonlarını görebilir.</p>
+    <div class="section-title-row">
+      <div>
+        <h2>Security Activity / Audit Log</h2>
+        <p class="muted">AUDIT_VIEW yetkisi olan roller yönetim, giriş, davet, parola ve abonelik aktivitelerini filtreleyebilir.</p>
+      </div>
+      <button id="exportAuditCsvBtn" class="secondary-btn">CSV İndir</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>
+        Arama
+        <input id="auditQ" type="text" placeholder="action, entity veya email">
+      </label>
+      <label>
+        Action
+        <input id="auditAction" type="text" placeholder="örn: login_failed">
+      </label>
+      <label>
+        Entity Type
+        <select id="auditEntityType">
+          <option value="all">all</option>
+          <option value="auth">auth</option>
+          <option value="user">user</option>
+          <option value="invite">invite</option>
+          <option value="subscription">subscription</option>
+          <option value="customer">customer</option>
+          <option value="site">site</option>
+          <option value="audit_log">audit_log</option>
+        </select>
+      </label>
+      <label>
+        Actor Email
+        <input id="auditActorEmail" type="email" placeholder="admin@firma.com">
+      </label>
+      <label>
+        Başlangıç
+        <input id="auditFrom" type="date">
+      </label>
+      <label>
+        Bitiş
+        <input id="auditTo" type="date">
+      </label>
+      <label>
+        Limit
+        <select id="auditLimit">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="applyAuditFiltersBtn" class="primary-btn">Filtrele</button>
+      </div>
+    </div>
+
+    <div id="auditSummary" class="mini-status">Özet yükleniyor...</div>
     <div id="auditLogTable">Yükleniyor...</div>
   </section>
 </main>
@@ -211,6 +266,74 @@
     } catch {
       return String(v);
     }
+  }
+
+  function auditQueryString(exportMode = false) {
+    const params = new URLSearchParams();
+    const q = document.getElementById('auditQ')?.value.trim();
+    const action = document.getElementById('auditAction')?.value.trim();
+    const entity = document.getElementById('auditEntityType')?.value;
+    const actor = document.getElementById('auditActorEmail')?.value.trim();
+    const from = document.getElementById('auditFrom')?.value;
+    const to = document.getElementById('auditTo')?.value;
+    const limit = document.getElementById('auditLimit')?.value || '50';
+
+    if (q) params.set('q', q);
+    if (action) params.set('action', action);
+    if (entity && entity !== 'all') params.set('entity_type', entity);
+    if (actor) params.set('actor_email', actor);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    params.set('limit', exportMode ? String(Math.max(Number(limit || 500), 500)) : limit);
+
+    return params.toString();
+  }
+
+  function renderAuditSummary(data) {
+    const target = document.getElementById('auditSummary');
+    if (!target) return;
+
+    const totals = data.totals || {};
+    const actions = (data.actions || []).map(x => `${x.action}: ${x.count}`).join(' · ') || 'Aksiyon yok';
+    const entities = (data.entities || []).map(x => `${x.entity_type}: ${x.count}`).join(' · ') || 'Entity yok';
+
+    target.innerHTML = `
+      <strong>Total:</strong> ${esc(totals.total ?? 0)} ·
+      <strong>24 Saat:</strong> ${esc(totals.last_24h ?? 0)} ·
+      <strong>7 Gün:</strong> ${esc(totals.last_7d ?? 0)} ·
+      <strong>Actor:</strong> ${esc(totals.actor_count ?? 0)} ·
+      <strong>Son:</strong> ${esc(fmtDate(totals.latest_at))}<br>
+      <strong>Actions:</strong> ${esc(actions)}<br>
+      <strong>Entities:</strong> ${esc(entities)}
+    `;
+  }
+
+  async function downloadAuditCsv() {
+    const token = authToken();
+    const query = auditQueryString(true);
+    const res = await fetch(`/api/admin/audit-logs/export.csv?${query}`, {
+      headers: token ? {Authorization: `Bearer ${token}`} : {}
+    });
+
+    if (!res.ok) {
+      let message = `CSV indirilemedi: ${res.status}`;
+      try {
+        const body = await res.json();
+        message = body.message || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `factorybox_audit_logs_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   async function apiJson(url, options = {}) {
@@ -342,7 +465,10 @@
       ['Blocked Subs', counts.blocked_subscriptions],
       ['AI Reports', counts.ai_reports],
       ['Active Alarms', counts.active_alarms],
-      ['Audit Logs', counts.audit_logs]
+      ['Audit Logs', counts.audit_logs],
+      ['Audit 24h', counts.audit_logs_24h],
+      ['Security Events', counts.security_events],
+      ['Failed Login 24h', counts.failed_logins_24h]
     ];
 
     el.innerHTML = items.map(([label, value]) => `
@@ -498,6 +624,8 @@
       {label:'Role', value:r=>r.actor_role || '-'},
       {label:'Action', value:r=>r.action},
       {label:'Entity', value:r=>`${r.entity_type}:${r.entity_id}`},
+      {label:'IP', value:r=>r.ip_address || '-'},
+      {label:'Metadata', value:r=>compactJson(r.metadata)},
       {label:'Old', value:r=>compactJson(r.old_values)},
       {label:'New', value:r=>compactJson(r.new_values)}
     ], data.logs || []);
@@ -564,7 +692,9 @@
     }
 
     if (can('AUDIT_VIEW')) {
-      tasks.push(['audit-logs', '/api/admin/audit-logs?limit=50', renderAuditLogs, 'auditLogTable']);
+      const auditQuery = auditQueryString(false);
+      tasks.push(['audit-summary', `/api/admin/audit-logs/summary?${auditQuery}`, renderAuditSummary, 'auditSummary']);
+      tasks.push(['audit-logs', `/api/admin/audit-logs?${auditQuery}`, renderAuditLogs, 'auditLogTable']);
     }
 
     for (const [name, url, renderer, targetId] of tasks) {
@@ -762,8 +892,24 @@
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshAdmin');
     const createInviteBtn = document.getElementById('createInviteBtn');
+    const applyAuditFiltersBtn = document.getElementById('applyAuditFiltersBtn');
+    const exportAuditCsvBtn = document.getElementById('exportAuditCsvBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
+    if (applyAuditFiltersBtn) applyAuditFiltersBtn.addEventListener('click', loadAdmin);
+    if (exportAuditCsvBtn) exportAuditCsvBtn.addEventListener('click', async () => {
+      exportAuditCsvBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Audit CSV hazırlanıyor...';
+      try {
+        await downloadAuditCsv();
+        document.getElementById('adminStatus').textContent = 'Audit CSV indirildi.';
+        await loadAdmin();
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        exportAuditCsvBtn.disabled = false;
+      }
+    });
     if (createInviteBtn) createInviteBtn.addEventListener('click', async () => {
       createInviteBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Davet oluşturuluyor...';

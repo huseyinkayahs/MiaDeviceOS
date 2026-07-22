@@ -1,0 +1,59 @@
+FactoryBox One v5.6.0 - Audit Log / Security Activity Viewer Pack
+
+KURULUM
+
+1) Bu ZIP içindeki dosyaları mevcut proje ana klasörünün üzerine kopyalayın.
+2) "Dosyaları hedefte değiştir" seçeneğini onaylayın.
+3) platform/backend/.env dosyasının en altına ekleyin:
+
+AUDIT_EXPORT_ENABLED=true
+
+4) Backend'i yeniden başlatın:
+
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+
+KONTROL
+
+http://localhost:3100/api/health
+
+Beklenen version:
+
+5.6.0
+
+Sonra:
+
+http://localhost:3100/api/auth/status
+
+Beklenen:
+
+audit_export_enabled: true
+
+Admin panel:
+
+http://localhost:3100/admin.html?fresh=560
+
+Ctrl + F5 yapın.
+
+Admin panelde kontrol edilecek alanlar:
+
+Security Activity / Audit Log
+Audit summary
+Action / Entity / Actor / tarih filtreleri
+CSV İndir butonu
+Login success / login failed / logout aktiviteleri
+Invite, role, status, subscription değişiklikleri
+
+TEST AKIŞI
+
+1) Admin paneli açın.
+2) Security Activity bölümünde kayıtların geldiğini kontrol edin.
+3) Action alanına login_success veya update_tenant_subscription yazıp Filtrele'ye basın.
+4) Entity Type seçimiyle filtreyi deneyin.
+5) CSV İndir butonuna basın.
+6) CSV dosyasının indiğini kontrol edin.
+
+NOT
+
+Bu sürüm ödeme sistemi eklemez.
+Bu sürüm audit log ve güvenlik aktivitesi görünürlüğünü güçlendirir.
