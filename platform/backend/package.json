@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "5.2.1",
-  "description": "FactoryBox / Mia BusinessOS Platform Backend MVP",
+  "version": "5.3.0",
+  "description": "FactoryBox / Mia BusinessOS Platform Backend - Password Reset / Account Recovery Pack",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

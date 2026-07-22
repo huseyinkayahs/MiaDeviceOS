@@ -1,0 +1,232 @@
+# V5.3 Password Reset / Account Recovery Pack
+
+Bu paket v5.2.1 üzerine kopyalanır.
+
+## Amaç
+
+Kullanıcının e-posta bağlantısı ile güvenli şekilde yeni şifre belirleyebilmesini sağlamak.
+
+## Eklenenler
+
+```text
+Login ekranında Şifremi unuttum bağlantısı
+Forgot Password ekranı
+Reset Password ekranı
+Tek kullanımlık ve süreli reset token
+Database içinde yalnızca token hash saklama
+E-posta ile reset linki gönderme
+Token geçerlilik kontrolü
+Yeni parola belirleme
+Şifre değişince eski oturumları kapatma
+Password reset audit log kayıtları
+İstek cooldown kontrolü
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## .env Ayarları
+
+Mevcut `.env` dosyanın sonuna şunları ekle:
+
+```text
+PASSWORD_RESET_ENABLED=true
+PASSWORD_RESET_TOKEN_MINUTES=30
+PASSWORD_RESET_COOLDOWN_SECONDS=60
+PUBLIC_APP_URL=http://localhost:3100
+```
+
+Lokal test için:
+
+```text
+PUBLIC_APP_URL=http://localhost:3100
+```
+
+İnternete açık production panel için örnek:
+
+```text
+PUBLIC_APP_URL=https://panel.firmaniz.com
+```
+
+Şifre sıfırlama maili mevcut SMTP ayarlarını kullanır.
+
+`.env` içinde şunların çalışır durumda olması gerekir:
+
+```text
+EMAIL_REPORTS_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=...
+SMTP_PASS=Google uygulama şifresi
+SMTP_FROM=...
+```
+
+## Database
+
+Yeni tablo backend başlatılırken otomatik oluşturulur:
+
+```text
+password_reset_tokens
+```
+
+Ayrıca migration dosyası pakete eklenmiştir:
+
+```text
+platform/database/migrations/016_password_reset_account_recovery_pack.sql
+```
+
+Mevcut database'i silme veya Docker volume'u sıfırlama.
+
+## Backend Yeniden Başlatma
+
+Açık backend terminalini `Ctrl + C` ile kapat.
+
+Sonra:
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+Tarayıcıda aç:
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.3.0
+```
+
+## Test 2 - Auth Status
+
+```text
+http://localhost:3100/api/auth/status
+```
+
+Beklenen alanlar:
+
+```text
+password_reset_enabled: true
+password_reset_token_minutes: 30
+password_reset_email_configured: true
+```
+
+## Test 3 - Login Ekranı
+
+```text
+http://localhost:3100/login.html?fresh=530
+```
+
+`Ctrl + F5` yap.
+
+Beklenen yeni bağlantı:
+
+```text
+Şifremi unuttum
+```
+
+## Test 4 - Reset Maili
+
+`Şifremi unuttum` bağlantısına tıkla.
+
+Aktif FactoryBox kullanıcı e-posta adresini yaz ve:
+
+```text
+Sıfırlama Bağlantısı Gönder
+```
+
+butonuna bas.
+
+Beklenen:
+
+```text
+Hesap aktifse sıfırlama bağlantısı e-posta adresinize gönderildi.
+```
+
+E-postanın gelmesi birkaç saniye sürebilir. Spam klasörünü de kontrol et.
+
+## Test 5 - Yeni Şifre
+
+E-postadaki:
+
+```text
+Yeni Şifre Belirle
+```
+
+butonuna tıkla.
+
+Beklenen:
+
+```text
+Bağlantı doğrulandı
+Yeni Şifre alanı açıldı
+```
+
+En az 8 karakterlik yeni şifreyi iki kez yaz ve:
+
+```text
+Şifreyi Güncelle
+```
+
+butonuna bas.
+
+Beklenen:
+
+```text
+Şifreniz güncellendi
+Login ekranına yönlendirme
+```
+
+## Test 6 - Login Kontrolü
+
+Eski şifre ile login dene.
+
+Beklenen:
+
+```text
+Invalid email or password
+```
+
+Yeni şifre ile login dene.
+
+Beklenen:
+
+```text
+Giriş başarılı
+Dashboard açılır
+```
+
+## Test 7 - Tek Kullanımlık Token
+
+E-postadaki aynı reset linkini tekrar aç.
+
+Beklenen:
+
+```text
+Bu bağlantı geçersiz, süresi dolmuş veya daha önce kullanılmış.
+```
+
+## Önemli Not
+
+Aynı e-posta veya IP için varsayılan 60 saniyelik cooldown vardır.
+
+Test mailini tekrar göndermek gerekiyorsa 60 saniye bekle veya `.env` içinde:
+
+```text
+PASSWORD_RESET_COOLDOWN_SECONDS=10
+```
+
+olarak geçici test değeri kullan.

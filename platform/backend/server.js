@@ -40,6 +40,7 @@ let lastMqttMessageAt = null;
 let lastMqttTopic = null;
 let ids = null;
 const authSessions = new Map();
+const passwordResetRequestWindow = new Map();
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
 const b = (v) => typeof v === 'boolean' ? v : (v === 'true' || v === '1' ? true : (v === 'false' || v === '0' ? false : null));
@@ -650,10 +651,16 @@ async function saveSmartAiReportIfPossible(machineId, report) {
 
 
 function authConfig() {
+  const resetMinutes = Number(process.env.PASSWORD_RESET_TOKEN_MINUTES || 30);
+  const resetCooldown = Number(process.env.PASSWORD_RESET_COOLDOWN_SECONDS || 60);
+
   return {
     enabled: String(process.env.AUTH_ENABLED || 'false').toLowerCase() === 'true',
     sessionHours: Number(process.env.AUTH_SESSION_HOURS || 12),
     signupEnabled: String(process.env.SIGNUP_ENABLED || 'false').toLowerCase() === 'true',
+    passwordResetEnabled: String(process.env.PASSWORD_RESET_ENABLED || 'true').toLowerCase() !== 'false',
+    passwordResetTokenMinutes: Math.max(5, Number.isFinite(resetMinutes) ? resetMinutes : 30),
+    passwordResetCooldownSeconds: Math.max(10, Number.isFinite(resetCooldown) ? resetCooldown : 60),
     adminEmail: process.env.FACTORYBOX_ADMIN_EMAIL || '',
     adminPassword: process.env.FACTORYBOX_ADMIN_PASSWORD || '',
     defaultRole: process.env.FACTORYBOX_ADMIN_ROLE || 'owner'
@@ -817,6 +824,187 @@ function getSession(req) {
   return session;
 }
 
+function createPasswordResetToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function hashPasswordResetToken(token) {
+  return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function isPasswordResetTokenFormat(token) {
+  return /^[a-f0-9]{64}$/i.test(String(token || ''));
+}
+
+function publicAppBaseUrl(req) {
+  const configured = String(process.env.PUBLIC_APP_URL || '').trim().replace(/\/+$/, '');
+  if (configured) return configured;
+
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3100';
+  return `${proto}://${host}`;
+}
+
+function publicPasswordResetUrl(req, token) {
+  return `${publicAppBaseUrl(req)}/reset-password.html?token=${encodeURIComponent(token)}`;
+}
+
+function maskEmail(email) {
+  const [name, domain] = String(email || '').split('@');
+  if (!name || !domain) return '';
+  const visible = name.slice(0, Math.min(2, name.length));
+  return `${visible}${'*'.repeat(Math.max(2, name.length - visible.length))}@${domain}`;
+}
+
+function validateNewPassword(password) {
+  const clean = String(password || '');
+  if (clean.length < 8) {
+    const err = new Error('Password must be at least 8 characters');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (clean.length > 128) {
+    const err = new Error('Password must be at most 128 characters');
+    err.statusCode = 400;
+    throw err;
+  }
+  return clean;
+}
+
+function revokeSessionsForUser(userId) {
+  let revoked = 0;
+  for (const [token, session] of authSessions.entries()) {
+    if (String(session?.user?.id || '') === String(userId || '')) {
+      authSessions.delete(token);
+      revoked += 1;
+    }
+  }
+  return revoked;
+}
+
+function passwordResetRequestAllowed(req, email) {
+  const cfg = authConfig();
+  const now = Date.now();
+  const cooldownMs = cfg.passwordResetCooldownSeconds * 1000;
+  const keys = [`ip:${reqIp(req)}`, `email:${String(email || '').toLowerCase()}`];
+
+  const blocked = keys.some(key => {
+    const last = passwordResetRequestWindow.get(key) || 0;
+    return now - last < cooldownMs;
+  });
+
+  if (blocked) return false;
+
+  keys.forEach(key => passwordResetRequestWindow.set(key, now));
+
+  if (passwordResetRequestWindow.size > 5000) {
+    for (const [key, timestamp] of passwordResetRequestWindow.entries()) {
+      if (now - timestamp > cooldownMs * 2) passwordResetRequestWindow.delete(key);
+    }
+  }
+
+  return true;
+}
+
+async function ensurePasswordResetSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id bigserial PRIMARY KEY,
+      user_id text NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      token_hash text NOT NULL UNIQUE,
+      expires_at timestamptz NOT NULL,
+      used_at timestamptz,
+      requested_ip text,
+      used_ip text,
+      email_sent_at timestamptz,
+      email_message_id text,
+      email_last_error text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id
+    ON password_reset_tokens(user_id, created_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_active
+    ON password_reset_tokens(expires_at)
+    WHERE used_at IS NULL
+  `);
+}
+
+function passwordResetEmailSubject() {
+  return 'FactoryBox şifre sıfırlama bağlantınız';
+}
+
+function passwordResetEmailHtml(user, resetUrl, expiresMinutes) {
+  const name = user.full_name || user.email;
+  return emailShellHtml('FactoryBox Şifre Sıfırlama', `
+    <h1 style="margin:0 0 12px 0;color:#102033;">Şifrenizi sıfırlayın</h1>
+    <p style="font-size:15px;line-height:1.6;color:#334155;">
+      Merhaba <strong>${h(name)}</strong>,<br>
+      FactoryBox hesabınız için bir şifre sıfırlama isteği aldık.
+    </p>
+
+    <p style="margin:22px 0;">
+      <a href="${h(resetUrl)}" style="display:inline-block;background:#123d64;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:bold;">
+        Yeni Şifre Belirle
+      </a>
+    </p>
+
+    <p style="font-size:13px;color:#64748b;line-height:1.5;">
+      Buton çalışmazsa bu linki tarayıcıya yapıştırın:<br>
+      <span style="word-break:break-all;">${h(resetUrl)}</span>
+    </p>
+
+    <p style="font-size:12px;color:#94a3b8;margin-top:22px;line-height:1.5;">
+      Bu bağlantı ${h(expiresMinutes)} dakika geçerlidir ve yalnızca bir kez kullanılabilir.<br>
+      Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
+    </p>
+  `);
+}
+
+function passwordResetEmailText(user, resetUrl, expiresMinutes) {
+  return [
+    `Merhaba ${user.full_name || user.email},`,
+    '',
+    'FactoryBox hesabınız için şifre sıfırlama isteği aldık.',
+    `Yeni şifre belirlemek için: ${resetUrl}`,
+    '',
+    `Bu bağlantı ${expiresMinutes} dakika geçerlidir ve yalnızca bir kez kullanılabilir.`,
+    'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.'
+  ].join('\n');
+}
+
+async function findValidPasswordResetToken(token, queryable = pool, forUpdate = false) {
+  if (!isPasswordResetTokenFormat(token)) return null;
+  const tokenHash = hashPasswordResetToken(token);
+  const lock = forUpdate ? 'FOR UPDATE' : '';
+  const result = await queryable.query(
+    `
+    SELECT
+      prt.id,
+      prt.user_id,
+      prt.expires_at,
+      prt.used_at,
+      u.email,
+      u.full_name,
+      u.status
+    FROM password_reset_tokens prt
+    JOIN app_users u ON u.id=prt.user_id
+    WHERE prt.token_hash=$1
+      AND prt.used_at IS NULL
+      AND prt.expires_at > now()
+      AND u.status='active'
+    LIMIT 1
+    ${lock}
+    `,
+    [tokenHash]
+  );
+  return result.rows[0] || null;
+}
 
 
 function slugCode(value, fallback) {
@@ -1178,12 +1366,15 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'5.2.1',
+    version:'5.3.0',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
       session_hours:cfg.sessionHours,
-      signup_enabled:cfg.signupEnabled
+      signup_enabled:cfg.signupEnabled,
+      password_reset_enabled:cfg.passwordResetEnabled,
+      password_reset_token_minutes:cfg.passwordResetTokenMinutes,
+      password_reset_email_configured:emailConfig().enabled && emailConfig().configured
     }
   });
 });
@@ -1195,7 +1386,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1206,7 +1397,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1216,7 +1407,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'5.2.1',
+    version:'5.3.0',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1226,6 +1417,214 @@ app.get('/api/auth/me', async (req,res)=>{
 });
 
 
+app.post('/api/auth/forgot-password', async (req,res)=>{
+  const genericResponse = {
+    status:'ok',
+    version:'5.3.0',
+    message:'If an active account exists for this email, a password reset link has been sent.'
+  };
+
+  try {
+    const cfg = authConfig();
+    if (!cfg.passwordResetEnabled) {
+      return res.status(503).json({
+        status:'disabled',
+        version:'5.3.0',
+        message:'Password reset is disabled'
+      });
+    }
+
+    await ensurePasswordResetSchema();
+
+    const email = normalizeEmail(req.body?.email);
+    if (!email || !email.includes('@')) {
+      return res.json(genericResponse);
+    }
+
+    if (!passwordResetRequestAllowed(req, email)) {
+      return res.json(genericResponse);
+    }
+
+    const user = await one(
+      `SELECT id, email, full_name, status FROM app_users WHERE lower(email)=lower($1) AND status='active' LIMIT 1`,
+      [email]
+    );
+
+    if (!user) {
+      return res.json(genericResponse);
+    }
+
+    await pool.query(
+      `UPDATE password_reset_tokens SET used_at=now() WHERE user_id=$1 AND used_at IS NULL`,
+      [user.id]
+    );
+
+    const rawToken = createPasswordResetToken();
+    const tokenHash = hashPasswordResetToken(rawToken);
+    const expiresAt = new Date(Date.now() + cfg.passwordResetTokenMinutes * 60 * 1000);
+
+    const resetRow = await one(
+      `
+      INSERT INTO password_reset_tokens(user_id, token_hash, expires_at, requested_ip)
+      VALUES($1,$2,$3,$4)
+      RETURNING id, user_id, expires_at, created_at
+      `,
+      [user.id, tokenHash, expiresAt, reqIp(req)]
+    );
+
+    const resetUrl = publicPasswordResetUrl(req, rawToken);
+    let emailResult;
+
+    try {
+      emailResult = await sendReportEmail({
+        to:user.email,
+        subject:passwordResetEmailSubject(),
+        html:passwordResetEmailHtml(user, resetUrl, cfg.passwordResetTokenMinutes),
+        text:passwordResetEmailText(user, resetUrl, cfg.passwordResetTokenMinutes)
+      });
+    } catch(e) {
+      emailResult = {sent:false, reason:e.message, message_id:null};
+    }
+
+    await pool.query(
+      `
+      UPDATE password_reset_tokens
+      SET
+        email_sent_at=CASE WHEN $2::boolean THEN now() ELSE NULL END,
+        email_message_id=$3,
+        email_last_error=$4
+      WHERE id=$1
+      `,
+      [
+        resetRow.id,
+        Boolean(emailResult.sent),
+        emailResult.message_id || null,
+        emailResult.sent ? null : (emailResult.reason || 'Email could not be sent')
+      ]
+    );
+
+    await writeAuditLog(req, {
+      action:'request_password_reset',
+      entity_type:'user',
+      entity_id:user.id,
+      old_values:null,
+      new_values:{password_reset_requested:true, expires_at:expiresAt.toISOString()},
+      metadata:{email_sent:Boolean(emailResult.sent)}
+    });
+
+    return res.json(genericResponse);
+  } catch(e) {
+    console.error('Password reset request failed:', e.message);
+    return res.json(genericResponse);
+  }
+});
+
+app.post('/api/auth/password-reset/validate', async (req,res)=>{
+  try {
+    const cfg = authConfig();
+    if (!cfg.passwordResetEnabled) {
+      return res.status(503).json({status:'disabled', version:'5.3.0', valid:false});
+    }
+
+    await ensurePasswordResetSchema();
+    const reset = await findValidPasswordResetToken(req.body?.token);
+
+    if (!reset) {
+      return res.status(400).json({
+        status:'invalid',
+        version:'5.3.0',
+        valid:false,
+        message:'Reset link is invalid, expired, or already used'
+      });
+    }
+
+    return res.json({
+      status:'ok',
+      version:'5.3.0',
+      valid:true,
+      email_hint:maskEmail(reset.email),
+      expires_at:reset.expires_at
+    });
+  } catch(e) {
+    return res.status(500).json({status:'error', version:'5.3.0', valid:false, message:e.message});
+  }
+});
+
+app.post('/api/auth/reset-password', async (req,res)=>{
+  let client;
+  try {
+    const cfg = authConfig();
+    if (!cfg.passwordResetEnabled) {
+      return res.status(503).json({status:'disabled', version:'5.3.0', message:'Password reset is disabled'});
+    }
+
+    const token = String(req.body?.token || '');
+    const password = validateNewPassword(req.body?.password);
+
+    await ensurePasswordResetSchema();
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const reset = await findValidPasswordResetToken(token, client, true);
+    if (!reset) {
+      await client.query('ROLLBACK');
+      client.release();
+      client = null;
+      return res.status(400).json({
+        status:'invalid',
+        version:'5.3.0',
+        message:'Reset link is invalid, expired, or already used'
+      });
+    }
+
+    const salt = makeSalt();
+    const passwordHash = hashPassword(password, salt);
+
+    await client.query(
+      `UPDATE app_users SET password_hash=$1, password_salt=$2, updated_at=now() WHERE id=$3`,
+      [passwordHash, salt, reset.user_id]
+    );
+
+    await client.query(
+      `
+      UPDATE password_reset_tokens
+      SET used_at=now(), used_ip=$2
+      WHERE user_id=$1 AND used_at IS NULL
+      `,
+      [reset.user_id, reqIp(req)]
+    );
+
+    await client.query('COMMIT');
+    client.release();
+    client = null;
+
+    const revokedSessions = revokeSessionsForUser(reset.user_id);
+
+    await writeAuditLog(req, {
+      action:'reset_user_password',
+      entity_type:'user',
+      entity_id:reset.user_id,
+      old_values:null,
+      new_values:{password_changed:true, sessions_revoked:revokedSessions},
+      metadata:{reset_token_id:String(reset.id)}
+    });
+
+    return res.json({
+      status:'ok',
+      version:'5.3.0',
+      password_reset:true,
+      sessions_revoked:revokedSessions,
+      login_url:'/login.html'
+    });
+  } catch(e) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch(_) {}
+      client.release();
+    }
+    return res.status(e.statusCode || 500).json({status:'error', version:'5.3.0', message:e.message});
+  }
+});
+
 
 app.post('/api/auth/signup', async (req,res)=>{
   try {
@@ -1234,7 +1633,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'5.2.1',
+        version:'5.3.0',
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -1266,7 +1665,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1278,7 +1677,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'5.2.1',
+      version:'5.3.0',
       message:e.message
     });
   }
@@ -1292,7 +1691,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'5.2.1',
+        version:'5.3.0',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -1332,7 +1731,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -1347,7 +1746,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'5.2.1', logged_out:true});
+  res.json({status:'ok', version:'5.3.0', logged_out:true});
 });
 
 
@@ -1399,7 +1798,7 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       counts
     });
   } catch(e) {
@@ -1414,7 +1813,7 @@ app.get('/api/admin/permissions', adminRequired, async (req,res)=>{
     const user = req.user || getSession(req)?.user || null;
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       role:user?.role || 'viewer',
       user:publicUser(user),
       permissions:publicPermissions(user),
@@ -1446,7 +1845,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       count:result.rows.length,
       users:result.rows
     });
@@ -1480,7 +1879,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       count:result.rows.length,
       customers:result.rows
     });
@@ -1515,7 +1914,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       count:result.rows.length,
       sites:result.rows
     });
@@ -1548,7 +1947,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       count:result.rows.length,
       access:result.rows
     });
@@ -1894,7 +2293,7 @@ app.get('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES'
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       count:result.rows.length,
       invites:result.rows.map(row => publicInvite(row, req))
     });
@@ -2007,7 +2406,7 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'create_user_invite',
       invite:publicInvite(invite, req),
       email:inviteEmailDelivery
@@ -2050,7 +2449,7 @@ app.post('/api/admin/invites/:id/email', adminRequired, permissionRequired('MANA
 
     res.json({
       status:delivery.email.sent ? 'ok' : 'not_sent',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'send_user_invite_email',
       invite:publicInvite(delivery.invite, req),
       email:delivery.email
@@ -2095,7 +2494,7 @@ app.post('/api/admin/invites/:id/cancel', adminRequired, permissionRequired('MAN
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'cancel_user_invite',
       invite
     });
@@ -2135,7 +2534,7 @@ app.get('/api/invites/:token', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       invite:{
         ...invite,
         expired
@@ -2272,7 +2671,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'accept_user_invite',
       authenticated:true,
       token:sessionToken,
@@ -2318,7 +2717,7 @@ app.get('/api/admin/audit-logs', adminRequired, permissionRequired('AUDIT_VIEW')
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       count:result.rows.length,
       logs:result.rows
     });
@@ -2369,7 +2768,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANA
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'update_user_status',
       user
     });
@@ -2422,7 +2821,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'update_user_role',
       user
     });
@@ -2464,7 +2863,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, permissionRequired
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'update_customer_status',
       customer
     });
@@ -2515,7 +2914,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, perm
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       action:'update_site_status',
       site
     });
@@ -2574,7 +2973,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       tenant:context
     });
   } catch(e) {
@@ -2588,7 +2987,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       customers:context.customers,
       sites:context.sites
     });
@@ -2602,7 +3001,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.2.1', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.3.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -2710,7 +3109,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.2.1',
+      version:'5.3.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -2731,7 +3130,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.2.1',
+      version:'5.3.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -2781,7 +3180,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -2825,7 +3224,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -2863,7 +3262,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'5.2.1',
+        version:'5.3.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -2878,7 +3277,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2918,7 +3317,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2969,7 +3368,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       machine_code:req.params.code,
       report
     });
@@ -3034,7 +3433,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -3085,7 +3484,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       device:row
     });
   } catch(e) {
@@ -3130,7 +3529,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       device:row
     });
   } catch(e) {
@@ -3387,7 +3786,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -3409,7 +3808,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -3460,7 +3859,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -3504,7 +3903,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -3555,7 +3954,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.2.1',
+      version:'5.3.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -3699,7 +4098,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v5.2.1
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.3.0
     </div>
   </main>
 </body>
@@ -4063,7 +4462,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'5.2.1',
+    version:'5.3.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -4085,7 +4484,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -4108,7 +4507,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -4218,7 +4617,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.2.1</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.3.0</p>
   </div>
 </body>
 </html>`;
@@ -4239,7 +4638,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'5.2.1',
+    version:'5.3.0',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -4294,7 +4693,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -4334,7 +4733,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -4375,7 +4774,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.2.1',
+      version:'5.3.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -4392,6 +4791,7 @@ async function start() {
   await pool.query('SELECT 1');
   await ensureEntities();
   await ensureSaasFoundation();
+  await ensurePasswordResetSchema();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });

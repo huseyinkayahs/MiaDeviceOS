@@ -353,3 +353,44 @@
 #usersTable .admin-table {
   min-width: 1350px;
 }
+
+
+/* v5.3 Password Reset / Account Recovery */
+.text-link {
+  color: var(--blue);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  padding: 4px 0;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.auth-note {
+  border: 1px solid var(--line);
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 12px;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.auth-note.success {
+  border-color: #b7dfcf;
+  background: #f1fbf6;
+  color: #0b6b49;
+}
+
+.auth-note.error {
+  border-color: #efc1bc;
+  background: #fff6f5;
+  color: #9f2f24;
+}
+
+.password-rules {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}

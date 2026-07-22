@@ -1,0 +1,10 @@
+FactoryBox One v5.3.0 Password Reset / Account Recovery Pack
+
+Bu ZIP, v5.2.1 proje ana klasörünün üzerine çıkarılacak tam değişen dosyaları içerir.
+Mevcut .env dosyası pakete dahil değildir ve ezilmez.
+
+Kurulum ve test adımları:
+KURULUM_V5_3.txt
+
+Teknik sprint kapanış notu:
+docs/V5_3_PASSWORD_RESET_ACCOUNT_RECOVERY_PACK.md
