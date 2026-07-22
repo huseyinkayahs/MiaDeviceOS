@@ -314,3 +314,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.checkbox-label {
+  justify-content: end;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin-top: 10px;
+}
+
+#invitesTable .admin-table {
+  min-width: 1200px;
+}

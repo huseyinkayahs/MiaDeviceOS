@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.0.3: Admin panelden kullanıcı daveti ve tenant access verme.</p>
+        <p class="muted">v5.1: Admin panelden kullanıcı daveti ve tenant access verme.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -62,8 +62,12 @@
         Site Code
         <input id="inviteSiteCode" type="text" placeholder="boş bırakılırsa tüm customer">
       </label>
+      <label class="checkbox-label">
+        Mail Gönder
+        <input id="inviteSendEmail" type="checkbox" checked>
+      </label>
       <div class="admin-form-actions">
-        <button id="createInviteBtn" class="primary-btn">Davet Oluştur</button>
+        <button id="createInviteBtn" class="primary-btn">Davet Oluştur + Mail</button>
       </div>
     </div>
 
@@ -309,8 +313,10 @@
       {label:'Customer', value:r=>r.customer_code},
       {label:'Site', value:r=>r.site_code || '*'},
       {label:'Status', value:r=>r.status},
+      {label:'Mail', value:r=>r.email_sent_at ? `Gönderildi ${fmtDate(r.email_sent_at)}` : (r.email_last_error ? `Hata: ${r.email_last_error}` : 'Gönderilmedi')},
       {label:'Expires', value:r=>fmtDate(r.expires_at)},
       {label:'Link', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="copy-invite" data-url="${esc(r.invite_url)}">Kopyala</button>`},
+      {label:'Mail Gönder', html:true, value:r=>r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="send-invite-email" data-id="${esc(r.id)}">Mail Gönder</button>` : '-'},
       {label:'İptal', html:true, value:r=>r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="cancel-invite" data-id="${esc(r.id)}">İptal</button>` : '-'}
     ], data.invites || []);
   }
@@ -397,15 +403,22 @@
     const role = document.getElementById('inviteRole').value;
     const customer_code = document.getElementById('inviteCustomerCode').value.trim();
     const site_code = document.getElementById('inviteSiteCode').value.trim();
+    const send_email = document.getElementById('inviteSendEmail').checked;
 
     const data = await apiJson('/api/admin/invites', {
       method:'POST',
-      body:JSON.stringify({email, full_name, role, customer_code, site_code})
+      body:JSON.stringify({email, full_name, role, customer_code, site_code, send_email})
     });
 
     const result = document.getElementById('inviteResult');
     const url = data.invite.invite_url;
     result.innerHTML = `Davet oluşturuldu: <code>${esc(url)}</code>`;
+
+    if (data.email) {
+      result.innerHTML += data.email.sent
+        ? ' <strong>Mail gönderildi.</strong>'
+        : ` <strong>Mail gönderilemedi:</strong> ${esc(data.email.reason || 'SMTP kontrol et')}`;
+    }
 
     try {
       await navigator.clipboard.writeText(url);
@@ -427,6 +440,17 @@
     const absolute = url.startsWith('http') ? url : `${location.origin}${url}`;
     await navigator.clipboard.writeText(absolute);
     document.getElementById('inviteResult').innerHTML = `Davet linki kopyalandı: <code>${esc(absolute)}</code>`;
+  }
+
+  async function sendInviteEmail(button) {
+    const data = await apiJson(`/api/admin/invites/${encodeURIComponent(button.dataset.id)}/email`, {
+      method:'POST'
+    });
+
+    const result = document.getElementById('inviteResult');
+    result.innerHTML = data.email?.sent
+      ? 'Davet maili gönderildi.'
+      : `Davet maili gönderilemedi: ${esc(data.email?.reason || 'SMTP kontrol et')}`;
   }
 
   async function handleAction(e) {
@@ -462,6 +486,12 @@
         status.textContent = 'Davet linki kopyalandı.';
       }
 
+      if (action === 'send-invite-email') {
+        await sendInviteEmail(button);
+        await loadAdmin();
+        status.textContent = 'Davet maili gönderildi / durum güncellendi.';
+      }
+
       if (action === 'cancel-invite') {
         await cancelInvite(button);
         await loadAdmin();
@@ -485,7 +515,7 @@
       try {
         await createInvite();
         await loadAdmin();
-        document.getElementById('adminStatus').textContent = 'Davet oluşturuldu. Activity history güncellendi.';
+        document.getElementById('adminStatus').textContent = 'Davet oluşturuldu. Mail durumu güncellendi.';
       } catch(e) {
         document.getElementById('adminStatus').textContent = e.message;
       } finally {

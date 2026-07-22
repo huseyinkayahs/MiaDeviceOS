@@ -1074,7 +1074,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'5.0.3',
+    version:'5.1.0',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1091,7 +1091,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1102,7 +1102,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1112,7 +1112,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'5.0.3',
+    version:'5.1.0',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1130,7 +1130,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'5.0.3',
+        version:'5.1.0',
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -1162,7 +1162,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1174,7 +1174,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'5.0.3',
+      version:'5.1.0',
       message:e.message
     });
   }
@@ -1188,7 +1188,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'5.0.3',
+        version:'5.1.0',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -1228,7 +1228,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -1243,7 +1243,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'5.0.3', logged_out:true});
+  res.json({status:'ok', version:'5.1.0', logged_out:true});
 });
 
 
@@ -1294,7 +1294,7 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       counts
     });
   } catch(e) {
@@ -1323,7 +1323,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       count:result.rows.length,
       users:result.rows
     });
@@ -1357,7 +1357,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       count:result.rows.length,
       customers:result.rows
     });
@@ -1392,7 +1392,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       count:result.rows.length,
       sites:result.rows
     });
@@ -1425,7 +1425,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       count:result.rows.length,
       access:result.rows
     });
@@ -1543,6 +1543,10 @@ async function ensureInviteSchema() {
     )
   `);
 
+  await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS email_sent_at timestamptz`);
+  await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS email_message_id text`);
+  await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS email_last_error text`);
+
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_user_invites_email
     ON user_invites(lower(email))
@@ -1572,6 +1576,150 @@ function publicInviteUrl(req, token) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3100';
   return `${proto}://${host}/invite.html?token=${encodeURIComponent(token)}`;
 }
+
+function inviteEmailSubject(invite) {
+  const customer = invite.customer_code || 'FactoryBox';
+  return `FactoryBox Davetiniz - ${customer}`;
+}
+
+function inviteEmailHtml(invite, inviteUrl) {
+  const role = invite.role || 'viewer';
+  const customer = invite.customer_code || '-';
+  const site = invite.site_code || 'Tüm customer';
+  const name = invite.full_name || invite.email;
+
+  return emailShellHtml('FactoryBox Davetiniz', `
+    <h1 style="margin:0 0 12px 0;color:#102033;">FactoryBox davetiniz hazır</h1>
+    <p style="font-size:15px;line-height:1.6;color:#334155;">
+      Merhaba <strong>${h(name)}</strong>,<br>
+      FactoryBox hesabınıza erişim için davet aldınız.
+    </p>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:18px 0;">
+      <p style="margin:6px 0;"><strong>Rol:</strong> ${h(role)}</p>
+      <p style="margin:6px 0;"><strong>Customer:</strong> ${h(customer)}</p>
+      <p style="margin:6px 0;"><strong>Site:</strong> ${h(site)}</p>
+    </div>
+
+    <p style="margin:22px 0;">
+      <a href="${h(inviteUrl)}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:bold;">
+        Daveti Kabul Et
+      </a>
+    </p>
+
+    <p style="font-size:13px;color:#64748b;line-height:1.5;">
+      Buton çalışmazsa bu linki tarayıcıya yapıştırın:<br>
+      <span style="word-break:break-all;">${h(inviteUrl)}</span>
+    </p>
+
+    <p style="font-size:12px;color:#94a3b8;margin-top:22px;">
+      Bu davet 7 gün içinde kabul edilmelidir.
+    </p>
+  `);
+}
+
+function inviteText(invite, inviteUrl) {
+  return [
+    'FactoryBox davetiniz hazır',
+    '',
+    `Email: ${invite.email}`,
+    `Rol: ${invite.role}`,
+    `Customer: ${invite.customer_code}`,
+    `Site: ${invite.site_code || 'Tüm customer'}`,
+    '',
+    `Daveti kabul etmek için: ${inviteUrl}`
+  ].join('\n');
+}
+
+function inviteReturnFieldsSql() {
+  return `
+    id::text,
+    invite_token,
+    email,
+    full_name,
+    role,
+    customer_code,
+    site_code,
+    status,
+    invited_by_email,
+    accepted_user_id,
+    accepted_at,
+    expires_at,
+    email_sent_at,
+    email_message_id,
+    email_last_error,
+    created_at,
+    updated_at
+  `;
+}
+
+function publicInvite(invite, req) {
+  return {
+    ...invite,
+    invite_url:publicInviteUrl(req, invite.invite_token)
+  };
+}
+
+async function deliverInviteEmail(req, invite) {
+  const inviteUrl = publicInviteUrl(req, invite.invite_token);
+  let emailResult;
+
+  try {
+    emailResult = await sendReportEmail({
+      to:invite.email,
+      subject:inviteEmailSubject(invite),
+      html:inviteEmailHtml(invite, inviteUrl),
+      text:inviteText(invite, inviteUrl)
+    });
+  } catch(e) {
+    emailResult = {
+      sent:false,
+      reason:e.message,
+      accepted:[],
+      rejected:[],
+      to:[invite.email]
+    };
+  }
+
+  const updated = await one(
+    `
+    UPDATE user_invites
+    SET
+      email_sent_at=CASE WHEN $2::boolean THEN now() ELSE email_sent_at END,
+      email_message_id=CASE WHEN $2::boolean THEN $3 ELSE email_message_id END,
+      email_last_error=CASE WHEN $2::boolean THEN NULL ELSE $4 END,
+      updated_at=now()
+    WHERE id=$1
+    RETURNING ${inviteReturnFieldsSql()}
+    `,
+    [
+      invite.id,
+      Boolean(emailResult.sent),
+      emailResult.message_id || null,
+      emailResult.sent ? null : (emailResult.reason || 'Email could not be sent')
+    ]
+  );
+
+  await writeAuditLog(req, {
+    action:'send_user_invite_email',
+    entity_type:'invite',
+    entity_id:invite.id,
+    old_values:invite,
+    new_values:updated || invite,
+    metadata:{
+      email:invite.email,
+      sent:Boolean(emailResult.sent),
+      reason:emailResult.reason || null,
+      message_id:emailResult.message_id || null
+    }
+  });
+
+  return {
+    invite:updated || invite,
+    email:emailResult
+  };
+}
+
 
 
 function validateChoice(value, allowed, label) {
@@ -1609,6 +1757,9 @@ app.get('/api/admin/invites', adminRequired, async (req,res)=>{
         accepted_user_id,
         accepted_at,
         expires_at,
+        email_sent_at,
+        email_message_id,
+        email_last_error,
         created_at,
         updated_at
       FROM user_invites
@@ -1620,12 +1771,9 @@ app.get('/api/admin/invites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       count:result.rows.length,
-      invites:result.rows.map(row => ({
-        ...row,
-        invite_url:`/invite.html?token=${encodeURIComponent(row.invite_token)}`
-      }))
+      invites:result.rows.map(row => publicInvite(row, req))
     });
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
@@ -1642,6 +1790,7 @@ app.post('/api/admin/invites', adminRequired, async (req,res)=>{
     const customerCode = String(req.body?.customer_code || '').trim();
     const siteCodeRaw = String(req.body?.site_code || '').trim();
     const siteCode = siteCodeRaw || null;
+    const shouldSendEmail = req.body?.send_email !== false;
 
     if (!email || !email.includes('@')) {
       return res.status(400).json({status:'error', message:'valid email is required'});
@@ -1680,7 +1829,7 @@ app.post('/api/admin/invites', adminRequired, async (req,res)=>{
     const token = createInviteToken();
     const actor = req.user || getSession(req)?.user || null;
 
-    const invite = await one(
+    let invite = await one(
       `
       INSERT INTO user_invites(
         invite_token,
@@ -1707,6 +1856,9 @@ app.post('/api/admin/invites', adminRequired, async (req,res)=>{
         accepted_user_id,
         accepted_at,
         expires_at,
+        email_sent_at,
+        email_message_id,
+        email_last_error,
         created_at,
         updated_at
       `,
@@ -1722,19 +1874,69 @@ app.post('/api/admin/invites', adminRequired, async (req,res)=>{
       metadata:{email, role, customer_code:customerCode, site_code:siteCode}
     });
 
+    let inviteEmailDelivery = null;
+
+    if (shouldSendEmail) {
+      const delivery = await deliverInviteEmail(req, invite);
+      invite = delivery.invite;
+      inviteEmailDelivery = delivery.email;
+    }
+
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'create_user_invite',
-      invite:{
-        ...invite,
-        invite_url:publicInviteUrl(req, token)
-      }
+      invite:publicInvite(invite, req),
+      email:inviteEmailDelivery
     });
   } catch(e) {
     res.status(e.statusCode || 500).json({status:'error', message:e.message});
   }
 });
+
+
+
+app.post('/api/admin/invites/:id/email', adminRequired, async (req,res)=>{
+  try {
+    await ensureInviteSchema();
+
+    const invite = await one(
+      `
+      SELECT ${inviteReturnFieldsSql()}
+      FROM user_invites
+      WHERE id=$1
+      LIMIT 1
+      `,
+      [req.params.id]
+    );
+
+    if (!invite) {
+      return res.status(404).json({status:'not_found', message:'invite not found', invite_id:req.params.id});
+    }
+
+    if (invite.status !== 'pending') {
+      return res.status(400).json({status:'error', message:`invite is ${invite.status}`});
+    }
+
+    if (new Date(invite.expires_at).getTime() < Date.now()) {
+      await pool.query(`UPDATE user_invites SET status='expired', updated_at=now() WHERE id=$1`, [invite.id]);
+      return res.status(400).json({status:'error', message:'invite expired'});
+    }
+
+    const delivery = await deliverInviteEmail(req, invite);
+
+    res.json({
+      status:delivery.email.sent ? 'ok' : 'not_sent',
+      version:'5.1.0',
+      action:'send_user_invite_email',
+      invite:publicInvite(delivery.invite, req),
+      email:delivery.email
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
 
 app.post('/api/admin/invites/:id/cancel', adminRequired, async (req,res)=>{
   try {
@@ -1770,7 +1972,7 @@ app.post('/api/admin/invites/:id/cancel', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'cancel_user_invite',
       invite
     });
@@ -1810,7 +2012,7 @@ app.get('/api/invites/:token', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       invite:{
         ...invite,
         expired
@@ -1947,7 +2149,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'accept_user_invite',
       authenticated:true,
       token:sessionToken,
@@ -1993,7 +2195,7 @@ app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       count:result.rows.length,
       logs:result.rows
     });
@@ -2036,7 +2238,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'update_user_status',
       user
     });
@@ -2087,7 +2289,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'update_user_role',
       user
     });
@@ -2129,7 +2331,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'update_customer_status',
       customer
     });
@@ -2180,7 +2382,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, asyn
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       action:'update_site_status',
       site
     });
@@ -2204,7 +2406,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       tenant:context
     });
   } catch(e) {
@@ -2218,7 +2420,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       customers:context.customers,
       sites:context.sites
     });
@@ -2232,7 +2434,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.0.3', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.1.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -2340,7 +2542,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.0.3',
+      version:'5.1.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -2361,7 +2563,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.0.3',
+      version:'5.1.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -2411,7 +2613,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -2455,7 +2657,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -2493,7 +2695,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'5.0.3',
+        version:'5.1.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -2508,7 +2710,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2548,7 +2750,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2599,7 +2801,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       machine_code:req.params.code,
       report
     });
@@ -2664,7 +2866,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -2715,7 +2917,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       device:row
     });
   } catch(e) {
@@ -2760,7 +2962,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       device:row
     });
   } catch(e) {
@@ -3017,7 +3219,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -3039,7 +3241,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -3090,7 +3292,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -3134,7 +3336,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -3185,7 +3387,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.0.3',
+      version:'5.1.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -3329,7 +3531,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v5.0.3
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.1.0
     </div>
   </main>
 </body>
@@ -3693,7 +3895,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'5.0.3',
+    version:'5.1.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -3715,7 +3917,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3738,7 +3940,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3848,7 +4050,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.0.3</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.1.0</p>
   </div>
 </body>
 </html>`;
@@ -3869,7 +4071,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'5.0.3',
+    version:'5.1.0',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -3924,7 +4126,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -3964,7 +4166,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -4005,7 +4207,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.0.3',
+      version:'5.1.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

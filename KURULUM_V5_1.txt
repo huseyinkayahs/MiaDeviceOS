@@ -1,0 +1,124 @@
+
+# V5.1 Email Invite Delivery Pack
+
+Bu paket v5.0.3 üzerine kopyalanır.
+
+## Amaç
+
+Davet linkini admin panelden otomatik e-posta ile göndermek.
+
+## Eklenenler
+
+```text
+Davet oluştururken otomatik mail gönderme
+Davet mailini tekrar gönderme
+Mail gönderim tarihi
+Mail message_id kaydı
+Mail hata mesajı kaydı
+Profesyonel davet email şablonu
+Activity History içinde send_user_invite_email kaydı
+```
+
+## SMTP Ayarları
+
+Bu sprint mevcut v4.5 email altyapısını kullanır.
+
+.env içinde şu ayarlar olmalı:
+
+```text
+EMAIL_REPORTS_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=...
+SMTP_PASS=Google uygulama şifresi
+SMTP_FROM=...
+REPORT_EMAIL_TO=...
+```
+
+Not:
+
+```text
+REPORT_EMAIL_TO raporlar için kullanılır.
+Davet mailinde alıcı, admin panelde yazılan Email alanıdır.
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.1.0
+```
+
+## Test 2 - Email Status
+
+```text
+http://localhost:3100/api/email/status
+```
+
+Beklenen:
+
+```text
+configured: true
+```
+
+## Test 3 - Admin Panel
+
+```text
+http://localhost:3100/admin.html
+```
+
+Ctrl + F5 yap.
+
+Invite User / Tenant Access bölümünde yeni alanlar:
+
+```text
+Mail Gönder checkbox
+Davet Oluştur + Mail
+Mail Gönder butonu
+Mail gönderim durumu
+```
+
+## Test 4 - Davet Maili
+
+Admin panelden davet oluştur.
+
+Beklenen:
+
+```text
+Davet oluşturuldu
+Mail gönderildi
+Link kopyalandı
+Invites tablosunda Mail: Gönderildi
+Activity History içinde send_user_invite_email
+```
+
+Eğer mail ayarlarında sorun varsa:
+
+```text
+Mail gönderilemedi: SMTP settings not configured
+```
+
+gibi hata görünür. Bu durumda davet yine oluşturulur; link manuel kopyalanabilir.
