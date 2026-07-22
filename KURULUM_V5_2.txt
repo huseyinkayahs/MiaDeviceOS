@@ -1,0 +1,136 @@
+
+# V5.2 Role Based Permission Pack
+
+Bu paket v5.1.0 üzerine kopyalanır.
+
+## Amaç
+
+Owner / admin / operator / viewer rollerini gerçek yetkilere bağlamak.
+
+## Eklenenler
+
+```text
+Role permission matrix
+Backend permissionRequired middleware
+Admin panel Permission Overview
+Admin panel butonlarını role göre gösterme/gizleme
+User role/status endpointlerinde MANAGE_USERS kontrolü
+Customer status endpointinde MANAGE_CUSTOMERS kontrolü
+Site status endpointinde MANAGE_SITES kontrolü
+Invite endpointlerinde MANAGE_INVITES kontrolü
+Audit log endpointinde AUDIT_VIEW kontrolü
+Report üretim/gönderim endpointlerinde SEND_REPORTS kontrolü
+```
+
+## Rol Yetki Matrisi
+
+```text
+system_admin:
+  tüm yetkiler
+
+owner:
+  ADMIN_VIEW
+  MANAGE_USERS
+  MANAGE_CUSTOMERS
+  MANAGE_SITES
+  MANAGE_INVITES
+  AUDIT_VIEW
+  SEND_REPORTS
+  VIEW_REPORTS
+  VIEW_DASHBOARD
+
+admin:
+  ADMIN_VIEW
+  MANAGE_CUSTOMERS
+  MANAGE_SITES
+  MANAGE_INVITES
+  AUDIT_VIEW
+  SEND_REPORTS
+  VIEW_REPORTS
+  VIEW_DASHBOARD
+
+operator:
+  SEND_REPORTS
+  VIEW_REPORTS
+  VIEW_DASHBOARD
+
+viewer:
+  VIEW_REPORTS
+  VIEW_DASHBOARD
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.2.0
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html?fresh=520
+```
+
+Ctrl + F5 yap.
+
+Beklenen yeni bölüm:
+
+```text
+Permission Overview
+```
+
+## Test 3 - Owner/Admin
+
+Owner/admin ile admin panel açıldığında butonlar role göre görünür.
+
+Owner:
+
+```text
+Kullanıcı rol/status değiştirebilir
+Customer/site değiştirebilir
+Invite oluşturabilir
+Audit görebilir
+```
+
+Admin:
+
+```text
+Customer/site değiştirebilir
+Invite oluşturabilir
+Audit görebilir
+Kullanıcı rol/status değiştiremez
+```
+
+## Test 4 - Operator/Viewer
+
+Operator veya viewer admin panel açmaya çalışırsa:
+
+```text
+Admin access required
+```
+
+Operator dashboard ve raporları görebilir.
+Viewer dashboard ve raporları görebilir fakat rapor gönderim/üretim gibi aksiyonlarda SEND_REPORTS yetkisi yoktur.
