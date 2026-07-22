@@ -40,8 +40,15 @@ let lastMqttMessageAt = null;
 let lastMqttTopic = null;
 let ids = null;
 let billingFoundationReady = false;
+let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
+
+const APP_VERSION = '5.5.0';
+
+function subscriptionEnforcementEnabled() {
+  return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
+}
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
 const b = (v) => typeof v === 'boolean' ? v : (v === 'true' || v === '1' ? true : (v === 'false' || v === '0' ? false : null));
@@ -1377,20 +1384,28 @@ async function ensureCustomerSubscription(customerId, planCode='trial') {
   );
 }
 
-function limitSnapshot(used, limit) {
+function limitSnapshot(used, limit, reserved=0) {
   const numericUsed = Number(used || 0);
+  const numericReserved = Number(reserved || 0);
   const numericLimit = limit === null || limit === undefined ? null : Number(limit);
+  const effectiveUsed = numericUsed + numericReserved;
+
   return {
     used:numericUsed,
+    reserved:numericReserved,
+    effective_used:effectiveUsed,
     limit:numericLimit,
     unlimited:numericLimit === null,
-    remaining:numericLimit === null ? null : Math.max(0, numericLimit - numericUsed),
-    exceeded:numericLimit === null ? false : numericUsed > numericLimit
+    remaining:numericLimit === null ? null : Math.max(0, numericLimit - effectiveUsed),
+    at_limit:numericLimit === null ? false : effectiveUsed >= numericLimit,
+    exceeded:numericLimit === null ? false : numericUsed > numericLimit,
+    capacity_exceeded:numericLimit === null ? false : effectiveUsed > numericLimit
   };
 }
 
 async function getSubscriptionSnapshot(customerCode, skipEnsure=false) {
   if (!skipEnsure) await ensureBillingFoundation();
+  await ensureInviteSchema();
   await refreshExpiredSubscriptions();
 
   const row = await one(
@@ -1429,6 +1444,21 @@ async function getSubscriptionSnapshot(customerCode, skipEnsure=false) {
         WHERE a.customer_code=c.code AND u.status='active'
       ) AS user_count,
       (
+        SELECT count(DISTINCT lower(ui.email))::int
+        FROM user_invites ui
+        WHERE ui.customer_code=c.code
+          AND ui.status='pending'
+          AND ui.expires_at > now()
+          AND NOT EXISTS (
+            SELECT 1
+            FROM app_user_tenant_access a2
+            JOIN app_users u2 ON lower(u2.email)=lower(a2.user_email)
+            WHERE a2.customer_code=c.code
+              AND lower(u2.email)=lower(ui.email)
+              AND u2.status='active'
+          )
+      ) AS pending_user_invite_count,
+      (
         SELECT count(DISTINCT d.id)::int
         FROM sites s
         JOIN machines m ON m.site_id=s.id
@@ -1447,7 +1477,7 @@ async function getSubscriptionSnapshot(customerCode, skipEnsure=false) {
   if (!row) return null;
 
   const usage = {
-    users:limitSnapshot(row.user_count, row.user_limit),
+    users:limitSnapshot(row.user_count, row.user_limit, row.pending_user_invite_count),
     sites:limitSnapshot(row.site_count, row.site_limit),
     devices:limitSnapshot(row.device_count, row.device_limit)
   };
@@ -1484,13 +1514,134 @@ async function getSubscriptionSnapshot(customerCode, skipEnsure=false) {
     usage,
     access:{
       allowed:statusAllowsAccess && !limitExceeded,
+      enforcement_enabled:subscriptionEnforcementEnabled(),
       status_allows_access:statusAllowsAccess,
       limit_exceeded:limitExceeded,
+      quota_at_limit:Object.values(usage).some(item => item.at_limit),
+      quota_capacity_exceeded:Object.values(usage).some(item => item.capacity_exceeded),
       reason:!statusAllowsAccess
         ? `subscription_status_${row.status}`
         : (limitExceeded ? 'plan_limit_exceeded' : 'ok')
     }
   };
+}
+
+function subscriptionGuardError(message, statusCode, details={}) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  err.subscription = details.subscription || null;
+  err.usage = details.usage || null;
+  err.access = details.access || null;
+  err.resource = details.resource || null;
+  return err;
+}
+
+async function assertSubscriptionAccessForCustomer(customerCode) {
+  const snapshot = await getSubscriptionSnapshot(customerCode);
+
+  if (!snapshot) {
+    throw subscriptionGuardError('Tenant subscription not found', 403, {
+      access:{allowed:false, reason:'subscription_not_found'}
+    });
+  }
+
+  if (!subscriptionEnforcementEnabled()) return snapshot;
+
+  if (!snapshot.access.status_allows_access) {
+    throw subscriptionGuardError(`Subscription is ${snapshot.subscription.status}`, 403, snapshot);
+  }
+
+  if (snapshot.access.limit_exceeded) {
+    throw subscriptionGuardError('Plan usage limit exceeded', 403, snapshot);
+  }
+
+  return snapshot;
+}
+
+async function assertSubscriptionCapacity(customerCode, resource, additional=1, includeReserved=true) {
+  const snapshot = await assertSubscriptionAccessForCustomer(customerCode);
+  if (!subscriptionEnforcementEnabled()) return snapshot;
+
+  const item = snapshot.usage?.[resource];
+  if (!item) {
+    throw subscriptionGuardError(`Unknown subscription resource: ${resource}`, 400, {resource});
+  }
+
+  if (item.unlimited) return snapshot;
+
+  const projected = item.used + (includeReserved ? item.reserved : 0) + Math.max(0, Number(additional || 0));
+  if (projected > item.limit) {
+    throw subscriptionGuardError(`${resource} plan limit reached`, 409, {
+      ...snapshot,
+      resource,
+      usage:{...snapshot.usage, projected:{resource, value:projected, limit:item.limit}}
+    });
+  }
+
+  return snapshot;
+}
+
+async function operationalCustomerCodeForRequest(req) {
+  if (req.user?.role === 'system_admin') return null;
+
+  if (req.params?.siteCode) {
+    const row = await one(`
+      SELECT c.code AS customer_code
+      FROM sites s
+      JOIN customers c ON c.id=s.customer_id
+      WHERE s.code=$1
+      LIMIT 1
+    `, [req.params.siteCode]);
+    if (row?.customer_code) return row.customer_code;
+  }
+
+  if (req.params?.uid) {
+    const row = await one(`
+      SELECT c.code AS customer_code
+      FROM devices d
+      JOIN machines m ON m.id=d.machine_id
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      WHERE d.device_uid=$1
+      LIMIT 1
+    `, [req.params.uid]);
+    if (row?.customer_code) return row.customer_code;
+  }
+
+  if (req.params?.code) {
+    const row = await one(`
+      SELECT c.code AS customer_code
+      FROM machines m
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      WHERE m.code=$1
+      LIMIT 1
+    `, [req.params.code]);
+    if (row?.customer_code) return row.customer_code;
+  }
+
+  return subscriptionCustomerCodeForRequest(req);
+}
+
+async function subscriptionAccessRequired(req, res, next) {
+  try {
+    if (!subscriptionEnforcementEnabled() || req.user?.role === 'system_admin') return next();
+
+    const customerCode = await operationalCustomerCodeForRequest(req);
+    const snapshot = await assertSubscriptionAccessForCustomer(customerCode);
+    req.subscription = snapshot;
+    return next();
+  } catch(e) {
+    return res.status(e.statusCode || 500).json({
+      status:e.statusCode === 409 ? 'subscription_quota_blocked' : 'subscription_blocked',
+      version:APP_VERSION,
+      message:e.message,
+      resource:e.resource || null,
+      subscription:e.subscription || null,
+      usage:e.usage || null,
+      access:e.access || null
+    });
+  }
 }
 
 async function subscriptionCustomerCodeForRequest(req) {
@@ -1665,7 +1816,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'5.4.0',
+    version:'5.5.0',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1673,7 +1824,8 @@ app.get('/api/auth/status', async (req,res)=>{
       signup_enabled:cfg.signupEnabled,
       password_reset_enabled:cfg.passwordResetEnabled,
       password_reset_token_minutes:cfg.passwordResetTokenMinutes,
-      password_reset_email_configured:emailConfig().enabled && emailConfig().configured
+      password_reset_email_configured:emailConfig().enabled && emailConfig().configured,
+      subscription_enforcement_enabled:subscriptionEnforcementEnabled()
     }
   });
 });
@@ -1685,7 +1837,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1696,7 +1848,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1706,7 +1858,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'5.4.0',
+    version:'5.5.0',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1722,7 +1874,7 @@ app.get('/api/auth/me', async (req,res)=>{
 app.post('/api/auth/forgot-password', async (req,res)=>{
   const genericResponse = {
     status:'ok',
-    version:'5.4.0',
+    version:'5.5.0',
     message:'If an active account exists for this email, a password reset link has been sent.'
   };
 
@@ -1731,7 +1883,7 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
     if (!cfg.passwordResetEnabled) {
       return res.status(503).json({
         status:'disabled',
-        version:'5.4.0',
+        version:'5.5.0',
         message:'Password reset is disabled'
       });
     }
@@ -1825,7 +1977,7 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
   try {
     const cfg = authConfig();
     if (!cfg.passwordResetEnabled) {
-      return res.status(503).json({status:'disabled', version:'5.4.0', valid:false});
+      return res.status(503).json({status:'disabled', version:'5.5.0', valid:false});
     }
 
     await ensurePasswordResetSchema();
@@ -1834,7 +1986,7 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
     if (!reset) {
       return res.status(400).json({
         status:'invalid',
-        version:'5.4.0',
+        version:'5.5.0',
         valid:false,
         message:'Reset link is invalid, expired, or already used'
       });
@@ -1842,13 +1994,13 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
 
     return res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       valid:true,
       email_hint:maskEmail(reset.email),
       expires_at:reset.expires_at
     });
   } catch(e) {
-    return res.status(500).json({status:'error', version:'5.4.0', valid:false, message:e.message});
+    return res.status(500).json({status:'error', version:'5.5.0', valid:false, message:e.message});
   }
 });
 
@@ -1857,7 +2009,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
   try {
     const cfg = authConfig();
     if (!cfg.passwordResetEnabled) {
-      return res.status(503).json({status:'disabled', version:'5.4.0', message:'Password reset is disabled'});
+      return res.status(503).json({status:'disabled', version:'5.5.0', message:'Password reset is disabled'});
     }
 
     const token = String(req.body?.token || '');
@@ -1874,7 +2026,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
       client = null;
       return res.status(400).json({
         status:'invalid',
-        version:'5.4.0',
+        version:'5.5.0',
         message:'Reset link is invalid, expired, or already used'
       });
     }
@@ -1913,7 +2065,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
 
     return res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       password_reset:true,
       sessions_revoked:revokedSessions,
       login_url:'/login.html'
@@ -1923,7 +2075,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
       try { await client.query('ROLLBACK'); } catch(_) {}
       client.release();
     }
-    return res.status(e.statusCode || 500).json({status:'error', version:'5.4.0', message:e.message});
+    return res.status(e.statusCode || 500).json({status:'error', version:'5.5.0', message:e.message});
   }
 });
 
@@ -1935,7 +2087,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'5.4.0',
+        version:'5.5.0',
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -1967,7 +2119,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1980,7 +2132,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'5.4.0',
+      version:'5.5.0',
       message:e.message
     });
   }
@@ -1994,7 +2146,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'5.4.0',
+        version:'5.5.0',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -2034,7 +2186,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -2052,7 +2204,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'5.4.0', logged_out:true});
+  res.json({status:'ok', version:'5.5.0', logged_out:true});
 });
 
 
@@ -2066,14 +2218,14 @@ app.get('/api/subscription/current', authRequired, async (req,res)=>{
     if (!snapshot) {
       return res.status(404).json({
         status:'not_found',
-        version:'5.4.0',
+        version:'5.5.0',
         customer_code:customerCode
       });
     }
 
-    res.json({status:'ok', version:'5.4.0', ...snapshot});
+    res.json({status:'ok', version:'5.5.0', ...snapshot});
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.4.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
   }
 });
 
@@ -2085,7 +2237,7 @@ app.get('/api/subscription/access-check', authRequired, async (req,res)=>{
     if (!snapshot) {
       return res.status(404).json({
         status:'not_found',
-        version:'5.4.0',
+        version:'5.5.0',
         customer_code:customerCode,
         access:{allowed:false, reason:'subscription_not_found'}
       });
@@ -2093,14 +2245,46 @@ app.get('/api/subscription/access-check', authRequired, async (req,res)=>{
 
     res.status(snapshot.access.allowed ? 200 : 403).json({
       status:snapshot.access.allowed ? 'ok' : 'subscription_blocked',
-      version:'5.4.0',
+      version:'5.5.0',
       customer:snapshot.customer,
       subscription:snapshot.subscription,
       usage:snapshot.usage,
       access:snapshot.access
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.4.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
+  }
+});
+
+
+app.get('/api/subscription/quota-check/:resource', authRequired, async (req,res)=>{
+  try {
+    const resource = validateChoice(req.params.resource, ['users','sites','devices'], 'resource');
+    const requestedAdditional = Number(req.query.additional ?? 1);
+    const additional = Number.isFinite(requestedAdditional) ? Math.max(0, requestedAdditional) : 1;
+    const customerCode = await subscriptionCustomerCodeForRequest(req);
+    const snapshot = await assertSubscriptionCapacity(customerCode, resource, additional, true);
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      resource,
+      additional,
+      customer:snapshot.customer,
+      subscription:snapshot.subscription,
+      usage:snapshot.usage,
+      access:snapshot.access
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({
+      status:e.statusCode === 409 ? 'subscription_quota_blocked' : 'error',
+      version:APP_VERSION,
+      message:e.message,
+      resource:e.resource || req.params.resource,
+      subscription:e.subscription || null,
+      usage:e.usage || null,
+      access:e.access || null
+    });
   }
 });
 
@@ -2156,7 +2340,8 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
+      subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
       counts
     });
   } catch(e) {
@@ -2171,7 +2356,7 @@ app.get('/api/admin/permissions', adminRequired, async (req,res)=>{
     const user = req.user || getSession(req)?.user || null;
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       role:user?.role || 'viewer',
       user:publicUser(user),
       permissions:publicPermissions(user),
@@ -2207,12 +2392,12 @@ app.get('/api/admin/subscription-plans', adminRequired, permissionRequired('VIEW
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       plans:result.rows
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.4.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
   }
 });
 
@@ -2230,12 +2415,12 @@ app.get('/api/admin/subscriptions', adminRequired, permissionRequired('VIEW_BILL
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:subscriptions.length,
       subscriptions
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.4.0', message:e.message});
+    res.status(500).json({status:'error', version:'5.5.0', message:e.message});
   }
 });
 
@@ -2351,13 +2536,13 @@ app.patch('/api/admin/subscriptions/:customerCode', adminRequired, permissionReq
       metadata:{customer_code:customer.code, customer_name:customer.name}
     });
 
-    res.json({status:'ok', version:'5.4.0', ...snapshot});
+    res.json({status:'ok', version:'5.5.0', ...snapshot});
   } catch(e) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch(_) {}
       client.release();
     }
-    res.status(e.statusCode || 500).json({status:'error', version:'5.4.0', message:e.message});
+    res.status(e.statusCode || 500).json({status:'error', version:'5.5.0', message:e.message});
   }
 });
 
@@ -2382,7 +2567,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       users:result.rows
     });
@@ -2416,7 +2601,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       customers:result.rows
     });
@@ -2451,7 +2636,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       sites:result.rows
     });
@@ -2484,7 +2669,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       access:result.rows
     });
@@ -2583,6 +2768,8 @@ async function writeAuditLog(req, {action, entity_type, entity_id, old_values, n
 
 
 async function ensureInviteSchema() {
+  if (inviteSchemaReady) return;
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_invites (
       id bigserial PRIMARY KEY,
@@ -2620,6 +2807,13 @@ async function ensureInviteSchema() {
     CREATE INDEX IF NOT EXISTS idx_user_invites_status
     ON user_invites(status)
   `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_invites_customer_pending
+    ON user_invites(customer_code, status, expires_at)
+  `);
+
+  inviteSchemaReady = true;
 }
 
 function createInviteToken() {
@@ -2830,7 +3024,7 @@ app.get('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES'
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       invites:result.rows.map(row => publicInvite(row, req))
     });
@@ -2866,6 +3060,39 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
 
     if (!customer) {
       return res.status(404).json({status:'not_found', message:'customer not found', customer_code:customerCode});
+    }
+
+    const existingAccess = await one(`
+      SELECT 1 AS found
+      FROM app_user_tenant_access a
+      JOIN app_users u ON lower(u.email)=lower(a.user_email)
+      WHERE a.customer_code=$1 AND lower(u.email)=lower($2) AND u.status='active'
+      LIMIT 1
+    `, [customerCode, email]);
+
+    const existingPendingInvite = await one(`
+      SELECT id::text
+      FROM user_invites
+      WHERE customer_code=$1
+        AND lower(email)=lower($2)
+        AND status='pending'
+        AND expires_at > now()
+      LIMIT 1
+    `, [customerCode, email]);
+
+    if (existingPendingInvite) {
+      return res.status(409).json({
+        status:'duplicate_invite',
+        version:APP_VERSION,
+        message:'This email already has a pending invite for the tenant',
+        invite_id:existingPendingInvite.id
+      });
+    }
+
+    if (!existingAccess) {
+      await assertSubscriptionCapacity(customerCode, 'users', 1, true);
+    } else {
+      await assertSubscriptionAccessForCustomer(customerCode);
     }
 
     if (siteCode) {
@@ -2943,13 +3170,21 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'create_user_invite',
       invite:publicInvite(invite, req),
       email:inviteEmailDelivery
     });
   } catch(e) {
-    res.status(e.statusCode || 500).json({status:'error', message:e.message});
+    res.status(e.statusCode || 500).json({
+      status:e.statusCode === 409 ? 'subscription_quota_blocked' : 'error',
+      version:APP_VERSION,
+      message:e.message,
+      resource:e.resource || null,
+      subscription:e.subscription || null,
+      usage:e.usage || null,
+      access:e.access || null
+    });
   }
 });
 
@@ -2986,7 +3221,7 @@ app.post('/api/admin/invites/:id/email', adminRequired, permissionRequired('MANA
 
     res.json({
       status:delivery.email.sent ? 'ok' : 'not_sent',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'send_user_invite_email',
       invite:publicInvite(delivery.invite, req),
       email:delivery.email
@@ -3031,7 +3266,7 @@ app.post('/api/admin/invites/:id/cancel', adminRequired, permissionRequired('MAN
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'cancel_user_invite',
       invite
     });
@@ -3071,7 +3306,7 @@ app.get('/api/invites/:token', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       invite:{
         ...invite,
         expired
@@ -3124,6 +3359,21 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
       await pool.query(`UPDATE user_invites SET status='expired', updated_at=now() WHERE id=$1`, [invite.id]);
       return res.status(400).json({status:'error', message:'invite expired'});
     }
+
+    const existingTenantAccess = await one(`
+      SELECT 1 AS found
+      FROM app_user_tenant_access a
+      JOIN app_users u ON lower(u.email)=lower(a.user_email)
+      WHERE a.customer_code=$1 AND lower(u.email)=lower($2) AND u.status='active'
+      LIMIT 1
+    `, [invite.customer_code, invite.email]);
+
+    await assertSubscriptionCapacity(
+      invite.customer_code,
+      'users',
+      existingTenantAccess ? 0 : 1,
+      false
+    );
 
     const fullName = fullNameInput || invite.full_name || invite.email;
     const salt = makeSalt();
@@ -3208,7 +3458,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'accept_user_invite',
       authenticated:true,
       token:sessionToken,
@@ -3218,7 +3468,15 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
       expires_at:new Date(expiresAt).toISOString()
     });
   } catch(e) {
-    res.status(500).json({status:'error', message:e.message});
+    res.status(e.statusCode || 500).json({
+      status:e.statusCode === 409 ? 'subscription_quota_blocked' : 'error',
+      version:APP_VERSION,
+      message:e.message,
+      resource:e.resource || null,
+      subscription:e.subscription || null,
+      usage:e.usage || null,
+      access:e.access || null
+    });
   }
 });
 
@@ -3254,7 +3512,7 @@ app.get('/api/admin/audit-logs', adminRequired, permissionRequired('AUDIT_VIEW')
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       count:result.rows.length,
       logs:result.rows
     });
@@ -3305,7 +3563,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANA
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'update_user_status',
       user
     });
@@ -3358,7 +3616,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'update_user_role',
       user
     });
@@ -3400,7 +3658,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, permissionRequired
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'update_customer_status',
       customer
     });
@@ -3451,7 +3709,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, perm
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       action:'update_site_status',
       site
     });
@@ -3510,7 +3768,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       tenant:context
     });
   } catch(e) {
@@ -3524,7 +3782,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       customers:context.customers,
       sites:context.sites
     });
@@ -3534,11 +3792,13 @@ app.get('/api/tenant/customers', async (req,res)=>{
 });
 
 
+app.use(['/api/machines', '/api/sites', '/api/devices'], authRequired, subscriptionAccessRequired);
+
 app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.4.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.5.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -3646,7 +3906,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.4.0',
+      version:'5.5.0',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -3667,7 +3927,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.4.0',
+      version:'5.5.0',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -3717,7 +3977,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -3761,7 +4021,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       machine_code:req.params.code,
       report: report || null
     });
@@ -3799,7 +4059,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'5.4.0',
+        version:'5.5.0',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -3814,7 +4074,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -3854,7 +4114,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -3905,7 +4165,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       machine_code:req.params.code,
       report
     });
@@ -3970,7 +4230,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -4021,7 +4281,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       device:row
     });
   } catch(e) {
@@ -4066,7 +4326,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       device:row
     });
   } catch(e) {
@@ -4323,7 +4583,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -4345,7 +4605,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -4396,7 +4656,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -4440,7 +4700,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -4491,7 +4751,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.4.0',
+      version:'5.5.0',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -4635,7 +4895,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v5.4.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.5.0
     </div>
   </main>
 </body>
@@ -4999,7 +5259,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'5.4.0',
+    version:'5.5.0',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -5021,7 +5281,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5044,7 +5304,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5154,7 +5414,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.4.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.5.0</p>
   </div>
 </body>
 </html>`;
@@ -5175,7 +5435,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'5.4.0',
+    version:'5.5.0',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -5230,7 +5490,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -5270,7 +5530,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -5311,7 +5571,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.4.0',
+      version:'5.5.0',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

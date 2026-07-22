@@ -1,0 +1,26 @@
+FactoryBox One v5.5.0 Subscription Enforcement / Usage Limit Guard Pack
+
+Değişen / eklenen dosyalar:
+
+- KURULUM_V5_5.txt
+- docs/V5_5_SUBSCRIPTION_ENFORCEMENT_USAGE_LIMIT_GUARD_PACK.md
+- platform/database/migrations/018_subscription_enforcement_usage_limit_guard.sql
+- platform/backend/server.js
+- platform/backend/package.json
+- platform/backend/package-lock.json
+- platform/backend/.env.auth.example
+- platform/backend/README.md
+- platform/backend/public/admin.html
+- platform/backend/public/login.html
+- platform/backend/public/signup.html
+- platform/backend/public/forgot-password.html
+- platform/backend/public/reset-password.html
+
+Ana özellikler:
+
+- Abonelik durumuna göre operasyon API engeli
+- User quota enforcement
+- Bekleyen davetlerin ayrılmış kapasite hesabı
+- Duplicate pending invite engeli
+- Quota-check API
+- Admin enforcement durumu ve quota görünümü

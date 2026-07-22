@@ -1,0 +1,57 @@
+FactoryBox One v5.5.0 - Subscription Enforcement / Usage Limit Guard Pack
+
+1) ZIP içeriğini mevcut proje ana klasörünün üzerine çıkarın.
+2) Dosyaları hedefte değiştir seçeneğini onaylayın.
+3) platform/backend/.env dosyasının en altına ekleyin:
+
+   SUBSCRIPTION_ENFORCEMENT_ENABLED=true
+
+4) Backend terminalini kapatıp yeniden başlatın:
+
+   cd platform\backend
+   npm.cmd start
+
+5) Tarayıcı kontrolleri:
+
+   http://localhost:3100/api/health
+   Beklenen version: 5.5.0
+
+   http://localhost:3100/api/auth/status
+   Beklenen:
+   subscription_enforcement_enabled: true
+
+   http://localhost:3100/admin.html?fresh=550
+   Ctrl + F5 yapın.
+
+6) Admin panel kontrolü:
+
+   - Subscription enforcement: ON görünmeli.
+   - Users alanında aktif kullanıcı / plan limiti görünmeli.
+   - Bekleyen davet varsa (+N bekleyen) görünmeli.
+
+7) Kullanıcı quota testi:
+
+   Trial plan user_limit değeri 3'tür.
+   Limit dolana kadar davet oluşturulabilir.
+   Limit dolduğunda yeni davet şu sonuçla reddedilmelidir:
+
+   status: subscription_quota_blocked
+   HTTP: 409
+
+8) Abonelik engel testi:
+
+   Admin panelde test tenant status değerini geçici olarak expired yapın.
+   Dashboard veya aşağıdaki adres engellenmelidir:
+
+   http://localhost:3100/api/machines
+
+   Beklenen HTTP: 403
+   Beklenen status: subscription_blocked
+
+   Testten sonra status değerini tekrar trialing veya active yapın.
+
+Notlar:
+- Billing/admin ekranları aboneliği düzeltmek için açık kalır.
+- system_admin rolü operasyon engelinden muaftır.
+- Gerçek ödeme entegrasyonu bu sürümde yoktur.
+- .env dosyası pakete dahil değildir ve mevcut ayarlarınız ezilmez.

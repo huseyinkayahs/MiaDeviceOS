@@ -71,3 +71,21 @@ Dashboard:
 ```text
 http://localhost:3100
 ```
+
+## v5.5 Subscription Enforcement / Usage Limit Guard
+
+```text
+GET /api/subscription/current
+GET /api/subscription/access-check
+GET /api/subscription/quota-check/users?additional=1
+GET /api/subscription/quota-check/sites?additional=1
+GET /api/subscription/quota-check/devices?additional=1
+```
+
+Aktif enforcement:
+
+```env
+SUBSCRIPTION_ENFORCEMENT_ENABLED=true
+```
+
+`expired`, `cancelled` veya `past_due` tenant için `/api/machines`, `/api/sites` ve `/api/devices` operasyonları engellenir. Kullanıcı davetleri plan limitine göre kontrol edilir.

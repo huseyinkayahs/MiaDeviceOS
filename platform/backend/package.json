@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "5.4.0",
-  "description": "FactoryBox / Mia BusinessOS Platform Backend - SaaS Billing / Subscription Foundation Pack",
+  "version": "5.5.0",
+  "description": "FactoryBox / Mia BusinessOS Platform Backend - Subscription Enforcement / Usage Limit Guard Pack",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

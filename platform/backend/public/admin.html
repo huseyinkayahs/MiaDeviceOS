@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.4.0: Plan, abonelik, deneme süresi ve tenant kullanım limitleri.</p>
+        <p class="muted">v5.5.0: Abonelik erişim engeli ve gerçek kullanıcı quota kontrolü.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -101,7 +101,8 @@
 
   <section id="billingSubscriptionsSection" class="card wide admin-card">
     <h2>Tenant Subscriptions</h2>
-    <p class="muted">Plan, abonelik durumu, deneme/bitiş tarihi ve kullanım limitleri.</p>
+    <p class="muted">Plan, abonelik durumu ve gerçek zamanlı kullanım limiti zorlaması.</p>
+    <p id="subscriptionEnforcementStatus" class="muted">Enforcement durumu yükleniyor...</p>
     <div id="subscriptionsTable">Yükleniyor...</div>
   </section>
 
@@ -432,7 +433,10 @@
 
   function usageText(item) {
     if (!item) return '-';
-    return item.unlimited ? `${item.used}/∞` : `${item.used}/${item.limit}${item.exceeded ? ' ⚠' : ''}`;
+    if (item.unlimited) return item.reserved ? `${item.used}/∞ (+${item.reserved} bekleyen)` : `${item.used}/∞`;
+    const pending = item.reserved ? ` (+${item.reserved} bekleyen)` : '';
+    const warning = item.capacity_exceeded ? ' ⚠ kapasite aşıldı' : (item.at_limit ? ' • limit dolu' : '');
+    return `${item.used}/${item.limit}${pending}${warning}`;
   }
 
   function renderSubscriptions(data) {
@@ -454,7 +458,7 @@
       {label:'Users', value:r=>usageText(r.usage?.users)},
       {label:'Sites', value:r=>usageText(r.usage?.sites)},
       {label:'Devices', value:r=>usageText(r.usage?.devices)},
-      {label:'Access', value:r=>r.access?.allowed ? 'allowed' : `blocked: ${r.access?.reason || '-'}`},
+      {label:'Access', value:r=>r.access?.allowed ? (r.access?.quota_at_limit ? 'allowed • quota full' : 'allowed') : `blocked: ${r.access?.reason || '-'}`},
       {label:'Aksiyon', html:true, value:r=>can('MANAGE_BILLING') ? `<button class="secondary-btn mini-btn" data-action="save-subscription" data-customer-code="${esc(r.customer_code)}">Kaydet</button>` : '<span class="muted">görüntüleme</span>'}
     ], rows);
   }
@@ -535,7 +539,13 @@
     }
 
     const tasks = [
-      ['overview', '/api/admin/overview', data => renderCounts(data.counts || {}), 'adminCounts'],
+      ['overview', '/api/admin/overview', data => {
+        renderCounts(data.counts || {});
+        const el = document.getElementById('subscriptionEnforcementStatus');
+        if (el) el.textContent = data.subscription_enforcement_enabled
+          ? 'Subscription enforcement: ON — expired/blocked tenant ve quota kontrolleri aktif.'
+          : 'Subscription enforcement: OFF — sadece izleme modu.';
+      }, 'adminCounts'],
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
       ...(can('VIEW_BILLING') ? [
