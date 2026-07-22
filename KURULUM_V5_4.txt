@@ -1,0 +1,34 @@
+FactoryBox One v5.4.0 - SaaS Billing / Subscription Foundation Pack
+
+1) ZIP içeriğini mevcut proje ana klasörünün üzerine çıkarın.
+2) Dosyaları hedefte değiştir seçeneğini onaylayın.
+3) Backend terminalini kapatıp yeniden başlatın:
+
+   cd platform\backend
+   npm.cmd start
+
+4) Tarayıcı kontrolleri:
+
+   http://localhost:3100/api/health
+   Beklenen version: 5.4.0
+
+   http://localhost:3100/admin.html?fresh=540
+   Ctrl + F5 yapın.
+
+5) Admin panelde kontrol edin:
+
+   - Subscription Plans tablosu görünmeli.
+   - Tenant Subscriptions tablosu görünmeli.
+   - Mevcut customer varsayılan olarak trial / trialing olmalı.
+   - Plan veya status değiştirip Kaydet butonuna basılabilmeli.
+
+6) API testi (login token ile):
+
+   GET /api/subscription/current
+   GET /api/subscription/access-check
+
+Notlar:
+- Gerçek ödeme alma entegrasyonu bu sürümde yoktur.
+- Trial, starter, professional ve enterprise planları otomatik oluşturulur.
+- Migration tablosu backend başlangıcında da güvenli biçimde otomatik hazırlanır.
+- .env dosyanız değiştirilmez.

@@ -1,0 +1,26 @@
+FactoryBox One v5.4.0 SaaS Billing / Subscription Foundation Pack
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/package.json
+- platform/backend/package-lock.json
+- platform/backend/public/admin.html
+- platform/backend/public/login.html
+- platform/backend/public/signup.html
+- platform/backend/public/forgot-password.html
+- platform/backend/public/reset-password.html
+
+Yeni dosyalar:
+- platform/database/migrations/017_saas_billing_subscription_foundation_pack.sql
+- KURULUM_V5_4.txt
+- V5_4_PAKET_ICERIGI.txt
+
+Ana özellikler:
+- subscription_plans tablosu
+- tenant_subscriptions tablosu
+- trial/starter/professional/enterprise planları
+- trialing/active/past_due/cancelled/expired durumları
+- kullanıcı/site/cihaz limitleri
+- tenant abonelik erişim kontrol API'si
+- admin panel plan ve abonelik görünümü
+- abonelik güncelleme audit log kaydı

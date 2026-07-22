@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Sites → Tenant Access → Invite User → Permissions → Audit Log</p>
+    <p>Users → Customers → Subscription Plans → Tenant Subscriptions → Sites → Permissions → Audit Log</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.3.0: Yetki kontrollü SaaS yönetimi ve güvenli hesap kurtarma akışı.</p>
+        <p class="muted">v5.4.0: Plan, abonelik, deneme süresi ve tenant kullanım limitleri.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -93,6 +93,18 @@
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
+  <section id="billingPlansSection" class="card wide admin-card">
+    <h2>Subscription Plans</h2>
+    <p class="muted">Ödeme sağlayıcısından bağımsız paket ve limit tanımları.</p>
+    <div id="subscriptionPlansTable">Yükleniyor...</div>
+  </section>
+
+  <section id="billingSubscriptionsSection" class="card wide admin-card">
+    <h2>Tenant Subscriptions</h2>
+    <p class="muted">Plan, abonelik durumu, deneme/bitiş tarihi ve kullanım limitleri.</p>
+    <div id="subscriptionsTable">Yükleniyor...</div>
+  </section>
+
   <section class="card wide admin-card">
     <h2>Sites / Atölyeler</h2>
     <p class="muted">Site status aksiyonu MANAGE_SITES yetkisine bağlıdır.</p>
@@ -115,11 +127,12 @@
 (function () {
   let currentUser = null;
   let currentPermissions = [];
+  let subscriptionPlanCodes = ['trial','starter','professional','enterprise'];
 
   const ROLE_MATRIX = {
-    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','VIEW_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
     operator: ['SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
     viewer: ['VIEW_REPORTS','VIEW_DASHBOARD']
   };
@@ -127,7 +140,7 @@
   const ROLE_SUMMARY = {
     system_admin: 'Tüm sistem yetkileri',
     owner: 'Tüm tenant yönetimi',
-    admin: 'Customer/site/invite/audit yönetimi',
+    admin: 'Customer/site/invite/billing görüntüleme/audit yönetimi',
     operator: 'Dashboard + rapor işlemleri',
     viewer: 'Sadece görüntüleme'
   };
@@ -282,6 +295,8 @@
         <div><p class="label">ADMIN VIEW</p><strong>${can('ADMIN_VIEW') ? 'yes' : 'no'}</strong></div>
         <div><p class="label">MANAGE USERS</p><strong>${can('MANAGE_USERS') ? 'yes' : 'no'}</strong></div>
         <div><p class="label">MANAGE INVITES</p><strong>${can('MANAGE_INVITES') ? 'yes' : 'no'}</strong></div>
+        <div><p class="label">VIEW BILLING</p><strong>${can('VIEW_BILLING') ? 'yes' : 'no'}</strong></div>
+        <div><p class="label">MANAGE BILLING</p><strong>${can('MANAGE_BILLING') ? 'yes' : 'no'}</strong></div>
         <div><p class="label">SEND REPORTS</p><strong>${can('SEND_REPORTS') ? 'yes' : 'no'}</strong></div>
       </div>
       <p class="muted permission-list">${permissionBadges(perms)}</p>
@@ -290,6 +305,8 @@
 
     const inviteSection = document.getElementById('inviteSection');
     const auditSection = document.getElementById('auditSection');
+    const billingPlansSection = document.getElementById('billingPlansSection');
+    const billingSubscriptionsSection = document.getElementById('billingSubscriptionsSection');
 
     if (inviteSection && !can('MANAGE_INVITES')) {
       inviteSection.style.display = 'none';
@@ -297,6 +314,11 @@
 
     if (auditSection && !can('AUDIT_VIEW')) {
       auditSection.style.display = 'none';
+    }
+
+    if (!can('VIEW_BILLING')) {
+      if (billingPlansSection) billingPlansSection.style.display = 'none';
+      if (billingSubscriptionsSection) billingSubscriptionsSection.style.display = 'none';
     }
   }
 
@@ -312,6 +334,11 @@
       ['Devices', counts.devices],
       ['Tenant Access', counts.tenant_access],
       ['Invites', counts.invites],
+      ['Plans', counts.subscription_plans],
+      ['Subscriptions', counts.subscriptions],
+      ['Trialing', counts.trialing_subscriptions],
+      ['Active Subs', counts.active_subscriptions],
+      ['Blocked Subs', counts.blocked_subscriptions],
       ['AI Reports', counts.ai_reports],
       ['Active Alarms', counts.active_alarms],
       ['Audit Logs', counts.audit_logs]
@@ -362,6 +389,73 @@
       {label:'Users', value:r=>r.user_count},
       {label:'Created', value:r=>fmtDate(r.created_at)},
       {label:'Aksiyon', html:true, value:r=>can('MANAGE_CUSTOMERS') ? `<button class="secondary-btn mini-btn" data-action="save-customer" data-code="${esc(r.code)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
+    ], rows);
+  }
+
+
+  function money(cents, currency) {
+    if (cents === null || cents === undefined) return 'Tanımlanmadı';
+    const value = Number(cents) / 100;
+    try {
+      return new Intl.NumberFormat('tr-TR', {style:'currency', currency:currency || 'TRY'}).format(value);
+    } catch {
+      return `${value.toFixed(2)} ${currency || 'TRY'}`;
+    }
+  }
+
+  function limitText(limit) {
+    return limit === null || limit === undefined ? 'Sınırsız' : String(limit);
+  }
+
+  function dateInputValue(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  }
+
+  function renderSubscriptionPlans(data) {
+    const rows = data.plans || [];
+    subscriptionPlanCodes = rows.filter(r => r.is_active).map(r => r.code);
+    document.getElementById('subscriptionPlansTable').innerHTML = table([
+      {label:'Code', value:r=>r.code},
+      {label:'Plan', value:r=>r.name},
+      {label:'Açıklama', value:r=>r.description || '-'},
+      {label:'Trial', value:r=>`${r.trial_days} gün`},
+      {label:'Users', value:r=>limitText(r.user_limit)},
+      {label:'Sites', value:r=>limitText(r.site_limit)},
+      {label:'Devices', value:r=>limitText(r.device_limit)},
+      {label:'Aylık', value:r=>money(r.monthly_price_cents, r.currency)},
+      {label:'Aktif', value:r=>r.is_active ? 'yes' : 'no'}
+    ], rows);
+  }
+
+  function usageText(item) {
+    if (!item) return '-';
+    return item.unlimited ? `${item.used}/∞` : `${item.used}/${item.limit}${item.exceeded ? ' ⚠' : ''}`;
+  }
+
+  function renderSubscriptions(data) {
+    const rows = (data.subscriptions || []).map(snapshot => ({
+      ...snapshot.subscription,
+      customer_code:snapshot.customer.code,
+      customer_name:snapshot.customer.name,
+      usage:snapshot.usage,
+      access:snapshot.access,
+      __kind:'subscription'
+    }));
+
+    document.getElementById('subscriptionsTable').innerHTML = table([
+      {label:'Customer', value:r=>`${r.customer_name} (${r.customer_code})`},
+      {label:'Plan', html:true, value:r=>can('MANAGE_BILLING') ? selectHtml('subscription-plan-select', r.plan_code, subscriptionPlanCodes) : esc(r.plan_code)},
+      {label:'Status', html:true, value:r=>can('MANAGE_BILLING') ? selectHtml('subscription-status-select', r.status, ['trialing','active','past_due','cancelled','expired']) : esc(r.status)},
+      {label:'Trial Ends', html:true, value:r=>can('MANAGE_BILLING') ? `<input class="subscription-trial-end" type="date" value="${esc(dateInputValue(r.trial_ends_at))}">` : esc(fmtDate(r.trial_ends_at))},
+      {label:'Period Ends', html:true, value:r=>can('MANAGE_BILLING') ? `<input class="subscription-period-end" type="date" value="${esc(dateInputValue(r.current_period_end))}">` : esc(fmtDate(r.current_period_end))},
+      {label:'Users', value:r=>usageText(r.usage?.users)},
+      {label:'Sites', value:r=>usageText(r.usage?.sites)},
+      {label:'Devices', value:r=>usageText(r.usage?.devices)},
+      {label:'Access', value:r=>r.access?.allowed ? 'allowed' : `blocked: ${r.access?.reason || '-'}`},
+      {label:'Aksiyon', html:true, value:r=>can('MANAGE_BILLING') ? `<button class="secondary-btn mini-btn" data-action="save-subscription" data-customer-code="${esc(r.customer_code)}">Kaydet</button>` : '<span class="muted">görüntüleme</span>'}
     ], rows);
   }
 
@@ -444,6 +538,10 @@
       ['overview', '/api/admin/overview', data => renderCounts(data.counts || {}), 'adminCounts'],
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
+      ...(can('VIEW_BILLING') ? [
+        ['subscription-plans', '/api/admin/subscription-plans', renderSubscriptionPlans, 'subscriptionPlansTable'],
+        ['subscriptions', '/api/admin/subscriptions', renderSubscriptions, 'subscriptionsTable']
+      ] : []),
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
       ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable']
     ];
@@ -513,6 +611,28 @@
     await apiJson(`/api/admin/sites/${encodeURIComponent(customerCode)}/${encodeURIComponent(code)}/status`, {
       method:'PATCH',
       body:JSON.stringify({status})
+    });
+  }
+
+
+  async function saveSubscription(button) {
+    const tr = button.closest('tr');
+    const customerCode = button.dataset.customerCode;
+    const plan_code = tr.querySelector('.subscription-plan-select').value;
+    const status = tr.querySelector('.subscription-status-select').value;
+    const trialDate = tr.querySelector('.subscription-trial-end').value;
+    const periodDate = tr.querySelector('.subscription-period-end').value;
+
+    const endOfDayIso = value => value ? new Date(`${value}T23:59:59`).toISOString() : null;
+
+    await apiJson(`/api/admin/subscriptions/${encodeURIComponent(customerCode)}`, {
+      method:'PATCH',
+      body:JSON.stringify({
+        plan_code,
+        status,
+        trial_ends_at:endOfDayIso(trialDate),
+        current_period_end:endOfDayIso(periodDate)
+      })
     });
   }
 
@@ -598,6 +718,12 @@
         await saveSite(button);
         await loadAdmin();
         status.textContent = 'Site güncellendi. Activity history güncellendi.';
+      }
+
+      if (action === 'save-subscription') {
+        await saveSubscription(button);
+        await loadAdmin();
+        status.textContent = 'Tenant aboneliği ve limit kontrolü güncellendi.';
       }
 
       if (action === 'copy-invite') {
