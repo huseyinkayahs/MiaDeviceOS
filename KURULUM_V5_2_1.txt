@@ -1,0 +1,80 @@
+
+# V5.2.1 User Permission Visibility Fix
+
+Bu paket v5.2.0 üzerine kopyalanır.
+
+## Amaç
+
+Admin panelde sadece aktif kullanıcının değil, diğer kullanıcıların rollerine göre hangi yetkileri aldığını da net göstermek.
+
+## Eklenenler
+
+```text
+Role Matrix tablosu
+Kullanıcılar tablosunda Permissions kolonu
+Role değişince permission önizlemesinin canlı değişmesi
+Permission Overview daha açıklayıcı hale getirildi
+```
+
+## Kurulum
+
+ZIP'i proje ana klasörünün üzerine çıkar:
+
+```text
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+```
+
+"Dosyaları hedefte değiştir" seçeneğini onayla.
+
+## Backend Yeniden Başlatma
+
+```powershell
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+```
+
+## Test 1 - Health
+
+```text
+http://localhost:3100/api/health
+```
+
+Beklenen:
+
+```text
+version: 5.2.1
+```
+
+## Test 2 - Admin Panel
+
+```text
+http://localhost:3100/admin.html?fresh=521
+```
+
+Ctrl + F5 yap.
+
+Beklenen:
+
+```text
+Permission Overview içinde Role Matrix tablosu
+Kullanıcılar tablosunda Permissions kolonu
+Role değiştirince permission listesi değişir
+```
+
+## Test 3 - Kullanıcı Rol Ayarı
+
+Kullanıcılar bölümünde örnek:
+
+```text
+hsrezazad@gmail.com → role: viewer
+Permissions: VIEW_REPORTS, VIEW_DASHBOARD
+Kaydet
+```
+
+veya:
+
+```text
+hsrezazad@gmail.com → role: operator
+Permissions: SEND_REPORTS, VIEW_REPORTS, VIEW_DASHBOARD
+Kaydet
+```

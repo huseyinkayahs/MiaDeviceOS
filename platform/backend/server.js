@@ -682,6 +682,109 @@ function verifyPassword(password, salt, expectedHash) {
   return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expectedHash));
 }
 
+
+const ROLE_PERMISSIONS = {
+  system_admin: [
+    'ADMIN_VIEW',
+    'MANAGE_USERS',
+    'MANAGE_CUSTOMERS',
+    'MANAGE_SITES',
+    'MANAGE_INVITES',
+    'AUDIT_VIEW',
+    'SEND_REPORTS',
+    'VIEW_REPORTS',
+    'VIEW_DASHBOARD'
+  ],
+  owner: [
+    'ADMIN_VIEW',
+    'MANAGE_USERS',
+    'MANAGE_CUSTOMERS',
+    'MANAGE_SITES',
+    'MANAGE_INVITES',
+    'AUDIT_VIEW',
+    'SEND_REPORTS',
+    'VIEW_REPORTS',
+    'VIEW_DASHBOARD'
+  ],
+  admin: [
+    'ADMIN_VIEW',
+    'MANAGE_CUSTOMERS',
+    'MANAGE_SITES',
+    'MANAGE_INVITES',
+    'AUDIT_VIEW',
+    'SEND_REPORTS',
+    'VIEW_REPORTS',
+    'VIEW_DASHBOARD'
+  ],
+  operator: [
+    'SEND_REPORTS',
+    'VIEW_REPORTS',
+    'VIEW_DASHBOARD'
+  ],
+  viewer: [
+    'VIEW_REPORTS',
+    'VIEW_DASHBOARD'
+  ]
+};
+
+function getRolePermissions(role) {
+  return ROLE_PERMISSIONS[String(role || 'viewer')] || ROLE_PERMISSIONS.viewer;
+}
+
+function hasPermission(userOrRole, permission) {
+  const role = typeof userOrRole === 'string' ? userOrRole : userOrRole?.role;
+  return getRolePermissions(role).includes(permission);
+}
+
+function publicPermissions(user) {
+  return getRolePermissions(user?.role || 'viewer');
+}
+
+function permissionRequired(permission) {
+  return (req, res, next) => {
+    if (!authConfig().enabled) {
+      return next();
+    }
+
+    if (!req.user) {
+      return res.status(401).json({
+        status:'unauthorized',
+        message:'Login required'
+      });
+    }
+
+    if (!hasPermission(req.user, permission)) {
+      return res.status(403).json({
+        status:'forbidden',
+        message:`Permission required: ${permission}`,
+        permission,
+        role:req.user.role
+      });
+    }
+
+    return next();
+  };
+}
+
+function assertRoleChangeAllowed(actor, targetRole) {
+  const actorRole = actor?.role || 'viewer';
+  const nextRole = String(targetRole || '').trim();
+
+  if (nextRole === 'system_admin' && actorRole !== 'system_admin') {
+    const err = new Error('Only system_admin can assign system_admin role');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (nextRole === 'owner' && !['system_admin', 'owner'].includes(actorRole)) {
+    const err = new Error('Only owner or system_admin can assign owner role');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  return true;
+}
+
 function publicUser(row) {
   if (!row) return null;
   return {
@@ -690,6 +793,7 @@ function publicUser(row) {
     full_name:row.full_name,
     role:row.role,
     status:row.status,
+    permissions:publicPermissions(row),
     default_customer_code:row.default_customer_code,
     default_site_code:row.default_site_code
   };
@@ -1074,7 +1178,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'5.1.0',
+    version:'5.2.1',
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1091,7 +1195,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1102,7 +1206,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1112,7 +1216,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'5.1.0',
+    version:'5.2.1',
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1130,7 +1234,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'5.1.0',
+        version:'5.2.1',
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -1162,7 +1266,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -1174,7 +1278,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'5.1.0',
+      version:'5.2.1',
       message:e.message
     });
   }
@@ -1188,7 +1292,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'5.1.0',
+        version:'5.2.1',
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -1228,7 +1332,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       authenticated:true,
       token,
       user:publicUser(user),
@@ -1243,7 +1347,7 @@ app.post('/api/auth/login', async (req,res)=>{
 app.post('/api/auth/logout', async (req,res)=>{
   const token = bearerToken(req);
   if (token) authSessions.delete(token);
-  res.json({status:'ok', version:'5.1.0', logged_out:true});
+  res.json({status:'ok', version:'5.2.1', logged_out:true});
 });
 
 
@@ -1273,6 +1377,7 @@ function adminRequired(req, res, next) {
 
   req.user = session.user;
   req.tenant = session.tenant;
+  req.permissions = publicPermissions(session.user);
   return next();
 }
 
@@ -1294,8 +1399,26 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       counts
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
+
+app.get('/api/admin/permissions', adminRequired, async (req,res)=>{
+  try {
+    const user = req.user || getSession(req)?.user || null;
+    res.json({
+      status:'ok',
+      version:'5.2.1',
+      role:user?.role || 'viewer',
+      user:publicUser(user),
+      permissions:publicPermissions(user),
+      matrix:ROLE_PERMISSIONS
     });
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
@@ -1323,7 +1446,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       count:result.rows.length,
       users:result.rows
     });
@@ -1357,7 +1480,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       count:result.rows.length,
       customers:result.rows
     });
@@ -1392,7 +1515,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       count:result.rows.length,
       sites:result.rows
     });
@@ -1425,7 +1548,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       count:result.rows.length,
       access:result.rows
     });
@@ -1736,7 +1859,7 @@ function validateChoice(value, allowed, label) {
 
 
 
-app.get('/api/admin/invites', adminRequired, async (req,res)=>{
+app.get('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES'), async (req,res)=>{
   try {
     await ensureInviteSchema();
 
@@ -1771,7 +1894,7 @@ app.get('/api/admin/invites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       count:result.rows.length,
       invites:result.rows.map(row => publicInvite(row, req))
     });
@@ -1780,7 +1903,7 @@ app.get('/api/admin/invites', adminRequired, async (req,res)=>{
   }
 });
 
-app.post('/api/admin/invites', adminRequired, async (req,res)=>{
+app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES'), async (req,res)=>{
   try {
     await ensureInviteSchema();
 
@@ -1884,7 +2007,7 @@ app.post('/api/admin/invites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'create_user_invite',
       invite:publicInvite(invite, req),
       email:inviteEmailDelivery
@@ -1896,7 +2019,7 @@ app.post('/api/admin/invites', adminRequired, async (req,res)=>{
 
 
 
-app.post('/api/admin/invites/:id/email', adminRequired, async (req,res)=>{
+app.post('/api/admin/invites/:id/email', adminRequired, permissionRequired('MANAGE_INVITES'), async (req,res)=>{
   try {
     await ensureInviteSchema();
 
@@ -1927,7 +2050,7 @@ app.post('/api/admin/invites/:id/email', adminRequired, async (req,res)=>{
 
     res.json({
       status:delivery.email.sent ? 'ok' : 'not_sent',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'send_user_invite_email',
       invite:publicInvite(delivery.invite, req),
       email:delivery.email
@@ -1938,7 +2061,7 @@ app.post('/api/admin/invites/:id/email', adminRequired, async (req,res)=>{
 });
 
 
-app.post('/api/admin/invites/:id/cancel', adminRequired, async (req,res)=>{
+app.post('/api/admin/invites/:id/cancel', adminRequired, permissionRequired('MANAGE_INVITES'), async (req,res)=>{
   try {
     await ensureInviteSchema();
 
@@ -1972,7 +2095,7 @@ app.post('/api/admin/invites/:id/cancel', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'cancel_user_invite',
       invite
     });
@@ -2012,7 +2135,7 @@ app.get('/api/invites/:token', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       invite:{
         ...invite,
         expired
@@ -2149,7 +2272,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'accept_user_invite',
       authenticated:true,
       token:sessionToken,
@@ -2164,7 +2287,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 });
 
 
-app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
+app.get('/api/admin/audit-logs', adminRequired, permissionRequired('AUDIT_VIEW'), async (req,res)=>{
   try {
     await ensureAuditLogSchema();
 
@@ -2195,7 +2318,7 @@ app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       count:result.rows.length,
       logs:result.rows
     });
@@ -2205,9 +2328,17 @@ app.get('/api/admin/audit-logs', adminRequired, async (req,res)=>{
 });
 
 
-app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
+app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['active','inactive','suspended'], 'status');
+
+    if (String(req.user?.id || '') === String(req.params.id || '') && status !== 'active') {
+      return res.status(400).json({
+        status:'error',
+        message:'You cannot disable or suspend your own active admin session'
+      });
+    }
+
     const oldUser = await one(
       `SELECT id,email,full_name,role,status,default_customer_code,default_site_code FROM app_users WHERE id=$1 LIMIT 1`,
       [req.params.id]
@@ -2238,7 +2369,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'update_user_status',
       user
     });
@@ -2247,9 +2378,11 @@ app.patch('/api/admin/users/:id/status', adminRequired, async (req,res)=>{
   }
 });
 
-app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
+app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
   try {
     const role = validateChoice(req.body?.role, ['viewer','operator','admin','owner','system_admin'], 'role');
+    assertRoleChangeAllowed(req.user, role);
+
     const oldUser = await one(
       `SELECT id,email,full_name,role,status,default_customer_code,default_site_code FROM app_users WHERE id=$1 LIMIT 1`,
       [req.params.id]
@@ -2289,7 +2422,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'update_user_role',
       user
     });
@@ -2298,7 +2431,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, async (req,res)=>{
   }
 });
 
-app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
+app.patch('/api/admin/customers/:code/status', adminRequired, permissionRequired('MANAGE_CUSTOMERS'), async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['trial','pilot','active','inactive','suspended'], 'status');
     const oldCustomer = await one(
@@ -2331,7 +2464,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'update_customer_status',
       customer
     });
@@ -2340,7 +2473,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, async (req,res)=>{
   }
 });
 
-app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, async (req,res)=>{
+app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['trial','pilot','active','inactive','suspended'], 'status');
     const oldSite = await one(
@@ -2382,7 +2515,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, asyn
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       action:'update_site_status',
       site
     });
@@ -2400,13 +2533,48 @@ app.use('/api', (req,res,next)=>{
 
 app.use('/api/sites/:siteCode', siteAccessRequired);
 
+
+app.use('/api/sites/:siteCode/ai', (req,res,next)=>{
+  try {
+    if (!authConfig().enabled || !req.user) {
+      return next();
+    }
+
+    const path = req.path || '';
+    const wantsGenerateOrDelivery =
+      path.includes('/email') ||
+      path.includes('/openai-report') ||
+      path.includes('/daily-report/telegram') ||
+      path.includes('/daily-report/print') ||
+      String(req.query?.save || '') === '1';
+
+    if (!wantsGenerateOrDelivery) {
+      return next();
+    }
+
+    if (!hasPermission(req.user, 'SEND_REPORTS')) {
+      return res.status(403).json({
+        status:'forbidden',
+        message:'Permission required: SEND_REPORTS',
+        permission:'SEND_REPORTS',
+        role:req.user.role
+      });
+    }
+
+    return next();
+  } catch(e) {
+    return res.status(500).json({status:'error', message:e.message});
+  }
+});
+
+
 app.get('/api/tenant/context', async (req,res)=>{
   try {
     const session = getSession(req);
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       tenant:context
     });
   } catch(e) {
@@ -2420,7 +2588,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       customers:context.customers,
       sites:context.sites
     });
@@ -2434,7 +2602,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.1.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.2.1', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -2542,7 +2710,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.1.0',
+      version:'5.2.1',
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -2563,7 +2731,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.1.0',
+      version:'5.2.1',
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -2613,7 +2781,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -2657,7 +2825,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       machine_code:req.params.code,
       report: report || null
     });
@@ -2695,7 +2863,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'5.1.0',
+        version:'5.2.1',
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -2710,7 +2878,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2750,7 +2918,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -2801,7 +2969,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       machine_code:req.params.code,
       report
     });
@@ -2866,7 +3034,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -2917,7 +3085,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       device:row
     });
   } catch(e) {
@@ -2962,7 +3130,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       device:row
     });
   } catch(e) {
@@ -3219,7 +3387,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -3241,7 +3409,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -3292,7 +3460,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -3336,7 +3504,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -3387,7 +3555,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.1.0',
+      version:'5.2.1',
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -3531,7 +3699,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v5.1.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.2.1
     </div>
   </main>
 </body>
@@ -3895,7 +4063,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'5.1.0',
+    version:'5.2.1',
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -3917,7 +4085,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -3940,7 +4108,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -4050,7 +4218,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.1.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.2.1</p>
   </div>
 </body>
 </html>`;
@@ -4071,7 +4239,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'5.1.0',
+    version:'5.2.1',
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -4126,7 +4294,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -4166,7 +4334,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -4207,7 +4375,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.1.0',
+      version:'5.2.1',
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,

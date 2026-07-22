@@ -328,3 +328,28 @@
 #invitesTable .admin-table {
   min-width: 1200px;
 }
+
+
+.permission-list code {
+  display: inline-block;
+  margin: 4px 4px 0 0;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #1e3a8a;
+  font-size: 12px;
+}
+
+
+.role-matrix-table td {
+  vertical-align: top;
+}
+
+.user-permissions code,
+.permission-list code {
+  white-space: nowrap;
+}
+
+#usersTable .admin-table {
+  min-width: 1350px;
+}

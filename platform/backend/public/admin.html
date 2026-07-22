@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Sites → Tenant Access → Invite User → Audit Log</p>
+    <p>Users → Customers → Sites → Tenant Access → Invite User → Permissions → Audit Log</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.1: Admin panelden kullanıcı daveti ve tenant access verme.</p>
+        <p class="muted">v5.2.1: Owner / admin / operator / viewer rollerine göre yetki kontrollü SaaS yönetimi.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -33,8 +33,14 @@
   </section>
 
   <section class="card wide admin-card">
+    <h2>Permission Overview</h2>
+    <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
+    <div id="permissionPanel">Yükleniyor...</div>
+  </section>
+
+  <section id="inviteSection" class="card wide admin-card">
     <h2>Invite User / Tenant Access</h2>
-    <p class="muted">Yeni kullanıcıya customer/site erişimi ver ve davet linki oluştur.</p>
+    <p class="muted">Yeni kullanıcıya customer/site erişimi ver ve davet maili gönder.</p>
 
     <div class="admin-form-grid">
       <label>
@@ -56,7 +62,7 @@
       </label>
       <label>
         Customer Code
-        <input id="inviteCustomerCode" type="text" placeholder="örn: mia-creative-art">
+        <input id="inviteCustomerCode" type="text" placeholder="örn: mia-demo">
       </label>
       <label>
         Site Code
@@ -77,19 +83,19 @@
 
   <section class="card wide admin-card">
     <h2>Kullanıcılar</h2>
-    <p class="muted">Rol veya status değiştirip “Kaydet”e bas. Değişiklik audit log’a yazılır.</p>
+    <p class="muted">Her kullanıcı satırında mevcut role göre alacağı permission listesi görünür. Role değişince permission önizlemesi de değişir.</p>
     <div id="usersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Customers / Tenants</h2>
-    <p class="muted">Customer status değiştirilebilir. Değişiklik audit log’a yazılır.</p>
+    <p class="muted">Customer status aksiyonu MANAGE_CUSTOMERS yetkisine bağlıdır.</p>
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card">
     <h2>Sites / Atölyeler</h2>
-    <p class="muted">Site status değiştirilebilir. Değişiklik audit log’a yazılır.</p>
+    <p class="muted">Site status aksiyonu MANAGE_SITES yetkisine bağlıdır.</p>
     <div id="sitesTable">Yükleniyor...</div>
   </section>
 
@@ -98,20 +104,75 @@
     <div id="tenantAccessTable">Yükleniyor...</div>
   </section>
 
-  <section class="card wide admin-card">
+  <section id="auditSection" class="card wide admin-card">
     <h2>Activity History / Audit Log</h2>
-    <p class="muted">Son yönetim aksiyonları: kim, neyi, ne zaman değiştirdi?</p>
+    <p class="muted">AUDIT_VIEW yetkisi olan roller son yönetim aksiyonlarını görebilir.</p>
     <div id="auditLogTable">Yükleniyor...</div>
   </section>
 </main>
 
 <script>
 (function () {
-  let lastCustomers = [];
-  let lastSites = [];
+  let currentUser = null;
+  let currentPermissions = [];
+
+  const ROLE_MATRIX = {
+    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    operator: ['SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    viewer: ['VIEW_REPORTS','VIEW_DASHBOARD']
+  };
+
+  const ROLE_SUMMARY = {
+    system_admin: 'Tüm sistem yetkileri',
+    owner: 'Tüm tenant yönetimi',
+    admin: 'Customer/site/invite/audit yönetimi',
+    operator: 'Dashboard + rapor işlemleri',
+    viewer: 'Sadece görüntüleme'
+  };
+
+  function permissionsForRole(role) {
+    return ROLE_MATRIX[String(role || 'viewer')] || ROLE_MATRIX.viewer;
+  }
+
+  function permissionBadges(list) {
+    return (list || []).map(p => `<code>${esc(p)}</code>`).join(' ');
+  }
+
+  function renderRoleMatrix() {
+    const roles = ['system_admin','owner','admin','operator','viewer'];
+    return `
+      <h3>Role Matrix</h3>
+      <div class="admin-table-wrap">
+        <table class="admin-table role-matrix-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Özet</th>
+              <th>Permissions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${roles.map(role => `
+              <tr>
+                <td><strong>${esc(role)}</strong></td>
+                <td>${esc(ROLE_SUMMARY[role])}</td>
+                <td class="permission-list">${permissionBadges(permissionsForRole(role))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
 
   function authToken() {
     return localStorage.getItem('factorybox_auth_token') || '';
+  }
+
+  function can(permission) {
+    return currentPermissions.includes(permission);
   }
 
   function esc(v) {
@@ -161,7 +222,7 @@
     }
 
     if (res.status === 403) {
-      throw new Error('Admin yetkisi gerekli.');
+      throw new Error(body?.message || 'Bu işlem için yetkin yok.');
     }
 
     if (!res.ok) {
@@ -207,6 +268,38 @@
     if (el) el.innerHTML = `<span class="alarm">${esc(message)}</span>`;
   }
 
+  function renderPermissions(data) {
+    currentUser = data.user || null;
+    currentPermissions = data.permissions || currentUser?.permissions || [];
+
+    const role = data.role || currentUser?.role || '-';
+    const perms = currentPermissions;
+
+    document.getElementById('permissionPanel').innerHTML = `
+      <div class="admin-count-grid">
+        <div><p class="label">USER</p><strong>${esc(currentUser?.email || '-')}</strong></div>
+        <div><p class="label">ROLE</p><strong>${esc(role)}</strong></div>
+        <div><p class="label">ADMIN VIEW</p><strong>${can('ADMIN_VIEW') ? 'yes' : 'no'}</strong></div>
+        <div><p class="label">MANAGE USERS</p><strong>${can('MANAGE_USERS') ? 'yes' : 'no'}</strong></div>
+        <div><p class="label">MANAGE INVITES</p><strong>${can('MANAGE_INVITES') ? 'yes' : 'no'}</strong></div>
+        <div><p class="label">SEND REPORTS</p><strong>${can('SEND_REPORTS') ? 'yes' : 'no'}</strong></div>
+      </div>
+      <p class="muted permission-list">${permissionBadges(perms)}</p>
+      ${renderRoleMatrix()}
+    `;
+
+    const inviteSection = document.getElementById('inviteSection');
+    const auditSection = document.getElementById('auditSection');
+
+    if (inviteSection && !can('MANAGE_INVITES')) {
+      inviteSection.style.display = 'none';
+    }
+
+    if (auditSection && !can('AUDIT_VIEW')) {
+      auditSection.style.display = 'none';
+    }
+  }
+
   function renderCounts(counts) {
     const el = document.getElementById('adminCounts');
     if (!el) return;
@@ -237,47 +330,52 @@
     document.getElementById('usersTable').innerHTML = table([
       {label:'Email', value:r=>r.email},
       {label:'Ad', value:r=>r.full_name},
-      {label:'Rol', html:true, value:r=>selectHtml('user-role-select', r.role, ['viewer','operator','admin','owner','system_admin'])},
-      {label:'Status', html:true, value:r=>selectHtml('user-status-select', r.status, ['active','inactive','suspended'])},
+      {label:'Rol', html:true, value:r=>can('MANAGE_USERS') ? selectHtml('user-role-select', r.role, ['viewer','operator','admin','owner','system_admin']) : esc(r.role)},
+      {label:'Status', html:true, value:r=>can('MANAGE_USERS') ? selectHtml('user-status-select', r.status, ['active','inactive','suspended']) : esc(r.status)},
+      {label:'Permissions', html:true, value:r=>`<span class="permission-list user-permissions" data-permission-preview="${esc(r.id)}">${permissionBadges(permissionsForRole(r.role))}</span>`},
       {label:'Customer', value:r=>r.default_customer_code},
       {label:'Site', value:r=>r.default_site_code},
       {label:'Son Login', value:r=>fmtDate(r.last_login_at)},
-      {label:'Aksiyon', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="save-user" data-id="${esc(r.id)}">Kaydet</button>`}
+      {label:'Aksiyon', html:true, value:r=>can('MANAGE_USERS') ? `<button class="secondary-btn mini-btn" data-action="save-user" data-id="${esc(r.id)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
     ], rows);
   }
 
-  function renderCustomers(data) {
-    lastCustomers = data.customers || [];
-    const customerInput = document.getElementById('inviteCustomerCode');
-    if (customerInput && !customerInput.value && lastCustomers.length === 1) {
-      customerInput.value = lastCustomers[0].code;
-    }
+  function updateUserPermissionPreview(selectEl) {
+    const tr = selectEl.closest('tr');
+    if (!tr) return;
+    const preview = tr.querySelector('.user-permissions');
+    if (!preview) return;
+    preview.innerHTML = permissionBadges(permissionsForRole(selectEl.value));
+  }
 
-    const rows = lastCustomers.map(x => ({...x, __kind:'customer'}));
+  function renderCustomers(data) {
+    const rows = (data.customers || []).map(x => ({...x, __kind:'customer'}));
+    const customerInput = document.getElementById('inviteCustomerCode');
+    if (customerInput && !customerInput.value && rows.length === 1) customerInput.value = rows[0].code;
+
     document.getElementById('customersTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
       {label:'Name', value:r=>r.name},
-      {label:'Status', html:true, value:r=>selectHtml('customer-status-select', r.status, ['trial','pilot','active','inactive','suspended'])},
+      {label:'Status', html:true, value:r=>can('MANAGE_CUSTOMERS') ? selectHtml('customer-status-select', r.status, ['trial','pilot','active','inactive','suspended']) : esc(r.status)},
       {label:'Sites', value:r=>r.site_count},
       {label:'Machines', value:r=>r.machine_count},
       {label:'Users', value:r=>r.user_count},
       {label:'Created', value:r=>fmtDate(r.created_at)},
-      {label:'Aksiyon', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="save-customer" data-code="${esc(r.code)}">Kaydet</button>`}
+      {label:'Aksiyon', html:true, value:r=>can('MANAGE_CUSTOMERS') ? `<button class="secondary-btn mini-btn" data-action="save-customer" data-code="${esc(r.code)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
     ], rows);
   }
 
   function renderSites(data) {
-    lastSites = data.sites || [];
-    const rows = lastSites.map(x => ({...x, __kind:'site'}));
+    const rows = (data.sites || []).map(x => ({...x, __kind:'site'}));
     document.getElementById('sitesTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
       {label:'Name', value:r=>r.name},
       {label:'Customer', value:r=>r.customer_code},
       {label:'Location', value:r=>r.location},
-      {label:'Status', html:true, value:r=>selectHtml('site-status-select', r.status, ['trial','pilot','active','inactive','suspended'])},
+      {label:'Status', html:true, value:r=>can('MANAGE_SITES') ? selectHtml('site-status-select', r.status, ['trial','pilot','active','inactive','suspended']) : esc(r.status)},
       {label:'Machines', value:r=>r.machine_count},
       {label:'Devices', value:r=>r.device_count},
-      {label:'Aksiyon', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="save-site" data-code="${esc(r.code)}" data-customer-code="${esc(r.customer_code)}">Kaydet</button>`}
+      {label:'Aksiyon', html:true, value:r=>can('MANAGE_SITES') ? `<button class="secondary-btn mini-btn" data-action="save-site" data-code="${esc(r.code)}" data-customer-code="${esc(r.customer_code)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
     ], rows);
   }
 
@@ -294,7 +392,9 @@
   }
 
   function renderAuditLogs(data) {
-    document.getElementById('auditLogTable').innerHTML = table([
+    const target = document.getElementById('auditLogTable');
+    if (!target) return;
+    target.innerHTML = table([
       {label:'Tarih', value:r=>fmtDate(r.created_at)},
       {label:'Actor', value:r=>r.actor_email || '-'},
       {label:'Role', value:r=>r.actor_role || '-'},
@@ -306,7 +406,9 @@
   }
 
   function renderInvites(data) {
-    document.getElementById('invitesTable').innerHTML = table([
+    const target = document.getElementById('invitesTable');
+    if (!target) return;
+    target.innerHTML = table([
       {label:'Email', value:r=>r.email},
       {label:'Ad', value:r=>r.full_name || '-'},
       {label:'Role', value:r=>r.role},
@@ -316,8 +418,8 @@
       {label:'Mail', value:r=>r.email_sent_at ? `Gönderildi ${fmtDate(r.email_sent_at)}` : (r.email_last_error ? `Hata: ${r.email_last_error}` : 'Gönderilmedi')},
       {label:'Expires', value:r=>fmtDate(r.expires_at)},
       {label:'Link', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="copy-invite" data-url="${esc(r.invite_url)}">Kopyala</button>`},
-      {label:'Mail Gönder', html:true, value:r=>r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="send-invite-email" data-id="${esc(r.id)}">Mail Gönder</button>` : '-'},
-      {label:'İptal', html:true, value:r=>r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="cancel-invite" data-id="${esc(r.id)}">İptal</button>` : '-'}
+      {label:'Mail Gönder', html:true, value:r=>can('MANAGE_INVITES') && r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="send-invite-email" data-id="${esc(r.id)}">Mail Gönder</button>` : '-'},
+      {label:'İptal', html:true, value:r=>can('MANAGE_INVITES') && r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="cancel-invite" data-id="${esc(r.id)}">İptal</button>` : '-'}
     ], data.invites || []);
   }
 
@@ -328,17 +430,34 @@
     status.textContent = 'Yükleniyor...';
     if (refreshBtn) refreshBtn.disabled = true;
 
+    const errors = [];
+
+    try {
+      const permissionData = await getJson('/api/admin/permissions');
+      renderPermissions(permissionData);
+    } catch(e) {
+      errors.push(`permissions: ${e.message}`);
+      setError('permissionPanel', e.message);
+    }
+
     const tasks = [
       ['overview', '/api/admin/overview', data => renderCounts(data.counts || {}), 'adminCounts'],
-      ['invites', '/api/admin/invites?limit=100', renderInvites, 'invitesTable'],
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
-      ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable'],
-      ['audit-logs', '/api/admin/audit-logs?limit=50', renderAuditLogs, 'auditLogTable']
+      ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable']
     ];
 
-    const errors = [];
+    if (can('MANAGE_INVITES')) {
+      tasks.push(['invites', '/api/admin/invites?limit=100', renderInvites, 'invitesTable']);
+    } else {
+      const inviteTarget = document.getElementById('invitesTable');
+      if (inviteTarget) inviteTarget.innerHTML = '<span class="muted">Davet yönetimi yetkisi yok.</span>';
+    }
+
+    if (can('AUDIT_VIEW')) {
+      tasks.push(['audit-logs', '/api/admin/audit-logs?limit=50', renderAuditLogs, 'auditLogTable']);
+    }
 
     for (const [name, url, renderer, targetId] of tasks) {
       try {
@@ -466,19 +585,19 @@
       if (action === 'save-user') {
         await saveUser(button);
         await loadAdmin();
-        status.textContent = 'Kaydedildi. Activity history güncellendi.';
+        status.textContent = 'Kullanıcı güncellendi. Permission kontrolü uygulandı.';
       }
 
       if (action === 'save-customer') {
         await saveCustomer(button);
         await loadAdmin();
-        status.textContent = 'Kaydedildi. Activity history güncellendi.';
+        status.textContent = 'Customer güncellendi. Activity history güncellendi.';
       }
 
       if (action === 'save-site') {
         await saveSite(button);
         await loadAdmin();
-        status.textContent = 'Kaydedildi. Activity history güncellendi.';
+        status.textContent = 'Site güncellendi. Activity history güncellendi.';
       }
 
       if (action === 'copy-invite') {
@@ -513,6 +632,7 @@
       createInviteBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Davet oluşturuluyor...';
       try {
+        if (!can('MANAGE_INVITES')) throw new Error('Permission required: MANAGE_INVITES');
         await createInvite();
         await loadAdmin();
         document.getElementById('adminStatus').textContent = 'Davet oluşturuldu. Mail durumu güncellendi.';
@@ -524,6 +644,11 @@
     });
 
     document.body.addEventListener('click', handleAction);
+    document.body.addEventListener('change', (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains('user-role-select')) {
+        updateUserPermissionPreview(e.target);
+      }
+    });
     loadAdmin();
   });
 })();
