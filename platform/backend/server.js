@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.12.1';
+const APP_VERSION = '5.13.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -78,6 +78,10 @@ function liveMonitoringEnabled() {
 
 function alarmCenterEnabled() {
   return String(process.env.ALARM_CENTER_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function alarmAnalyticsEnabled() {
+  return String(process.env.ALARM_ANALYTICS_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -1864,7 +1868,8 @@ app.get('/api/auth/status', async (req,res)=>{
       admin_dashboard_kpi_enabled:adminDashboardKpiEnabled(),
       asset_management_enabled:assetManagementEnabled(),
       live_monitoring_enabled:liveMonitoringEnabled(),
-      alarm_center_enabled:alarmCenterEnabled()
+      alarm_center_enabled:alarmCenterEnabled(),
+      alarm_analytics_enabled:alarmAnalyticsEnabled()
     }
   });
 });
@@ -2514,6 +2519,7 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
       asset_management_enabled:assetManagementEnabled(),
       live_monitoring_enabled:liveMonitoringEnabled(),
       alarm_center_enabled:alarmCenterEnabled(),
+      alarm_analytics_enabled:alarmAnalyticsEnabled(),
       counts
     });
   } catch(e) {
@@ -2995,6 +3001,126 @@ app.post('/api/admin/alarms/:id/clear', adminRequired, permissionRequired('VIEW_
     });
 
     res.json({status:'ok', version:APP_VERSION, alarm:updated});
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+
+function alarmAnalyticsDays(raw, fallback = 7, max = 90) {
+  const value = Number(raw || fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 1), max);
+}
+
+function alarmAnalyticsLimit(raw, fallback = 8, max = 25) {
+  const value = Number(raw || fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 1), max);
+}
+
+app.get('/api/admin/alarm-analytics', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    await ensureAlarmCenterFoundation();
+
+    const days = alarmAnalyticsDays(req.query.days, 7, 90);
+    const limit = alarmAnalyticsLimit(req.query.limit, 8, 25);
+
+    const summary = await one(`
+      SELECT
+        count(*) FILTER (WHERE started_at >= now() - ($1::int * interval '1 day'))::int AS total_in_window,
+        count(*) FILTER (WHERE status='active')::int AS active,
+        count(*) FILTER (WHERE status='active' AND acknowledged_at IS NULL)::int AS unacknowledged_active,
+        count(*) FILTER (WHERE status='active' AND acknowledged_at IS NOT NULL)::int AS acknowledged_active,
+        count(*) FILTER (WHERE status='active' AND severity='critical')::int AS critical_active,
+        count(*) FILTER (WHERE status='cleared' AND cleared_at >= now() - ($1::int * interval '1 day'))::int AS cleared_in_window,
+        ROUND((AVG(EXTRACT(EPOCH FROM (acknowledged_at - started_at)) / 60.0)
+          FILTER (WHERE acknowledged_at IS NOT NULL AND acknowledged_at >= started_at
+            AND started_at >= now() - ($1::int * interval '1 day')))::numeric, 1) AS avg_ack_minutes,
+        ROUND((AVG(EXTRACT(EPOCH FROM (cleared_at - started_at)) / 60.0)
+          FILTER (WHERE cleared_at IS NOT NULL AND cleared_at >= started_at
+            AND started_at >= now() - ($1::int * interval '1 day')))::numeric, 1) AS avg_resolution_minutes,
+        min(started_at) FILTER (WHERE status='active') AS oldest_active_started_at
+      FROM alarms
+    `, [days]);
+
+    const daily = await pool.query(`
+      WITH days AS (
+        SELECT generate_series(
+          current_date - ($1::int - 1),
+          current_date,
+          interval '1 day'
+        )::date AS day
+      )
+      SELECT
+        d.day,
+        count(a.id)::int AS total,
+        count(a.id) FILTER (WHERE a.severity='critical')::int AS critical,
+        count(a.id) FILTER (WHERE a.severity='warning')::int AS warning,
+        count(a.id) FILTER (WHERE a.status='cleared')::int AS cleared
+      FROM days d
+      LEFT JOIN alarms a
+        ON a.started_at >= d.day
+       AND a.started_at < d.day + interval '1 day'
+      GROUP BY d.day
+      ORDER BY d.day
+    `, [days]);
+
+    const topTypes = await pool.query(`
+      SELECT
+        COALESCE(NULLIF(alarm_type, ''), 'unknown') AS alarm_type,
+        count(*)::int AS count,
+        count(*) FILTER (WHERE severity='critical')::int AS critical_count,
+        count(*) FILTER (WHERE status='active')::int AS active_count
+      FROM alarms
+      WHERE started_at >= now() - ($1::int * interval '1 day')
+      GROUP BY COALESCE(NULLIF(alarm_type, ''), 'unknown')
+      ORDER BY count(*) DESC, alarm_type
+      LIMIT $2
+    `, [days, limit]);
+
+    const topMachines = await pool.query(`
+      SELECT
+        COALESCE(m.code, 'unassigned') AS machine_code,
+        COALESCE(m.name, 'Unassigned') AS machine_name,
+        COALESCE(s.code, '-') AS site_code,
+        COALESCE(c.code, '-') AS customer_code,
+        count(a.id)::int AS alarm_count,
+        count(a.id) FILTER (WHERE a.severity='critical')::int AS critical_count,
+        count(a.id) FILTER (WHERE a.status='active')::int AS active_count
+      FROM alarms a
+      LEFT JOIN machines m ON m.id=a.machine_id
+      LEFT JOIN sites s ON s.id=m.site_id
+      LEFT JOIN customers c ON c.id=s.customer_id
+      WHERE a.started_at >= now() - ($1::int * interval '1 day')
+      GROUP BY m.code, m.name, s.code, c.code
+      ORDER BY count(a.id) DESC, machine_code
+      LIMIT $2
+    `, [days, limit]);
+
+    const responseBuckets = await one(`
+      SELECT
+        count(*) FILTER (WHERE acknowledged_at IS NULL)::int AS not_acknowledged,
+        count(*) FILTER (WHERE acknowledged_at IS NOT NULL AND acknowledged_at - started_at <= interval '5 minutes')::int AS under_5m,
+        count(*) FILTER (WHERE acknowledged_at IS NOT NULL AND acknowledged_at - started_at > interval '5 minutes' AND acknowledged_at - started_at <= interval '15 minutes')::int AS from_5_to_15m,
+        count(*) FILTER (WHERE acknowledged_at IS NOT NULL AND acknowledged_at - started_at > interval '15 minutes' AND acknowledged_at - started_at <= interval '60 minutes')::int AS from_15_to_60m,
+        count(*) FILTER (WHERE acknowledged_at IS NOT NULL AND acknowledged_at - started_at > interval '60 minutes')::int AS over_60m
+      FROM alarms
+      WHERE started_at >= now() - ($1::int * interval '1 day')
+    `, [days]);
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      alarm_analytics_enabled:alarmAnalyticsEnabled(),
+      generated_at:new Date().toISOString(),
+      window_days:days,
+      summary:summary || {},
+      response_buckets:responseBuckets || {},
+      daily:daily.rows,
+      top_alarm_types:topTypes.rows,
+      top_machines:topMachines.rows
+    });
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }

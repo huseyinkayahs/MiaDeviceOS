@@ -1,0 +1,29 @@
+FactoryBox One v5.13.0 - Alarm Analytics / Response KPI Pack
+
+ON KOSUL
+- Projede v5.12.1 kurulu ve calisiyor olmali.
+
+KURULUM
+1. FactoryBox backend'i durdur.
+2. Bu ZIP dosyasini ac.
+3. ZIP icindeki tum dosya ve klasorleri FactoryBox ana proje klasorunun uzerine kopyala.
+4. Dosyalari degistir / uzerine yaz secenegini kabul et.
+5. Backend'i yeniden baslat.
+6. Admin panelini kapatip yeniden ac.
+7. Ctrl + F5 yap.
+
+TEST
+1. Sol ustte v5.13.0 yazdigini kontrol et.
+2. Sol menuden Alarm Analytics ekranini ac.
+3. Son 7 gun, 14 gun ve 30 gun filtrelerini sirayla dene.
+4. KPI kartlarinin acildigini kontrol et.
+5. Gunluk alarm trendi tablosunu kontrol et.
+6. Acknowledge hizi tablosunu kontrol et.
+7. En cok alarm tipi ve makine tablolarini kontrol et.
+
+BEKLENEN
+- Admin panel menuleri calismali.
+- Alarm Center calismaya devam etmeli.
+- Alarm Analytics ekrani hata vermeden acilmali.
+- Alarm yoksa KPI degerleri 0 ve tablolar bos gorunebilir.
+- Manuel veritabani migration islemi gerekmez.

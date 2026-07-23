@@ -240,7 +240,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.12.1 — Alarm Center aktif.</p>
+      <p id="adminVersionLabel">v5.13.0 — Alarm Analytics aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -248,6 +248,7 @@
       <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>📊 Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="live"><span>🟢 Live Monitoring</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="alarms"><span>🚨 Alarm Center</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="analytics"><span>📈 Alarm Analytics</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
@@ -287,7 +288,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.12.1: Alarm Center, canlı izleme, asset yönetimi ve güvenlik aktiviteleri.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.13.0: Alarm Analytics, Alarm Center, canlı izleme ve asset yönetimi.</p>
       </div>
     </div>
 
@@ -362,6 +363,53 @@
 
     <div id="alarmCenterSummary" class="mini-status">Alarm özeti yükleniyor...</div>
     <div id="alarmCenterTable">Alarmlar yükleniyor...</div>
+  </section>
+
+  <section id="alarmAnalyticsSection" class="card wide admin-card" data-admin-view="analytics">
+    <div class="section-title-row">
+      <div>
+        <h2>Alarm Analytics / Response KPI</h2>
+        <p class="muted">v5.13: Alarm yoğunluğu, acknowledge süresi, çözüm süresi ve en çok alarm üreten makineler.</p>
+      </div>
+      <button id="refreshAlarmAnalyticsBtn" class="secondary-btn">Analitiği Yenile</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>
+        Analiz Aralığı
+        <select id="alarmAnalyticsDays">
+          <option value="7">Son 7 gün</option>
+          <option value="14">Son 14 gün</option>
+          <option value="30">Son 30 gün</option>
+          <option value="90">Son 90 gün</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="applyAlarmAnalyticsBtn" class="primary-btn">Analizi Getir</button>
+      </div>
+    </div>
+
+    <div id="alarmAnalyticsSummary">Alarm analitiği yükleniyor...</div>
+    <div class="kpi-two-col-v59">
+      <div class="kpi-panel-v59">
+        <h3>Günlük Alarm Trendi</h3>
+        <div id="alarmAnalyticsDaily">Yükleniyor...</div>
+      </div>
+      <div class="kpi-panel-v59">
+        <h3>Acknowledge Hızı</h3>
+        <div id="alarmResponseBuckets">Yükleniyor...</div>
+      </div>
+    </div>
+    <div class="kpi-two-col-v59">
+      <div class="kpi-panel-v59">
+        <h3>En Çok Alarm Tipleri</h3>
+        <div id="alarmTopTypes">Yükleniyor...</div>
+      </div>
+      <div class="kpi-panel-v59">
+        <h3>En Çok Alarm Üreten Makineler</h3>
+        <div id="alarmTopMachines">Yükleniyor...</div>
+      </div>
+    </div>
   </section>
 
   <section class="card wide admin-card" data-admin-view="permissions">
@@ -697,11 +745,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.12.1').replace(/^v/i, '');
+    const safeVersion = String(version || '5.13.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Alarm Center aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Alarm Center, canlı izleme, asset yönetimi ve güvenlik aktiviteleri.`;
+    if (brand) brand.textContent = `v${safeVersion} — Alarm Analytics aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Alarm Analytics, Alarm Center, canlı izleme ve asset yönetimi.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -833,6 +881,10 @@
     alarms: {
       title:'Alarm Center',
       desc:'Aktif alarm listesi, alarm geçmişi, acknowledge ve clear işlemleri.'
+    },
+    analytics: {
+      title:'Alarm Analytics',
+      desc:'Alarm trendi, acknowledge/çözüm süreleri ve makine bazlı alarm yoğunluğu.'
     },
     tenants: {
       title:'Customers / Tenants',
@@ -1306,6 +1358,77 @@
     });
   }
 
+
+  function alarmAnalyticsQueryString() {
+    const params = new URLSearchParams();
+    const days = document.getElementById('alarmAnalyticsDays')?.value || '7';
+    params.set('days', days);
+    params.set('limit', '8');
+    return params.toString();
+  }
+
+  function fmtMinutes(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '-';
+    if (n < 60) return `${n.toFixed(1).replace(/\.0$/, '')} dk`;
+    return `${(n / 60).toFixed(1).replace(/\.0$/, '')} sa`;
+  }
+
+  function renderAlarmAnalytics(data) {
+    const summaryTarget = document.getElementById('alarmAnalyticsSummary');
+    const dailyTarget = document.getElementById('alarmAnalyticsDaily');
+    const bucketsTarget = document.getElementById('alarmResponseBuckets');
+    const typesTarget = document.getElementById('alarmTopTypes');
+    const machinesTarget = document.getElementById('alarmTopMachines');
+    if (!summaryTarget || !dailyTarget || !bucketsTarget || !typesTarget || !machinesTarget) return;
+
+    const s = data.summary || {};
+    const b = data.response_buckets || {};
+
+    summaryTarget.innerHTML = `
+      <div class="kpi-grid-v59">
+        <div class="kpi-card-v59"><span>${esc(data.window_days || 7)} Gün Alarm</span><strong>${esc(s.total_in_window || 0)}</strong><small>Pencere içindeki toplam alarm</small></div>
+        <div class="kpi-card-v59"><span>Aktif</span><strong>${esc(s.active || 0)}</strong><small>${esc(s.unacknowledged_active || 0)} acknowledge bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Kritik Aktif</span><strong>${esc(s.critical_active || 0)}</strong><small>Hemen kontrol edilmesi gereken</small></div>
+        <div class="kpi-card-v59"><span>Ort. Acknowledge</span><strong>${esc(fmtMinutes(s.avg_ack_minutes))}</strong><small>İlk müdahale süresi</small></div>
+        <div class="kpi-card-v59"><span>Ort. Çözüm</span><strong>${esc(fmtMinutes(s.avg_resolution_minutes))}</strong><small>Alarm kapanma süresi</small></div>
+        <div class="kpi-card-v59"><span>Kapatılan</span><strong>${esc(s.cleared_in_window || 0)}</strong><small>Seçilen analiz aralığında</small></div>
+      </div>
+      <p class="mini-status">En eski aktif alarm: <strong>${esc(fmtDate(s.oldest_active_started_at))}</strong> · Oluşturma: ${esc(fmtDate(data.generated_at))}</p>
+    `;
+
+    dailyTarget.innerHTML = table([
+      {label:'Gün', value:r=>new Date(`${r.day}T00:00:00`).toLocaleDateString('tr-TR')},
+      {label:'Toplam', value:r=>r.total || 0},
+      {label:'Kritik', value:r=>r.critical || 0},
+      {label:'Warning', value:r=>r.warning || 0},
+      {label:'Cleared', value:r=>r.cleared || 0}
+    ], data.daily || []);
+
+    bucketsTarget.innerHTML = `
+      <div class="kpi-row-v59"><span>5 dakika altı</span><strong>${esc(b.under_5m || 0)}</strong></div>
+      <div class="kpi-row-v59"><span>5–15 dakika</span><strong>${esc(b.from_5_to_15m || 0)}</strong></div>
+      <div class="kpi-row-v59"><span>15–60 dakika</span><strong>${esc(b.from_15_to_60m || 0)}</strong></div>
+      <div class="kpi-row-v59"><span>60 dakika üzeri</span><strong>${esc(b.over_60m || 0)}</strong></div>
+      <div class="kpi-row-v59"><span>Acknowledge edilmemiş</span><strong>${esc(b.not_acknowledged || 0)}</strong></div>
+    `;
+
+    typesTarget.innerHTML = table([
+      {label:'Alarm Tipi', value:r=>r.alarm_type || '-'},
+      {label:'Toplam', value:r=>r.count || 0},
+      {label:'Kritik', value:r=>r.critical_count || 0},
+      {label:'Aktif', value:r=>r.active_count || 0}
+    ], data.top_alarm_types || []);
+
+    machinesTarget.innerHTML = table([
+      {label:'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
+      {label:'Customer / Site', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
+      {label:'Toplam', value:r=>r.alarm_count || 0},
+      {label:'Kritik', value:r=>r.critical_count || 0},
+      {label:'Aktif', value:r=>r.active_count || 0}
+    ], data.top_machines || []);
+  }
+
   function renderCounts(counts) {
     const el = document.getElementById('adminCounts');
     if (!el) return;
@@ -1585,6 +1708,7 @@
       ['dashboard-summary', '/api/admin/dashboard-summary', renderDashboardSummary, 'adminDashboardSummary'],
       ['live-monitoring', '/api/admin/live-monitoring?limit=120', renderLiveMonitoring, 'liveMachineCards'],
       ['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable'],
+      ['alarm-analytics', `/api/admin/alarm-analytics?${alarmAnalyticsQueryString()}`, renderAlarmAnalytics, 'alarmAnalyticsSummary'],
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -1963,6 +2087,8 @@
     const refreshLiveMonitoringBtn = document.getElementById('refreshLiveMonitoringBtn');
     const refreshAlarmCenterBtn = document.getElementById('refreshAlarmCenterBtn');
     const applyAlarmFiltersBtn = document.getElementById('applyAlarmFiltersBtn');
+    const refreshAlarmAnalyticsBtn = document.getElementById('refreshAlarmAnalyticsBtn');
+    const applyAlarmAnalyticsBtn = document.getElementById('applyAlarmAnalyticsBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -1970,6 +2096,8 @@
     if (refreshLiveMonitoringBtn) refreshLiveMonitoringBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmCenterBtn) refreshAlarmCenterBtn.addEventListener('click', loadAdmin);
     if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click', loadAdmin);
+    if (refreshAlarmAnalyticsBtn) refreshAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
+    if (applyAlarmAnalyticsBtn) applyAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
     if (applyAuditFiltersBtn) applyAuditFiltersBtn.addEventListener('click', loadAdmin);
     if (exportAuditCsvBtn) exportAuditCsvBtn.addEventListener('click', async () => {
       exportAuditCsvBtn.disabled = true;
