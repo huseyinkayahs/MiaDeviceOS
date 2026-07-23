@@ -1,0 +1,11 @@
+FactoryBox One v5.12.1 - Admin Version Display Hotfix
+
+1. Backend'i durdurun.
+2. ZIP içindeki platform klasörünü mevcut projenin ana klasörüne kopyalayın.
+3. Dosyaların üzerine yazılmasını onaylayın.
+4. Backend'i yeniden başlatın.
+5. Admin panelini kapatıp yeniden açın ve Ctrl+F5 yapın.
+6. Sol üstte v5.12.1 yazdığını kontrol edin.
+
+Kontrol:
+http://localhost:3000/api/admin/overview yanıtında "version":"5.12.1" görünmelidir.

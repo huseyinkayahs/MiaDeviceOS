@@ -1,0 +1,16 @@
+# FactoryBox One v5.12.0 Paket İçeriği
+
+Sprint: Alarm Center / Acknowledge & History Pack
+
+Temel paket:
+- FactoryBox_One_v5.11.1_Live_Monitoring_Health_Classification_Fix.zip
+
+v5.12.0 ile güncellenen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- KURULUM_V5_12.txt
+
+Ek doğrulama/düzeltme:
+- Admin panel Alarm Center API adresindeki JavaScript sözdizimi hatası düzeltildi.
+- server.js ve admin.html içindeki JavaScript kodları Node.js sözdizimi kontrolünden geçirildi.
+- ZIP bütünlük testi tamamlandı.

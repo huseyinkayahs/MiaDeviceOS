@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="utf-8">
@@ -240,14 +240,13 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.12.1 — Alarm Center aktif.</p>
+      <p>v5.11.1 — canlı izleme ve telemetri özeti eklendi.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
     <nav class="admin-nav-v58" aria-label="Admin panel menüsü">
       <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>📊 Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="live"><span>🟢 Live Monitoring</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="alarms"><span>🚨 Alarm Center</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
@@ -287,7 +286,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.12.1: Alarm Center, canlı izleme, asset yönetimi ve güvenlik aktiviteleri.</p>
+        <p class="muted">v5.11.1: KPI kartları, canlı izleme, asset yönetimi ve son güvenlik aktiviteleri.</p>
       </div>
     </div>
 
@@ -309,59 +308,6 @@
     <div id="liveMonitoringSummary" class="mini-status">Canlı izleme özeti yükleniyor...</div>
     <div id="liveMachineCards" class="live-grid-v511">Makine kartları yükleniyor...</div>
     <div id="liveMachineTable">Makine telemetri tablosu yükleniyor...</div>
-  </section>
-
-  
-  <section id="alarmCenterSection" class="card wide admin-card" data-admin-view="alarms">
-    <div class="section-title-row">
-      <div>
-        <h2>Alarm Center</h2>
-        <p class="muted">v5.12: Aktif alarm, alarm geçmişi, acknowledge ve clear işlemleri.</p>
-      </div>
-      <button id="refreshAlarmCenterBtn" class="secondary-btn">Alarmları Yenile</button>
-    </div>
-
-    <div class="admin-form-grid">
-      <label>
-        Status
-        <select id="alarmStatusFilter">
-          <option value="active">active</option>
-          <option value="cleared">cleared</option>
-          <option value="all">all</option>
-        </select>
-      </label>
-      <label>
-        Severity
-        <select id="alarmSeverityFilter">
-          <option value="all">all</option>
-          <option value="critical">critical</option>
-          <option value="warning">warning</option>
-          <option value="info">info</option>
-        </select>
-      </label>
-      <label>
-        Machine Code
-        <input id="alarmMachineFilter" type="text" placeholder="örn: laser01">
-      </label>
-      <label>
-        Başlangıç
-        <input id="alarmFromFilter" type="date">
-      </label>
-      <label>
-        Bitiş
-        <input id="alarmToFilter" type="date">
-      </label>
-      <label>
-        Arama
-        <input id="alarmSearchFilter" type="text" placeholder="alarm tipi / mesaj">
-      </label>
-      <div class="admin-form-actions">
-        <button id="applyAlarmFiltersBtn" class="primary-btn">Filtrele</button>
-      </div>
-    </div>
-
-    <div id="alarmCenterSummary" class="mini-status">Alarm özeti yükleniyor...</div>
-    <div id="alarmCenterTable">Alarmlar yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card" data-admin-view="permissions">
@@ -696,15 +642,6 @@
     viewer: 'Sadece görüntüleme'
   };
 
-  function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.12.1').replace(/^v/i, '');
-    const brand = document.getElementById('adminVersionLabel');
-    const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Alarm Center aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Alarm Center, canlı izleme, asset yönetimi ve güvenlik aktiviteleri.`;
-    document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
-  }
-
   function permissionsForRole(role) {
     return ROLE_MATRIX[String(role || 'viewer')] || ROLE_MATRIX.viewer;
   }
@@ -829,10 +766,6 @@
     live: {
       title:'Live Monitoring',
       desc:'Makine canlı durumları, son telemetri ve bağlantı sağlığı.'
-    },
-    alarms: {
-      title:'Alarm Center',
-      desc:'Aktif alarm listesi, alarm geçmişi, acknowledge ve clear işlemleri.'
     },
     tenants: {
       title:'Customers / Tenants',
@@ -1229,83 +1162,6 @@
     ], machines);
   }
 
-
-  function alarmQueryString() {
-    const params = new URLSearchParams();
-    const status = document.getElementById('alarmStatusFilter')?.value || 'active';
-    const severity = document.getElementById('alarmSeverityFilter')?.value || 'all';
-    const machine = document.getElementById('alarmMachineFilter')?.value.trim() || '';
-    const from = document.getElementById('alarmFromFilter')?.value || '';
-    const to = document.getElementById('alarmToFilter')?.value || '';
-    const q = document.getElementById('alarmSearchFilter')?.value.trim() || '';
-
-    params.set('status', status);
-    params.set('severity', severity);
-    if (machine) params.set('machine_code', machine);
-    if (from) params.set('from', from);
-    if (to) params.set('to', to);
-    if (q) params.set('q', q);
-    params.set('limit', '150');
-
-    return params.toString();
-  }
-
-  function alarmBadge(value) {
-    const clean = String(value || '-').toLowerCase();
-    const cls = clean === 'critical' ? 'alarm' : (clean === 'cleared' ? 'stopped' : 'stale');
-    return `<span class="live-badge-v511 ${esc(cls)}">${esc(clean)}</span>`;
-  }
-
-  function renderAlarmCenter(data) {
-    const summaryTarget = document.getElementById('alarmCenterSummary');
-    const tableTarget = document.getElementById('alarmCenterTable');
-    if (!summaryTarget || !tableTarget) return;
-
-    const s = data.summary || {};
-    const alarms = data.alarms || [];
-
-    summaryTarget.innerHTML = `
-      Alarm center: <strong>${data.alarm_center_enabled ? 'ON' : 'OFF'}</strong> —
-      Active: <strong>${esc(s.active || 0)}</strong> ·
-      Acknowledged: <strong>${esc(s.acknowledged || 0)}</strong> ·
-      Cleared: <strong>${esc(s.cleared || 0)}</strong> ·
-      Critical: <strong>${esc(s.critical || 0)}</strong> ·
-      Warning: <strong>${esc(s.warning || 0)}</strong>
-    `;
-
-    tableTarget.innerHTML = table([
-      {label:'Status', html:true, value:r=>alarmBadge(r.status)},
-      {label:'Severity', html:true, value:r=>alarmBadge(r.severity)},
-      {label:'Machine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
-      {label:'Customer / Site', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
-      {label:'Alarm Type', value:r=>r.alarm_type || '-'},
-      {label:'Message', value:r=>r.message || '-'},
-      {label:'Started', value:r=>fmtDate(r.started_at)},
-      {label:'Ack', value:r=>r.acknowledged_at ? `${fmtDate(r.acknowledged_at)} / ${r.acknowledged_by || '-'}` : '-'},
-      {label:'Cleared', value:r=>r.cleared_at ? `${fmtDate(r.cleared_at)} / ${r.cleared_by || '-'}` : '-'},
-      {label:'Aksiyon', html:true, value:r=>`
-        <button class="secondary-btn mini-btn" data-action="ack-alarm" data-id="${esc(r.id)}">Acknowledge</button>
-        <button class="secondary-btn mini-btn" data-action="clear-alarm" data-id="${esc(r.id)}">Clear</button>
-      `}
-    ], alarms);
-  }
-
-  async function acknowledgeAlarm(button) {
-    const note = prompt('Acknowledge notu:', '') || '';
-    await apiJson(`/api/admin/alarms/${encodeURIComponent(button.dataset.id)}/acknowledge`, {
-      method:'POST',
-      body:JSON.stringify({note})
-    });
-  }
-
-  async function clearAlarm(button) {
-    const note = prompt('Clear notu:', '') || '';
-    await apiJson(`/api/admin/alarms/${encodeURIComponent(button.dataset.id)}/clear`, {
-      method:'POST',
-      body:JSON.stringify({note})
-    });
-  }
-
   function renderCounts(counts) {
     const el = document.getElementById('adminCounts');
     if (!el) return;
@@ -1584,9 +1440,7 @@
     const tasks = [
       ['dashboard-summary', '/api/admin/dashboard-summary', renderDashboardSummary, 'adminDashboardSummary'],
       ['live-monitoring', '/api/admin/live-monitoring?limit=120', renderLiveMonitoring, 'liveMachineCards'],
-      ['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable'],
       ['overview', '/api/admin/overview', data => {
-        applyBackendVersion(data.version);
         renderCounts(data.counts || {});
         const el = document.getElementById('subscriptionEnforcementStatus');
         if (el) el.textContent = data.subscription_enforcement_enabled
@@ -1929,18 +1783,6 @@
         await loadAdmin();
         status.textContent = 'Davet iptal edildi. Activity history güncellendi.';
       }
-
-      if (action === 'ack-alarm') {
-        await acknowledgeAlarm(button);
-        await loadAdmin();
-        status.textContent = 'Alarm acknowledge edildi. Audit log güncellendi.';
-      }
-
-      if (action === 'clear-alarm') {
-        await clearAlarm(button);
-        await loadAdmin();
-        status.textContent = 'Alarm clear edildi. Audit log güncellendi.';
-      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -1961,15 +1803,11 @@
     const createMachineBtn = document.getElementById('createMachineBtn');
     const refreshMachinesBtn = document.getElementById('refreshMachinesBtn');
     const refreshLiveMonitoringBtn = document.getElementById('refreshLiveMonitoringBtn');
-    const refreshAlarmCenterBtn = document.getElementById('refreshAlarmCenterBtn');
-    const applyAlarmFiltersBtn = document.getElementById('applyAlarmFiltersBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
     if (refreshMachinesBtn) refreshMachinesBtn.addEventListener('click', loadAdmin);
     if (refreshLiveMonitoringBtn) refreshLiveMonitoringBtn.addEventListener('click', loadAdmin);
-    if (refreshAlarmCenterBtn) refreshAlarmCenterBtn.addEventListener('click', loadAdmin);
-    if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click', loadAdmin);
     if (applyAuditFiltersBtn) applyAuditFiltersBtn.addEventListener('click', loadAdmin);
     if (exportAuditCsvBtn) exportAuditCsvBtn.addEventListener('click', async () => {
       exportAuditCsvBtn.disabled = true;
@@ -2071,6 +1909,5 @@
 </script>
 </body>
 </html>
-
 
 

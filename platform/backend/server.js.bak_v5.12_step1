@@ -33,17 +33,7 @@ const pool = new Pool({
 const app = express();
 app.use(cors());
 app.use(express.json({limit:'1mb'}));
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag:false,
-  maxAge:0,
-  setHeaders:(res, filePath)=>{
-    if (/\.html$/i.test(filePath)) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    }
-  }
-}));
+app.use(express.static(path.join(__dirname, 'public')));
 
 let mqttConnected = false;
 let lastMqttMessageAt = null;
@@ -54,7 +44,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.12.1';
+const APP_VERSION = '5.11.1';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -74,10 +64,6 @@ function assetManagementEnabled() {
 
 function liveMonitoringEnabled() {
   return String(process.env.LIVE_MONITORING_ENABLED || 'true').toLowerCase() !== 'false';
-}
-
-function alarmCenterEnabled() {
-  return String(process.env.ALARM_CENTER_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -1863,8 +1849,7 @@ app.get('/api/auth/status', async (req,res)=>{
       device_provisioning_enabled:deviceProvisioningEnabled(),
       admin_dashboard_kpi_enabled:adminDashboardKpiEnabled(),
       asset_management_enabled:assetManagementEnabled(),
-      live_monitoring_enabled:liveMonitoringEnabled(),
-      alarm_center_enabled:alarmCenterEnabled()
+      live_monitoring_enabled:liveMonitoringEnabled()
     }
   });
 });
@@ -2513,7 +2498,6 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
       device_provisioning_enabled:deviceProvisioningEnabled(),
       asset_management_enabled:assetManagementEnabled(),
       live_monitoring_enabled:liveMonitoringEnabled(),
-      alarm_center_enabled:alarmCenterEnabled(),
       counts
     });
   } catch(e) {
@@ -2780,221 +2764,10 @@ app.get('/api/admin/live-monitoring', adminRequired, permissionRequired('VIEW_DA
       status:'ok',
       version:APP_VERSION,
       live_monitoring_enabled:liveMonitoringEnabled(),
-      alarm_center_enabled:alarmCenterEnabled(),
       generated_at:new Date().toISOString(),
       summary:liveMachineSummary(machines),
       machines
     });
-  } catch(e) {
-    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
-  }
-});
-
-
-async function ensureAlarmCenterFoundation() {
-  await pool.query(`
-    ALTER TABLE alarms ADD COLUMN IF NOT EXISTS acknowledged_at timestamptz;
-    ALTER TABLE alarms ADD COLUMN IF NOT EXISTS acknowledged_by text;
-    ALTER TABLE alarms ADD COLUMN IF NOT EXISTS acknowledge_note text;
-    ALTER TABLE alarms ADD COLUMN IF NOT EXISTS cleared_by text;
-    ALTER TABLE alarms ADD COLUMN IF NOT EXISTS clear_note text;
-    ALTER TABLE alarms ADD COLUMN IF NOT EXISTS updated_at timestamptz;
-  `);
-
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_alarms_status_started_desc
-    ON alarms(status, started_at DESC)
-  `);
-
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_alarms_machine_started_desc
-    ON alarms(machine_id, started_at DESC)
-  `);
-}
-
-function alarmLimit(raw, fallback = 100, max = 500) {
-  const value = Number(raw || fallback);
-  if (!Number.isFinite(value)) return fallback;
-  return Math.min(Math.max(Math.floor(value), 1), max);
-}
-
-function parseAlarmDate(value, endOfDay = false) {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const suffix = endOfDay ? 'T23:59:59' : 'T00:00:00';
-  const date = new Date(raw.length <= 10 ? `${raw}${suffix}` : raw);
-  if (Number.isNaN(date.getTime())) return null;
-  return date;
-}
-
-app.get('/api/admin/alarm-center', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
-  try {
-    await ensureAlarmCenterFoundation();
-
-    const limit = alarmLimit(req.query.limit, 100, 500);
-    const params = [];
-    const where = [];
-
-    const status = String(req.query.status || 'active').trim();
-    if (status && status !== 'all') {
-      params.push(status);
-      where.push(`a.status=$${params.length}`);
-    }
-
-    const severity = String(req.query.severity || '').trim();
-    if (severity && severity !== 'all') {
-      params.push(severity);
-      where.push(`a.severity=$${params.length}`);
-    }
-
-    const machineCode = String(req.query.machine_code || '').trim();
-    if (machineCode) {
-      params.push(machineCode);
-      where.push(`m.code=$${params.length}`);
-    }
-
-    const fromDate = parseAlarmDate(req.query.from, false);
-    if (fromDate) {
-      params.push(fromDate.toISOString());
-      where.push(`a.started_at >= $${params.length}`);
-    }
-
-    const toDate = parseAlarmDate(req.query.to, true);
-    if (toDate) {
-      params.push(toDate.toISOString());
-      where.push(`a.started_at <= $${params.length}`);
-    }
-
-    const search = String(req.query.q || '').trim();
-    if (search) {
-      params.push(`%${search}%`);
-      where.push(`(a.alarm_type ILIKE $${params.length} OR a.message ILIKE $${params.length} OR m.code ILIKE $${params.length} OR c.code ILIKE $${params.length})`);
-    }
-
-    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
-    const summary = await one(`
-      SELECT
-        count(*)::int AS total,
-        count(*) FILTER (WHERE status='active')::int AS active,
-        count(*) FILTER (WHERE status='cleared')::int AS cleared,
-        count(*) FILTER (WHERE acknowledged_at IS NOT NULL AND status='active')::int AS acknowledged,
-        count(*) FILTER (WHERE severity='critical')::int AS critical,
-        count(*) FILTER (WHERE severity='warning')::int AS warning
-      FROM alarms
-    `);
-
-    params.push(limit);
-
-    const result = await pool.query(`
-      SELECT
-        a.id::text,
-        a.alarm_type,
-        a.severity,
-        a.status,
-        a.started_at,
-        a.cleared_at,
-        a.acknowledged_at,
-        a.acknowledged_by,
-        a.acknowledge_note,
-        a.cleared_by,
-        a.clear_note,
-        a.message,
-        m.code AS machine_code,
-        m.name AS machine_name,
-        s.code AS site_code,
-        c.code AS customer_code
-      FROM alarms a
-      LEFT JOIN machines m ON m.id=a.machine_id
-      LEFT JOIN sites s ON s.id=m.site_id
-      LEFT JOIN customers c ON c.id=s.customer_id
-      ${whereSql}
-      ORDER BY a.started_at DESC
-      LIMIT $${params.length}
-    `, params);
-
-    res.json({
-      status:'ok',
-      version:APP_VERSION,
-      alarm_center_enabled:alarmCenterEnabled(),
-      generated_at:new Date().toISOString(),
-      summary:summary || {},
-      alarms:result.rows
-    });
-  } catch(e) {
-    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
-  }
-});
-
-app.post('/api/admin/alarms/:id/acknowledge', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
-  try {
-    await ensureAlarmCenterFoundation();
-
-    const id = String(req.params.id || '').trim();
-    const note = String(req.body?.note || '').trim();
-    const actor = req.user || getSession(req)?.user || null;
-
-    const oldAlarm = await one(`SELECT * FROM alarms WHERE id=$1`, [id]);
-    if (!oldAlarm) return res.status(404).json({status:'not_found', message:'Alarm not found'});
-
-    const updated = await one(`
-      UPDATE alarms
-      SET acknowledged_at=COALESCE(acknowledged_at, now()),
-          acknowledged_by=$2,
-          acknowledge_note=NULLIF($3,''),
-          updated_at=now()
-      WHERE id=$1
-      RETURNING *
-    `, [id, actor?.email || 'admin', note]);
-
-    await writeAuditLog(req, {
-      action:'acknowledge_alarm',
-      entity_type:'alarm',
-      entity_id:id,
-      old_values:oldAlarm,
-      new_values:updated,
-      metadata:{machine_id:String(updated.machine_id || ''), alarm_type:updated.alarm_type}
-    });
-
-    res.json({status:'ok', version:APP_VERSION, alarm:updated});
-  } catch(e) {
-    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
-  }
-});
-
-app.post('/api/admin/alarms/:id/clear', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
-  try {
-    await ensureAlarmCenterFoundation();
-
-    const id = String(req.params.id || '').trim();
-    const note = String(req.body?.note || '').trim();
-    const actor = req.user || getSession(req)?.user || null;
-
-    const oldAlarm = await one(`SELECT * FROM alarms WHERE id=$1`, [id]);
-    if (!oldAlarm) return res.status(404).json({status:'not_found', message:'Alarm not found'});
-
-    const updated = await one(`
-      UPDATE alarms
-      SET status='cleared',
-          cleared_at=COALESCE(cleared_at, now()),
-          cleared_by=$2,
-          clear_note=NULLIF($3,''),
-          updated_at=now()
-      WHERE id=$1
-      RETURNING *
-    `, [id, actor?.email || 'admin', note]);
-
-    await writeAuditLog(req, {
-      action:'clear_alarm',
-      entity_type:'alarm',
-      entity_id:id,
-      old_values:oldAlarm,
-      new_values:updated,
-      metadata:{machine_id:String(updated.machine_id || ''), alarm_type:updated.alarm_type}
-    });
-
-    res.json({status:'ok', version:APP_VERSION, alarm:updated});
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
@@ -7132,5 +6905,4 @@ async function start() {
   app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
-
 

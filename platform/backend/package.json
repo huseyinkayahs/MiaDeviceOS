@@ -1,6 +1,6 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "5.11.0",
+  "version": "5.12.1",
   "description": "FactoryBox / MiaDeviceOS Platform Backend - Machine Live Monitoring Telemetry Snapshot Pack",
   "main": "server.js",
   "scripts": {
