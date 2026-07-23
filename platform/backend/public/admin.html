@@ -223,7 +223,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p>v5.9.0 — KPI kartları, sistem özeti ve hızlı sağlık görünümü.</p>
+      <p>v5.10.0 — tenant, site ve makine yönetimi düzenlendi.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -233,6 +233,7 @@
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>💳 Subscriptions</span><span class="admin-nav-pill-v58">2</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="assets"><span>🏭 Assets / Machines</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="devices"><span>📦 Device Registry</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="security"><span>🛡️ Security Activity</span><span class="admin-nav-pill-v58">1</span></button>
     </nav>
@@ -267,7 +268,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.9.0: KPI kartları, sistem özeti, hızlı sağlık görünümü ve son güvenlik aktiviteleri.</p>
+        <p class="muted">v5.10.0: KPI kartları, sistem özeti, asset yönetimi ve son güvenlik aktiviteleri.</p>
       </div>
     </div>
 
@@ -333,7 +334,31 @@
 
   <section class="card wide admin-card" data-admin-view="tenants">
     <h2>Customers / Tenants</h2>
-    <p class="muted">Customer status aksiyonu MANAGE_CUSTOMERS yetkisine bağlıdır.</p>
+    <p class="muted">v5.10: Yeni tenant oluşturma ve mevcut tenant düzenleme işlemleri MANAGE_CUSTOMERS yetkisine bağlıdır.</p>
+
+    <div class="admin-form-grid">
+      <label>
+        Customer Code
+        <input id="newCustomerCode" type="text" placeholder="örn: yeni-demo">
+      </label>
+      <label>
+        Customer Name
+        <input id="newCustomerName" type="text" placeholder="Firma / Atölye adı">
+      </label>
+      <label>
+        Status
+        <select id="newCustomerStatus">
+          <option value="pilot">pilot</option>
+          <option value="trial">trial</option>
+          <option value="active">active</option>
+          <option value="inactive">inactive</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="createCustomerBtn" class="primary-btn">Customer Oluştur</button>
+      </div>
+    </div>
+    <div id="customerResult" class="mini-status muted"></div>
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
@@ -348,6 +373,59 @@
     <p class="muted">Plan, abonelik durumu ve gerçek zamanlı kullanım limiti zorlaması.</p>
     <p id="subscriptionEnforcementStatus" class="muted">Enforcement durumu yükleniyor...</p>
     <div id="subscriptionsTable">Yükleniyor...</div>
+  </section>
+
+  <section id="assetManagementSection" class="card wide admin-card" data-admin-view="assets">
+    <div class="section-title-row">
+      <div>
+        <h2>Assets / Machines</h2>
+        <p class="muted">v5.10: Tenant ve site altındaki makineleri oluştur, düzenle ve durumunu yönet.</p>
+      </div>
+      <button id="refreshMachinesBtn" class="secondary-btn">Makineleri Yenile</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>
+        Customer Code
+        <input id="newMachineCustomerCode" type="text" placeholder="örn: mia-demo">
+      </label>
+      <label>
+        Site Code
+        <input id="newMachineSiteCode" type="text" placeholder="örn: site01">
+      </label>
+      <label>
+        Machine Code
+        <input id="newMachineCode" type="text" placeholder="örn: laser02">
+      </label>
+      <label>
+        Machine Name
+        <input id="newMachineName" type="text" placeholder="Lazer-02">
+      </label>
+      <label>
+        Machine Type
+        <select id="newMachineType">
+          <option value="laser_cutting">laser_cutting</option>
+          <option value="cnc">cnc</option>
+          <option value="plastic_injection">plastic_injection</option>
+          <option value="furniture">furniture</option>
+          <option value="unknown">unknown</option>
+        </select>
+      </label>
+      <label>
+        Status
+        <select id="newMachineStatus">
+          <option value="active">active</option>
+          <option value="passive">passive</option>
+          <option value="maintenance">maintenance</option>
+          <option value="archived">archived</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="createMachineBtn" class="primary-btn">Machine Oluştur</button>
+      </div>
+    </div>
+    <div id="machineResult" class="mini-status muted"></div>
+    <div id="machinesTable">Yükleniyor...</div>
   </section>
 
   <section id="deviceRegistrySection" class="card wide admin-card" data-admin-view="devices">
@@ -404,7 +482,39 @@
 
   <section class="card wide admin-card" data-admin-view="tenants">
     <h2>Sites / Atölyeler</h2>
-    <p class="muted">Site status aksiyonu MANAGE_SITES yetkisine bağlıdır.</p>
+    <p class="muted">v5.10: Site oluşturma, düzenleme ve abonelik site limit kontrolü.</p>
+
+    <div class="admin-form-grid">
+      <label>
+        Customer Code
+        <input id="newSiteCustomerCode" type="text" placeholder="örn: mia-demo">
+      </label>
+      <label>
+        Site Code
+        <input id="newSiteCode" type="text" placeholder="örn: site02">
+      </label>
+      <label>
+        Site Name
+        <input id="newSiteName" type="text" placeholder="Atölye adı">
+      </label>
+      <label>
+        Location
+        <input id="newSiteLocation" type="text" placeholder="İstanbul">
+      </label>
+      <label>
+        Status
+        <select id="newSiteStatus">
+          <option value="pilot">pilot</option>
+          <option value="trial">trial</option>
+          <option value="active">active</option>
+          <option value="inactive">inactive</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="createSiteBtn" class="primary-btn">Site Oluştur</button>
+      </div>
+    </div>
+    <div id="siteResult" class="mini-status muted"></div>
     <div id="sitesTable">Yükleniyor...</div>
   </section>
 
@@ -588,6 +698,10 @@
       title:'Subscriptions',
       desc:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.'
     },
+    assets: {
+      title:'Assets / Machines',
+      desc:'Tenant, site ve makine kayıtlarını yönetme ekranı.'
+    },
     devices: {
       title:'Device Registry',
       desc:'FactoryBox cihaz kayıtları ve provisioning token işlemleri.'
@@ -749,6 +863,10 @@
         ${options.map(opt => `<option value="${esc(opt)}" ${String(value) === opt ? 'selected' : ''}>${esc(opt)}</option>`).join('')}
       </select>
     `;
+  }
+
+  function inputHtml(className, value, type = 'text') {
+    return `<input class="${className}" type="${type}" value="${esc(value || '')}">`;
   }
 
   function table(headers, rows) {
@@ -957,8 +1075,8 @@
 
     document.getElementById('customersTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
-      {label:'Name', value:r=>r.name},
-      {label:'Status', html:true, value:r=>can('MANAGE_CUSTOMERS') ? selectHtml('customer-status-select', r.status, ['trial','pilot','active','inactive','suspended']) : esc(r.status)},
+      {label:'Name', html:true, value:r=>can('MANAGE_CUSTOMERS') ? inputHtml('customer-name-input', r.name) : esc(r.name)},
+      {label:'Status', html:true, value:r=>can('MANAGE_CUSTOMERS') ? selectHtml('customer-status-select', r.status, ['trial','pilot','active','inactive','suspended','passive','archived']) : esc(r.status)},
       {label:'Sites', value:r=>r.site_count},
       {label:'Machines', value:r=>r.machine_count},
       {label:'Users', value:r=>r.user_count},
@@ -1041,14 +1159,39 @@
     const rows = (data.sites || []).map(x => ({...x, __kind:'site'}));
     document.getElementById('sitesTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
-      {label:'Name', value:r=>r.name},
+      {label:'Name', html:true, value:r=>can('MANAGE_SITES') ? inputHtml('site-name-input', r.name) : esc(r.name)},
       {label:'Customer', value:r=>r.customer_code},
-      {label:'Location', value:r=>r.location},
-      {label:'Status', html:true, value:r=>can('MANAGE_SITES') ? selectHtml('site-status-select', r.status, ['trial','pilot','active','inactive','suspended']) : esc(r.status)},
+      {label:'Location', html:true, value:r=>can('MANAGE_SITES') ? inputHtml('site-location-input', r.location) : esc(r.location)},
+      {label:'Status', html:true, value:r=>can('MANAGE_SITES') ? selectHtml('site-status-select', r.status, ['trial','pilot','active','inactive','suspended','passive','archived']) : esc(r.status)},
       {label:'Machines', value:r=>r.machine_count},
       {label:'Devices', value:r=>r.device_count},
       {label:'Aksiyon', html:true, value:r=>can('MANAGE_SITES') ? `<button class="secondary-btn mini-btn" data-action="save-site" data-code="${esc(r.code)}" data-customer-code="${esc(r.customer_code)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
     ], rows);
+  }
+
+  function renderMachines(data) {
+    const target = document.getElementById('machinesTable');
+    if (!target) return;
+
+    const result = document.getElementById('machineResult');
+    if (result && !result.dataset.manualMessage) {
+      result.innerHTML = data.asset_management_enabled
+        ? 'Asset management: <strong>ON</strong> — machine create/update ve audit kayıtları aktif.'
+        : 'Asset management: <strong>OFF</strong> — sadece listeleme modu.';
+    }
+
+    target.innerHTML = table([
+      {label:'Machine Code', value:r=>r.code},
+      {label:'Name', html:true, value:r=>can('MANAGE_SITES') ? inputHtml('machine-name-input', r.name) : esc(r.name)},
+      {label:'Type', html:true, value:r=>can('MANAGE_SITES') ? inputHtml('machine-type-input', r.machine_type) : esc(r.machine_type)},
+      {label:'Customer', value:r=>`${r.customer_name || '-'} (${r.customer_code || '-'})`},
+      {label:'Site', value:r=>`${r.site_name || '-'} (${r.site_code || '-'})`},
+      {label:'Status', html:true, value:r=>can('MANAGE_SITES') ? selectHtml('machine-status-select', r.status, ['active','passive','maintenance','archived']) : esc(r.status)},
+      {label:'Devices', value:r=>r.device_count},
+      {label:'Active Alarms', value:r=>r.active_alarm_count},
+      {label:'Updated', value:r=>fmtDate(r.updated_at)},
+      {label:'Aksiyon', html:true, value:r=>can('MANAGE_SITES') ? `<button class="secondary-btn mini-btn" data-action="save-machine" data-customer-code="${esc(r.customer_code)}" data-site-code="${esc(r.site_code)}" data-machine-code="${esc(r.code)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
+    ], data.machines || []);
   }
 
   function renderTenantAccess(data) {
@@ -1161,6 +1304,9 @@
         ['devices', '/api/admin/devices?limit=200', renderDevices, 'devicesTable']
       ] : []),
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
+      ...(can('MANAGE_SITES') ? [
+        ['machines', '/api/admin/machines?limit=300', renderMachines, 'machinesTable']
+      ] : []),
       ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable']
     ];
 
@@ -1214,11 +1360,12 @@
   async function saveCustomer(button) {
     const tr = button.closest('tr');
     const code = button.dataset.code;
+    const name = tr.querySelector('.customer-name-input').value.trim();
     const status = tr.querySelector('.customer-status-select').value;
 
-    await apiJson(`/api/admin/customers/${encodeURIComponent(code)}/status`, {
+    await apiJson(`/api/admin/customers/${encodeURIComponent(code)}`, {
       method:'PATCH',
-      body:JSON.stringify({status})
+      body:JSON.stringify({name, status})
     });
   }
 
@@ -1226,14 +1373,85 @@
     const tr = button.closest('tr');
     const code = button.dataset.code;
     const customerCode = button.dataset.customerCode;
+    const name = tr.querySelector('.site-name-input').value.trim();
+    const location = tr.querySelector('.site-location-input').value.trim();
     const status = tr.querySelector('.site-status-select').value;
 
-    await apiJson(`/api/admin/sites/${encodeURIComponent(customerCode)}/${encodeURIComponent(code)}/status`, {
+    await apiJson(`/api/admin/sites/${encodeURIComponent(customerCode)}/${encodeURIComponent(code)}`, {
       method:'PATCH',
-      body:JSON.stringify({status})
+      body:JSON.stringify({name, location, status})
     });
   }
 
+
+  async function createCustomer() {
+    const code = document.getElementById('newCustomerCode').value.trim();
+    const name = document.getElementById('newCustomerName').value.trim();
+    const status = document.getElementById('newCustomerStatus').value;
+
+    const data = await apiJson('/api/admin/customers', {
+      method:'POST',
+      body:JSON.stringify({code, name, status})
+    });
+
+    const result = document.getElementById('customerResult');
+    result.innerHTML = `Customer oluşturuldu: <strong>${esc(data.customer.code)}</strong>. Varsayılan trial abonelik hazırlandı.`;
+    document.getElementById('newCustomerCode').value = '';
+    document.getElementById('newCustomerName').value = '';
+  }
+
+  async function createSite() {
+    const customer_code = document.getElementById('newSiteCustomerCode').value.trim();
+    const code = document.getElementById('newSiteCode').value.trim();
+    const name = document.getElementById('newSiteName').value.trim();
+    const location = document.getElementById('newSiteLocation').value.trim();
+    const status = document.getElementById('newSiteStatus').value;
+
+    const data = await apiJson('/api/admin/sites', {
+      method:'POST',
+      body:JSON.stringify({customer_code, code, name, location, status})
+    });
+
+    const result = document.getElementById('siteResult');
+    result.innerHTML = `Site oluşturuldu: <strong>${esc(data.customer.code)}/${esc(data.site.code)}</strong>. Site quota kontrolü uygulandı.`;
+    document.getElementById('newSiteCode').value = '';
+    document.getElementById('newSiteName').value = '';
+  }
+
+  async function createMachine() {
+    const customer_code = document.getElementById('newMachineCustomerCode').value.trim();
+    const site_code = document.getElementById('newMachineSiteCode').value.trim();
+    const code = document.getElementById('newMachineCode').value.trim();
+    const name = document.getElementById('newMachineName').value.trim();
+    const machine_type = document.getElementById('newMachineType').value;
+    const status = document.getElementById('newMachineStatus').value;
+
+    const data = await apiJson('/api/admin/machines', {
+      method:'POST',
+      body:JSON.stringify({customer_code, site_code, code, name, machine_type, status})
+    });
+
+    const result = document.getElementById('machineResult');
+    result.dataset.manualMessage = 'true';
+    result.innerHTML = `Machine oluşturuldu: <strong>${esc(data.site.customer_code || customer_code)}/${esc(data.site.code)}/${esc(data.machine.code)}</strong>.`;
+    document.getElementById('newMachineCode').value = '';
+    document.getElementById('newMachineName').value = '';
+  }
+
+  async function saveMachine(button) {
+    const tr = button.closest('tr');
+    const customerCode = button.dataset.customerCode;
+    const siteCode = button.dataset.siteCode;
+    const machineCode = button.dataset.machineCode;
+    const name = tr.querySelector('.machine-name-input').value.trim();
+    const machine_type = tr.querySelector('.machine-type-input').value.trim();
+    const status = tr.querySelector('.machine-status-select').value;
+
+    await apiJson(`/api/admin/machines/${encodeURIComponent(customerCode)}/${encodeURIComponent(siteCode)}/${encodeURIComponent(machineCode)}`, {
+      method:'PATCH',
+      body:JSON.stringify({name, machine_type, status})
+    });
+  }
 
   async function saveSubscription(button) {
     const tr = button.closest('tr');
@@ -1378,6 +1596,12 @@
         status.textContent = 'Site güncellendi. Activity history güncellendi.';
       }
 
+      if (action === 'save-machine') {
+        await saveMachine(button);
+        await loadAdmin();
+        status.textContent = 'Machine güncellendi. Activity history güncellendi.';
+      }
+
       if (action === 'save-subscription') {
         await saveSubscription(button);
         await loadAdmin();
@@ -1421,9 +1645,14 @@
     const exportAuditCsvBtn = document.getElementById('exportAuditCsvBtn');
     const createDeviceProvisionBtn = document.getElementById('createDeviceProvisionBtn');
     const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
+    const createCustomerBtn = document.getElementById('createCustomerBtn');
+    const createSiteBtn = document.getElementById('createSiteBtn');
+    const createMachineBtn = document.getElementById('createMachineBtn');
+    const refreshMachinesBtn = document.getElementById('refreshMachinesBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
+    if (refreshMachinesBtn) refreshMachinesBtn.addEventListener('click', loadAdmin);
     if (applyAuditFiltersBtn) applyAuditFiltersBtn.addEventListener('click', loadAdmin);
     if (exportAuditCsvBtn) exportAuditCsvBtn.addEventListener('click', async () => {
       exportAuditCsvBtn.disabled = true;
@@ -1438,6 +1667,51 @@
         exportAuditCsvBtn.disabled = false;
       }
     });
+    if (createCustomerBtn) createCustomerBtn.addEventListener('click', async () => {
+      createCustomerBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Customer oluşturuluyor...';
+      try {
+        if (!can('MANAGE_CUSTOMERS')) throw new Error('Permission required: MANAGE_CUSTOMERS');
+        await createCustomer();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = 'Customer oluşturuldu. Trial abonelik ve audit kaydı hazır.';
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        createCustomerBtn.disabled = false;
+      }
+    });
+
+    if (createSiteBtn) createSiteBtn.addEventListener('click', async () => {
+      createSiteBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Site oluşturuluyor...';
+      try {
+        if (!can('MANAGE_SITES')) throw new Error('Permission required: MANAGE_SITES');
+        await createSite();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = 'Site oluşturuldu. Site quota ve audit kaydı uygulandı.';
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        createSiteBtn.disabled = false;
+      }
+    });
+
+    if (createMachineBtn) createMachineBtn.addEventListener('click', async () => {
+      createMachineBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Machine oluşturuluyor...';
+      try {
+        if (!can('MANAGE_SITES')) throw new Error('Permission required: MANAGE_SITES');
+        await createMachine();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = 'Machine oluşturuldu. Asset listesi güncellendi.';
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        createMachineBtn.disabled = false;
+      }
+    });
+
     if (createDeviceProvisionBtn) createDeviceProvisionBtn.addEventListener('click', async () => {
       createDeviceProvisionBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Provision token oluşturuluyor...';

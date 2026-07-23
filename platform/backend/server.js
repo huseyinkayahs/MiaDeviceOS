@@ -44,7 +44,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.9.0';
+const APP_VERSION = '5.10.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -56,6 +56,10 @@ function deviceProvisioningEnabled() {
 
 function adminDashboardKpiEnabled() {
   return String(process.env.ADMIN_DASHBOARD_KPI_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function assetManagementEnabled() {
+  return String(process.env.ASSET_MANAGEMENT_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -1839,7 +1843,8 @@ app.get('/api/auth/status', async (req,res)=>{
       subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
       audit_export_enabled:auditExportEnabled(),
       device_provisioning_enabled:deviceProvisioningEnabled(),
-      admin_dashboard_kpi_enabled:adminDashboardKpiEnabled()
+      admin_dashboard_kpi_enabled:adminDashboardKpiEnabled(),
+      asset_management_enabled:assetManagementEnabled()
     }
   });
 });
@@ -2374,6 +2379,86 @@ function adminRequired(req, res, next) {
   return next();
 }
 
+
+
+const ASSET_CUSTOMER_STATUSES = ['trial','pilot','active','inactive','suspended','passive','archived'];
+const ASSET_SITE_STATUSES = ['trial','pilot','active','inactive','suspended','passive','archived'];
+const ASSET_MACHINE_STATUSES = ['active','passive','maintenance','archived'];
+
+async function ensureAssetManagementFoundation() {
+  await pool.query(`
+    DO $$
+    BEGIN
+      ALTER TABLE machines DROP CONSTRAINT IF EXISTS machines_status_check;
+      ALTER TABLE machines ADD CONSTRAINT machines_status_check
+        CHECK (status IN ('active','passive','maintenance','archived'));
+    END $$;
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_customers_code_status ON customers(code, status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_sites_customer_status ON sites(customer_id, status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_machines_site_status ON machines(site_id, status)`);
+}
+
+function normalizeAssetCode(value, label) {
+  const v = String(value || '').trim();
+  if (!v) {
+    const err = new Error(`${label} is required`);
+    err.statusCode = 400;
+    throw err;
+  }
+  if (!/^[a-zA-Z0-9_-]{2,64}$/.test(v)) {
+    const err = new Error(`${label} must be 2-64 chars and contain only letters, numbers, dash or underscore`);
+    err.statusCode = 400;
+    throw err;
+  }
+  return v.toLowerCase();
+}
+
+function cleanAssetName(value, label, maxLen=160) {
+  const v = String(value || '').trim();
+  if (!v) {
+    const err = new Error(`${label} is required`);
+    err.statusCode = 400;
+    throw err;
+  }
+  return v.slice(0, maxLen);
+}
+
+function cleanOptionalText(value, maxLen=200) {
+  const v = String(value || '').trim();
+  return v ? v.slice(0, maxLen) : null;
+}
+
+async function machineAssetRows(limit=300) {
+  const safeLimit = Math.min(Math.max(Number(limit || 300), 1), 500);
+  const result = await pool.query(`
+    SELECT
+      m.id::text,
+      m.code,
+      m.name,
+      m.machine_type,
+      m.status,
+      s.code AS site_code,
+      s.name AS site_name,
+      c.code AS customer_code,
+      c.name AS customer_name,
+      m.created_at,
+      m.updated_at,
+      count(DISTINCT d.id)::int AS device_count,
+      (count(DISTINCT a.id) FILTER (WHERE a.status='active'))::int AS active_alarm_count
+    FROM machines m
+    JOIN sites s ON s.id=m.site_id
+    JOIN customers c ON c.id=s.customer_id
+    LEFT JOIN devices d ON d.machine_id=m.id
+    LEFT JOIN alarms a ON a.machine_id=m.id
+    GROUP BY m.id, m.code, m.name, m.machine_type, m.status, s.code, s.name, c.code, c.name, m.created_at, m.updated_at
+    ORDER BY c.code, s.code, m.code
+    LIMIT $1
+  `, [safeLimit]);
+  return result.rows;
+}
+
 app.get('/api/admin/overview', adminRequired, async (req,res)=>{
   try {
     const counts = await one(`
@@ -2406,6 +2491,7 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
       subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
       audit_export_enabled:auditExportEnabled(),
       device_provisioning_enabled:deviceProvisioningEnabled(),
+      asset_management_enabled:assetManagementEnabled(),
       counts
     });
   } catch(e) {
@@ -2791,6 +2877,267 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
   }
 });
 
+
+app.get('/api/admin/machines', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAssetManagementFoundation();
+    const machines = await machineAssetRows(req.query.limit || 300);
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      asset_management_enabled:assetManagementEnabled(),
+      count:machines.length,
+      machines
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/customers', adminRequired, permissionRequired('MANAGE_CUSTOMERS'), async (req,res)=>{
+  let client;
+  try {
+    await ensureBillingFoundation();
+    await ensureAssetManagementFoundation();
+
+    const code = normalizeAssetCode(req.body?.code, 'customer code');
+    const name = cleanAssetName(req.body?.name, 'customer name');
+    const status = validateChoice(req.body?.status || 'pilot', ASSET_CUSTOMER_STATUSES, 'status');
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const created = await client.query(`
+      INSERT INTO customers(code, name, status)
+      VALUES($1,$2,$3)
+      RETURNING id::text, code, name, status, created_at, updated_at
+    `, [code, name, status]);
+
+    await client.query('COMMIT');
+    client.release();
+    client = null;
+
+    await ensureCustomerSubscription(created.rows[0].id, 'trial');
+    const subscription = await getSubscriptionSnapshot(code, true);
+
+    await writeAuditLog(req, {
+      action:'create_customer',
+      entity_type:'customer',
+      entity_id:created.rows[0].id,
+      old_values:null,
+      new_values:created.rows[0],
+      metadata:{customer_code:code, subscription_created:Boolean(subscription)}
+    });
+
+    res.status(201).json({status:'ok', version:APP_VERSION, customer:created.rows[0], subscription});
+  } catch(e) {
+    if (client) { try { await client.query('ROLLBACK'); } catch(_) {} client.release(); }
+    const status = e.code === '23505' ? 409 : (e.statusCode || 500);
+    res.status(status).json({status:'error', version:APP_VERSION, message:e.code === '23505' ? 'Customer code already exists' : e.message});
+  }
+});
+
+app.patch('/api/admin/customers/:code', adminRequired, permissionRequired('MANAGE_CUSTOMERS'), async (req,res)=>{
+  try {
+    await ensureAssetManagementFoundation();
+    const code = normalizeAssetCode(req.params.code, 'customer code');
+    const oldRow = await one(`SELECT id::text, code, name, status FROM customers WHERE code=$1 LIMIT 1`, [code]);
+    if (!oldRow) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Customer not found'});
+
+    const name = req.body?.name !== undefined ? cleanAssetName(req.body.name, 'customer name') : oldRow.name;
+    const status = req.body?.status !== undefined ? validateChoice(req.body.status, ASSET_CUSTOMER_STATUSES, 'status') : oldRow.status;
+
+    const updated = await one(`
+      UPDATE customers
+      SET name=$2, status=$3, updated_at=now()
+      WHERE code=$1
+      RETURNING id::text, code, name, status, created_at, updated_at
+    `, [code, name, status]);
+
+    await writeAuditLog(req, {
+      action:'update_customer',
+      entity_type:'customer',
+      entity_id:updated.id,
+      old_values:oldRow,
+      new_values:updated,
+      metadata:{customer_code:code}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, customer:updated});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/sites', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureBillingFoundation();
+    await ensureAssetManagementFoundation();
+
+    const customerCode = normalizeAssetCode(req.body?.customer_code, 'customer code');
+    const code = normalizeAssetCode(req.body?.code, 'site code');
+    const name = cleanAssetName(req.body?.name, 'site name');
+    const location = cleanOptionalText(req.body?.location, 220);
+    const status = validateChoice(req.body?.status || 'pilot', ASSET_SITE_STATUSES, 'status');
+
+    const customer = await one(`SELECT id::text, code, name FROM customers WHERE code=$1 LIMIT 1`, [customerCode]);
+    if (!customer) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Customer not found'});
+
+    await assertSubscriptionCapacity(customerCode, 'sites', 1, false);
+
+    const created = await one(`
+      INSERT INTO sites(customer_id, code, name, location, status)
+      VALUES($1,$2,$3,$4,$5)
+      RETURNING id::text, code, name, location, status, created_at, updated_at
+    `, [customer.id, code, name, location, status]);
+
+    await writeAuditLog(req, {
+      action:'create_site',
+      entity_type:'site',
+      entity_id:created.id,
+      old_values:null,
+      new_values:created,
+      metadata:{customer_code:customerCode, site_code:code}
+    });
+
+    res.status(201).json({status:'ok', version:APP_VERSION, customer, site:created});
+  } catch(e) {
+    const status = e.code === '23505' ? 409 : (e.statusCode || 500);
+    res.status(status).json({
+      status:e.statusCode === 409 ? 'subscription_quota_blocked' : 'error',
+      version:APP_VERSION,
+      message:e.code === '23505' ? 'Site code already exists for this customer' : e.message,
+      usage:e.usage || null,
+      access:e.access || null
+    });
+  }
+});
+
+app.patch('/api/admin/sites/:customerCode/:siteCode', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAssetManagementFoundation();
+    const customerCode = normalizeAssetCode(req.params.customerCode, 'customer code');
+    const siteCode = normalizeAssetCode(req.params.siteCode, 'site code');
+
+    const oldRow = await one(`
+      SELECT s.id::text, s.code, s.name, s.location, s.status, c.code AS customer_code
+      FROM sites s JOIN customers c ON c.id=s.customer_id
+      WHERE c.code=$1 AND s.code=$2 LIMIT 1
+    `, [customerCode, siteCode]);
+    if (!oldRow) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Site not found'});
+
+    const name = req.body?.name !== undefined ? cleanAssetName(req.body.name, 'site name') : oldRow.name;
+    const location = req.body?.location !== undefined ? cleanOptionalText(req.body.location, 220) : oldRow.location;
+    const status = req.body?.status !== undefined ? validateChoice(req.body.status, ASSET_SITE_STATUSES, 'status') : oldRow.status;
+
+    const updated = await one(`
+      UPDATE sites s
+      SET name=$3, location=$4, status=$5, updated_at=now()
+      FROM customers c
+      WHERE s.customer_id=c.id AND c.code=$1 AND s.code=$2
+      RETURNING s.id::text, s.code, s.name, s.location, s.status, s.created_at, s.updated_at
+    `, [customerCode, siteCode, name, location, status]);
+
+    await writeAuditLog(req, {
+      action:'update_site',
+      entity_type:'site',
+      entity_id:updated.id,
+      old_values:oldRow,
+      new_values:updated,
+      metadata:{customer_code:customerCode, site_code:siteCode}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, site:updated});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/machines', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAssetManagementFoundation();
+    const customerCode = normalizeAssetCode(req.body?.customer_code, 'customer code');
+    const siteCode = normalizeAssetCode(req.body?.site_code, 'site code');
+    const code = normalizeAssetCode(req.body?.code, 'machine code');
+    const name = cleanAssetName(req.body?.name, 'machine name');
+    const machineType = cleanOptionalText(req.body?.machine_type, 80) || 'unknown';
+    const status = validateChoice(req.body?.status || 'active', ASSET_MACHINE_STATUSES, 'status');
+
+    await assertSubscriptionAccessForCustomer(customerCode);
+
+    const site = await one(`
+      SELECT s.id::text, s.code, s.name, c.code AS customer_code, c.name AS customer_name
+      FROM sites s JOIN customers c ON c.id=s.customer_id
+      WHERE c.code=$1 AND s.code=$2 LIMIT 1
+    `, [customerCode, siteCode]);
+    if (!site) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Site not found'});
+
+    const created = await one(`
+      INSERT INTO machines(site_id, code, name, machine_type, status)
+      VALUES($1,$2,$3,$4,$5)
+      RETURNING id::text, code, name, machine_type, status, created_at, updated_at
+    `, [site.id, code, name, machineType, status]);
+
+    await writeAuditLog(req, {
+      action:'create_machine',
+      entity_type:'machine',
+      entity_id:created.id,
+      old_values:null,
+      new_values:created,
+      metadata:{customer_code:customerCode, site_code:siteCode, machine_code:code}
+    });
+
+    res.status(201).json({status:'ok', version:APP_VERSION, site, machine:created});
+  } catch(e) {
+    const status = e.code === '23505' ? 409 : (e.statusCode || 500);
+    res.status(status).json({status:'error', version:APP_VERSION, message:e.code === '23505' ? 'Machine code already exists for this site' : e.message});
+  }
+});
+
+app.patch('/api/admin/machines/:customerCode/:siteCode/:machineCode', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAssetManagementFoundation();
+    const customerCode = normalizeAssetCode(req.params.customerCode, 'customer code');
+    const siteCode = normalizeAssetCode(req.params.siteCode, 'site code');
+    const machineCode = normalizeAssetCode(req.params.machineCode, 'machine code');
+
+    const oldRow = await one(`
+      SELECT m.id::text, m.code, m.name, m.machine_type, m.status, s.code AS site_code, c.code AS customer_code
+      FROM machines m
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      WHERE c.code=$1 AND s.code=$2 AND m.code=$3
+      LIMIT 1
+    `, [customerCode, siteCode, machineCode]);
+    if (!oldRow) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Machine not found'});
+
+    const name = req.body?.name !== undefined ? cleanAssetName(req.body.name, 'machine name') : oldRow.name;
+    const machineType = req.body?.machine_type !== undefined ? (cleanOptionalText(req.body.machine_type, 80) || 'unknown') : oldRow.machine_type;
+    const status = req.body?.status !== undefined ? validateChoice(req.body.status, ASSET_MACHINE_STATUSES, 'status') : oldRow.status;
+
+    const updated = await one(`
+      UPDATE machines m
+      SET name=$4, machine_type=$5, status=$6, updated_at=now()
+      FROM sites s, customers c
+      WHERE m.site_id=s.id AND s.customer_id=c.id AND c.code=$1 AND s.code=$2 AND m.code=$3
+      RETURNING m.id::text, m.code, m.name, m.machine_type, m.status, m.created_at, m.updated_at
+    `, [customerCode, siteCode, machineCode, name, machineType, status]);
+
+    await writeAuditLog(req, {
+      action:'update_machine',
+      entity_type:'machine',
+      entity_id:updated.id,
+      old_values:oldRow,
+      new_values:updated,
+      metadata:{customer_code:customerCode, site_code:siteCode, machine_code:machineCode}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, machine:updated});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
 app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
   try {
     const result = await pool.query(`
@@ -2947,6 +3294,7 @@ async function resolveDeviceTarget(customerCode, siteCode, machineCode, machineN
 app.get('/api/admin/devices', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
   try {
     await ensureDeviceRegistrySchema();
+  await ensureAssetManagementFoundation();
     const limit = Math.min(Math.max(Number(req.query.limit || 200), 1), 500);
     const result = await pool.query(`
       SELECT
@@ -3000,6 +3348,7 @@ app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired
     }
 
     await ensureDeviceRegistrySchema();
+  await ensureAssetManagementFoundation();
 
     const customerCode = cleanCode(req.body?.customer_code || req.body?.customerCode || CFG.customerCode);
     const siteCode = cleanCode(req.body?.site_code || req.body?.siteCode || CFG.siteCode);
@@ -3102,6 +3451,7 @@ app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired
 app.patch('/api/admin/devices/:uid/status', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
   try {
     await ensureDeviceRegistrySchema();
+  await ensureAssetManagementFoundation();
     const status = validateChoice(req.body?.status, ['online','offline','unknown','maintenance','archived'], 'status');
     const uid = String(req.params.uid || '').trim();
 
@@ -3144,6 +3494,7 @@ app.post('/api/device/provision/claim', async (req,res)=>{
     }
 
     await ensureDeviceRegistrySchema();
+  await ensureAssetManagementFoundation();
 
     const token = String(req.body?.token || '').trim();
     const deviceUid = cleanCode(req.body?.device_uid || req.body?.deviceUid);
@@ -6354,6 +6705,7 @@ async function start() {
   await ensureInviteSchema();
   await ensureBillingFoundation();
   await ensureDeviceRegistrySchema();
+  await ensureAssetManagementFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });

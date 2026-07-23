@@ -1,0 +1,51 @@
+FactoryBox One v5.10.0 Kurulum
+================================
+
+Sprint:
+v5.10.0 Asset Management / Tenant Site Machine Pack
+
+Kurulum:
+1. Bu ZIP'i mevcut proje ana klasörünün üzerine çıkar.
+2. Dosyaları hedefte değiştir seçeneğini onayla.
+3. Bu sürümde zorunlu yeni .env satırı yoktur.
+   İstersen açık şekilde ekleyebilirsin:
+
+   ASSET_MANAGEMENT_ENABLED=true
+
+4. Backend'i yeniden başlat:
+
+   cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+   npm.cmd start
+
+Kontrol:
+
+1. Health:
+   http://localhost:3100/api/health
+
+   Beklenen:
+   version: 5.10.0
+
+2. Auth status:
+   http://localhost:3100/api/auth/status
+
+   Beklenen:
+   asset_management_enabled: true
+
+3. Admin panel:
+   http://localhost:3100/admin.html?fresh=5100
+
+   Ctrl + F5 yap.
+
+Beklenen admin panel bölümleri:
+- Customers / Tenants içinde Customer Oluştur formu
+- Sites / Atölyeler içinde Site Oluştur formu
+- Assets / Machines menüsü
+- Machine Oluştur formu
+- Machines tablosu
+
+Kısa test:
+1. Mevcut customer adını değiştirip kaydet.
+2. Mevcut site location veya status değerini değiştirip kaydet.
+3. Assets / Machines bölümünde yeni bir test makinesi oluştur.
+4. Oluşan makinenin status değerini maintenance yapıp kaydet.
+5. Sayfayı yenile; kayıtlar korunmalı.

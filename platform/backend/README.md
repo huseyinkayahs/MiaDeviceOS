@@ -94,3 +94,14 @@ SUBSCRIPTION_ENFORCEMENT_ENABLED=true
 ## v5.7 Device Registry / Provisioning
 
 Admin panel üzerinden cihaz listesi, cihaz durum yönetimi ve tek kullanımlık provisioning token üretimi desteklenir.
+
+
+## v5.10.0 Asset Management / Tenant Site Machine Pack
+
+Bu sürümde admin panel üzerinden customer, site ve machine kayıtları daha düzenli yönetilebilir hale getirildi.
+
+- Customer oluşturma ve düzenleme
+- Site oluşturma, düzenleme ve site quota kontrolü
+- Machine oluşturma ve düzenleme
+- Machine listesi ve durum yönetimi
+- Asset işlemlerinin audit log'a yazılması

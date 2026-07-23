@@ -1,0 +1,21 @@
+FactoryBox One v5.10.0 Paket İçeriği
+====================================
+
+Sprint:
+v5.10.0 Asset Management / Tenant Site Machine Pack
+
+Değişen ana dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/package.json
+- platform/backend/package-lock.json
+- platform/backend/README.md
+
+Yeni dosyalar:
+- platform/database/migrations/021_asset_management_tenant_site_machine_pack.sql
+- docs/V5_10_ASSET_MANAGEMENT_TENANT_SITE_MACHINE_PACK.md
+- KURULUM_V5_10.txt
+
+Özet:
+Bu paket admin panelden customer, site ve machine kayıtlarının daha düzenli yönetilmesini sağlar.
+Mevcut device registry ve subscription enforcement yapısı korunmuştur.
