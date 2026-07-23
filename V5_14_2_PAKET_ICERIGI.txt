@@ -1,0 +1,9 @@
+FactoryBox One v5.14.2 değişen dosyalar
+
+platform/backend/server.js
+platform/backend/package.json
+platform/backend/package-lock.json
+platform/backend/public/login.html
+platform/backend/public/admin.html
+
+docs/V5_14_2_LOGIN_ADMIN_REDIRECT_HOTFIX.md

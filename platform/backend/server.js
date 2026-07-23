@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.13.0';
+const APP_VERSION = '5.14.2';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -82,6 +82,10 @@ function alarmCenterEnabled() {
 
 function alarmAnalyticsEnabled() {
   return String(process.env.ALARM_ANALYTICS_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function alarmEscalationEnabled() {
+  return String(process.env.ALARM_ESCALATION_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -1869,7 +1873,8 @@ app.get('/api/auth/status', async (req,res)=>{
       asset_management_enabled:assetManagementEnabled(),
       live_monitoring_enabled:liveMonitoringEnabled(),
       alarm_center_enabled:alarmCenterEnabled(),
-      alarm_analytics_enabled:alarmAnalyticsEnabled()
+      alarm_analytics_enabled:alarmAnalyticsEnabled(),
+      alarm_escalation_enabled:alarmEscalationEnabled()
     }
   });
 });
@@ -3121,6 +3126,337 @@ app.get('/api/admin/alarm-analytics', adminRequired, permissionRequired('VIEW_DA
       top_alarm_types:topTypes.rows,
       top_machines:topMachines.rows
     });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+
+
+async function ensureAlarmEscalationFoundation() {
+  await ensureAlarmCenterFoundation();
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alarm_escalation_rules (
+      id bigserial PRIMARY KEY,
+      rule_key text NOT NULL UNIQUE,
+      name text NOT NULL,
+      customer_code text,
+      site_code text,
+      machine_code text,
+      alarm_type text,
+      severity text NOT NULL DEFAULT 'all',
+      acknowledge_sla_minutes integer NOT NULL DEFAULT 15,
+      resolve_sla_minutes integer NOT NULL DEFAULT 120,
+      escalation_channel text NOT NULL DEFAULT 'dashboard',
+      recipients text,
+      priority integer NOT NULL DEFAULT 100,
+      enabled boolean NOT NULL DEFAULT true,
+      is_system boolean NOT NULL DEFAULT false,
+      created_by text,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CHECK (severity IN ('all','critical','warning','info')),
+      CHECK (acknowledge_sla_minutes BETWEEN 1 AND 10080),
+      CHECK (resolve_sla_minutes BETWEEN 1 AND 43200),
+      CHECK (priority BETWEEN 0 AND 1000)
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_escalation_rules_enabled_priority
+    ON alarm_escalation_rules(enabled, priority DESC)
+  `);
+
+  await pool.query(`
+    INSERT INTO alarm_escalation_rules(
+      rule_key,name,severity,acknowledge_sla_minutes,resolve_sla_minutes,
+      escalation_channel,priority,enabled,is_system,created_by,updated_by
+    ) VALUES
+      ('system-critical','Critical Alarm SLA','critical',5,30,'dashboard',300,true,true,'system','system'),
+      ('system-warning','Warning Alarm SLA','warning',15,120,'dashboard',200,true,true,'system','system'),
+      ('system-info','Info Alarm SLA','info',60,480,'dashboard',100,true,true,'system','system')
+    ON CONFLICT(rule_key) DO NOTHING
+  `);
+}
+
+function alarmSlaMinutes(raw, fallback, max) {
+  const value = Number(raw ?? fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 1), max);
+}
+
+function alarmRuleText(raw, max = 120) {
+  const value = String(raw || '').trim();
+  return value ? value.slice(0, max) : null;
+}
+
+function alarmRuleSeverity(raw) {
+  const value = String(raw || 'all').trim().toLowerCase();
+  return ['all','critical','warning','info'].includes(value) ? value : 'all';
+}
+
+function alarmRulePriority(raw, fallback = 100) {
+  const value = Number(raw ?? fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 0), 1000);
+}
+
+function alarmRuleMatches(rule, alarm) {
+  let score = Number(rule.priority || 0);
+
+  const checks = [
+    ['customer_code', 1],
+    ['site_code', 2],
+    ['machine_code', 4],
+    ['alarm_type', 8]
+  ];
+
+  for (const [field, weight] of checks) {
+    const wanted = String(rule[field] || '').trim().toLowerCase();
+    if (!wanted) continue;
+    const actual = String(alarm[field] || '').trim().toLowerCase();
+    if (wanted !== actual) return -1;
+    score += weight * 10000;
+  }
+
+  const severity = String(rule.severity || 'all').toLowerCase();
+  if (severity !== 'all') {
+    if (severity !== String(alarm.severity || '').toLowerCase()) return -1;
+    score += 16 * 10000;
+  }
+
+  return score;
+}
+
+function alarmSlaStatus(alarm, rule, nowMs = Date.now()) {
+  if (!rule) {
+    return {
+      ...alarm,
+      rule_id:null,
+      rule_name:null,
+      acknowledge_sla_minutes:null,
+      resolve_sla_minutes:null,
+      age_minutes:Math.max(0, Math.round((nowMs - new Date(alarm.started_at).getTime()) / 60000)),
+      ack_due_at:null,
+      resolve_due_at:null,
+      ack_overdue:false,
+      resolve_overdue:false,
+      sla_status:'no_rule'
+    };
+  }
+
+  const startedMs = new Date(alarm.started_at).getTime();
+  const ageMinutes = Math.max(0, (nowMs - startedMs) / 60000);
+  const ackLimit = Number(rule.acknowledge_sla_minutes || 0);
+  const resolveLimit = Number(rule.resolve_sla_minutes || 0);
+  const ackOverdue = !alarm.acknowledged_at && ageMinutes > ackLimit;
+  const resolveOverdue = ageMinutes > resolveLimit;
+  const status = resolveOverdue ? 'resolve_overdue' : (ackOverdue ? 'ack_overdue' : 'within_sla');
+
+  return {
+    ...alarm,
+    rule_id:String(rule.id),
+    rule_name:rule.name,
+    escalation_channel:rule.escalation_channel,
+    recipients:rule.recipients,
+    acknowledge_sla_minutes:ackLimit,
+    resolve_sla_minutes:resolveLimit,
+    age_minutes:Math.round(ageMinutes * 10) / 10,
+    ack_due_at:new Date(startedMs + ackLimit * 60000).toISOString(),
+    resolve_due_at:new Date(startedMs + resolveLimit * 60000).toISOString(),
+    ack_overdue:ackOverdue,
+    resolve_overdue:resolveOverdue,
+    sla_status:status
+  };
+}
+
+app.get('/api/admin/alarm-escalation', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+
+    const rulesResult = await pool.query(`
+      SELECT *
+      FROM alarm_escalation_rules
+      ORDER BY priority DESC, is_system DESC, id ASC
+    `);
+
+    const activeResult = await pool.query(`
+      SELECT
+        a.id::text,
+        a.alarm_type,
+        a.severity,
+        a.status,
+        a.started_at,
+        a.acknowledged_at,
+        a.acknowledged_by,
+        a.message,
+        m.code AS machine_code,
+        m.name AS machine_name,
+        s.code AS site_code,
+        c.code AS customer_code
+      FROM alarms a
+      LEFT JOIN machines m ON m.id=a.machine_id
+      LEFT JOIN sites s ON s.id=m.site_id
+      LEFT JOIN customers c ON c.id=s.customer_id
+      WHERE a.status='active'
+      ORDER BY a.started_at ASC
+      LIMIT 500
+    `);
+
+    const enabledRules = rulesResult.rows.filter(rule => rule.enabled);
+    const nowMs = Date.now();
+    const activeAlarms = activeResult.rows.map(alarm => {
+      let selected = null;
+      let selectedScore = -1;
+      for (const rule of enabledRules) {
+        const score = alarmRuleMatches(rule, alarm);
+        if (score > selectedScore) {
+          selected = rule;
+          selectedScore = score;
+        }
+      }
+      return alarmSlaStatus(alarm, selected, nowMs);
+    }).sort((a,b) => {
+      const rank = {resolve_overdue:0, ack_overdue:1, within_sla:2, no_rule:3};
+      return (rank[a.sla_status] ?? 9) - (rank[b.sla_status] ?? 9) || Number(b.age_minutes || 0) - Number(a.age_minutes || 0);
+    });
+
+    const summary = activeAlarms.reduce((acc,row)=>{
+      acc.active += 1;
+      acc[row.sla_status] = (acc[row.sla_status] || 0) + 1;
+      if (row.severity === 'critical') acc.critical_active += 1;
+      return acc;
+    }, {active:0, critical_active:0, within_sla:0, ack_overdue:0, resolve_overdue:0, no_rule:0});
+
+    const actor = req.user || getSession(req)?.user || null;
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      alarm_escalation_enabled:alarmEscalationEnabled(),
+      can_manage_rules:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
+      generated_at:new Date().toISOString(),
+      summary,
+      rules:rulesResult.rows,
+      active_alarms:activeAlarms
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/alarm-escalation/rules', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+    const actor = req.user || getSession(req)?.user || null;
+    const name = alarmRuleText(req.body?.name, 100);
+    if (!name) return res.status(400).json({status:'invalid_request', message:'Rule name is required'});
+
+    const ackMinutes = alarmSlaMinutes(req.body?.acknowledge_sla_minutes, 15, 10080);
+    const resolveMinutes = alarmSlaMinutes(req.body?.resolve_sla_minutes, 120, 43200);
+    if (resolveMinutes < ackMinutes) {
+      return res.status(400).json({status:'invalid_request', message:'Resolve SLA must be equal to or greater than acknowledge SLA'});
+    }
+
+    const ruleKey = `custom-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const created = await one(`
+      INSERT INTO alarm_escalation_rules(
+        rule_key,name,customer_code,site_code,machine_code,alarm_type,severity,
+        acknowledge_sla_minutes,resolve_sla_minutes,escalation_channel,recipients,
+        priority,enabled,is_system,created_by,updated_by
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,false,$13,$13)
+      RETURNING *
+    `, [
+      ruleKey,
+      name,
+      alarmRuleText(req.body?.customer_code, 80),
+      alarmRuleText(req.body?.site_code, 80),
+      alarmRuleText(req.body?.machine_code, 80),
+      alarmRuleText(req.body?.alarm_type, 100),
+      alarmRuleSeverity(req.body?.severity),
+      ackMinutes,
+      resolveMinutes,
+      alarmRuleText(req.body?.escalation_channel, 40) || 'dashboard',
+      alarmRuleText(req.body?.recipients, 500),
+      alarmRulePriority(req.body?.priority, 500),
+      actor?.email || 'admin'
+    ]);
+
+    await writeAuditLog(req, {
+      action:'create_alarm_escalation_rule',
+      entity_type:'alarm_escalation_rule',
+      entity_id:String(created.id),
+      old_values:null,
+      new_values:created,
+      metadata:{rule_key:created.rule_key}
+    });
+
+    res.status(201).json({status:'ok', version:APP_VERSION, rule:created});
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.patch('/api/admin/alarm-escalation/rules/:id', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+    const id = String(req.params.id || '').trim();
+    const oldRule = await one(`SELECT * FROM alarm_escalation_rules WHERE id=$1`, [id]);
+    if (!oldRule) return res.status(404).json({status:'not_found', message:'Alarm escalation rule not found'});
+
+    const actor = req.user || getSession(req)?.user || null;
+    const ackMinutes = alarmSlaMinutes(req.body?.acknowledge_sla_minutes, oldRule.acknowledge_sla_minutes, 10080);
+    const resolveMinutes = alarmSlaMinutes(req.body?.resolve_sla_minutes, oldRule.resolve_sla_minutes, 43200);
+    if (resolveMinutes < ackMinutes) {
+      return res.status(400).json({status:'invalid_request', message:'Resolve SLA must be equal to or greater than acknowledge SLA'});
+    }
+
+    const updated = await one(`
+      UPDATE alarm_escalation_rules
+      SET name=$2,
+          customer_code=$3,
+          site_code=$4,
+          machine_code=$5,
+          alarm_type=$6,
+          severity=$7,
+          acknowledge_sla_minutes=$8,
+          resolve_sla_minutes=$9,
+          escalation_channel=$10,
+          recipients=$11,
+          priority=$12,
+          enabled=$13,
+          updated_by=$14,
+          updated_at=now()
+      WHERE id=$1
+      RETURNING *
+    `, [
+      id,
+      alarmRuleText(req.body?.name, 100) || oldRule.name,
+      Object.prototype.hasOwnProperty.call(req.body || {}, 'customer_code') ? alarmRuleText(req.body?.customer_code, 80) : oldRule.customer_code,
+      Object.prototype.hasOwnProperty.call(req.body || {}, 'site_code') ? alarmRuleText(req.body?.site_code, 80) : oldRule.site_code,
+      Object.prototype.hasOwnProperty.call(req.body || {}, 'machine_code') ? alarmRuleText(req.body?.machine_code, 80) : oldRule.machine_code,
+      Object.prototype.hasOwnProperty.call(req.body || {}, 'alarm_type') ? alarmRuleText(req.body?.alarm_type, 100) : oldRule.alarm_type,
+      alarmRuleSeverity(req.body?.severity ?? oldRule.severity),
+      ackMinutes,
+      resolveMinutes,
+      alarmRuleText(req.body?.escalation_channel, 40) || oldRule.escalation_channel || 'dashboard',
+      Object.prototype.hasOwnProperty.call(req.body || {}, 'recipients') ? alarmRuleText(req.body?.recipients, 500) : oldRule.recipients,
+      alarmRulePriority(req.body?.priority, oldRule.priority),
+      typeof req.body?.enabled === 'boolean' ? req.body.enabled : oldRule.enabled,
+      actor?.email || 'admin'
+    ]);
+
+    await writeAuditLog(req, {
+      action:'update_alarm_escalation_rule',
+      entity_type:'alarm_escalation_rule',
+      entity_id:id,
+      old_values:oldRule,
+      new_values:updated,
+      metadata:{rule_key:updated.rule_key, is_system:updated.is_system}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, rule:updated});
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }

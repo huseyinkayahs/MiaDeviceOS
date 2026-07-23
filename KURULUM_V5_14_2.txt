@@ -1,0 +1,10 @@
+FactoryBox One v5.14.2 Login Admin Redirect Hotfix
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine kopyalayın.
+3. Dosyaların değiştirilmesini/onaylanmasını kabul edin.
+4. Backend'i yeniden başlatın.
+5. Login ekranını açıp Ctrl+F5 yapın.
+6. Owner/admin hesabıyla giriş yapın.
+7. Girişten sonra /admin.html açıldığını kontrol edin.
+8. Admin Panel üstündeki Dashboard düğmesini test edin; eski / ekranına gitmemelidir.

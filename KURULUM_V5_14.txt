@@ -1,0 +1,31 @@
+FactoryBox One v5.14.0 - Alarm SLA / Escalation Rules Pack
+
+ON KOSUL
+- Projede v5.13.0 kurulu ve calisiyor olmali.
+
+KURULUM
+1. FactoryBox backend'i durdur.
+2. Bu ZIP dosyasini ac.
+3. ZIP icindeki tum dosya ve klasorleri FactoryBox ana proje klasorunun uzerine kopyala.
+4. Dosyalari degistir / uzerine yaz secenegini kabul et.
+5. Backend'i yeniden baslat.
+6. Admin panelini kapatip yeniden ac.
+7. Ctrl + F5 yap.
+
+TEST
+1. Sol ustte v5.14.0 yazdigini kontrol et.
+2. Sol menuden Alarm SLA ekranini ac.
+3. Critical, Warning ve Info varsayilan kurallarinin gorundugunu kontrol et.
+4. Aktif alarm varsa SLA durum tablosunu kontrol et.
+5. Yeni bir test kurali olustur.
+6. Kuralin Ack / Resolve suresini degistirip Kaydet'e bas.
+7. Enabled degerini false ve tekrar true yaparak test et.
+8. Alarm Center ve Alarm Analytics ekranlarinin calismaya devam ettigini kontrol et.
+
+BEKLENEN
+- Admin panel menuleri calismali.
+- Alarm SLA ekrani hata vermeden acilmali.
+- Varsayilan 3 SLA kurali otomatik olusmali.
+- Yeni kural olusturma ve guncelleme calismali.
+- Aktif alarm yoksa SLA tablosunun bos gorunmesi normaldir.
+- Manuel veritabani migration islemi gerekmez.

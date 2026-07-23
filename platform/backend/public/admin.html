@@ -191,6 +191,13 @@
     .kpi-panel-v59 { border:1px solid var(--fb-border); border-radius:18px; background:#fff; padding:15px; }
     .kpi-panel-v59 h3 { margin:0 0 10px; font-size:16px; }
     .kpi-two-col-v59 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .alarm-stack-v5141 { display:grid; grid-template-columns:minmax(0, 1fr); gap:14px; }
+    #alarmAnalyticsSection,
+    #alarmSlaSection { min-width:0; overflow:hidden; }
+    #alarmAnalyticsSection .kpi-panel-v59,
+    #alarmSlaSection .kpi-panel-v59 { min-width:0; width:100%; box-sizing:border-box; }
+    #alarmAnalyticsSection .admin-table-wrap,
+    #alarmSlaSection .admin-table-wrap { width:100%; max-width:100%; overflow-x:auto; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -240,7 +247,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.13.0 — Alarm Analytics aktif.</p>
+      <p id="adminVersionLabel">v5.14.2 — giriş yönlendirme hotfix aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -249,6 +256,7 @@
       <button class="admin-nav-link-v58" data-admin-nav="live"><span>🟢 Live Monitoring</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="alarms"><span>🚨 Alarm Center</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="analytics"><span>📈 Alarm Analytics</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="sla"><span>⏱️ Alarm SLA</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
@@ -272,7 +280,7 @@
       </div>
       <div class="admin-topbar-actions-v58">
         <button id="refreshAdmin" class="secondary-btn">Yenile</button>
-        <a class="secondary-btn link-btn" href="/">Dashboard</a>
+        <a class="secondary-btn link-btn" href="/admin.html">Dashboard</a>
         <a class="secondary-btn link-btn" href="/login.html">Login</a>
       </div>
     </header>
@@ -288,7 +296,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.13.0: Alarm Analytics, Alarm Center, canlı izleme ve asset yönetimi.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.14.2: Güncel Admin Panel ve doğru giriş yönlendirmesi.</p>
       </div>
     </div>
 
@@ -390,7 +398,7 @@
     </div>
 
     <div id="alarmAnalyticsSummary">Alarm analitiği yükleniyor...</div>
-    <div class="kpi-two-col-v59">
+    <div class="alarm-stack-v5141">
       <div class="kpi-panel-v59">
         <h3>Günlük Alarm Trendi</h3>
         <div id="alarmAnalyticsDaily">Yükleniyor...</div>
@@ -400,7 +408,7 @@
         <div id="alarmResponseBuckets">Yükleniyor...</div>
       </div>
     </div>
-    <div class="kpi-two-col-v59">
+    <div class="alarm-stack-v5141">
       <div class="kpi-panel-v59">
         <h3>En Çok Alarm Tipleri</h3>
         <div id="alarmTopTypes">Yükleniyor...</div>
@@ -408,6 +416,44 @@
       <div class="kpi-panel-v59">
         <h3>En Çok Alarm Üreten Makineler</h3>
         <div id="alarmTopMachines">Yükleniyor...</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="alarmSlaSection" class="card wide admin-card" data-admin-view="sla">
+    <div class="section-title-row">
+      <div>
+        <h2>Alarm SLA / Escalation Rules</h2>
+        <p class="muted">v5.14: Müdahale ve çözüm SLA süreleri, geciken aktif alarmlar ve kural öncelikleri.</p>
+      </div>
+      <button id="refreshAlarmSlaBtn" class="secondary-btn">SLA Durumunu Yenile</button>
+    </div>
+
+    <div id="alarmSlaSummary">Alarm SLA özeti yükleniyor...</div>
+
+    <h3>Yeni SLA Kuralı</h3>
+    <div class="admin-form-grid">
+      <label>Kural Adı<input id="newAlarmRuleName" type="text" placeholder="örn: Lazer kritik alarm"></label>
+      <label>Severity<select id="newAlarmRuleSeverity"><option value="all">all</option><option value="critical">critical</option><option value="warning">warning</option><option value="info">info</option></select></label>
+      <label>Alarm Type<input id="newAlarmRuleType" type="text" placeholder="boş = tüm tipler"></label>
+      <label>Machine Code<input id="newAlarmRuleMachine" type="text" placeholder="boş = tüm makineler"></label>
+      <label>Acknowledge SLA (dk)<input id="newAlarmRuleAck" type="number" min="1" max="10080" value="15"></label>
+      <label>Resolve SLA (dk)<input id="newAlarmRuleResolve" type="number" min="1" max="43200" value="120"></label>
+      <label>Kanal<select id="newAlarmRuleChannel"><option value="dashboard">dashboard</option><option value="email">email</option><option value="telegram">telegram</option><option value="dashboard+email">dashboard+email</option><option value="dashboard+telegram">dashboard+telegram</option></select></label>
+      <label>Alıcılar<input id="newAlarmRuleRecipients" type="text" placeholder="email veya Telegram hedefi"></label>
+      <label>Öncelik<input id="newAlarmRulePriority" type="number" min="0" max="1000" value="500"></label>
+      <div class="admin-form-actions"><button id="createAlarmRuleBtn" class="primary-btn">Kural Oluştur</button></div>
+    </div>
+    <div id="alarmRuleResult" class="mini-status muted"></div>
+
+    <div class="alarm-stack-v5141">
+      <div class="kpi-panel-v59">
+        <h3>SLA Kuralları</h3>
+        <div id="alarmRulesTable">Kurallar yükleniyor...</div>
+      </div>
+      <div class="kpi-panel-v59">
+        <h3>Aktif Alarm SLA Durumu</h3>
+        <div id="alarmSlaTable">Aktif alarmlar yükleniyor...</div>
       </div>
     </div>
   </section>
@@ -745,11 +791,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.13.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.14.2').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Alarm Analytics aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Alarm Analytics, Alarm Center, canlı izleme ve asset yönetimi.`;
+    if (brand) brand.textContent = `v${safeVersion} — Alarm SLA & Escalation aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Alarm SLA, Alarm Analytics, Alarm Center ve canlı izleme.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -885,6 +931,10 @@
     analytics: {
       title:'Alarm Analytics',
       desc:'Alarm trendi, acknowledge/çözüm süreleri ve makine bazlı alarm yoğunluğu.'
+    },
+    sla: {
+      title:'Alarm SLA',
+      desc:'Müdahale/çözüm süreleri, escalation kuralları ve SLA dışı aktif alarmlar.'
     },
     tenants: {
       title:'Customers / Tenants',
@@ -1374,6 +1424,15 @@
     return `${(n / 60).toFixed(1).replace(/\.0$/, '')} sa`;
   }
 
+  function fmtAnalyticsDay(value) {
+    if (!value) return '-';
+    const raw = String(value);
+    const normalized = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T00:00:00` : raw;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return raw.slice(0, 10) || '-';
+    return date.toLocaleDateString('tr-TR');
+  }
+
   function renderAlarmAnalytics(data) {
     const summaryTarget = document.getElementById('alarmAnalyticsSummary');
     const dailyTarget = document.getElementById('alarmAnalyticsDaily');
@@ -1398,7 +1457,7 @@
     `;
 
     dailyTarget.innerHTML = table([
-      {label:'Gün', value:r=>new Date(`${r.day}T00:00:00`).toLocaleDateString('tr-TR')},
+      {label:'Gün', value:r=>fmtAnalyticsDay(r.day)},
       {label:'Toplam', value:r=>r.total || 0},
       {label:'Kritik', value:r=>r.critical || 0},
       {label:'Warning', value:r=>r.warning || 0},
@@ -1427,6 +1486,63 @@
       {label:'Kritik', value:r=>r.critical_count || 0},
       {label:'Aktif', value:r=>r.active_count || 0}
     ], data.top_machines || []);
+  }
+
+
+  function slaStatusLabel(status) {
+    const labels = {
+      within_sla:'SLA içinde',
+      ack_overdue:'Acknowledge gecikti',
+      resolve_overdue:'Çözüm gecikti',
+      no_rule:'Kural yok'
+    };
+    return labels[status] || status || '-';
+  }
+
+  function renderAlarmSla(data) {
+    const summaryTarget = document.getElementById('alarmSlaSummary');
+    const rulesTarget = document.getElementById('alarmRulesTable');
+    const slaTarget = document.getElementById('alarmSlaTable');
+    const createBtn = document.getElementById('createAlarmRuleBtn');
+    if (!summaryTarget || !rulesTarget || !slaTarget) return;
+
+    const s = data.summary || {};
+    summaryTarget.innerHTML = `
+      <div class="kpi-grid-v59">
+        <div class="kpi-card-v59"><span>Aktif Alarm</span><strong>${esc(s.active || 0)}</strong><small>${esc(s.critical_active || 0)} kritik aktif</small></div>
+        <div class="kpi-card-v59"><span>SLA İçinde</span><strong>${esc(s.within_sla || 0)}</strong><small>Zaman sınırı aşılmadı</small></div>
+        <div class="kpi-card-v59"><span>Ack Gecikti</span><strong>${esc(s.ack_overdue || 0)}</strong><small>İlk müdahale bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Çözüm Gecikti</span><strong>${esc(s.resolve_overdue || 0)}</strong><small>Resolve SLA aşıldı</small></div>
+        <div class="kpi-card-v59"><span>Kural Yok</span><strong>${esc(s.no_rule || 0)}</strong><small>Eşleşen SLA kuralı yok</small></div>
+      </div>
+      <p class="mini-status">Kural yönetimi: <strong>${data.can_manage_rules ? 'Açık' : 'Sadece görüntüleme'}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}</p>
+    `;
+
+    if (createBtn) createBtn.disabled = !data.can_manage_rules;
+
+    rulesTarget.innerHTML = table([
+      {label:'Ad', html:true, value:r=>data.can_manage_rules ? `<input class="alarm-rule-name" value="${esc(r.name || '')}">` : esc(r.name || '-')},
+      {label:'Scope', value:r=>`${r.customer_code || '*'}/${r.site_code || '*'}/${r.machine_code || '*'} · ${r.alarm_type || '*'}`},
+      {label:'Severity', html:true, value:r=>data.can_manage_rules ? selectHtml('alarm-rule-severity', r.severity, ['all','critical','warning','info']) : esc(r.severity)},
+      {label:'Ack', html:true, value:r=>data.can_manage_rules ? `<input class="alarm-rule-ack" type="number" min="1" max="10080" value="${esc(r.acknowledge_sla_minutes)}">` : esc(fmtMinutes(r.acknowledge_sla_minutes))},
+      {label:'Resolve', html:true, value:r=>data.can_manage_rules ? `<input class="alarm-rule-resolve" type="number" min="1" max="43200" value="${esc(r.resolve_sla_minutes)}">` : esc(fmtMinutes(r.resolve_sla_minutes))},
+      {label:'Kanal', html:true, value:r=>data.can_manage_rules ? `<input class="alarm-rule-channel" value="${esc(r.escalation_channel || 'dashboard')}">` : esc(r.escalation_channel || 'dashboard')},
+      {label:'Öncelik', html:true, value:r=>data.can_manage_rules ? `<input class="alarm-rule-priority" type="number" min="0" max="1000" value="${esc(r.priority)}">` : esc(r.priority)},
+      {label:'Enabled', html:true, value:r=>data.can_manage_rules ? selectHtml('alarm-rule-enabled', String(Boolean(r.enabled)), ['true','false']) : (r.enabled ? 'true' : 'false')},
+      {label:'Aksiyon', html:true, value:r=>data.can_manage_rules ? `<button class="secondary-btn mini-btn" data-action="save-alarm-rule" data-id="${esc(r.id)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
+    ], data.rules || []);
+
+    slaTarget.innerHTML = table([
+      {label:'Durum', value:r=>slaStatusLabel(r.sla_status)},
+      {label:'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
+      {label:'Alarm', value:r=>`${r.alarm_type || '-'} / ${r.severity || '-'}`},
+      {label:'Yaş', value:r=>fmtMinutes(r.age_minutes)},
+      {label:'Ack SLA', value:r=>r.acknowledge_sla_minutes == null ? '-' : `${r.acknowledge_sla_minutes} dk`},
+      {label:'Resolve SLA', value:r=>r.resolve_sla_minutes == null ? '-' : `${r.resolve_sla_minutes} dk`},
+      {label:'Ack Due', value:r=>fmtDate(r.ack_due_at)},
+      {label:'Resolve Due', value:r=>fmtDate(r.resolve_due_at)},
+      {label:'Kural', value:r=>r.rule_name || '-'}
+    ], data.active_alarms || []);
   }
 
   function renderCounts(counts) {
@@ -1709,6 +1825,7 @@
       ['live-monitoring', '/api/admin/live-monitoring?limit=120', renderLiveMonitoring, 'liveMachineCards'],
       ['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable'],
       ['alarm-analytics', `/api/admin/alarm-analytics?${alarmAnalyticsQueryString()}`, renderAlarmAnalytics, 'alarmAnalyticsSummary'],
+      ['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary'],
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -1909,6 +2026,48 @@
     });
   }
 
+
+  async function createAlarmRule() {
+    const body = {
+      name:document.getElementById('newAlarmRuleName').value.trim(),
+      severity:document.getElementById('newAlarmRuleSeverity').value,
+      alarm_type:document.getElementById('newAlarmRuleType').value.trim(),
+      machine_code:document.getElementById('newAlarmRuleMachine').value.trim(),
+      acknowledge_sla_minutes:Number(document.getElementById('newAlarmRuleAck').value),
+      resolve_sla_minutes:Number(document.getElementById('newAlarmRuleResolve').value),
+      escalation_channel:document.getElementById('newAlarmRuleChannel').value,
+      recipients:document.getElementById('newAlarmRuleRecipients').value.trim(),
+      priority:Number(document.getElementById('newAlarmRulePriority').value)
+    };
+
+    const data = await apiJson('/api/admin/alarm-escalation/rules', {
+      method:'POST',
+      body:JSON.stringify(body)
+    });
+
+    document.getElementById('alarmRuleResult').innerHTML = `Kural oluşturuldu: <strong>${esc(data.rule.name)}</strong>`;
+    document.getElementById('newAlarmRuleName').value = '';
+    document.getElementById('newAlarmRuleType').value = '';
+    document.getElementById('newAlarmRuleMachine').value = '';
+    document.getElementById('newAlarmRuleRecipients').value = '';
+  }
+
+  async function saveAlarmRule(button) {
+    const tr = button.closest('tr');
+    await apiJson(`/api/admin/alarm-escalation/rules/${encodeURIComponent(button.dataset.id)}`, {
+      method:'PATCH',
+      body:JSON.stringify({
+        name:tr.querySelector('.alarm-rule-name').value.trim(),
+        severity:tr.querySelector('.alarm-rule-severity').value,
+        acknowledge_sla_minutes:Number(tr.querySelector('.alarm-rule-ack').value),
+        resolve_sla_minutes:Number(tr.querySelector('.alarm-rule-resolve').value),
+        escalation_channel:tr.querySelector('.alarm-rule-channel').value.trim(),
+        priority:Number(tr.querySelector('.alarm-rule-priority').value),
+        enabled:tr.querySelector('.alarm-rule-enabled').value === 'true'
+      })
+    });
+  }
+
   async function createDeviceProvisionToken() {
     const customer_code = document.getElementById('deviceCustomerCode').value.trim();
     const site_code = document.getElementById('deviceSiteCode').value.trim();
@@ -2065,6 +2224,12 @@
         await loadAdmin();
         status.textContent = 'Alarm clear edildi. Audit log güncellendi.';
       }
+
+      if (action === 'save-alarm-rule') {
+        await saveAlarmRule(button);
+        await loadAdmin();
+        status.textContent = 'Alarm SLA kuralı güncellendi. Audit log kaydedildi.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -2089,6 +2254,8 @@
     const applyAlarmFiltersBtn = document.getElementById('applyAlarmFiltersBtn');
     const refreshAlarmAnalyticsBtn = document.getElementById('refreshAlarmAnalyticsBtn');
     const applyAlarmAnalyticsBtn = document.getElementById('applyAlarmAnalyticsBtn');
+    const refreshAlarmSlaBtn = document.getElementById('refreshAlarmSlaBtn');
+    const createAlarmRuleBtn = document.getElementById('createAlarmRuleBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -2098,6 +2265,20 @@
     if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmAnalyticsBtn) refreshAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
     if (applyAlarmAnalyticsBtn) applyAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
+    if (refreshAlarmSlaBtn) refreshAlarmSlaBtn.addEventListener('click', loadAdmin);
+    if (createAlarmRuleBtn) createAlarmRuleBtn.addEventListener('click', async () => {
+      createAlarmRuleBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Alarm SLA kuralı oluşturuluyor...';
+      try {
+        await createAlarmRule();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = 'Alarm SLA kuralı oluşturuldu.';
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        createAlarmRuleBtn.disabled = false;
+      }
+    });
     if (applyAuditFiltersBtn) applyAuditFiltersBtn.addEventListener('click', loadAdmin);
     if (exportAuditCsvBtn) exportAuditCsvBtn.addEventListener('click', async () => {
       exportAuditCsvBtn.disabled = true;

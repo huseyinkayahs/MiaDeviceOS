@@ -10,7 +10,7 @@
   <main class="login-shell">
     <section class="card login-card">
       <h1>FactoryBox Login</h1>
-      <p class="muted">v5.5.0 Subscription Enforcement / Usage Limit Guard Pack</p>
+      <p class="muted" id="loginVersion">FactoryBox sürümü yükleniyor...</p>
 
       <label>E-posta</label>
       <input id="email" type="email" placeholder="admin@factorybox.local" autocomplete="username">
@@ -56,14 +56,35 @@
           localStorage.setItem('factorybox_auth_token', data.token);
         }
 
-        status.textContent = 'Giriş başarılı. Dashboard açılıyor...';
-        setTimeout(() => { window.location.href = '/'; }, 700);
+        const role = String(data.user?.role || '').toLowerCase();
+        const adminRoles = ['owner', 'admin', 'system_admin'];
+        const openAdminPanel = data.auth_enabled === false || adminRoles.includes(role);
+        const targetUrl = openAdminPanel ? '/admin.html' : '/';
+
+        status.textContent = openAdminPanel
+          ? 'Giriş başarılı. Admin Panel açılıyor...'
+          : 'Giriş başarılı. Dashboard açılıyor...';
+
+        setTimeout(() => { window.location.replace(targetUrl); }, 500);
       } catch(e) {
         status.textContent = e.message;
       } finally {
         btn.disabled = false;
       }
     }
+
+    async function loadFactoryBoxVersion() {
+      const target = document.getElementById('loginVersion');
+      try {
+        const res = await fetch('/api/health', {cache:'no-store'});
+        const data = await res.json();
+        target.textContent = `v${String(data.version || '5.14.2').replace(/^v/i, '')} — FactoryBox güvenli giriş`;
+      } catch (_) {
+        target.textContent = 'v5.14.2 — FactoryBox güvenli giriş';
+      }
+    }
+
+    loadFactoryBoxVersion();
 
     document.getElementById('loginBtn').addEventListener('click', login);
     document.getElementById('password').addEventListener('keydown', (e) => {

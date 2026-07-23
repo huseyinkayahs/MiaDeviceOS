@@ -1,0 +1,11 @@
+FactoryBox One v5.14.0 - Degisen Dosyalar
+
+platform/backend/server.js
+platform/backend/public/admin.html
+platform/backend/package.json
+platform/backend/package-lock.json
+docs/V5_14_ALARM_SLA_ESCALATION_RULES_PACK.md
+KURULUM_V5_14.txt
+V5_14_PAKET_ICERIGI.txt
+
+Bu paket v5.13.0 projesinin uzerine kopyalanir.

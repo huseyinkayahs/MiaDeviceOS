@@ -1,0 +1,13 @@
+FactoryBox One v5.14.1 - Degisen Dosyalar
+
+platform/backend/public/admin.html
+platform/backend/server.js
+platform/backend/package.json
+platform/backend/package-lock.json
+
+Duzeltmeler:
+- Alarm Analytics panelleri alt alta alindi.
+- Alarm SLA panelleri alt alta alindi.
+- Genis tablolar sayfayi saga tasirmak yerine kendi alaninda yatay kaydirilir.
+- Alarm Analytics gun alanindaki Invalid Date hatasi duzeltildi.
+- Surum v5.14.1 olarak guncellendi.

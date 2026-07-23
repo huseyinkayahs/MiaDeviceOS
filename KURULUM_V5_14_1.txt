@@ -1,0 +1,11 @@
+FactoryBox One v5.14.1 - Analytics / SLA Layout and Date Hotfix
+
+1. Backend'i durdur.
+2. ZIP icindeki dosyalari FactoryBox ana proje klasorunun uzerine kopyala.
+3. Dosyalari degistir / uzerine yaz secenegini kabul et.
+4. Backend'i yeniden baslat.
+5. Admin panelini kapatip tekrar ac.
+6. Ctrl + F5 yap.
+7. Sol ustte v5.14.1 yazdigini kontrol et.
+8. Alarm Analytics ekraninda panellerin alt alta ve tarihlerin gecerli oldugunu kontrol et.
+9. Alarm SLA ekraninda SLA Kurallari ile Aktif Alarm SLA Durumu panellerinin alt alta oldugunu kontrol et.
