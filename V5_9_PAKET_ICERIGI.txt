@@ -1,0 +1,14 @@
+FactoryBox One v5.9.0 Paket İçeriği
+===================================
+
+platform/backend/server.js
+platform/backend/package.json
+platform/backend/public/admin.html
+platform/database/migrations/018_subscription_enforcement_usage_limit_guard.sql
+platform/database/migrations/019_audit_log_security_activity_viewer.sql
+platform/database/migrations/020_device_registry_provisioning_foundation.sql
+docs/V5_9_ADMIN_DASHBOARD_KPI_SYSTEM_SNAPSHOT_PACK.md
+KURULUM_V5_9.txt
+V5_9_PAKET_ICERIGI.txt
+
+Not: Bu paket mevcut proje üzerine kopyalanacak geliştirme paketidir.

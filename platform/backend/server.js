@@ -44,7 +44,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.8.0';
+const APP_VERSION = '5.9.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -52,6 +52,10 @@ function subscriptionEnforcementEnabled() {
 
 function deviceProvisioningEnabled() {
   return String(process.env.DEVICE_PROVISIONING_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function adminDashboardKpiEnabled() {
+  return String(process.env.ADMIN_DASHBOARD_KPI_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -1834,7 +1838,8 @@ app.get('/api/auth/status', async (req,res)=>{
       password_reset_email_configured:emailConfig().enabled && emailConfig().configured,
       subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
       audit_export_enabled:auditExportEnabled(),
-      device_provisioning_enabled:deviceProvisioningEnabled()
+      device_provisioning_enabled:deviceProvisioningEnabled(),
+      admin_dashboard_kpi_enabled:adminDashboardKpiEnabled()
     }
   });
 });
@@ -2406,8 +2411,90 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
   }
+
 });
 
+app.get('/api/admin/dashboard-summary', adminRequired, async (req,res)=>{
+  try {
+    const counts = await one(`
+      SELECT
+        (SELECT count(*)::int FROM customers) AS customers,
+        (SELECT count(*)::int FROM sites) AS sites,
+        (SELECT count(*)::int FROM machines) AS machines,
+        (SELECT count(*)::int FROM devices) AS devices,
+        (SELECT count(*)::int FROM devices WHERE status='online') AS online_devices,
+        (SELECT count(*)::int FROM devices WHERE status='offline') AS offline_devices,
+        (SELECT count(*)::int FROM devices WHERE status IN ('unknown','maintenance','archived')) AS other_devices,
+        (SELECT count(*)::int FROM devices WHERE provisioning_status='pending') AS pending_devices,
+        (SELECT count(*)::int FROM devices WHERE provisioning_status='paired') AS paired_devices,
+        (SELECT count(*)::int FROM app_users) AS users,
+        (SELECT count(*)::int FROM app_users WHERE status='active') AS active_users,
+        (SELECT count(*)::int FROM user_invites WHERE status='pending') AS pending_invites,
+        (SELECT count(*)::int FROM tenant_subscriptions WHERE status='trialing') AS trialing_subscriptions,
+        (SELECT count(*)::int FROM tenant_subscriptions WHERE status='active') AS active_subscriptions,
+        (SELECT count(*)::int FROM tenant_subscriptions WHERE status IN ('past_due','cancelled','expired')) AS blocked_subscriptions,
+        (SELECT count(*)::int FROM admin_audit_logs WHERE created_at >= now() - interval '24 hours') AS audit_logs_24h,
+        (SELECT count(*)::int FROM admin_audit_logs WHERE action='login_failed' AND created_at >= now() - interval '24 hours') AS failed_logins_24h,
+        (SELECT count(*)::int FROM alarms WHERE status='active') AS active_alarms
+    `);
+
+    const subscriptionsByStatus = await pool.query(`
+      SELECT status, count(*)::int AS count
+      FROM tenant_subscriptions
+      GROUP BY status
+      ORDER BY status
+    `);
+
+    const devicesByStatus = await pool.query(`
+      SELECT COALESCE(status, 'unknown') AS status, count(*)::int AS count
+      FROM devices
+      GROUP BY COALESCE(status, 'unknown')
+      ORDER BY status
+    `);
+
+    const devicesByProvisioning = await pool.query(`
+      SELECT COALESCE(provisioning_status, 'unknown') AS status, count(*)::int AS count
+      FROM devices
+      GROUP BY COALESCE(provisioning_status, 'unknown')
+      ORDER BY status
+    `);
+
+    const usersByRole = await pool.query(`
+      SELECT role, count(*)::int AS count
+      FROM app_users
+      GROUP BY role
+      ORDER BY role
+    `);
+
+    const latestAudit = await pool.query(`
+      SELECT created_at, actor_email, actor_role, action, entity_type, entity_id
+      FROM admin_audit_logs
+      ORDER BY created_at DESC
+      LIMIT 8
+    `);
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      kpi_enabled:adminDashboardKpiEnabled(),
+      generated_at:new Date().toISOString(),
+      counts,
+      subscriptions_by_status:subscriptionsByStatus.rows,
+      devices_by_status:devicesByStatus.rows,
+      devices_by_provisioning:devicesByProvisioning.rows,
+      users_by_role:usersByRole.rows,
+      latest_audit:latestAudit.rows,
+      alerts:{
+        blocked_subscriptions:counts.blocked_subscriptions || 0,
+        failed_logins_24h:counts.failed_logins_24h || 0,
+        active_alarms:counts.active_alarms || 0,
+        offline_devices:counts.offline_devices || 0
+      }
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
 
 
 app.get('/api/admin/permissions', adminRequired, async (req,res)=>{

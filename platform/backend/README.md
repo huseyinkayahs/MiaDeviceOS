@@ -72,7 +72,7 @@ Dashboard:
 http://localhost:3100
 ```
 
-## v5.5 Subscription Enforcement / Usage Limit Guard
+## v5.9.0 Admin Dashboard KPI / System Snapshot Pack
 
 ```text
 GET /api/subscription/current

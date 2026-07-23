@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "5.5.0",
-  "description": "FactoryBox / Mia BusinessOS Platform Backend - Subscription Enforcement / Usage Limit Guard Pack",
+  "version": "5.9.0",
+  "description": "FactoryBox / MiaDeviceOS Platform Backend - Admin Dashboard KPI / System Snapshot Pack",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

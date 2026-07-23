@@ -1,0 +1,33 @@
+FactoryBox One v5.9.0 Kurulum
+================================
+
+Sprint: Admin Dashboard KPI / System Snapshot Pack
+
+1) ZIP içeriğini mevcut proje ana klasörünün üzerine çıkarın.
+2) Dosyaları değiştirmeyi onaylayın.
+3) Bu sürümde yeni .env satırı zorunlu değildir.
+4) Backend'i yeniden başlatın:
+
+   cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+   npm.cmd start
+
+Kontrol:
+
+   http://localhost:3100/api/health
+
+Beklenen:
+
+   version: 5.9.0
+
+Admin panel:
+
+   http://localhost:3100/admin.html?fresh=590
+
+Beklenen Dashboard öğeleri:
+
+   KPI kartları
+   Sistem uyarı rozetleri
+   Subscription Status dağılımı
+   Device Status dağılımı
+   User Roles dağılımı
+   Son Güvenlik Aktiviteleri
