@@ -1,0 +1,19 @@
+FactoryBox One v5.8.0 Admin Panel Navigation / UI Organization Pack
+
+Paket içeriği:
+
+- platform/backend/server.js
+  - APP_VERSION 5.8.0 olarak güncellendi.
+
+- platform/backend/public/admin.html
+  - Sol menü sistemi eklendi.
+  - Admin panel bölümleri menülere ayrıldı.
+  - Üst başlık ve aktif bölüm alanı eklendi.
+  - Responsive mobil menü eklendi.
+  - Mevcut API çağrıları ve tablo render fonksiyonları korundu.
+
+- docs/V5_8_ADMIN_PANEL_NAVIGATION_UI_ORGANIZATION_PACK.md
+  - Sprint teknik açıklaması.
+
+- KURULUM_V5_8.txt
+  - Kurulum ve kontrol adımları.

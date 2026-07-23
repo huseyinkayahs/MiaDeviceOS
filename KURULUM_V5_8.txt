@@ -1,0 +1,40 @@
+FactoryBox One v5.8.0 - Admin Panel Navigation / UI Organization Pack
+
+KURULUM
+
+1) Bu ZIP içindeki dosyaları mevcut proje ana klasörünün üzerine kopyalayın.
+2) Dosyaları hedefte değiştir seçeneğini onaylayın.
+3) Bu sprint için yeni .env satırı yoktur.
+4) Backend'i yeniden başlatın:
+
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+
+KONTROL
+
+1) Health endpoint:
+http://localhost:3100/api/health
+
+Beklenen:
+version: 5.8.0
+
+2) Admin panel:
+http://localhost:3100/admin.html?fresh=580
+
+Ctrl + F5 yapın.
+
+Beklenen ekran değişiklikleri:
+- Sol menü sistemi
+- Üst başlık alanı
+- Dashboard bölümü
+- Customers / Tenants bölümü
+- Users & Invites bölümü
+- Roles & Permissions bölümü
+- Subscriptions bölümü
+- Device Registry bölümü
+- Security Activity bölümü
+
+NOT
+
+Bu sürüm UI düzenleme sprintidir.
+Backend veri modeli, abonelik enforcement, device provisioning ve audit log akışları korunmuştur.

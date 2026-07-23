@@ -5,40 +5,259 @@
   <title>FactoryBox SaaS Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
-</head>
-<body>
-<header>
-  <div>
-    <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Subscriptions → Devices → Sites → Permissions → Security Activity</p>
-  </div>
-  <div>
-    <a class="secondary-btn link-btn" href="/">Dashboard</a>
-    <a class="secondary-btn link-btn" href="/login.html">Login</a>
-  </div>
-</header>
 
-<main>
-  <section class="card wide admin-card">
+  <style>
+    :root {
+      --fb-bg:#f3f7fc;
+      --fb-panel:#ffffff;
+      --fb-border:#d9e5f3;
+      --fb-text:#0b1f33;
+      --fb-muted:#5f7188;
+      --fb-primary:#123f67;
+      --fb-primary-soft:#e8f1fb;
+      --fb-shadow:0 18px 45px rgba(20, 45, 75, .08);
+    }
+    body.admin-ui-v58 {
+      margin:0;
+      min-height:100vh;
+      background:var(--fb-bg);
+      color:var(--fb-text);
+    }
+    body.admin-ui-v58 header { margin:0; }
+    .admin-shell-v58 {
+      display:grid;
+      grid-template-columns:280px minmax(0, 1fr);
+      min-height:100vh;
+    }
+    .admin-sidebar-v58 {
+      position:sticky;
+      top:0;
+      height:100vh;
+      padding:24px 18px;
+      background:linear-gradient(180deg, #0c2d4d, #071d32);
+      color:#fff;
+      box-sizing:border-box;
+      overflow:auto;
+    }
+    .admin-brand-v58 h1 {
+      margin:0 0 8px;
+      font-size:22px;
+      line-height:1.15;
+    }
+    .admin-brand-v58 p {
+      margin:0 0 22px;
+      color:rgba(255,255,255,.72);
+      font-size:13px;
+      line-height:1.35;
+    }
+    .admin-nav-title-v58 {
+      margin:20px 10px 8px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.55);
+    }
+    .admin-nav-v58 {
+      display:flex;
+      flex-direction:column;
+      gap:7px;
+    }
+    .admin-nav-link-v58 {
+      width:100%;
+      border:0;
+      border-radius:14px;
+      padding:12px 12px;
+      background:transparent;
+      color:rgba(255,255,255,.82);
+      text-align:left;
+      font:inherit;
+      font-weight:700;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      transition:background .16s ease, color .16s ease, transform .16s ease;
+    }
+    .admin-nav-link-v58 span:first-child {
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .admin-nav-link-v58:hover {
+      background:rgba(255,255,255,.10);
+      color:#fff;
+      transform:translateX(2px);
+    }
+    .admin-nav-link-v58.active {
+      background:#fff;
+      color:var(--fb-primary);
+      box-shadow:0 12px 24px rgba(0,0,0,.18);
+    }
+    .admin-nav-pill-v58 {
+      min-width:24px;
+      padding:2px 7px;
+      border-radius:999px;
+      font-size:11px;
+      color:inherit;
+      background:rgba(255,255,255,.14);
+      text-align:center;
+    }
+    .admin-nav-link-v58.active .admin-nav-pill-v58 {
+      background:var(--fb-primary-soft);
+    }
+    .admin-sidebar-footer-v58 {
+      margin-top:22px;
+      padding:14px 12px;
+      border-radius:16px;
+      background:rgba(255,255,255,.08);
+      color:rgba(255,255,255,.76);
+      font-size:12px;
+      line-height:1.35;
+    }
+    .admin-content-v58 {
+      min-width:0;
+      padding:24px;
+      box-sizing:border-box;
+    }
+    .admin-topbar-v58 {
+      position:sticky;
+      top:0;
+      z-index:10;
+      margin:-24px -24px 22px;
+      padding:18px 24px;
+      background:rgba(243,247,252,.92);
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--fb-border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+    }
+    .admin-topbar-v58 h2 {
+      margin:0 0 4px;
+      font-size:24px;
+    }
+    .admin-topbar-v58 p {
+      margin:0;
+      color:var(--fb-muted);
+      font-size:14px;
+    }
+    .admin-topbar-actions-v58 {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .admin-mobile-toggle-v58 {
+      display:none;
+    }
+    .admin-card {
+      box-shadow:var(--fb-shadow);
+      border:1px solid var(--fb-border);
+    }
+    .admin-card[data-admin-view] { display:none; }
+    .admin-card[data-admin-view].admin-view-active { display:block; }
+    .admin-view-header-v58 {
+      margin:0 0 18px;
+      padding:14px 16px;
+      border:1px solid var(--fb-border);
+      border-radius:18px;
+      background:var(--fb-panel);
+      box-shadow:var(--fb-shadow);
+    }
+    .admin-view-header-v58 strong { display:block; font-size:13px; color:var(--fb-muted); margin-bottom:4px; }
+    .admin-view-header-v58 h3 { margin:0; font-size:20px; }
+    .admin-view-header-v58 p { margin:6px 0 0; color:var(--fb-muted); }
+    .admin-table-wrap { overflow:auto; }
+    .admin-table { min-width:980px; }
+    .admin-table th { position:sticky; top:0; z-index:1; }
+    .mini-status { border-radius:14px; }
+    @media (max-width: 980px) {
+      .admin-shell-v58 { grid-template-columns:1fr; }
+      .admin-sidebar-v58 {
+        position:fixed;
+        z-index:30;
+        inset:0 auto 0 0;
+        width:290px;
+        transform:translateX(-105%);
+        transition:transform .2s ease;
+      }
+      body.admin-menu-open-v58 .admin-sidebar-v58 { transform:translateX(0); }
+      .admin-mobile-toggle-v58 { display:inline-flex; }
+      .admin-content-v58 { padding:18px; }
+      .admin-topbar-v58 { margin:-18px -18px 18px; padding:14px 18px; }
+      .admin-topbar-v58 { align-items:flex-start; flex-direction:column; }
+      .admin-topbar-actions-v58 { justify-content:flex-start; }
+    }
+  </style>
+</head>
+<body class="admin-ui-v58">
+<div class="admin-shell-v58">
+  <aside class="admin-sidebar-v58" id="adminSidebarV58">
+    <div class="admin-brand-v58">
+      <h1>FactoryBox Admin</h1>
+      <p>v5.8.0 — düzenli menü, bölümlenmiş yönetim ekranı ve demo hazır SaaS görünümü.</p>
+    </div>
+
+    <div class="admin-nav-title-v58">Ana Menü</div>
+    <nav class="admin-nav-v58" aria-label="Admin panel menüsü">
+      <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>📊 Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>💳 Subscriptions</span><span class="admin-nav-pill-v58">2</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="devices"><span>📦 Device Registry</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="security"><span>🛡️ Security Activity</span><span class="admin-nav-pill-v58">1</span></button>
+    </nav>
+
+    <div class="admin-sidebar-footer-v58">
+      Menü sadece arayüz düzenidir; mevcut backend API ve iş kuralları korunur.
+    </div>
+  </aside>
+
+  <div class="admin-content-v58">
+    <header class="admin-topbar-v58">
+      <div>
+        <button id="adminMenuToggleV58" class="secondary-btn admin-mobile-toggle-v58">Menü</button>
+        <h2 id="adminViewTitleV58">Dashboard</h2>
+        <p id="adminViewDescV58">Sistem özeti, sürüm ve hızlı durum kartları.</p>
+      </div>
+      <div class="admin-topbar-actions-v58">
+        <button id="refreshAdmin" class="secondary-btn">Yenile</button>
+        <a class="secondary-btn link-btn" href="/">Dashboard</a>
+        <a class="secondary-btn link-btn" href="/login.html">Login</a>
+      </div>
+    </header>
+
+    <div id="adminViewHeaderV58" class="admin-view-header-v58">
+      <strong>Aktif bölüm</strong>
+      <h3>Dashboard</h3>
+      <p>Sistem özeti, sürüm ve hızlı durum kartları.</p>
+    </div>
+
+    <main>
+  <section class="card wide admin-card admin-view-active" data-admin-view="dashboard">
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.7.0: Cihaz registry, provisioning token ve cihaz limit görünümü.</p>
+        <p class="muted">v5.8.0: Menü kontrollü, daha derli toplu ve demo hazır admin panel arayüzü.</p>
       </div>
-      <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
 
     <div id="adminStatus" class="mini-status">Yükleniyor...</div>
     <div id="adminCounts" class="admin-count-grid"></div>
   </section>
 
-  <section class="card wide admin-card">
+  <section class="card wide admin-card" data-admin-view="permissions">
     <h2>Permission Overview</h2>
     <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
     <div id="permissionPanel">Yükleniyor...</div>
   </section>
 
-  <section id="inviteSection" class="card wide admin-card">
+  <section id="inviteSection" class="card wide admin-card" data-admin-view="users">
     <h2>Invite User / Tenant Access</h2>
     <p class="muted">Yeni kullanıcıya customer/site erişimi ver ve davet maili gönder.</p>
 
@@ -81,32 +300,32 @@
     <div id="invitesTable">Yükleniyor...</div>
   </section>
 
-  <section class="card wide admin-card">
+  <section class="card wide admin-card" data-admin-view="users">
     <h2>Kullanıcılar</h2>
     <p class="muted">Her kullanıcı satırında mevcut role göre alacağı permission listesi görünür. Role değişince permission önizlemesi de değişir.</p>
     <div id="usersTable">Yükleniyor...</div>
   </section>
 
-  <section class="card wide admin-card">
+  <section class="card wide admin-card" data-admin-view="tenants">
     <h2>Customers / Tenants</h2>
     <p class="muted">Customer status aksiyonu MANAGE_CUSTOMERS yetkisine bağlıdır.</p>
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
-  <section id="billingPlansSection" class="card wide admin-card">
+  <section id="billingPlansSection" class="card wide admin-card" data-admin-view="subscriptions">
     <h2>Subscription Plans</h2>
     <p class="muted">Ödeme sağlayıcısından bağımsız paket ve limit tanımları.</p>
     <div id="subscriptionPlansTable">Yükleniyor...</div>
   </section>
 
-  <section id="billingSubscriptionsSection" class="card wide admin-card">
+  <section id="billingSubscriptionsSection" class="card wide admin-card" data-admin-view="subscriptions">
     <h2>Tenant Subscriptions</h2>
     <p class="muted">Plan, abonelik durumu ve gerçek zamanlı kullanım limiti zorlaması.</p>
     <p id="subscriptionEnforcementStatus" class="muted">Enforcement durumu yükleniyor...</p>
     <div id="subscriptionsTable">Yükleniyor...</div>
   </section>
 
-  <section id="deviceRegistrySection" class="card wide admin-card">
+  <section id="deviceRegistrySection" class="card wide admin-card" data-admin-view="devices">
     <div class="section-title-row">
       <div>
         <h2>Device Registry / Provisioning</h2>
@@ -158,18 +377,18 @@
     <div id="devicesTable">Yükleniyor...</div>
   </section>
 
-  <section class="card wide admin-card">
+  <section class="card wide admin-card" data-admin-view="tenants">
     <h2>Sites / Atölyeler</h2>
     <p class="muted">Site status aksiyonu MANAGE_SITES yetkisine bağlıdır.</p>
     <div id="sitesTable">Yükleniyor...</div>
   </section>
 
-  <section class="card wide admin-card">
+  <section class="card wide admin-card" data-admin-view="users">
     <h2>Tenant Access</h2>
     <div id="tenantAccessTable">Yükleniyor...</div>
   </section>
 
-  <section id="auditSection" class="card wide admin-card">
+  <section id="auditSection" class="card wide admin-card" data-admin-view="security">
     <div class="section-title-row">
       <div>
         <h2>Security Activity / Audit Log</h2>
@@ -230,6 +449,8 @@
     <div id="auditLogTable">Yükleniyor...</div>
   </section>
 </main>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -318,6 +539,78 @@
     } catch {
       return String(v);
     }
+  }
+
+
+  const ADMIN_VIEWS = {
+    dashboard: {
+      title:'Dashboard',
+      desc:'Sistem özeti, sürüm ve hızlı durum kartları.'
+    },
+    tenants: {
+      title:'Customers / Tenants',
+      desc:'Customer, tenant, site ve atölye yönetimi.'
+    },
+    users: {
+      title:'Users & Invitations',
+      desc:'Kullanıcılar, davetler ve tenant erişim kayıtları.'
+    },
+    permissions: {
+      title:'Roles & Permissions',
+      desc:'Aktif rol, permission matrisi ve yetki görünümü.'
+    },
+    subscriptions: {
+      title:'Subscriptions',
+      desc:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.'
+    },
+    devices: {
+      title:'Device Registry',
+      desc:'FactoryBox cihaz kayıtları ve provisioning token işlemleri.'
+    },
+    security: {
+      title:'Security Activity',
+      desc:'Audit log, güvenlik aktiviteleri, filtreleme ve CSV dışa aktarım.'
+    }
+  };
+
+  function setAdminView(view) {
+    const key = ADMIN_VIEWS[view] ? view : 'dashboard';
+    const meta = ADMIN_VIEWS[key];
+
+    document.querySelectorAll('[data-admin-view]').forEach(section => {
+      section.classList.toggle('admin-view-active', section.dataset.adminView === key);
+    });
+
+    document.querySelectorAll('[data-admin-nav]').forEach(button => {
+      button.classList.toggle('active', button.dataset.adminNav === key);
+    });
+
+    const title = document.getElementById('adminViewTitleV58');
+    const desc = document.getElementById('adminViewDescV58');
+    const header = document.getElementById('adminViewHeaderV58');
+    if (title) title.textContent = meta.title;
+    if (desc) desc.textContent = meta.desc;
+    if (header) {
+      header.innerHTML = `<strong>Aktif bölüm</strong><h3>${esc(meta.title)}</h3><p>${esc(meta.desc)}</p>`;
+    }
+
+    localStorage.setItem('factorybox_admin_view', key);
+    history.replaceState(null, '', `#${key}`);
+    document.body.classList.remove('admin-menu-open-v58');
+  }
+
+  function setupAdminNavigation() {
+    const initial = (location.hash || '').replace('#', '') || localStorage.getItem('factorybox_admin_view') || 'dashboard';
+    document.querySelectorAll('[data-admin-nav]').forEach(button => {
+      button.addEventListener('click', () => setAdminView(button.dataset.adminNav));
+    });
+
+    const toggle = document.getElementById('adminMenuToggleV58');
+    if (toggle) {
+      toggle.addEventListener('click', () => document.body.classList.toggle('admin-menu-open-v58'));
+    }
+
+    setAdminView(initial);
   }
 
   function auditQueryString(exportMode = false) {
@@ -1025,6 +1318,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    setupAdminNavigation();
     const refreshBtn = document.getElementById('refreshAdmin');
     const createInviteBtn = document.getElementById('createInviteBtn');
     const applyAuditFiltersBtn = document.getElementById('applyAuditFiltersBtn');
