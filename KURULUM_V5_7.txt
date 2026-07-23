@@ -1,0 +1,23 @@
+FactoryBox One v5.7.0 - Device Registry / Provisioning Foundation Pack
+
+Kurulum:
+1) ZIP içindeki dosyaları mevcut proje ana klasörünün üzerine kopyalayın.
+2) platform/backend/.env dosyasının en altına ekleyin:
+
+DEVICE_PROVISIONING_ENABLED=true
+
+3) Backend'i yeniden başlatın:
+
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+
+Kontrol:
+http://localhost:3100/api/health -> version: 5.7.0
+http://localhost:3100/api/auth/status -> device_provisioning_enabled: true
+http://localhost:3100/admin.html?fresh=570 -> Device Registry / Provisioning bölümü görünmeli.
+
+Notlar:
+- Provisioning token sadece oluşturulduğu anda görünür.
+- Token veritabanında ham halde saklanmaz; SHA-256 hash olarak tutulur.
+- Cihaz oluşturma, abonelikteki device_limit değerine bağlıdır.
+- Token süresi 5 dakika ile 24 saat arasında sınırlandırılır.

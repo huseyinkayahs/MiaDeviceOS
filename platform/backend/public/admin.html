@@ -10,7 +10,7 @@
 <header>
   <div>
     <h1>FactoryBox SaaS Admin Panel</h1>
-    <p>Users → Customers → Subscriptions → Sites → Permissions → Security Activity</p>
+    <p>Users → Customers → Subscriptions → Devices → Sites → Permissions → Security Activity</p>
   </div>
   <div>
     <a class="secondary-btn link-btn" href="/">Dashboard</a>
@@ -23,7 +23,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.6.0: Audit log filtreleme, güvenlik aktivite görünümü ve CSV dışa aktarma.</p>
+        <p class="muted">v5.7.0: Cihaz registry, provisioning token ve cihaz limit görünümü.</p>
       </div>
       <button id="refreshAdmin" class="secondary-btn">Yenile</button>
     </div>
@@ -106,6 +106,58 @@
     <div id="subscriptionsTable">Yükleniyor...</div>
   </section>
 
+  <section id="deviceRegistrySection" class="card wide admin-card">
+    <div class="section-title-row">
+      <div>
+        <h2>Device Registry / Provisioning</h2>
+        <p class="muted">FactoryBox cihazlarını tenant, site ve makineye bağla; tek kullanımlık provisioning token üret.</p>
+      </div>
+      <button id="refreshDevicesBtn" class="secondary-btn">Cihazları Yenile</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>
+        Customer Code
+        <input id="deviceCustomerCode" type="text" placeholder="örn: mia-demo">
+      </label>
+      <label>
+        Site Code
+        <input id="deviceSiteCode" type="text" placeholder="örn: site01">
+      </label>
+      <label>
+        Machine Code
+        <input id="deviceMachineCode" type="text" placeholder="örn: laser01">
+      </label>
+      <label>
+        Device UID
+        <input id="deviceUid" type="text" placeholder="örn: factorybox-001">
+      </label>
+      <label>
+        Model
+        <input id="deviceModel" type="text" value="FactoryBox One">
+      </label>
+      <label>
+        MQTT Base Topic
+        <input id="deviceMqttTopic" type="text" placeholder="customer/site/machine">
+      </label>
+      <label>
+        Token Süresi
+        <select id="deviceTokenMinutes">
+          <option value="30">30 dk</option>
+          <option value="60" selected>60 dk</option>
+          <option value="240">4 saat</option>
+          <option value="1440">24 saat</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="createDeviceProvisionBtn" class="primary-btn">Provision Token Oluştur</button>
+      </div>
+    </div>
+
+    <div id="deviceProvisionResult" class="mini-status muted"></div>
+    <div id="devicesTable">Yükleniyor...</div>
+  </section>
+
   <section class="card wide admin-card">
     <h2>Sites / Atölyeler</h2>
     <p class="muted">Site status aksiyonu MANAGE_SITES yetkisine bağlıdır.</p>
@@ -186,9 +238,9 @@
   let subscriptionPlanCodes = ['trial','starter','professional','enterprise'];
 
   const ROLE_MATRIX = {
-    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_INVITES','VIEW_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
+    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
     operator: ['SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
     viewer: ['VIEW_REPORTS','VIEW_DASHBOARD']
   };
@@ -421,6 +473,7 @@
         <div><p class="label">MANAGE INVITES</p><strong>${can('MANAGE_INVITES') ? 'yes' : 'no'}</strong></div>
         <div><p class="label">VIEW BILLING</p><strong>${can('VIEW_BILLING') ? 'yes' : 'no'}</strong></div>
         <div><p class="label">MANAGE BILLING</p><strong>${can('MANAGE_BILLING') ? 'yes' : 'no'}</strong></div>
+        <div><p class="label">MANAGE DEVICES</p><strong>${can('MANAGE_DEVICES') ? 'yes' : 'no'}</strong></div>
         <div><p class="label">SEND REPORTS</p><strong>${can('SEND_REPORTS') ? 'yes' : 'no'}</strong></div>
       </div>
       <p class="muted permission-list">${permissionBadges(perms)}</p>
@@ -431,6 +484,7 @@
     const auditSection = document.getElementById('auditSection');
     const billingPlansSection = document.getElementById('billingPlansSection');
     const billingSubscriptionsSection = document.getElementById('billingSubscriptionsSection');
+    const deviceRegistrySection = document.getElementById('deviceRegistrySection');
 
     if (inviteSection && !can('MANAGE_INVITES')) {
       inviteSection.style.display = 'none';
@@ -444,6 +498,10 @@
       if (billingPlansSection) billingPlansSection.style.display = 'none';
       if (billingSubscriptionsSection) billingSubscriptionsSection.style.display = 'none';
     }
+
+    if (deviceRegistrySection && !can('MANAGE_DEVICES')) {
+      deviceRegistrySection.style.display = 'none';
+    }
   }
 
   function renderCounts(counts) {
@@ -456,6 +514,8 @@
       ['Sites', counts.sites],
       ['Machines', counts.machines],
       ['Devices', counts.devices],
+      ['Pending Devices', counts.pending_devices],
+      ['Paired Devices', counts.paired_devices],
       ['Tenant Access', counts.tenant_access],
       ['Invites', counts.invites],
       ['Plans', counts.subscription_plans],
@@ -615,6 +675,34 @@
     ], data.access || []);
   }
 
+
+  function renderDevices(data) {
+    const target = document.getElementById('devicesTable');
+    if (!target) return;
+
+    const result = document.getElementById('deviceProvisionResult');
+    if (result && !result.dataset.manualMessage) {
+      result.innerHTML = data.provisioning_enabled
+        ? 'Device provisioning: <strong>ON</strong> — token sadece oluşturulduğu anda gösterilir.'
+        : 'Device provisioning: <strong>OFF</strong> — sadece listeleme modu.';
+    }
+
+    target.innerHTML = table([
+      {label:'Device UID', value:r=>r.device_uid},
+      {label:'Customer', value:r=>`${r.customer_name || '-'} (${r.customer_code || '-'})`},
+      {label:'Site', value:r=>r.site_code || '-'},
+      {label:'Machine', value:r=>r.machine_code ? `${r.machine_name || r.machine_code} (${r.machine_code})` : '-'},
+      {label:'Model', value:r=>r.model || '-'},
+      {label:'Firmware', value:r=>r.firmware_version || '-'},
+      {label:'MQTT Topic', value:r=>r.mqtt_base_topic || '-'},
+      {label:'Provisioning', value:r=>r.provisioning_status || '-'},
+      {label:'Status', html:true, value:r=>can('MANAGE_DEVICES') ? selectHtml('device-status-select', r.status, ['online','offline','unknown','maintenance','archived']) : esc(r.status)},
+      {label:'Last Seen', value:r=>fmtDate(r.last_seen_at)},
+      {label:'Token Expires', value:r=>fmtDate(r.provisioning_token_expires_at)},
+      {label:'Aksiyon', html:true, value:r=>can('MANAGE_DEVICES') ? `<button class="secondary-btn mini-btn" data-action="save-device-status" data-uid="${esc(r.device_uid)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
+    ], data.devices || []);
+  }
+
   function renderAuditLogs(data) {
     const target = document.getElementById('auditLogTable');
     if (!target) return;
@@ -679,6 +767,9 @@
       ...(can('VIEW_BILLING') ? [
         ['subscription-plans', '/api/admin/subscription-plans', renderSubscriptionPlans, 'subscriptionPlansTable'],
         ['subscriptions', '/api/admin/subscriptions', renderSubscriptions, 'subscriptionsTable']
+      ] : []),
+      ...(can('MANAGE_DEVICES') ? [
+        ['devices', '/api/admin/devices?limit=200', renderDevices, 'devicesTable']
       ] : []),
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
       ['tenant-access', '/api/admin/tenant-access', renderTenantAccess, 'tenantAccessTable']
@@ -776,6 +867,44 @@
     });
   }
 
+
+  async function saveDeviceStatus(button) {
+    const tr = button.closest('tr');
+    const uid = button.dataset.uid;
+    const status = tr.querySelector('.device-status-select').value;
+
+    await apiJson(`/api/admin/devices/${encodeURIComponent(uid)}/status`, {
+      method:'PATCH',
+      body:JSON.stringify({status})
+    });
+  }
+
+  async function createDeviceProvisionToken() {
+    const customer_code = document.getElementById('deviceCustomerCode').value.trim();
+    const site_code = document.getElementById('deviceSiteCode').value.trim();
+    const machine_code = document.getElementById('deviceMachineCode').value.trim();
+    const device_uid = document.getElementById('deviceUid').value.trim();
+    const model = document.getElementById('deviceModel').value.trim();
+    const mqtt_base_topic = document.getElementById('deviceMqttTopic').value.trim();
+    const token_minutes = document.getElementById('deviceTokenMinutes').value;
+
+    const data = await apiJson('/api/admin/devices/provision-token', {
+      method:'POST',
+      body:JSON.stringify({customer_code, site_code, machine_code, device_uid, model, mqtt_base_topic, token_minutes})
+    });
+
+    const result = document.getElementById('deviceProvisionResult');
+    result.dataset.manualMessage = 'true';
+    result.innerHTML = `Provision token oluşturuldu. Token sadece bu ekranda bir kez görünür:<br><code>${esc(data.provisioning.token)}</code><br>Claim endpoint: <code>${esc(data.provisioning.claim_endpoint)}</code>`;
+
+    try {
+      await navigator.clipboard.writeText(data.provisioning.token);
+      result.innerHTML += '<br><strong>Token panoya kopyalandı.</strong>';
+    } catch {}
+
+    document.getElementById('deviceUid').value = '';
+  }
+
   async function createInvite() {
     const email = document.getElementById('inviteEmail').value.trim();
     const full_name = document.getElementById('inviteFullName').value.trim();
@@ -866,6 +995,12 @@
         status.textContent = 'Tenant aboneliği ve limit kontrolü güncellendi.';
       }
 
+      if (action === 'save-device-status') {
+        await saveDeviceStatus(button);
+        await loadAdmin();
+        status.textContent = 'Cihaz durumu güncellendi. Activity history güncellendi.';
+      }
+
       if (action === 'copy-invite') {
         await copyInvite(button);
         status.textContent = 'Davet linki kopyalandı.';
@@ -894,8 +1029,11 @@
     const createInviteBtn = document.getElementById('createInviteBtn');
     const applyAuditFiltersBtn = document.getElementById('applyAuditFiltersBtn');
     const exportAuditCsvBtn = document.getElementById('exportAuditCsvBtn');
+    const createDeviceProvisionBtn = document.getElementById('createDeviceProvisionBtn');
+    const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
+    if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
     if (applyAuditFiltersBtn) applyAuditFiltersBtn.addEventListener('click', loadAdmin);
     if (exportAuditCsvBtn) exportAuditCsvBtn.addEventListener('click', async () => {
       exportAuditCsvBtn.disabled = true;
@@ -910,6 +1048,21 @@
         exportAuditCsvBtn.disabled = false;
       }
     });
+    if (createDeviceProvisionBtn) createDeviceProvisionBtn.addEventListener('click', async () => {
+      createDeviceProvisionBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'Provision token oluşturuluyor...';
+      try {
+        if (!can('MANAGE_DEVICES')) throw new Error('Permission required: MANAGE_DEVICES');
+        await createDeviceProvisionToken();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = 'Provision token oluşturuldu. Cihaz listesi güncellendi.';
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        createDeviceProvisionBtn.disabled = false;
+      }
+    });
+
     if (createInviteBtn) createInviteBtn.addEventListener('click', async () => {
       createInviteBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Davet oluşturuluyor...';

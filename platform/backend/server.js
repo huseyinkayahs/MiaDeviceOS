@@ -44,10 +44,14 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.6.0';
+const APP_VERSION = '5.7.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function deviceProvisioningEnabled() {
+  return String(process.env.DEVICE_PROVISIONING_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -704,6 +708,7 @@ const ROLE_PERMISSIONS = {
     'MANAGE_USERS',
     'MANAGE_CUSTOMERS',
     'MANAGE_SITES',
+    'MANAGE_DEVICES',
     'MANAGE_INVITES',
     'VIEW_BILLING',
     'MANAGE_BILLING',
@@ -717,6 +722,7 @@ const ROLE_PERMISSIONS = {
     'MANAGE_USERS',
     'MANAGE_CUSTOMERS',
     'MANAGE_SITES',
+    'MANAGE_DEVICES',
     'MANAGE_INVITES',
     'VIEW_BILLING',
     'MANAGE_BILLING',
@@ -729,6 +735,7 @@ const ROLE_PERMISSIONS = {
     'ADMIN_VIEW',
     'MANAGE_CUSTOMERS',
     'MANAGE_SITES',
+    'MANAGE_DEVICES',
     'MANAGE_INVITES',
     'VIEW_BILLING',
     'AUDIT_VIEW',
@@ -1816,7 +1823,7 @@ app.get('/api/auth/status', async (req,res)=>{
   const cfg = authConfig();
   res.json({
     status:'ok',
-    version:'5.6.0',
+    version:APP_VERSION,
     auth:{
       enabled:cfg.enabled,
       admin_configured:Boolean(cfg.adminEmail && cfg.adminPassword),
@@ -1826,7 +1833,8 @@ app.get('/api/auth/status', async (req,res)=>{
       password_reset_token_minutes:cfg.passwordResetTokenMinutes,
       password_reset_email_configured:emailConfig().enabled && emailConfig().configured,
       subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
-      audit_export_enabled:auditExportEnabled()
+      audit_export_enabled:auditExportEnabled(),
+      device_provisioning_enabled:deviceProvisioningEnabled()
     }
   });
 });
@@ -1838,7 +1846,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!cfg.enabled) {
     return res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       authenticated:false,
       auth_enabled:false,
       user:null,
@@ -1849,7 +1857,7 @@ app.get('/api/auth/me', async (req,res)=>{
   if (!session) {
     return res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       authenticated:false,
       auth_enabled:true,
       user:null,
@@ -1859,7 +1867,7 @@ app.get('/api/auth/me', async (req,res)=>{
 
   res.json({
     status:'ok',
-    version:'5.6.0',
+    version:APP_VERSION,
     authenticated:true,
     auth_enabled:true,
     user:publicUser(session.user),
@@ -1875,7 +1883,7 @@ app.get('/api/auth/me', async (req,res)=>{
 app.post('/api/auth/forgot-password', async (req,res)=>{
   const genericResponse = {
     status:'ok',
-    version:'5.6.0',
+    version:APP_VERSION,
     message:'If an active account exists for this email, a password reset link has been sent.'
   };
 
@@ -1884,7 +1892,7 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
     if (!cfg.passwordResetEnabled) {
       return res.status(503).json({
         status:'disabled',
-        version:'5.6.0',
+        version:APP_VERSION,
         message:'Password reset is disabled'
       });
     }
@@ -1978,7 +1986,7 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
   try {
     const cfg = authConfig();
     if (!cfg.passwordResetEnabled) {
-      return res.status(503).json({status:'disabled', version:'5.6.0', valid:false});
+      return res.status(503).json({status:'disabled', version:APP_VERSION, valid:false});
     }
 
     await ensurePasswordResetSchema();
@@ -1987,7 +1995,7 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
     if (!reset) {
       return res.status(400).json({
         status:'invalid',
-        version:'5.6.0',
+        version:APP_VERSION,
         valid:false,
         message:'Reset link is invalid, expired, or already used'
       });
@@ -1995,13 +2003,13 @@ app.post('/api/auth/password-reset/validate', async (req,res)=>{
 
     return res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       valid:true,
       email_hint:maskEmail(reset.email),
       expires_at:reset.expires_at
     });
   } catch(e) {
-    return res.status(500).json({status:'error', version:'5.6.0', valid:false, message:e.message});
+    return res.status(500).json({status:'error', version:APP_VERSION, valid:false, message:e.message});
   }
 });
 
@@ -2010,7 +2018,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
   try {
     const cfg = authConfig();
     if (!cfg.passwordResetEnabled) {
-      return res.status(503).json({status:'disabled', version:'5.6.0', message:'Password reset is disabled'});
+      return res.status(503).json({status:'disabled', version:APP_VERSION, message:'Password reset is disabled'});
     }
 
     const token = String(req.body?.token || '');
@@ -2027,7 +2035,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
       client = null;
       return res.status(400).json({
         status:'invalid',
-        version:'5.6.0',
+        version:APP_VERSION,
         message:'Reset link is invalid, expired, or already used'
       });
     }
@@ -2066,7 +2074,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
 
     return res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       password_reset:true,
       sessions_revoked:revokedSessions,
       login_url:'/login.html'
@@ -2076,7 +2084,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
       try { await client.query('ROLLBACK'); } catch(_) {}
       client.release();
     }
-    return res.status(e.statusCode || 500).json({status:'error', version:'5.6.0', message:e.message});
+    return res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -2088,7 +2096,7 @@ app.post('/api/auth/signup', async (req,res)=>{
     if (!cfg.signupEnabled) {
       return res.status(403).json({
         status:'disabled',
-        version:'5.6.0',
+        version:APP_VERSION,
         message:'SIGNUP_ENABLED=false'
       });
     }
@@ -2133,7 +2141,7 @@ app.post('/api/auth/signup', async (req,res)=>{
 
     res.status(201).json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       authenticated:true,
       token,
       user:publicUser(created.user),
@@ -2146,7 +2154,7 @@ app.post('/api/auth/signup', async (req,res)=>{
   } catch(e) {
     res.status(e.statusCode || 500).json({
       status:'error',
-      version:'5.6.0',
+      version:APP_VERSION,
       message:e.message
     });
   }
@@ -2160,7 +2168,7 @@ app.post('/api/auth/login', async (req,res)=>{
     if (!cfg.enabled) {
       return res.json({
         status:'ok',
-        version:'5.6.0',
+        version:APP_VERSION,
         authenticated:true,
         auth_enabled:false,
         token:null,
@@ -2217,7 +2225,7 @@ app.post('/api/auth/login', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       authenticated:true,
       token,
       user:publicUser(user),
@@ -2262,14 +2270,14 @@ app.get('/api/subscription/current', authRequired, async (req,res)=>{
     if (!snapshot) {
       return res.status(404).json({
         status:'not_found',
-        version:'5.6.0',
+        version:APP_VERSION,
         customer_code:customerCode
       });
     }
 
-    res.json({status:'ok', version:'5.6.0', ...snapshot});
+    res.json({status:'ok', version:APP_VERSION, ...snapshot});
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -2281,7 +2289,7 @@ app.get('/api/subscription/access-check', authRequired, async (req,res)=>{
     if (!snapshot) {
       return res.status(404).json({
         status:'not_found',
-        version:'5.6.0',
+        version:APP_VERSION,
         customer_code:customerCode,
         access:{allowed:false, reason:'subscription_not_found'}
       });
@@ -2289,14 +2297,14 @@ app.get('/api/subscription/access-check', authRequired, async (req,res)=>{
 
     res.status(snapshot.access.allowed ? 200 : 403).json({
       status:snapshot.access.allowed ? 'ok' : 'subscription_blocked',
-      version:'5.6.0',
+      version:APP_VERSION,
       customer:snapshot.customer,
       subscription:snapshot.subscription,
       usage:snapshot.usage,
       access:snapshot.access
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -2369,6 +2377,8 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
         (SELECT count(*)::int FROM sites) AS sites,
         (SELECT count(*)::int FROM machines) AS machines,
         (SELECT count(*)::int FROM devices) AS devices,
+        (SELECT count(*)::int FROM devices WHERE provisioning_status='pending') AS pending_devices,
+        (SELECT count(*)::int FROM devices WHERE provisioning_status='paired') AS paired_devices,
         (SELECT count(*)::int FROM app_users) AS users,
         (SELECT count(*)::int FROM app_user_tenant_access) AS tenant_access,
         (SELECT count(*)::int FROM ai_reports) AS ai_reports,
@@ -2390,6 +2400,7 @@ app.get('/api/admin/overview', adminRequired, async (req,res)=>{
       version:APP_VERSION,
       subscription_enforcement_enabled:subscriptionEnforcementEnabled(),
       audit_export_enabled:auditExportEnabled(),
+      device_provisioning_enabled:deviceProvisioningEnabled(),
       counts
     });
   } catch(e) {
@@ -2404,7 +2415,7 @@ app.get('/api/admin/permissions', adminRequired, async (req,res)=>{
     const user = req.user || getSession(req)?.user || null;
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       role:user?.role || 'viewer',
       user:publicUser(user),
       permissions:publicPermissions(user),
@@ -2440,12 +2451,12 @@ app.get('/api/admin/subscription-plans', adminRequired, permissionRequired('VIEW
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:result.rows.length,
       plans:result.rows
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -2463,12 +2474,12 @@ app.get('/api/admin/subscriptions', adminRequired, permissionRequired('VIEW_BILL
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:subscriptions.length,
       subscriptions
     });
   } catch(e) {
-    res.status(500).json({status:'error', version:'5.6.0', message:e.message});
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -2584,13 +2595,13 @@ app.patch('/api/admin/subscriptions/:customerCode', adminRequired, permissionReq
       metadata:{customer_code:customer.code, customer_name:customer.name}
     });
 
-    res.json({status:'ok', version:'5.6.0', ...snapshot});
+    res.json({status:'ok', version:APP_VERSION, ...snapshot});
   } catch(e) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch(_) {}
       client.release();
     }
-    res.status(e.statusCode || 500).json({status:'error', version:'5.6.0', message:e.message});
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -2615,7 +2626,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:result.rows.length,
       users:result.rows
     });
@@ -2649,7 +2660,7 @@ app.get('/api/admin/customers', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:result.rows.length,
       customers:result.rows
     });
@@ -2684,7 +2695,7 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:result.rows.length,
       sites:result.rows
     });
@@ -2717,7 +2728,7 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:result.rows.length,
       access:result.rows
     });
@@ -2726,6 +2737,412 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
   }
 });
 
+
+
+
+async function ensureDeviceRegistrySchema() {
+  await pool.query(`
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS serial_no text;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS provisioning_status text NOT NULL DEFAULT 'paired';
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS provisioning_token_hash text;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS provisioning_token_expires_at timestamptz;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS provisioned_at timestamptz;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS deactivated_at timestamptz;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS device_notes text;
+  `);
+
+  await pool.query(`
+    UPDATE devices
+    SET provisioning_status='paired', provisioned_at=COALESCE(provisioned_at, created_at)
+    WHERE provisioning_status IS NULL
+       OR provisioning_status NOT IN ('pending','paired','revoked')
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_devices_provisioning_status
+    ON devices(provisioning_status)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_devices_provisioning_token_hash
+    ON devices(provisioning_token_hash)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_devices_status_updated_at
+    ON devices(status, updated_at DESC)
+  `);
+}
+
+function makeProvisioningToken() {
+  return `fbp_${crypto.randomBytes(24).toString('hex')}`;
+}
+
+function hashProvisioningToken(token) {
+  return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function tokenMinutes(raw) {
+  const value = Number(raw || 60);
+  if (!Number.isFinite(value)) return 60;
+  return Math.min(Math.max(Math.floor(value), 5), 1440);
+}
+
+function cleanCode(value, fallback='') {
+  return String(value || fallback || '').trim();
+}
+
+async function deviceTenantRowByUid(uid) {
+  return one(`
+    SELECT
+      d.id::text AS id,
+      d.device_uid,
+      d.model,
+      d.firmware_version,
+      d.hardware_revision,
+      d.mqtt_base_topic,
+      d.status,
+      d.last_seen_at,
+      d.serial_no,
+      d.provisioning_status,
+      d.provisioning_token_expires_at,
+      d.provisioned_at,
+      d.deactivated_at,
+      d.device_notes,
+      m.id::text AS machine_id,
+      m.code AS machine_code,
+      m.name AS machine_name,
+      m.machine_type,
+      m.status AS machine_status,
+      s.code AS site_code,
+      s.name AS site_name,
+      c.code AS customer_code,
+      c.name AS customer_name,
+      d.created_at,
+      d.updated_at
+    FROM devices d
+    LEFT JOIN machines m ON m.id=d.machine_id
+    LEFT JOIN sites s ON s.id=m.site_id
+    LEFT JOIN customers c ON c.id=s.customer_id
+    WHERE d.device_uid=$1
+    LIMIT 1
+  `, [uid]);
+}
+
+async function resolveDeviceTarget(customerCode, siteCode, machineCode, machineName, machineType) {
+  const customer = await one(`SELECT id, code, name FROM customers WHERE code=$1 LIMIT 1`, [customerCode]);
+  if (!customer) {
+    const err = new Error(`Customer not found: ${customerCode}`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const site = await one(`SELECT id, code, name FROM sites WHERE customer_id=$1 AND code=$2 LIMIT 1`, [customer.id, siteCode]);
+  if (!site) {
+    const err = new Error(`Site not found: ${customerCode}/${siteCode}`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const machine = await one(`
+    INSERT INTO machines(site_id, code, name, machine_type, status)
+    VALUES($1,$2,$3,$4,'active')
+    ON CONFLICT(site_id, code) DO UPDATE SET
+      name=COALESCE(NULLIF(EXCLUDED.name,''), machines.name),
+      machine_type=COALESCE(NULLIF(EXCLUDED.machine_type,''), machines.machine_type),
+      updated_at=now()
+    RETURNING id, code, name, machine_type, status
+  `, [site.id, machineCode, machineName || machineCode, machineType || 'unknown']);
+
+  return {customer, site, machine};
+}
+
+app.get('/api/admin/devices', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try {
+    await ensureDeviceRegistrySchema();
+    const limit = Math.min(Math.max(Number(req.query.limit || 200), 1), 500);
+    const result = await pool.query(`
+      SELECT
+        d.id::text,
+        d.device_uid,
+        d.model,
+        d.firmware_version,
+        d.hardware_revision,
+        d.mqtt_base_topic,
+        d.status,
+        d.last_seen_at,
+        d.serial_no,
+        d.provisioning_status,
+        d.provisioning_token_expires_at,
+        d.provisioned_at,
+        d.deactivated_at,
+        d.device_notes,
+        m.code AS machine_code,
+        m.name AS machine_name,
+        m.machine_type,
+        s.code AS site_code,
+        s.name AS site_name,
+        c.code AS customer_code,
+        c.name AS customer_name,
+        d.created_at,
+        d.updated_at
+      FROM devices d
+      LEFT JOIN machines m ON m.id=d.machine_id
+      LEFT JOIN sites s ON s.id=m.site_id
+      LEFT JOIN customers c ON c.id=s.customer_id
+      ORDER BY d.updated_at DESC, d.created_at DESC
+      LIMIT $1
+    `, [limit]);
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      provisioning_enabled:deviceProvisioningEnabled(),
+      count:result.rows.length,
+      devices:result.rows
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try {
+    if (!deviceProvisioningEnabled()) {
+      return res.status(403).json({status:'disabled', version:APP_VERSION, message:'Device provisioning is disabled'});
+    }
+
+    await ensureDeviceRegistrySchema();
+
+    const customerCode = cleanCode(req.body?.customer_code || req.body?.customerCode || CFG.customerCode);
+    const siteCode = cleanCode(req.body?.site_code || req.body?.siteCode || CFG.siteCode);
+    const machineCode = cleanCode(req.body?.machine_code || req.body?.machineCode || req.body?.device_uid || CFG.machineCode);
+    const machineName = cleanCode(req.body?.machine_name || req.body?.machineName || machineCode);
+    const machineType = cleanCode(req.body?.machine_type || req.body?.machineType || CFG.machineType);
+    const deviceUid = cleanCode(req.body?.device_uid || req.body?.deviceUid);
+    const model = cleanCode(req.body?.model || CFG.deviceModel);
+    const serialNo = cleanCode(req.body?.serial_no || req.body?.serialNo);
+    const mqttBaseTopic = cleanCode(req.body?.mqtt_base_topic || req.body?.mqttBaseTopic || `${customerCode}/${siteCode}/${machineCode}`);
+    const notes = cleanCode(req.body?.device_notes || req.body?.notes);
+    const minutes = tokenMinutes(req.body?.token_minutes || req.body?.tokenMinutes);
+
+    if (!deviceUid) {
+      return res.status(400).json({status:'error', version:APP_VERSION, message:'device_uid is required'});
+    }
+
+    const existing = await deviceTenantRowByUid(deviceUid);
+    if (existing?.customer_code && existing.customer_code !== customerCode) {
+      return res.status(409).json({
+        status:'device_uid_conflict',
+        version:APP_VERSION,
+        message:'This device_uid belongs to another customer',
+        current_customer_code:existing.customer_code
+      });
+    }
+
+    const additionalDevice = existing && existing.status !== 'archived' ? 0 : 1;
+    await assertSubscriptionCapacity(customerCode, 'devices', additionalDevice, false);
+
+    const {machine} = await resolveDeviceTarget(customerCode, siteCode, machineCode, machineName, machineType);
+    const token = makeProvisioningToken();
+    const tokenHash = hashProvisioningToken(token);
+
+    const oldDevice = existing || null;
+    const device = await one(`
+      INSERT INTO devices(
+        machine_id,
+        device_uid,
+        model,
+        serial_no,
+        mqtt_base_topic,
+        status,
+        provisioning_status,
+        provisioning_token_hash,
+        provisioning_token_expires_at,
+        provisioned_at,
+        device_notes
+      )
+      VALUES($1,$2,$3,$4,$5,'offline','pending',$6,now() + make_interval(mins => $7),NULL,$8)
+      ON CONFLICT(device_uid) DO UPDATE SET
+        machine_id=EXCLUDED.machine_id,
+        model=EXCLUDED.model,
+        serial_no=COALESCE(NULLIF(EXCLUDED.serial_no,''), devices.serial_no),
+        mqtt_base_topic=EXCLUDED.mqtt_base_topic,
+        status=CASE WHEN devices.status='archived' THEN 'offline' ELSE devices.status END,
+        provisioning_status='pending',
+        provisioning_token_hash=EXCLUDED.provisioning_token_hash,
+        provisioning_token_expires_at=EXCLUDED.provisioning_token_expires_at,
+        device_notes=COALESCE(NULLIF(EXCLUDED.device_notes,''), devices.device_notes),
+        updated_at=now()
+      RETURNING id::text, device_uid, model, serial_no, mqtt_base_topic, status, provisioning_status, provisioning_token_expires_at, provisioned_at, device_notes, created_at, updated_at
+    `, [machine.id, deviceUid, model, serialNo || null, mqttBaseTopic, tokenHash, minutes, notes || null]);
+
+    const deviceWithTenant = await deviceTenantRowByUid(deviceUid);
+
+    await writeAuditLog(req, {
+      action:'create_device_provisioning_token',
+      entity_type:'device',
+      entity_id:deviceUid,
+      old_values:oldDevice,
+      new_values:{...deviceWithTenant, provisioning_token:'issued_once'},
+      metadata:{customer_code:customerCode, site_code:siteCode, machine_code:machineCode, expires_minutes:minutes}
+    });
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      action:'create_device_provisioning_token',
+      device:deviceWithTenant || device,
+      provisioning:{
+        token,
+        expires_at:device.provisioning_token_expires_at,
+        claim_endpoint:'/api/device/provision/claim',
+        token_visible_once:true
+      }
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({
+      status:e.statusCode === 409 ? 'subscription_quota_blocked' : 'error',
+      version:APP_VERSION,
+      message:e.message,
+      resource:e.resource || null,
+      usage:e.usage || null,
+      access:e.access || null
+    });
+  }
+});
+
+app.patch('/api/admin/devices/:uid/status', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try {
+    await ensureDeviceRegistrySchema();
+    const status = validateChoice(req.body?.status, ['online','offline','unknown','maintenance','archived'], 'status');
+    const uid = String(req.params.uid || '').trim();
+
+    const oldDevice = await deviceTenantRowByUid(uid);
+    if (!oldDevice) return res.status(404).json({status:'not_found', version:APP_VERSION, device_uid:uid});
+
+    const device = await one(`
+      UPDATE devices
+      SET
+        status=$1,
+        provisioning_status=CASE WHEN $1='archived' THEN 'revoked' ELSE provisioning_status END,
+        deactivated_at=CASE WHEN $1='archived' THEN now() ELSE deactivated_at END,
+        provisioning_token_hash=CASE WHEN $1='archived' THEN NULL ELSE provisioning_token_hash END,
+        provisioning_token_expires_at=CASE WHEN $1='archived' THEN NULL ELSE provisioning_token_expires_at END,
+        updated_at=now()
+      WHERE device_uid=$2
+      RETURNING id::text, device_uid, model, firmware_version, hardware_revision, mqtt_base_topic, status, last_seen_at, serial_no, provisioning_status, provisioning_token_expires_at, provisioned_at, deactivated_at, device_notes, created_at, updated_at
+    `, [status, uid]);
+
+    const deviceWithTenant = await deviceTenantRowByUid(uid);
+    await writeAuditLog(req, {
+      action:'update_device_status',
+      entity_type:'device',
+      entity_id:uid,
+      old_values:oldDevice,
+      new_values:deviceWithTenant || device,
+      metadata:{changed_field:'status', old_status:oldDevice.status, new_status:status}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, action:'update_device_status', device:deviceWithTenant || device});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/device/provision/claim', async (req,res)=>{
+  try {
+    if (!deviceProvisioningEnabled()) {
+      return res.status(403).json({status:'disabled', version:APP_VERSION, message:'Device provisioning is disabled'});
+    }
+
+    await ensureDeviceRegistrySchema();
+
+    const token = String(req.body?.token || '').trim();
+    const deviceUid = cleanCode(req.body?.device_uid || req.body?.deviceUid);
+
+    if (!token) return res.status(400).json({status:'error', version:APP_VERSION, message:'token is required'});
+
+    const tokenHash = hashProvisioningToken(token);
+    const device = await one(`
+      SELECT d.id::text, d.device_uid, d.model, d.mqtt_base_topic, d.provisioning_token_hash, d.provisioning_token_expires_at
+      FROM devices d
+      WHERE d.provisioning_token_hash=$1
+        AND d.provisioning_status='pending'
+        AND d.provisioning_token_expires_at > now()
+      LIMIT 1
+    `, [tokenHash]);
+
+    if (!device) {
+      await writeAuditLog(req, {
+        action:'device_provisioning_failed',
+        entity_type:'device',
+        entity_id:deviceUid || 'unknown',
+        old_values:null,
+        new_values:null,
+        metadata:{reason:'invalid_or_expired_token'}
+      });
+      return res.status(404).json({status:'invalid_or_expired_token', version:APP_VERSION, message:'Provisioning token is invalid or expired'});
+    }
+
+    if (deviceUid && deviceUid !== device.device_uid) {
+      await writeAuditLog(req, {
+        action:'device_provisioning_failed',
+        entity_type:'device',
+        entity_id:device.device_uid,
+        old_values:null,
+        new_values:null,
+        metadata:{reason:'device_uid_mismatch', requested_device_uid:deviceUid}
+      });
+      return res.status(409).json({status:'device_uid_mismatch', version:APP_VERSION, expected_device_uid:device.device_uid});
+    }
+
+    const updated = await one(`
+      UPDATE devices
+      SET
+        model=COALESCE(NULLIF($2,''), model),
+        firmware_version=COALESCE(NULLIF($3,''), firmware_version),
+        hardware_revision=COALESCE(NULLIF($4,''), hardware_revision),
+        mqtt_base_topic=COALESCE(NULLIF($5,''), mqtt_base_topic),
+        serial_no=COALESCE(NULLIF($6,''), serial_no),
+        provisioning_status='paired',
+        provisioning_token_hash=NULL,
+        provisioning_token_expires_at=NULL,
+        provisioned_at=now(),
+        status='online',
+        last_seen_at=now(),
+        updated_at=now()
+      WHERE id=$1::uuid
+      RETURNING id::text, device_uid, model, firmware_version, hardware_revision, mqtt_base_topic, serial_no, status, provisioning_status, provisioned_at, last_seen_at, updated_at
+    `, [
+      device.id,
+      cleanCode(req.body?.model),
+      cleanCode(req.body?.firmware_version || req.body?.firmwareVersion),
+      cleanCode(req.body?.hardware_revision || req.body?.hardwareRevision),
+      cleanCode(req.body?.mqtt_base_topic || req.body?.mqttBaseTopic),
+      cleanCode(req.body?.serial_no || req.body?.serialNo)
+    ]);
+
+    await writeAuditLog(req, {
+      action:'claim_device_provisioning_token',
+      entity_type:'device',
+      entity_id:updated.device_uid,
+      old_values:{device_uid:device.device_uid, provisioning_status:'pending'},
+      new_values:{...updated, provisioning_token:'consumed'},
+      metadata:{claim_endpoint:'/api/device/provision/claim'}
+    });
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      action:'claim_device_provisioning_token',
+      device:updated,
+      mqtt:{base_topic:updated.mqtt_base_topic}
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
 
 
 
@@ -3082,7 +3499,7 @@ app.get('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES'
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       count:result.rows.length,
       invites:result.rows.map(row => publicInvite(row, req))
     });
@@ -3228,7 +3645,7 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'create_user_invite',
       invite:publicInvite(invite, req),
       email:inviteEmailDelivery
@@ -3279,7 +3696,7 @@ app.post('/api/admin/invites/:id/email', adminRequired, permissionRequired('MANA
 
     res.json({
       status:delivery.email.sent ? 'ok' : 'not_sent',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'send_user_invite_email',
       invite:publicInvite(delivery.invite, req),
       email:delivery.email
@@ -3324,7 +3741,7 @@ app.post('/api/admin/invites/:id/cancel', adminRequired, permissionRequired('MAN
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'cancel_user_invite',
       invite
     });
@@ -3364,7 +3781,7 @@ app.get('/api/invites/:token', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       invite:{
         ...invite,
         expired
@@ -3516,7 +3933,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'accept_user_invite',
       authenticated:true,
       token:sessionToken,
@@ -3820,7 +4237,7 @@ app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANA
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'update_user_status',
       user
     });
@@ -3873,7 +4290,7 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'update_user_role',
       user
     });
@@ -3915,7 +4332,7 @@ app.patch('/api/admin/customers/:code/status', adminRequired, permissionRequired
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'update_customer_status',
       customer
     });
@@ -3966,7 +4383,7 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, perm
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       action:'update_site_status',
       site
     });
@@ -4025,7 +4442,7 @@ app.get('/api/tenant/context', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       tenant:context
     });
   } catch(e) {
@@ -4039,7 +4456,7 @@ app.get('/api/tenant/customers', async (req,res)=>{
     const context = await getTenantContextForUser(session?.user || null);
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       customers:context.customers,
       sites:context.sites
     });
@@ -4055,7 +4472,7 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:'5.6.0', database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:APP_VERSION, database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -4163,7 +4580,7 @@ app.get('/api/machines/:code/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.6.0',
+      version:APP_VERSION,
       saved_to_database: result.saveResult,
       report: result.report
     });
@@ -4184,7 +4601,7 @@ app.get('/api/machines/:code/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Local Rule Engine',
-      version:'5.6.0',
+      version:APP_VERSION,
       machine_code: req.params.code,
       saved_to_database: result.saveResult,
       telegram_text: result.telegram_text,
@@ -4234,7 +4651,7 @@ app.get('/api/machines/:code/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       machine_code:req.params.code,
       count: result.rows.length,
       reports: result.rows
@@ -4278,7 +4695,7 @@ app.get('/api/machines/:code/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       machine_code:req.params.code,
       report: report || null
     });
@@ -4316,7 +4733,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
       const c = await one(`SELECT COUNT(*)::int AS count FROM ai_reports WHERE ${demoWhere}`, [machine.id]);
       return res.json({
         status:'ok',
-        version:'5.6.0',
+        version:APP_VERSION,
         machine_code:req.params.code,
         dry_run:true,
         demo_report_count:Number(c?.count || 0),
@@ -4331,7 +4748,7 @@ app.get('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -4371,7 +4788,7 @@ app.post('/api/machines/:code/ai/reports/cleanup-demo', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       machine_code:req.params.code,
       deleted_count:deleted.rowCount,
       deleted_ids:deleted.rows.map(r => String(r.id))
@@ -4422,7 +4839,7 @@ app.get('/api/machines/:code/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       machine_code:req.params.code,
       report
     });
@@ -4487,7 +4904,7 @@ app.get('/api/sites/:siteCode/ai/report-center', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       site:{ code:site.code, name:site.name, status:site.status },
       machine_count:rows.length,
       machines:rows
@@ -4538,7 +4955,7 @@ app.get('/api/machines/:code/device-info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       device:row
     });
   } catch(e) {
@@ -4583,7 +5000,7 @@ app.get('/api/devices/:uid/info', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       device:row
     });
   } catch(e) {
@@ -4840,7 +5257,7 @@ app.get('/api/sites/:siteCode/ai/daily-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       report:result.report
@@ -4862,7 +5279,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:'SmartAI Site Rule Engine',
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       telegram_text:result.telegram_text,
@@ -4913,7 +5330,7 @@ app.get('/api/sites/:siteCode/ai/reports', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       site:{code:site.code, name:site.name, status:site.status},
       count:result.rows.length,
       reports:result.rows
@@ -4957,7 +5374,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       site:{code:site.code, name:site.name, status:site.status},
       report:report || null
     });
@@ -5008,7 +5425,7 @@ app.get('/api/sites/:siteCode/ai/reports/:id', async (req,res)=>{
 
     res.json({
       status:'ok',
-      version:'5.6.0',
+      version:APP_VERSION,
       site:{code:site.code, name:site.name, status:site.status},
       report
     });
@@ -5152,7 +5569,7 @@ function siteReportPrintHtml(site, report) {
     ${telegramText ? `<h2>Telegram Mesajı</h2><pre>${h(telegramText)}</pre>` : ''}
 
     <div class="footer">
-      FactoryBox / MiaDeviceOS - PDF Export View - v5.6.0
+      FactoryBox / MiaDeviceOS - PDF Export View - v5.7.0
     </div>
   </main>
 </body>
@@ -5516,7 +5933,7 @@ app.get('/api/ai/openai/status', async (req,res)=>{
   const cfg = openAiConfig();
   res.json({
     status:'ok',
-    version:'5.6.0',
+    version:APP_VERSION,
     openai:{
       configured:cfg.configured,
       enabled:cfg.enabled,
@@ -5538,7 +5955,7 @@ app.get('/api/sites/:siteCode/ai/openai-report', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5561,7 +5978,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
     res.json({
       status:'ok',
       ai_engine:result.report.ai_engine,
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5671,7 +6088,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.6.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.7.0</p>
   </div>
 </body>
 </html>`;
@@ -5692,7 +6109,7 @@ app.get('/api/email/status', async (req,res)=>{
   const cfg = emailConfig();
   res.json({
     status:'ok',
-    version:'5.6.0',
+    version:APP_VERSION,
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
@@ -5747,7 +6164,7 @@ app.get('/api/sites/:siteCode/ai/reports/latest/email', async (req,res)=>{
 
     res.json({
       status:result.sent ? 'ok' : 'not_sent',
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       report_id:report.id,
       email:result
@@ -5787,7 +6204,7 @@ app.get('/api/sites/:siteCode/ai/daily-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       saved_to_database:result.saveResult,
       email,
@@ -5828,7 +6245,7 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
     res.json({
       status:email.sent ? 'ok' : 'not_sent',
-      version:'5.6.0',
+      version:APP_VERSION,
       site_code:req.params.siteCode,
       openai:result.openai,
       saved_to_database:result.saveResult,
@@ -5849,6 +6266,7 @@ async function start() {
   await ensureAuditLogSchema();
   await ensureInviteSchema();
   await ensureBillingFoundation();
+  await ensureDeviceRegistrySchema();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });

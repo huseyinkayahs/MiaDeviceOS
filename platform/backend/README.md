@@ -89,3 +89,8 @@ SUBSCRIPTION_ENFORCEMENT_ENABLED=true
 ```
 
 `expired`, `cancelled` veya `past_due` tenant için `/api/machines`, `/api/sites` ve `/api/devices` operasyonları engellenir. Kullanıcı davetleri plan limitine göre kontrol edilir.
+
+
+## v5.7 Device Registry / Provisioning
+
+Admin panel üzerinden cihaz listesi, cihaz durum yönetimi ve tek kullanımlık provisioning token üretimi desteklenir.

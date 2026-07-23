@@ -1,0 +1,12 @@
+v5.7.0 Device Registry / Provisioning Foundation Pack
+
+İçerik:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/.env.auth.example
+- platform/database/migrations/020_device_registry_provisioning_foundation.sql
+- docs/V5_7_DEVICE_REGISTRY_PROVISIONING_FOUNDATION_PACK.md
+- KURULUM_V5_7.txt
+
+Özet:
+Admin panelde cihaz listesi, cihaz durum güncelleme, tek kullanımlık provisioning token ve cihaz claim endpoint'i eklendi.
