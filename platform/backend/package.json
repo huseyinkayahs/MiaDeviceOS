@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "5.10.0",
-  "description": "FactoryBox / MiaDeviceOS Platform Backend - Asset Management Tenant Site Machine Pack",
+  "version": "5.11.0",
+  "description": "FactoryBox / MiaDeviceOS Platform Backend - Machine Live Monitoring Telemetry Snapshot Pack",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

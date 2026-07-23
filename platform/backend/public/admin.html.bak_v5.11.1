@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="utf-8">
@@ -240,7 +240,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p>v5.11.1 — canlı izleme ve telemetri özeti eklendi.</p>
+      <p>v5.11.0 — canlı izleme ve telemetri özeti eklendi.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -286,7 +286,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p class="muted">v5.11.1: KPI kartları, canlı izleme, asset yönetimi ve son güvenlik aktiviteleri.</p>
+        <p class="muted">v5.11.0: KPI kartları, canlı izleme, asset yönetimi ve son güvenlik aktiviteleri.</p>
       </div>
     </div>
 
@@ -733,21 +733,6 @@
     return labels[health] || health || '-';
   }
 
-  function liveConnectionIssueCount(summary) {
-    return Number(summary.offline || 0) + Number(summary.stale || 0) + Number(summary.no_device || 0);
-  }
-
-  function liveAlarmText(row) {
-    const active = Number(row.active_alarm_count || 0);
-    const visible = Number(row.visible_active_alarm_count ?? active);
-
-    if (row.has_stale_alarm) {
-      return `Last alarm: ${fmtDate(row.latest_alarm_at)} · bağlantı eski`;
-    }
-
-    return `Active alarms: ${visible}`;
-  }
-
   function compactJson(v) {
     if (!v) return '-';
     try {
@@ -1112,9 +1097,7 @@
       Running: <strong>${esc(summary.running ?? 0)}</strong> ·
       Stopped: <strong>${esc(summary.stopped ?? 0)}</strong> ·
       Alarm: <strong>${esc(summary.alarm ?? 0)}</strong> ·
-      Offline: <strong>${esc(summary.offline || 0)}</strong> ·
-      Stale: <strong>${esc(summary.stale || 0)}</strong> ·
-      No Device: <strong>${esc(summary.no_device || 0)}</strong>
+      Offline/Stale: <strong>${esc((summary.offline || 0) + (summary.stale || 0))}</strong>
       <span class="live-updated-v511">Son güncelleme: ${esc(generated)}</span>
     `;
 
@@ -1134,16 +1117,14 @@
           <span class="live-badge-v511 ${esc(row.health)}">${esc(liveHealthLabel(row.health))}</span>
         </div>
         <div class="live-metrics-v511">
-          <div class="live-metric-v511"><span>Connection</span><strong>${esc(liveHealthLabel(row.connection_health || row.health))}</strong></div>
+          <div class="live-metric-v511"><span>State</span><strong>${esc(row.latest_state || row.machine_status || '-')}</strong></div>
           <div class="live-metric-v511"><span>Signal Age</span><strong>${esc(fmtDuration(row.signal_age_sec))}</strong></div>
-          <div class="live-metric-v511"><span>Machine State</span><strong>${esc(row.latest_state || '-')}</strong></div>
-          <div class="live-metric-v511"><span>Machine Status</span><strong>${esc(row.machine_status || '-')}</strong></div>
           <div class="live-metric-v511"><span>Current</span><strong>${fmtMetric(row.current_amp, ' A')}</strong></div>
           <div class="live-metric-v511"><span>Temp</span><strong>${fmtMetric(row.temperature_c, ' °C')}</strong></div>
           <div class="live-metric-v511"><span>WiFi RSSI</span><strong>${fmtMetric(row.wifi_rssi, ' dBm')}</strong></div>
           <div class="live-metric-v511"><span>Devices</span><strong>${esc(row.online_device_count || 0)}/${esc(row.device_count || 0)}</strong></div>
         </div>
-        <p class="muted">Last seen: ${esc(fmtDate(row.last_seen_at || row.latest_telemetry_at))} · ${esc(liveAlarmText(row))}</p>
+        <p class="muted">Last seen: ${esc(fmtDate(row.last_seen_at || row.latest_telemetry_at))} · Active alarms: ${esc(row.active_alarm_count || 0)}</p>
       </div>
     `).join('');
 
@@ -1151,13 +1132,13 @@
       {label:'Health', html:true, value:r=>`<span class="live-badge-v511 ${esc(r.health)}">${esc(liveHealthLabel(r.health))}</span>`},
       {label:'Machine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
       {label:'Customer / Site', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
-      {label:'Machine State', value:r=>r.latest_state || '-'},
+      {label:'State', value:r=>r.latest_state || '-'},
       {label:'Machine Status', value:r=>r.machine_status || '-'},
       {label:'Current', html:true, value:r=>fmtMetric(r.current_amp, ' A')},
       {label:'Temp', html:true, value:r=>fmtMetric(r.temperature_c, ' °C')},
       {label:'RSSI', html:true, value:r=>fmtMetric(r.wifi_rssi, ' dBm')},
       {label:'Devices', value:r=>`${r.online_device_count || 0}/${r.device_count || 0}`},
-      {label:'Alarms', value:r=>liveAlarmText(r)},
+      {label:'Alarms', value:r=>r.active_alarm_count || 0},
       {label:'Last Seen', value:r=>fmtDate(r.last_seen_at || r.latest_telemetry_at)}
     ], machines);
   }
@@ -1909,5 +1890,3 @@
 </script>
 </body>
 </html>
-
-

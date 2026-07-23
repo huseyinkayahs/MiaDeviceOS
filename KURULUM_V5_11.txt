@@ -1,0 +1,26 @@
+# FactoryBox One v5.11.0 Kurulum
+
+Sprint: Machine Live Monitoring / Telemetry Snapshot Pack
+
+1. ZIP içeriğini mevcut proje ana klasörünün üzerine kopyalayın.
+2. Dosyaları değiştirmeyi onaylayın.
+3. İsterseniz platform/backend/.env dosyasına şu satırı ekleyin:
+
+LIVE_MONITORING_ENABLED=true
+
+4. Backend'i yeniden başlatın:
+
+cd "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+npm.cmd start
+
+5. Kontrol adresleri:
+
+http://localhost:3100/api/health
+http://localhost:3100/api/auth/status
+http://localhost:3100/admin.html?fresh=5110
+
+Beklenen:
+- version: 5.11.0
+- live_monitoring_enabled: true
+- Admin panelde Live Monitoring menüsü
+- Makine canlı durum kartları ve telemetri tablosu

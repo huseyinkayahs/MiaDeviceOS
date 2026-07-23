@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
@@ -44,7 +44,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.11.1';
+const APP_VERSION = '5.11.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -2616,20 +2616,16 @@ function classifyLiveMachine(row) {
   const activeAlarms = Number(row.active_alarm_count || 0);
   const deviceCount = Number(row.device_count || 0);
   const onlineDevices = Number(row.online_device_count || 0);
-  const rawSignalAge = Number(row.signal_age_sec);
-  const signalAge = Number.isFinite(rawSignalAge) ? rawSignalAge : 999999;
-  const staleThresholdSec = Number(process.env.LIVE_MONITORING_STALE_SECONDS || 300);
+  const signalAge = Number(row.signal_age_sec || 999999);
   const machineStatus = String(row.machine_status || '').toLowerCase();
   const latestState = String(row.latest_state || '').toUpperCase();
 
-  // v5.11.1: Machine status ile canlı bağlantı sağlığı ayrıldı.
-  // Öncelik: cihaz yok / bağlantı eski / bakım / alarm / çalışma durumu.
-  if (deviceCount === 0) return 'no_device';
   if (machineStatus === 'archived') return 'archived';
-  if (onlineDevices === 0) return 'offline';
-  if (signalAge > staleThresholdSec) return 'stale';
   if (machineStatus === 'maintenance') return 'maintenance';
   if (activeAlarms > 0) return 'alarm';
+  if (deviceCount === 0) return 'no_device';
+  if (onlineDevices === 0) return 'offline';
+  if (signalAge > 900) return 'stale';
   if (latestState === 'RUNNING') return 'running';
   if (latestState === 'STOPPED') return 'stopped';
   return 'online';
@@ -2743,22 +2739,10 @@ app.get('/api/admin/live-monitoring', adminRequired, permissionRequired('VIEW_DA
       LIMIT $1
     `, [limit]);
 
-    const machines = result.rows.map(row => {
-      const health = classifyLiveMachine(row);
-      const activeAlarmCount = Number(row.active_alarm_count || 0);
-      const connectionIssue = ['stale', 'offline', 'no_device'].includes(health);
-
-      return {
-        ...row,
-        health,
-        connection_health: health,
-        visible_active_alarm_count: connectionIssue ? 0 : activeAlarmCount,
-        has_stale_alarm: connectionIssue && activeAlarmCount > 0,
-        live_status_note: connectionIssue && activeAlarmCount > 0
-          ? 'Bağlantı eski/kopuk; aktif alarm kaydı eski olabilir.'
-          : ''
-      };
-    });
+    const machines = result.rows.map(row => ({
+      ...row,
+      health: classifyLiveMachine(row)
+    }));
 
     res.json({
       status:'ok',
@@ -6905,4 +6889,3 @@ async function start() {
   app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
-

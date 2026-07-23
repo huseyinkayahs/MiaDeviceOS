@@ -1112,9 +1112,7 @@
       Running: <strong>${esc(summary.running ?? 0)}</strong> ·
       Stopped: <strong>${esc(summary.stopped ?? 0)}</strong> ·
       Alarm: <strong>${esc(summary.alarm ?? 0)}</strong> ·
-      Offline: <strong>${esc(summary.offline || 0)}</strong> ·
-      Stale: <strong>${esc(summary.stale || 0)}</strong> ·
-      No Device: <strong>${esc(summary.no_device || 0)}</strong>
+      Offline/Stale: <strong>${esc((summary.offline || 0) + (summary.stale || 0))}</strong>
       <span class="live-updated-v511">Son güncelleme: ${esc(generated)}</span>
     `;
 
@@ -1909,5 +1907,4 @@
 </script>
 </body>
 </html>
-
 

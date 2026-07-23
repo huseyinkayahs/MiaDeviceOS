@@ -96,7 +96,7 @@ SUBSCRIPTION_ENFORCEMENT_ENABLED=true
 Admin panel üzerinden cihaz listesi, cihaz durum yönetimi ve tek kullanımlık provisioning token üretimi desteklenir.
 
 
-## v5.10.0 Asset Management / Tenant Site Machine Pack
+## v5.11.0 Asset Management / Tenant Site Machine Pack
 
 Bu sürümde admin panel üzerinden customer, site ve machine kayıtları daha düzenli yönetilebilir hale getirildi.
 
