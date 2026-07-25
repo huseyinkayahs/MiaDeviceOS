@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.14.2';
+const APP_VERSION = '5.15.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -86,6 +86,10 @@ function alarmAnalyticsEnabled() {
 
 function alarmEscalationEnabled() {
   return String(process.env.ALARM_ESCALATION_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function alarmEscalationQueueEnabled() {
+  return String(process.env.ALARM_ESCALATION_QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -3179,6 +3183,41 @@ async function ensureAlarmEscalationFoundation() {
       ('system-info','Info Alarm SLA','info',60,480,'dashboard',100,true,true,'system','system')
     ON CONFLICT(rule_key) DO NOTHING
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alarm_escalation_events (
+      id bigserial PRIMARY KEY,
+      event_key text NOT NULL UNIQUE,
+      alarm_id bigint NOT NULL REFERENCES alarms(id) ON DELETE CASCADE,
+      rule_id bigint REFERENCES alarm_escalation_rules(id) ON DELETE SET NULL,
+      stage text NOT NULL,
+      severity text NOT NULL DEFAULT 'warning',
+      channel text NOT NULL DEFAULT 'dashboard',
+      recipients text,
+      delivery_status text NOT NULL DEFAULT 'pending',
+      message text NOT NULL,
+      attempt_count integer NOT NULL DEFAULT 0,
+      detected_at timestamptz NOT NULL DEFAULT now(),
+      delivered_at timestamptz,
+      failed_at timestamptz,
+      last_error text,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CHECK (stage IN ('ack_overdue','resolve_overdue')),
+      CHECK (delivery_status IN ('pending','delivered','failed','suppressed'))
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_escalation_events_status_created
+    ON alarm_escalation_events(delivery_status, created_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_escalation_events_alarm_stage
+    ON alarm_escalation_events(alarm_id, stage)
+  `);
 }
 
 function alarmSlaMinutes(raw, fallback, max) {
@@ -3272,64 +3311,91 @@ function alarmSlaStatus(alarm, rule, nowMs = Date.now()) {
   };
 }
 
+
+async function loadAlarmEscalationSnapshot() {
+  await ensureAlarmEscalationFoundation();
+
+  const rulesResult = await pool.query(`
+    SELECT *
+    FROM alarm_escalation_rules
+    ORDER BY priority DESC, is_system DESC, id ASC
+  `);
+
+  const activeResult = await pool.query(`
+    SELECT
+      a.id::text,
+      a.alarm_type,
+      a.severity,
+      a.status,
+      a.started_at,
+      a.acknowledged_at,
+      a.acknowledged_by,
+      a.message,
+      m.code AS machine_code,
+      m.name AS machine_name,
+      s.code AS site_code,
+      c.code AS customer_code
+    FROM alarms a
+    LEFT JOIN machines m ON m.id=a.machine_id
+    LEFT JOIN sites s ON s.id=m.site_id
+    LEFT JOIN customers c ON c.id=s.customer_id
+    WHERE a.status='active'
+    ORDER BY a.started_at ASC
+    LIMIT 500
+  `);
+
+  const enabledRules = rulesResult.rows.filter(rule => rule.enabled);
+  const nowMs = Date.now();
+  const activeAlarms = activeResult.rows.map(alarm => {
+    let selected = null;
+    let selectedScore = -1;
+    for (const rule of enabledRules) {
+      const score = alarmRuleMatches(rule, alarm);
+      if (score > selectedScore) {
+        selected = rule;
+        selectedScore = score;
+      }
+    }
+    return alarmSlaStatus(alarm, selected, nowMs);
+  }).sort((a,b) => {
+    const rank = {resolve_overdue:0, ack_overdue:1, within_sla:2, no_rule:3};
+    return (rank[a.sla_status] ?? 9) - (rank[b.sla_status] ?? 9) || Number(b.age_minutes || 0) - Number(a.age_minutes || 0);
+  });
+
+  const summary = activeAlarms.reduce((acc,row)=>{
+    acc.active += 1;
+    acc[row.sla_status] = (acc[row.sla_status] || 0) + 1;
+    if (row.severity === 'critical') acc.critical_active += 1;
+    return acc;
+  }, {active:0, critical_active:0, within_sla:0, ack_overdue:0, resolve_overdue:0, no_rule:0});
+
+  return {rules:rulesResult.rows, activeAlarms, summary};
+}
+
+function escalationEventLimit(raw, fallback = 100, max = 500) {
+  const value = Number(raw || fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 1), max);
+}
+
+function escalationEventStatus(raw) {
+  const value = String(raw || 'all').trim().toLowerCase();
+  return ['all','pending','delivered','failed','suppressed'].includes(value) ? value : 'all';
+}
+
+function escalationEventStage(raw) {
+  const value = String(raw || 'all').trim().toLowerCase();
+  return ['all','ack_overdue','resolve_overdue'].includes(value) ? value : 'all';
+}
+
+function escalationEventMessage(alarm) {
+  const stageText = alarm.sla_status === 'resolve_overdue' ? 'Çözüm SLA süresi aşıldı' : 'Acknowledge SLA süresi aşıldı';
+  return `${stageText}: ${alarm.machine_code || 'unassigned'} / ${alarm.alarm_type || 'unknown'} / ${alarm.severity || 'warning'}`;
+}
+
 app.get('/api/admin/alarm-escalation', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
   try {
-    await ensureAlarmEscalationFoundation();
-
-    const rulesResult = await pool.query(`
-      SELECT *
-      FROM alarm_escalation_rules
-      ORDER BY priority DESC, is_system DESC, id ASC
-    `);
-
-    const activeResult = await pool.query(`
-      SELECT
-        a.id::text,
-        a.alarm_type,
-        a.severity,
-        a.status,
-        a.started_at,
-        a.acknowledged_at,
-        a.acknowledged_by,
-        a.message,
-        m.code AS machine_code,
-        m.name AS machine_name,
-        s.code AS site_code,
-        c.code AS customer_code
-      FROM alarms a
-      LEFT JOIN machines m ON m.id=a.machine_id
-      LEFT JOIN sites s ON s.id=m.site_id
-      LEFT JOIN customers c ON c.id=s.customer_id
-      WHERE a.status='active'
-      ORDER BY a.started_at ASC
-      LIMIT 500
-    `);
-
-    const enabledRules = rulesResult.rows.filter(rule => rule.enabled);
-    const nowMs = Date.now();
-    const activeAlarms = activeResult.rows.map(alarm => {
-      let selected = null;
-      let selectedScore = -1;
-      for (const rule of enabledRules) {
-        const score = alarmRuleMatches(rule, alarm);
-        if (score > selectedScore) {
-          selected = rule;
-          selectedScore = score;
-        }
-      }
-      return alarmSlaStatus(alarm, selected, nowMs);
-    }).sort((a,b) => {
-      const rank = {resolve_overdue:0, ack_overdue:1, within_sla:2, no_rule:3};
-      return (rank[a.sla_status] ?? 9) - (rank[b.sla_status] ?? 9) || Number(b.age_minutes || 0) - Number(a.age_minutes || 0);
-    });
-
-    const summary = activeAlarms.reduce((acc,row)=>{
-      acc.active += 1;
-      acc[row.sla_status] = (acc[row.sla_status] || 0) + 1;
-      if (row.severity === 'critical') acc.critical_active += 1;
-      return acc;
-    }, {active:0, critical_active:0, within_sla:0, ack_overdue:0, resolve_overdue:0, no_rule:0});
-
+    const snapshot = await loadAlarmEscalationSnapshot();
     const actor = req.user || getSession(req)?.user || null;
     res.json({
       status:'ok',
@@ -3337,10 +3403,204 @@ app.get('/api/admin/alarm-escalation', adminRequired, permissionRequired('VIEW_D
       alarm_escalation_enabled:alarmEscalationEnabled(),
       can_manage_rules:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
       generated_at:new Date().toISOString(),
-      summary,
-      rules:rulesResult.rows,
-      active_alarms:activeAlarms
+      summary:snapshot.summary,
+      rules:snapshot.rules,
+      active_alarms:snapshot.activeAlarms
     });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.get('/api/admin/alarm-escalation/events', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+    const limit = escalationEventLimit(req.query.limit, 100, 500);
+    const status = escalationEventStatus(req.query.status);
+    const stage = escalationEventStage(req.query.stage);
+    const where = [];
+    const params = [];
+
+    if (status !== 'all') {
+      params.push(status);
+      where.push(`e.delivery_status=$${params.length}`);
+    }
+    if (stage !== 'all') {
+      params.push(stage);
+      where.push(`e.stage=$${params.length}`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    params.push(limit);
+
+    const result = await pool.query(`
+      SELECT
+        e.id::text,
+        e.event_key,
+        e.alarm_id::text,
+        e.rule_id::text,
+        e.stage,
+        e.severity,
+        e.channel,
+        e.recipients,
+        e.delivery_status,
+        e.message,
+        e.attempt_count,
+        e.detected_at,
+        e.delivered_at,
+        e.failed_at,
+        e.last_error,
+        e.created_at,
+        e.updated_at,
+        a.alarm_type,
+        a.status AS alarm_status,
+        a.started_at AS alarm_started_at,
+        m.code AS machine_code,
+        m.name AS machine_name,
+        r.name AS rule_name
+      FROM alarm_escalation_events e
+      JOIN alarms a ON a.id=e.alarm_id
+      LEFT JOIN machines m ON m.id=a.machine_id
+      LEFT JOIN alarm_escalation_rules r ON r.id=e.rule_id
+      ${whereSql}
+      ORDER BY e.created_at DESC
+      LIMIT $${params.length}
+    `, params);
+
+    const summary = await one(`
+      SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE delivery_status='pending')::int AS pending,
+        count(*) FILTER (WHERE delivery_status='delivered')::int AS delivered,
+        count(*) FILTER (WHERE delivery_status='failed')::int AS failed,
+        count(*) FILTER (WHERE delivery_status='suppressed')::int AS suppressed,
+        count(*) FILTER (WHERE stage='ack_overdue')::int AS ack_overdue,
+        count(*) FILTER (WHERE stage='resolve_overdue')::int AS resolve_overdue
+      FROM alarm_escalation_events
+    `);
+
+    const actor = req.user || getSession(req)?.user || null;
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      alarm_escalation_queue_enabled:alarmEscalationQueueEnabled(),
+      can_manage_events:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
+      generated_at:new Date().toISOString(),
+      filters:{status, stage, limit},
+      summary:summary || {},
+      events:result.rows
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/alarm-escalation/scan', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    if (!alarmEscalationQueueEnabled()) {
+      return res.status(503).json({status:'disabled', version:APP_VERSION, message:'Alarm escalation queue is disabled'});
+    }
+
+    const snapshot = await loadAlarmEscalationSnapshot();
+    const overdue = snapshot.activeAlarms.filter(row =>
+      row.rule_id && ['ack_overdue','resolve_overdue'].includes(row.sla_status)
+    );
+    const created = [];
+
+    for (const alarm of overdue) {
+      const channel = String(alarm.escalation_channel || 'dashboard').trim() || 'dashboard';
+      const deliveryStatus = channel === 'dashboard' ? 'delivered' : 'pending';
+      const deliveredAt = deliveryStatus === 'delivered' ? new Date().toISOString() : null;
+      const eventKey = `alarm-${alarm.id}-${alarm.sla_status}-rule-${alarm.rule_id}`;
+      const metadata = JSON.stringify({
+        customer_code:alarm.customer_code || null,
+        site_code:alarm.site_code || null,
+        machine_code:alarm.machine_code || null,
+        rule_name:alarm.rule_name || null,
+        acknowledge_sla_minutes:alarm.acknowledge_sla_minutes,
+        resolve_sla_minutes:alarm.resolve_sla_minutes,
+        age_minutes:alarm.age_minutes
+      });
+
+      const inserted = await one(`
+        INSERT INTO alarm_escalation_events(
+          event_key,alarm_id,rule_id,stage,severity,channel,recipients,
+          delivery_status,message,detected_at,delivered_at,metadata
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),$10,$11::jsonb)
+        ON CONFLICT(event_key) DO NOTHING
+        RETURNING *
+      `, [
+        eventKey,
+        alarm.id,
+        alarm.rule_id,
+        alarm.sla_status,
+        alarm.severity || 'warning',
+        channel,
+        alarm.recipients || null,
+        deliveryStatus,
+        escalationEventMessage(alarm),
+        deliveredAt,
+        metadata
+      ]);
+      if (inserted) created.push(inserted);
+    }
+
+    await writeAuditLog(req, {
+      action:'scan_alarm_escalations',
+      entity_type:'alarm_escalation_queue',
+      entity_id:'manual-scan',
+      old_values:null,
+      new_values:{overdue_count:overdue.length, created_count:created.length},
+      metadata:{duplicate_count:Math.max(0, overdue.length - created.length)}
+    });
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      scanned_active_count:snapshot.activeAlarms.length,
+      overdue_count:overdue.length,
+      created_count:created.length,
+      duplicate_count:Math.max(0, overdue.length - created.length),
+      events:created
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.patch('/api/admin/alarm-escalation/events/:id/status', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+    const id = String(req.params.id || '').trim();
+    const status = escalationEventStatus(req.body?.status);
+    if (status === 'all') {
+      return res.status(400).json({status:'invalid_request', message:'Valid delivery status is required'});
+    }
+    const oldEvent = await one(`SELECT * FROM alarm_escalation_events WHERE id=$1`, [id]);
+    if (!oldEvent) return res.status(404).json({status:'not_found', message:'Escalation event not found'});
+
+    const errorText = String(req.body?.last_error || '').trim().slice(0, 500) || null;
+    const updated = await one(`
+      UPDATE alarm_escalation_events
+      SET delivery_status=$2,
+          delivered_at=CASE WHEN $2='delivered' THEN COALESCE(delivered_at,now()) ELSE NULL END,
+          failed_at=CASE WHEN $2='failed' THEN now() ELSE NULL END,
+          last_error=CASE WHEN $2='failed' THEN $3 ELSE NULL END,
+          attempt_count=attempt_count + CASE WHEN $2='pending' THEN 1 ELSE 0 END,
+          updated_at=now()
+      WHERE id=$1
+      RETURNING *
+    `, [id, status, errorText]);
+
+    await writeAuditLog(req, {
+      action:'update_alarm_escalation_event_status',
+      entity_type:'alarm_escalation_event',
+      entity_id:id,
+      old_values:oldEvent,
+      new_values:updated,
+      metadata:{from_status:oldEvent.delivery_status, to_status:status}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, event:updated});
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }

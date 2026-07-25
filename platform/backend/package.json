@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "5.14.2",
-  "description": "FactoryBox / MiaDeviceOS Platform Backend - Login Admin Redirect Hotfix",
+  "version": "5.15.0",
+  "description": "FactoryBox / MiaDeviceOS Platform Backend - Alarm Escalation Queue and Notification History Pack",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

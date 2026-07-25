@@ -78,9 +78,9 @@
       try {
         const res = await fetch('/api/health', {cache:'no-store'});
         const data = await res.json();
-        target.textContent = `v${String(data.version || '5.14.2').replace(/^v/i, '')} — FactoryBox güvenli giriş`;
+        target.textContent = `v${String(data.version || '5.15.0').replace(/^v/i, '')} — FactoryBox güvenli giriş`;
       } catch (_) {
-        target.textContent = 'v5.14.2 — FactoryBox güvenli giriş';
+        target.textContent = 'v5.15.0 — FactoryBox güvenli giriş';
       }
     }
 

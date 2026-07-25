@@ -198,6 +198,8 @@
     #alarmSlaSection .kpi-panel-v59 { min-width:0; width:100%; box-sizing:border-box; }
     #alarmAnalyticsSection .admin-table-wrap,
     #alarmSlaSection .admin-table-wrap { width:100%; max-width:100%; overflow-x:auto; }
+    #alarmEscalationQueueSection { min-width:0; overflow:hidden; }
+    #alarmEscalationQueueSection .admin-table-wrap { width:100%; max-width:100%; overflow-x:auto; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -247,7 +249,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.14.2 — giriş yönlendirme hotfix aktif.</p>
+      <p id="adminVersionLabel">v5.15.0 — Escalation Queue ve bildirim geçmişi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -257,6 +259,7 @@
       <button class="admin-nav-link-v58" data-admin-nav="alarms"><span>🚨 Alarm Center</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="analytics"><span>📈 Alarm Analytics</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="sla"><span>⏱️ Alarm SLA</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="escalations"><span>📣 Escalation Queue</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
@@ -296,7 +299,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.14.2: Güncel Admin Panel ve doğru giriş yönlendirmesi.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.15.0: Alarm Escalation Queue ve Notification History aktif.</p>
       </div>
     </div>
 
@@ -455,6 +458,49 @@
         <h3>Aktif Alarm SLA Durumu</h3>
         <div id="alarmSlaTable">Aktif alarmlar yükleniyor...</div>
       </div>
+    </div>
+  </section>
+
+  <section id="alarmEscalationQueueSection" class="card wide admin-card" data-admin-view="escalations">
+    <div class="section-title-row">
+      <div>
+        <h2>Alarm Escalation Queue / Notification History</h2>
+        <p class="muted">v5.15: SLA dışı alarmları tekilleştirerek kuyruğa alma, kanal durumu ve gönderim geçmişi.</p>
+      </div>
+      <div class="admin-form-actions">
+        <button id="scanAlarmEscalationsBtn" class="primary-btn">SLA Tara ve Kuyruğa Al</button>
+        <button id="refreshAlarmEscalationEventsBtn" class="secondary-btn">Geçmişi Yenile</button>
+      </div>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>
+        Gönderim Durumu
+        <select id="alarmEscalationStatusFilter">
+          <option value="all">all</option>
+          <option value="pending">pending</option>
+          <option value="delivered">delivered</option>
+          <option value="failed">failed</option>
+          <option value="suppressed">suppressed</option>
+        </select>
+      </label>
+      <label>
+        SLA Aşaması
+        <select id="alarmEscalationStageFilter">
+          <option value="all">all</option>
+          <option value="ack_overdue">ack_overdue</option>
+          <option value="resolve_overdue">resolve_overdue</option>
+        </select>
+      </label>
+      <div class="admin-form-actions">
+        <button id="applyAlarmEscalationFiltersBtn" class="secondary-btn">Filtrele</button>
+      </div>
+    </div>
+
+    <div id="alarmEscalationEventsSummary">Escalation Queue özeti yükleniyor...</div>
+    <div class="kpi-panel-v59">
+      <h3>Escalation Olay Geçmişi</h3>
+      <div id="alarmEscalationEventsTable">Escalation olayları yükleniyor...</div>
     </div>
   </section>
 
@@ -794,8 +840,8 @@
     const safeVersion = String(version || '5.14.2').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Alarm SLA & Escalation aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Alarm SLA, Alarm Analytics, Alarm Center ve canlı izleme.`;
+    if (brand) brand.textContent = `v${safeVersion} — Escalation Queue & Notification History aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Escalation Queue, Alarm SLA, Analytics ve Alarm Center.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -935,6 +981,10 @@
     sla: {
       title:'Alarm SLA',
       desc:'Müdahale/çözüm süreleri, escalation kuralları ve SLA dışı aktif alarmlar.'
+    },
+    escalations: {
+      title:'Escalation Queue',
+      desc:'SLA dışı alarm olay kuyruğu, kanal durumu ve gönderim geçmişi.'
     },
     tenants: {
       title:'Customers / Tenants',
@@ -1545,6 +1595,66 @@
     ], data.active_alarms || []);
   }
 
+  function escalationDeliveryLabel(status) {
+    const labels = {
+      pending:'Bekliyor',
+      delivered:'Teslim edildi',
+      failed:'Başarısız',
+      suppressed:'Bastırıldı'
+    };
+    return labels[status] || status || '-';
+  }
+
+  function escalationStageLabel(stage) {
+    return stage === 'resolve_overdue' ? 'Çözüm gecikti' : (stage === 'ack_overdue' ? 'Ack gecikti' : stage || '-');
+  }
+
+  function alarmEscalationEventsQueryString() {
+    const p = new URLSearchParams();
+    p.set('status', document.getElementById('alarmEscalationStatusFilter')?.value || 'all');
+    p.set('stage', document.getElementById('alarmEscalationStageFilter')?.value || 'all');
+    p.set('limit', '150');
+    return p.toString();
+  }
+
+  function renderAlarmEscalationEvents(data) {
+    const summaryTarget = document.getElementById('alarmEscalationEventsSummary');
+    const tableTarget = document.getElementById('alarmEscalationEventsTable');
+    const scanBtn = document.getElementById('scanAlarmEscalationsBtn');
+    if (!summaryTarget || !tableTarget) return;
+
+    const s = data.summary || {};
+    summaryTarget.innerHTML = `
+      <div class="kpi-grid-v59">
+        <div class="kpi-card-v59"><span>Toplam Olay</span><strong>${esc(s.total || 0)}</strong><small>${esc(s.ack_overdue || 0)} ack · ${esc(s.resolve_overdue || 0)} resolve</small></div>
+        <div class="kpi-card-v59"><span>Bekliyor</span><strong>${esc(s.pending || 0)}</strong><small>Email / Telegram teslimatı bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Teslim Edildi</span><strong>${esc(s.delivered || 0)}</strong><small>Dashboard veya onaylanmış gönderim</small></div>
+        <div class="kpi-card-v59"><span>Başarısız</span><strong>${esc(s.failed || 0)}</strong><small>Tekrar kuyruğa alınabilir</small></div>
+        <div class="kpi-card-v59"><span>Bastırıldı</span><strong>${esc(s.suppressed || 0)}</strong><small>Gönderim yapılmayacak</small></div>
+      </div>
+      <p class="mini-status">Kuyruk yönetimi: <strong>${data.can_manage_events ? 'Açık' : 'Sadece görüntüleme'}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}</p>
+    `;
+    if (scanBtn) scanBtn.disabled = !data.can_manage_events;
+
+    tableTarget.innerHTML = table([
+      {label:'Oluşma', value:r=>fmtDate(r.detected_at || r.created_at)},
+      {label:'Durum', value:r=>escalationDeliveryLabel(r.delivery_status)},
+      {label:'Aşama', value:r=>escalationStageLabel(r.stage)},
+      {label:'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
+      {label:'Alarm', value:r=>`${r.alarm_type || '-'} / ${r.severity || '-'}`},
+      {label:'Kanal', value:r=>r.channel || 'dashboard'},
+      {label:'Alıcılar', value:r=>r.recipients || '-'},
+      {label:'Mesaj', value:r=>r.message || '-'},
+      {label:'Deneme', value:r=>r.attempt_count || 0},
+      {label:'Aksiyon', html:true, value:r=>{
+        if (!data.can_manage_events) return '<span class="muted">yetki yok</span>';
+        if (r.delivery_status === 'pending') return `<button class="secondary-btn mini-btn" data-action="mark-escalation-delivered" data-id="${esc(r.id)}">Teslim Edildi</button>`;
+        if (r.delivery_status === 'failed') return `<button class="secondary-btn mini-btn" data-action="retry-escalation" data-id="${esc(r.id)}">Tekrar Kuyruğa Al</button>`;
+        return '<span class="muted">-</span>';
+      }}
+    ], data.events || []);
+  }
+
   function renderCounts(counts) {
     const el = document.getElementById('adminCounts');
     if (!el) return;
@@ -1826,6 +1936,7 @@
       ['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable'],
       ['alarm-analytics', `/api/admin/alarm-analytics?${alarmAnalyticsQueryString()}`, renderAlarmAnalytics, 'alarmAnalyticsSummary'],
       ['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary'],
+      ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -2068,6 +2179,20 @@
     });
   }
 
+  async function scanAlarmEscalations() {
+    return apiJson('/api/admin/alarm-escalation/scan', {
+      method:'POST',
+      body:JSON.stringify({source:'admin-panel'})
+    });
+  }
+
+  async function updateAlarmEscalationEventStatus(button, status) {
+    await apiJson(`/api/admin/alarm-escalation/events/${encodeURIComponent(button.dataset.id)}/status`, {
+      method:'PATCH',
+      body:JSON.stringify({status})
+    });
+  }
+
   async function createDeviceProvisionToken() {
     const customer_code = document.getElementById('deviceCustomerCode').value.trim();
     const site_code = document.getElementById('deviceSiteCode').value.trim();
@@ -2230,6 +2355,18 @@
         await loadAdmin();
         status.textContent = 'Alarm SLA kuralı güncellendi. Audit log kaydedildi.';
       }
+
+      if (action === 'mark-escalation-delivered') {
+        await updateAlarmEscalationEventStatus(button, 'delivered');
+        await loadAdmin();
+        status.textContent = 'Escalation olayı teslim edildi olarak işaretlendi.';
+      }
+
+      if (action === 'retry-escalation') {
+        await updateAlarmEscalationEventStatus(button, 'pending');
+        await loadAdmin();
+        status.textContent = 'Escalation olayı tekrar kuyruğa alındı.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -2256,6 +2393,9 @@
     const applyAlarmAnalyticsBtn = document.getElementById('applyAlarmAnalyticsBtn');
     const refreshAlarmSlaBtn = document.getElementById('refreshAlarmSlaBtn');
     const createAlarmRuleBtn = document.getElementById('createAlarmRuleBtn');
+    const scanAlarmEscalationsBtn = document.getElementById('scanAlarmEscalationsBtn');
+    const refreshAlarmEscalationEventsBtn = document.getElementById('refreshAlarmEscalationEventsBtn');
+    const applyAlarmEscalationFiltersBtn = document.getElementById('applyAlarmEscalationFiltersBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -2266,6 +2406,21 @@
     if (refreshAlarmAnalyticsBtn) refreshAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
     if (applyAlarmAnalyticsBtn) applyAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmSlaBtn) refreshAlarmSlaBtn.addEventListener('click', loadAdmin);
+    if (refreshAlarmEscalationEventsBtn) refreshAlarmEscalationEventsBtn.addEventListener('click', loadAdmin);
+    if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click', loadAdmin);
+    if (scanAlarmEscalationsBtn) scanAlarmEscalationsBtn.addEventListener('click', async () => {
+      scanAlarmEscalationsBtn.disabled = true;
+      document.getElementById('adminStatus').textContent = 'SLA dışı alarmlar taranıyor...';
+      try {
+        const result = await scanAlarmEscalations();
+        await loadAdmin();
+        document.getElementById('adminStatus').textContent = `Tarama tamamlandı: ${result.created_count || 0} yeni olay, ${result.duplicate_count || 0} tekrar engellendi.`;
+      } catch(e) {
+        document.getElementById('adminStatus').textContent = e.message;
+      } finally {
+        scanAlarmEscalationsBtn.disabled = false;
+      }
+    });
     if (createAlarmRuleBtn) createAlarmRuleBtn.addEventListener('click', async () => {
       createAlarmRuleBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Alarm SLA kuralı oluşturuluyor...';
