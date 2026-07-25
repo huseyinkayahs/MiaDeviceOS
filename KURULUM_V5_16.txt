@@ -1,0 +1,12 @@
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine kopyalayın.
+3. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+4. Gerekirse .env.escalation.example içindeki ayarları mevcut .env dosyanıza ekleyin.
+5. Backend'i yeniden başlatın.
+6. Admin panelinde Ctrl + F5 yapın.
+7. Escalation Delivery ekranını açın.
+8. SLA Tara ve Kuyruğa Al düğmesini kullanın.
+9. Email/Telegram kuralı varsa Bekleyenleri Gönder düğmesini test edin.
+
+Not: Otomatik gönderim varsayılan olarak kapalıdır.
+ALARM_ESCALATION_AUTO_DELIVERY_ENABLED=true ile açılır.

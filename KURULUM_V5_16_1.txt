@@ -1,0 +1,16 @@
+FactoryBox One v5.16.1 - SLA Rule Priority Hotfix
+
+1. Backend'i durdurun.
+2. ZIP içindeki dosyalari FactoryBox proje ana klasorunun uzerine kopyalayin.
+3. Dosyalarin uzerine yazilmasini onaylayin.
+4. Backend'i yeniden baslatin: npm.cmd start
+5. Admin panelinde Ctrl + F5 yapin.
+6. Surumun v5.16.1 oldugunu kontrol edin.
+7. Alarm SLA ekraninda Priority 999 Telegram kuralini etkin birakin.
+8. Escalation Delivery ekraninda "SLA Tara ve Kuyruga Al" butonuna basin.
+
+Beklenen:
+- Yeni olay: 1
+- Bekleyen: 1
+- Kanal: telegram
+- Ayni alarm tekrar taranirsa duplicate_count artar, yeni kayit olusmaz.

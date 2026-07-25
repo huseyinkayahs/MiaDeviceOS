@@ -1,0 +1,12 @@
+FACTORYBOX ONE v5.15.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içindeki dosyaları FactoryBox ana proje klasörünün üzerine kopyalayın.
+3. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+4. Backend'i yeniden başlatın.
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sol menüden Escalation Queue ekranını açın.
+7. SLA Tara ve Kuyruğa Al düğmesine basın.
+8. Aynı taramayı tekrar çalıştırın; yeni kayıt oluşmamalı ve tekrar engellendi sayısı artmalıdır.
+
+Beklenen sürüm: v5.15.0

@@ -1,0 +1,7 @@
+Degisen dosyalar:
+platform/backend/server.js
+platform/backend/public/admin.html
+
+Duzeltme:
+Ekrandaki Priority degeri artik kural seciminde birincil kriterdir.
+Customer/site/machine/alarm type/severity ozelligi sadece ayni priority degerindeki kurallar arasinda tie-breaker olarak kullanilir.

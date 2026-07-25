@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.14.2';
+const APP_VERSION = '5.16.1';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -86,6 +86,39 @@ function alarmAnalyticsEnabled() {
 
 function alarmEscalationEnabled() {
   return String(process.env.ALARM_ESCALATION_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function alarmEscalationQueueEnabled() {
+  return String(process.env.ALARM_ESCALATION_QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function alarmEscalationDeliveryEnabled() {
+  return String(process.env.ALARM_ESCALATION_DELIVERY_ENABLED || 'true').toLowerCase() !== 'false';
+}
+
+function alarmEscalationAutoDeliveryEnabled() {
+  return String(process.env.ALARM_ESCALATION_AUTO_DELIVERY_ENABLED || 'false').toLowerCase() === 'true';
+}
+
+function alarmEscalationDeliveryIntervalSec() {
+  const value = Number(process.env.ALARM_ESCALATION_DELIVERY_INTERVAL_SEC || 60);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 15), 3600) : 60;
+}
+
+function alarmEscalationDeliveryBatchSize() {
+  const value = Number(process.env.ALARM_ESCALATION_DELIVERY_BATCH_SIZE || 20);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 1), 100) : 20;
+}
+
+function telegramEscalationConfig() {
+  const token = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+  const defaultChatId = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+  return {
+    enabled:String(process.env.TELEGRAM_ESCALATION_ENABLED || 'true').toLowerCase() !== 'false',
+    token,
+    defaultChatId,
+    configured:Boolean(token && defaultChatId)
+  };
 }
 
 const n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -3179,6 +3212,65 @@ async function ensureAlarmEscalationFoundation() {
       ('system-info','Info Alarm SLA','info',60,480,'dashboard',100,true,true,'system','system')
     ON CONFLICT(rule_key) DO NOTHING
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alarm_escalation_events (
+      id bigserial PRIMARY KEY,
+      event_key text NOT NULL UNIQUE,
+      alarm_id bigint NOT NULL REFERENCES alarms(id) ON DELETE CASCADE,
+      rule_id bigint REFERENCES alarm_escalation_rules(id) ON DELETE SET NULL,
+      stage text NOT NULL,
+      severity text NOT NULL DEFAULT 'warning',
+      channel text NOT NULL DEFAULT 'dashboard',
+      recipients text,
+      delivery_status text NOT NULL DEFAULT 'pending',
+      message text NOT NULL,
+      attempt_count integer NOT NULL DEFAULT 0,
+      detected_at timestamptz NOT NULL DEFAULT now(),
+      last_attempt_at timestamptz,
+      next_attempt_at timestamptz,
+      delivered_at timestamptz,
+      failed_at timestamptz,
+      provider_message_id text,
+      last_error text,
+      delivery_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CHECK (stage IN ('ack_overdue','resolve_overdue')),
+      CHECK (delivery_status IN ('pending','processing','delivered','failed','suppressed'))
+    )
+  `);
+
+  await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS last_attempt_at timestamptz`);
+  await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz`);
+  await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS provider_message_id text`);
+  await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS delivery_metadata jsonb NOT NULL DEFAULT '{}'::jsonb`);
+  await pool.query(`ALTER TABLE alarm_escalation_events DROP CONSTRAINT IF EXISTS alarm_escalation_events_delivery_status_check`);
+  await pool.query(`
+    ALTER TABLE alarm_escalation_events
+    ADD CONSTRAINT alarm_escalation_events_delivery_status_check
+    CHECK (delivery_status IN ('pending','processing','delivered','failed','suppressed'))
+  `);
+
+  await pool.query(`
+    UPDATE alarm_escalation_events
+    SET delivery_status='pending',
+        last_error=COALESCE(last_error,'Stale processing lock recovered'),
+        updated_at=now()
+    WHERE delivery_status='processing'
+      AND COALESCE(last_attempt_at,updated_at) < now() - interval '10 minutes'
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_escalation_events_status_created
+    ON alarm_escalation_events(delivery_status, created_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_escalation_events_alarm_stage
+    ON alarm_escalation_events(alarm_id, stage)
+  `);
 }
 
 function alarmSlaMinutes(raw, fallback, max) {
@@ -3204,7 +3296,9 @@ function alarmRulePriority(raw, fallback = 100) {
 }
 
 function alarmRuleMatches(rule, alarm) {
-  let score = Number(rule.priority || 0);
+  // Explicit rule priority must always win. Specificity is only a tie-breaker
+  // between rules that have the same priority.
+  let score = alarmRulePriority(rule.priority, 0) * 1000;
 
   const checks = [
     ['customer_code', 1],
@@ -3218,13 +3312,13 @@ function alarmRuleMatches(rule, alarm) {
     if (!wanted) continue;
     const actual = String(alarm[field] || '').trim().toLowerCase();
     if (wanted !== actual) return -1;
-    score += weight * 10000;
+    score += weight;
   }
 
   const severity = String(rule.severity || 'all').toLowerCase();
   if (severity !== 'all') {
     if (severity !== String(alarm.severity || '').toLowerCase()) return -1;
-    score += 16 * 10000;
+    score += 16;
   }
 
   return score;
@@ -3272,64 +3366,374 @@ function alarmSlaStatus(alarm, rule, nowMs = Date.now()) {
   };
 }
 
-app.get('/api/admin/alarm-escalation', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+
+async function loadAlarmEscalationSnapshot() {
+  await ensureAlarmEscalationFoundation();
+
+  const rulesResult = await pool.query(`
+    SELECT *
+    FROM alarm_escalation_rules
+    ORDER BY priority DESC, is_system DESC, id ASC
+  `);
+
+  const activeResult = await pool.query(`
+    SELECT
+      a.id::text,
+      a.alarm_type,
+      a.severity,
+      a.status,
+      a.started_at,
+      a.acknowledged_at,
+      a.acknowledged_by,
+      a.message,
+      m.code AS machine_code,
+      m.name AS machine_name,
+      s.code AS site_code,
+      c.code AS customer_code
+    FROM alarms a
+    LEFT JOIN machines m ON m.id=a.machine_id
+    LEFT JOIN sites s ON s.id=m.site_id
+    LEFT JOIN customers c ON c.id=s.customer_id
+    WHERE a.status='active'
+    ORDER BY a.started_at ASC
+    LIMIT 500
+  `);
+
+  const enabledRules = rulesResult.rows.filter(rule => rule.enabled);
+  const nowMs = Date.now();
+  const activeAlarms = activeResult.rows.map(alarm => {
+    let selected = null;
+    let selectedScore = -1;
+    for (const rule of enabledRules) {
+      const score = alarmRuleMatches(rule, alarm);
+      if (score > selectedScore) {
+        selected = rule;
+        selectedScore = score;
+      }
+    }
+    return alarmSlaStatus(alarm, selected, nowMs);
+  }).sort((a,b) => {
+    const rank = {resolve_overdue:0, ack_overdue:1, within_sla:2, no_rule:3};
+    return (rank[a.sla_status] ?? 9) - (rank[b.sla_status] ?? 9) || Number(b.age_minutes || 0) - Number(a.age_minutes || 0);
+  });
+
+  const summary = activeAlarms.reduce((acc,row)=>{
+    acc.active += 1;
+    acc[row.sla_status] = (acc[row.sla_status] || 0) + 1;
+    if (row.severity === 'critical') acc.critical_active += 1;
+    return acc;
+  }, {active:0, critical_active:0, within_sla:0, ack_overdue:0, resolve_overdue:0, no_rule:0});
+
+  return {rules:rulesResult.rows, activeAlarms, summary};
+}
+
+function escalationEventLimit(raw, fallback = 100, max = 500) {
+  const value = Number(raw || fallback);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.floor(value), 1), max);
+}
+
+function escalationEventStatus(raw) {
+  const value = String(raw || 'all').trim().toLowerCase();
+  return ['all','pending','processing','delivered','failed','suppressed'].includes(value) ? value : 'all';
+}
+
+function escalationEventStage(raw) {
+  const value = String(raw || 'all').trim().toLowerCase();
+  return ['all','ack_overdue','resolve_overdue'].includes(value) ? value : 'all';
+}
+
+function escalationEventMessage(alarm) {
+  const stageText = alarm.sla_status === 'resolve_overdue' ? 'Çözüm SLA süresi aşıldı' : 'Acknowledge SLA süresi aşıldı';
+  return `${stageText}: ${alarm.machine_code || 'unassigned'} / ${alarm.alarm_type || 'unknown'} / ${alarm.severity || 'warning'}`;
+}
+
+function splitRecipientValues(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function escalationDeliverySubject(event) {
+  const stage = event.stage === 'resolve_overdue' ? 'Çözüm SLA Aşımı' : 'Müdahale SLA Aşımı';
+  return `FactoryBox ${stage} - ${event.machine_code || 'Makine'} - ${event.alarm_type || 'Alarm'}`;
+}
+
+function escalationDeliveryText(event) {
+  return [
+    'FactoryBox Alarm Escalation',
+    '',
+    `Durum: ${event.message || '-'}`,
+    `Makine: ${event.machine_name || '-'} (${event.machine_code || '-'})`,
+    `Alarm: ${event.alarm_type || '-'} / ${event.severity || '-'}`,
+    `Aşama: ${event.stage || '-'}`,
+    `Alarm başlangıcı: ${event.alarm_started_at ? new Date(event.alarm_started_at).toLocaleString('tr-TR') : '-'}`,
+    `Olay ID: ${event.id}`
+  ].join('\n');
+}
+
+function escalationDeliveryEmailHtml(event) {
+  return emailShellHtml('FactoryBox Alarm Escalation', `
+    <h1 style="margin:0 0 14px;color:#102033;">${h(escalationDeliverySubject(event))}</h1>
+    <p style="font-size:16px;line-height:1.6;color:#334155;">${h(event.message || '-')}</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:18px;">
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Makine</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${h(event.machine_name || '-')} (${h(event.machine_code || '-')})</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Alarm</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${h(event.alarm_type || '-')} / ${h(event.severity || '-')}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Aşama</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${h(event.stage || '-')}</td></tr>
+      <tr><td style="padding:8px;"><strong>Olay ID</strong></td><td style="padding:8px;">${h(event.id)}</td></tr>
+    </table>
+  `);
+}
+
+async function sendEscalationEmail(event) {
+  const result = await sendReportEmail({
+    to:event.recipients,
+    subject:escalationDeliverySubject(event),
+    html:escalationDeliveryEmailHtml(event),
+    text:escalationDeliveryText(event)
+  });
+  if (!result.sent) throw new Error(result.reason || 'Escalation email could not be sent');
+  return {
+    provider:'email',
+    message_id:result.message_id || null,
+    recipients:result.to || [],
+    accepted:result.accepted || [],
+    rejected:result.rejected || []
+  };
+}
+
+async function sendEscalationTelegram(event) {
+  const cfg = telegramEscalationConfig();
+  if (!cfg.enabled) throw new Error('TELEGRAM_ESCALATION_ENABLED=false');
+  if (!cfg.token) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
+
+  const chatIds = splitRecipientValues(event.recipients || cfg.defaultChatId);
+  if (!chatIds.length) throw new Error('Telegram chat id is not configured');
+
+  const delivered = [];
+  for (const chatId of chatIds) {
+    const response = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        chat_id:chatId,
+        text:escalationDeliveryText(event),
+        disable_web_page_preview:true
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.description || `Telegram HTTP ${response.status}`);
+    }
+    delivered.push({chat_id:chatId, message_id:payload.result?.message_id || null});
+  }
+
+  return {
+    provider:'telegram',
+    message_id:delivered.map(item => item.message_id).filter(Boolean).join(',') || null,
+    delivered
+  };
+}
+
+async function deliverEscalationEvent(event) {
+  const channels = String(event.channel || 'dashboard')
+    .toLowerCase()
+    .split(/[,+]/)
+    .map(value => value.trim())
+    .filter(Boolean);
+  const uniqueChannels = [...new Set(channels.length ? channels : ['dashboard'])];
+  const results = [];
+
+  for (const channel of uniqueChannels) {
+    if (channel === 'dashboard') {
+      results.push({provider:'dashboard', message_id:`dashboard-${event.id}`});
+    } else if (channel === 'email') {
+      results.push(await sendEscalationEmail(event));
+    } else if (channel === 'telegram') {
+      results.push(await sendEscalationTelegram(event));
+    } else {
+      throw new Error(`Unsupported escalation channel: ${channel}`);
+    }
+  }
+
+  return {
+    sent:true,
+    providers:results,
+    message_id:results.map(item => item.message_id).filter(Boolean).join(',') || null
+  };
+}
+
+async function claimEscalationEvents(limit, eventId = null) {
+  await ensureAlarmEscalationFoundation();
+  const safeLimit = escalationEventLimit(limit, alarmEscalationDeliveryBatchSize(), 100);
+  let claimed;
+
+  if (eventId) {
+    claimed = await pool.query(`
+      UPDATE alarm_escalation_events
+      SET delivery_status='processing',
+          attempt_count=attempt_count+1,
+          last_attempt_at=now(),
+          last_error=NULL,
+          updated_at=now()
+      WHERE id=$1
+        AND delivery_status IN ('pending','failed')
+      RETURNING id::text
+    `, [String(eventId)]);
+  } else {
+    claimed = await pool.query(`
+      WITH candidates AS (
+        SELECT id
+        FROM alarm_escalation_events
+        WHERE delivery_status='pending'
+          AND (next_attempt_at IS NULL OR next_attempt_at<=now())
+        ORDER BY created_at ASC
+        LIMIT $1
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE alarm_escalation_events e
+      SET delivery_status='processing',
+          attempt_count=e.attempt_count+1,
+          last_attempt_at=now(),
+          last_error=NULL,
+          updated_at=now()
+      FROM candidates c
+      WHERE e.id=c.id
+      RETURNING e.id::text
+    `, [safeLimit]);
+  }
+
+  const ids = claimed.rows.map(row => row.id);
+  if (!ids.length) return [];
+
+  const result = await pool.query(`
+    SELECT
+      e.*,
+      e.id::text AS id,
+      e.alarm_id::text,
+      e.rule_id::text,
+      a.alarm_type,
+      a.status AS alarm_status,
+      a.started_at AS alarm_started_at,
+      m.code AS machine_code,
+      m.name AS machine_name,
+      r.name AS rule_name
+    FROM alarm_escalation_events e
+    JOIN alarms a ON a.id=e.alarm_id
+    LEFT JOIN machines m ON m.id=a.machine_id
+    LEFT JOIN alarm_escalation_rules r ON r.id=e.rule_id
+    WHERE e.id=ANY($1::bigint[])
+    ORDER BY e.created_at ASC
+  `, [ids]);
+  return result.rows;
+}
+
+async function processAlarmEscalationDeliveries({limit, eventId = null, trigger = 'manual'} = {}) {
+  if (!alarmEscalationDeliveryEnabled()) {
+    return {enabled:false, claimed_count:0, delivered_count:0, failed_count:0, results:[]};
+  }
+
+  const events = await claimEscalationEvents(limit, eventId);
+  const results = [];
+
+  for (const event of events) {
+    try {
+      const delivery = await deliverEscalationEvent(event);
+      const updated = await one(`
+        UPDATE alarm_escalation_events
+        SET delivery_status='delivered',
+            delivered_at=now(),
+            failed_at=NULL,
+            provider_message_id=$2,
+            last_error=NULL,
+            delivery_metadata=COALESCE(delivery_metadata,'{}'::jsonb) || $3::jsonb,
+            updated_at=now()
+        WHERE id=$1
+        RETURNING *
+      `, [event.id, delivery.message_id, JSON.stringify({trigger, delivery})]);
+      results.push({id:event.id, status:'delivered', event:updated});
+    } catch (error) {
+      const message = String(error?.message || error || 'Unknown delivery error').slice(0, 500);
+      const updated = await one(`
+        UPDATE alarm_escalation_events
+        SET delivery_status='failed',
+            failed_at=now(),
+            delivered_at=NULL,
+            last_error=$2,
+            delivery_metadata=COALESCE(delivery_metadata,'{}'::jsonb) || $3::jsonb,
+            updated_at=now()
+        WHERE id=$1
+        RETURNING *
+      `, [event.id, message, JSON.stringify({trigger, failed_at:new Date().toISOString()})]);
+      results.push({id:event.id, status:'failed', error:message, event:updated});
+    }
+  }
+
+  return {
+    enabled:true,
+    claimed_count:events.length,
+    delivered_count:results.filter(item => item.status === 'delivered').length,
+    failed_count:results.filter(item => item.status === 'failed').length,
+    results
+  };
+}
+
+app.get('/api/admin/alarm-escalation/delivery-status', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
   try {
     await ensureAlarmEscalationFoundation();
-
-    const rulesResult = await pool.query(`
-      SELECT *
-      FROM alarm_escalation_rules
-      ORDER BY priority DESC, is_system DESC, id ASC
-    `);
-
-    const activeResult = await pool.query(`
+    const email = emailConfig();
+    const telegram = telegramEscalationConfig();
+    const queue = await one(`
       SELECT
-        a.id::text,
-        a.alarm_type,
-        a.severity,
-        a.status,
-        a.started_at,
-        a.acknowledged_at,
-        a.acknowledged_by,
-        a.message,
-        m.code AS machine_code,
-        m.name AS machine_name,
-        s.code AS site_code,
-        c.code AS customer_code
-      FROM alarms a
-      LEFT JOIN machines m ON m.id=a.machine_id
-      LEFT JOIN sites s ON s.id=m.site_id
-      LEFT JOIN customers c ON c.id=s.customer_id
-      WHERE a.status='active'
-      ORDER BY a.started_at ASC
-      LIMIT 500
+        count(*) FILTER (WHERE delivery_status='pending')::int AS pending,
+        count(*) FILTER (WHERE delivery_status='processing')::int AS processing,
+        count(*) FILTER (WHERE delivery_status='failed')::int AS failed,
+        count(*) FILTER (WHERE delivery_status='delivered')::int AS delivered
+      FROM alarm_escalation_events
     `);
-
-    const enabledRules = rulesResult.rows.filter(rule => rule.enabled);
-    const nowMs = Date.now();
-    const activeAlarms = activeResult.rows.map(alarm => {
-      let selected = null;
-      let selectedScore = -1;
-      for (const rule of enabledRules) {
-        const score = alarmRuleMatches(rule, alarm);
-        if (score > selectedScore) {
-          selected = rule;
-          selectedScore = score;
-        }
-      }
-      return alarmSlaStatus(alarm, selected, nowMs);
-    }).sort((a,b) => {
-      const rank = {resolve_overdue:0, ack_overdue:1, within_sla:2, no_rule:3};
-      return (rank[a.sla_status] ?? 9) - (rank[b.sla_status] ?? 9) || Number(b.age_minutes || 0) - Number(a.age_minutes || 0);
+    const actor = req.user || getSession(req)?.user || null;
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      delivery_enabled:alarmEscalationDeliveryEnabled(),
+      auto_delivery_enabled:alarmEscalationAutoDeliveryEnabled(),
+      interval_sec:alarmEscalationDeliveryIntervalSec(),
+      batch_size:alarmEscalationDeliveryBatchSize(),
+      can_deliver:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
+      email:{enabled:email.enabled, configured:email.configured, default_to:Boolean(email.defaultTo)},
+      telegram:{enabled:telegram.enabled, configured:telegram.configured, default_chat_id:Boolean(telegram.defaultChatId)},
+      queue:queue || {}
     });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
 
-    const summary = activeAlarms.reduce((acc,row)=>{
-      acc.active += 1;
-      acc[row.sla_status] = (acc[row.sla_status] || 0) + 1;
-      if (row.severity === 'critical') acc.critical_active += 1;
-      return acc;
-    }, {active:0, critical_active:0, within_sla:0, ack_overdue:0, resolve_overdue:0, no_rule:0});
+app.post('/api/admin/alarm-escalation/deliver', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    const result = await processAlarmEscalationDeliveries({
+      limit:req.body?.limit,
+      eventId:req.body?.event_id || null,
+      trigger:'admin-panel'
+    });
+    await writeAuditLog(req, {
+      action:'deliver_alarm_escalations',
+      entity_type:'alarm_escalation_delivery',
+      entity_id:req.body?.event_id ? String(req.body.event_id) : 'batch',
+      old_values:null,
+      new_values:{claimed_count:result.claimed_count, delivered_count:result.delivered_count, failed_count:result.failed_count},
+      metadata:{delivery_enabled:result.enabled}
+    });
+    res.json({status:'ok', version:APP_VERSION, ...result});
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
 
+app.get('/api/admin/alarm-escalation', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    const snapshot = await loadAlarmEscalationSnapshot();
     const actor = req.user || getSession(req)?.user || null;
     res.json({
       status:'ok',
@@ -3337,10 +3741,209 @@ app.get('/api/admin/alarm-escalation', adminRequired, permissionRequired('VIEW_D
       alarm_escalation_enabled:alarmEscalationEnabled(),
       can_manage_rules:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
       generated_at:new Date().toISOString(),
-      summary,
-      rules:rulesResult.rows,
-      active_alarms:activeAlarms
+      summary:snapshot.summary,
+      rules:snapshot.rules,
+      active_alarms:snapshot.activeAlarms
     });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.get('/api/admin/alarm-escalation/events', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+    const limit = escalationEventLimit(req.query.limit, 100, 500);
+    const status = escalationEventStatus(req.query.status);
+    const stage = escalationEventStage(req.query.stage);
+    const where = [];
+    const params = [];
+
+    if (status !== 'all') {
+      params.push(status);
+      where.push(`e.delivery_status=$${params.length}`);
+    }
+    if (stage !== 'all') {
+      params.push(stage);
+      where.push(`e.stage=$${params.length}`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    params.push(limit);
+
+    const result = await pool.query(`
+      SELECT
+        e.id::text,
+        e.event_key,
+        e.alarm_id::text,
+        e.rule_id::text,
+        e.stage,
+        e.severity,
+        e.channel,
+        e.recipients,
+        e.delivery_status,
+        e.message,
+        e.attempt_count,
+        e.detected_at,
+        e.last_attempt_at,
+        e.next_attempt_at,
+        e.delivered_at,
+        e.failed_at,
+        e.provider_message_id,
+        e.last_error,
+        e.delivery_metadata,
+        e.created_at,
+        e.updated_at,
+        a.alarm_type,
+        a.status AS alarm_status,
+        a.started_at AS alarm_started_at,
+        m.code AS machine_code,
+        m.name AS machine_name,
+        r.name AS rule_name
+      FROM alarm_escalation_events e
+      JOIN alarms a ON a.id=e.alarm_id
+      LEFT JOIN machines m ON m.id=a.machine_id
+      LEFT JOIN alarm_escalation_rules r ON r.id=e.rule_id
+      ${whereSql}
+      ORDER BY e.created_at DESC
+      LIMIT $${params.length}
+    `, params);
+
+    const summary = await one(`
+      SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE delivery_status='pending')::int AS pending,
+        count(*) FILTER (WHERE delivery_status='processing')::int AS processing,
+        count(*) FILTER (WHERE delivery_status='delivered')::int AS delivered,
+        count(*) FILTER (WHERE delivery_status='failed')::int AS failed,
+        count(*) FILTER (WHERE delivery_status='suppressed')::int AS suppressed,
+        count(*) FILTER (WHERE stage='ack_overdue')::int AS ack_overdue,
+        count(*) FILTER (WHERE stage='resolve_overdue')::int AS resolve_overdue
+      FROM alarm_escalation_events
+    `);
+
+    const actor = req.user || getSession(req)?.user || null;
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      alarm_escalation_queue_enabled:alarmEscalationQueueEnabled(),
+      can_manage_events:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
+      generated_at:new Date().toISOString(),
+      filters:{status, stage, limit},
+      summary:summary || {},
+      events:result.rows
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/alarm-escalation/scan', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    if (!alarmEscalationQueueEnabled()) {
+      return res.status(503).json({status:'disabled', version:APP_VERSION, message:'Alarm escalation queue is disabled'});
+    }
+
+    const snapshot = await loadAlarmEscalationSnapshot();
+    const overdue = snapshot.activeAlarms.filter(row =>
+      row.rule_id && ['ack_overdue','resolve_overdue'].includes(row.sla_status)
+    );
+    const created = [];
+
+    for (const alarm of overdue) {
+      const channel = String(alarm.escalation_channel || 'dashboard').trim() || 'dashboard';
+      const deliveryStatus = channel === 'dashboard' ? 'delivered' : 'pending';
+      const deliveredAt = deliveryStatus === 'delivered' ? new Date().toISOString() : null;
+      const eventKey = `alarm-${alarm.id}-${alarm.sla_status}-rule-${alarm.rule_id}`;
+      const metadata = JSON.stringify({
+        customer_code:alarm.customer_code || null,
+        site_code:alarm.site_code || null,
+        machine_code:alarm.machine_code || null,
+        rule_name:alarm.rule_name || null,
+        acknowledge_sla_minutes:alarm.acknowledge_sla_minutes,
+        resolve_sla_minutes:alarm.resolve_sla_minutes,
+        age_minutes:alarm.age_minutes
+      });
+
+      const inserted = await one(`
+        INSERT INTO alarm_escalation_events(
+          event_key,alarm_id,rule_id,stage,severity,channel,recipients,
+          delivery_status,message,detected_at,delivered_at,metadata
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),$10,$11::jsonb)
+        ON CONFLICT(event_key) DO NOTHING
+        RETURNING *
+      `, [
+        eventKey,
+        alarm.id,
+        alarm.rule_id,
+        alarm.sla_status,
+        alarm.severity || 'warning',
+        channel,
+        alarm.recipients || null,
+        deliveryStatus,
+        escalationEventMessage(alarm),
+        deliveredAt,
+        metadata
+      ]);
+      if (inserted) created.push(inserted);
+    }
+
+    await writeAuditLog(req, {
+      action:'scan_alarm_escalations',
+      entity_type:'alarm_escalation_queue',
+      entity_id:'manual-scan',
+      old_values:null,
+      new_values:{overdue_count:overdue.length, created_count:created.length},
+      metadata:{duplicate_count:Math.max(0, overdue.length - created.length)}
+    });
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      scanned_active_count:snapshot.activeAlarms.length,
+      overdue_count:overdue.length,
+      created_count:created.length,
+      duplicate_count:Math.max(0, overdue.length - created.length),
+      events:created
+    });
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.patch('/api/admin/alarm-escalation/events/:id/status', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureAlarmEscalationFoundation();
+    const id = String(req.params.id || '').trim();
+    const status = escalationEventStatus(req.body?.status);
+    if (status === 'all') {
+      return res.status(400).json({status:'invalid_request', message:'Valid delivery status is required'});
+    }
+    const oldEvent = await one(`SELECT * FROM alarm_escalation_events WHERE id=$1`, [id]);
+    if (!oldEvent) return res.status(404).json({status:'not_found', message:'Escalation event not found'});
+
+    const errorText = String(req.body?.last_error || '').trim().slice(0, 500) || null;
+    const updated = await one(`
+      UPDATE alarm_escalation_events
+      SET delivery_status=$2,
+          delivered_at=CASE WHEN $2='delivered' THEN COALESCE(delivered_at,now()) ELSE NULL END,
+          failed_at=CASE WHEN $2='failed' THEN now() ELSE NULL END,
+          last_error=CASE WHEN $2='failed' THEN $3 ELSE NULL END,
+          next_attempt_at=CASE WHEN $2='pending' THEN now() ELSE next_attempt_at END,
+          updated_at=now()
+      WHERE id=$1
+      RETURNING *
+    `, [id, status, errorText]);
+
+    await writeAuditLog(req, {
+      action:'update_alarm_escalation_event_status',
+      entity_type:'alarm_escalation_event',
+      entity_id:id,
+      old_values:oldEvent,
+      new_values:updated,
+      metadata:{from_status:oldEvent.delivery_status, to_status:status}
+    });
+
+    res.json({status:'ok', version:APP_VERSION, event:updated});
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
@@ -7575,6 +8178,40 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 });
 
 
+let alarmEscalationDeliveryTimer = null;
+let alarmEscalationDeliveryRunning = false;
+
+function startAlarmEscalationDeliveryWorker() {
+  if (!alarmEscalationDeliveryEnabled() || !alarmEscalationAutoDeliveryEnabled()) {
+    console.log('Alarm escalation auto delivery: disabled');
+    return;
+  }
+  if (alarmEscalationDeliveryTimer) return;
+
+  const run = async () => {
+    if (alarmEscalationDeliveryRunning) return;
+    alarmEscalationDeliveryRunning = true;
+    try {
+      const result = await processAlarmEscalationDeliveries({
+        limit:alarmEscalationDeliveryBatchSize(),
+        trigger:'auto-worker'
+      });
+      if (result.claimed_count) {
+        console.log(`Alarm escalation worker: ${result.delivered_count} delivered, ${result.failed_count} failed`);
+      }
+    } catch (error) {
+      console.error('Alarm escalation worker error:', error.message);
+    } finally {
+      alarmEscalationDeliveryRunning = false;
+    }
+  };
+
+  alarmEscalationDeliveryTimer = setInterval(run, alarmEscalationDeliveryIntervalSec() * 1000);
+  alarmEscalationDeliveryTimer.unref?.();
+  setTimeout(run, 2500).unref?.();
+  console.log(`Alarm escalation auto delivery: every ${alarmEscalationDeliveryIntervalSec()} sec`);
+}
+
 async function start() {
   await pool.query('SELECT 1');
   await ensureEntities();
@@ -7586,12 +8223,14 @@ async function start() {
   await ensureDeviceRegistrySchema();
   await ensureAssetManagementFoundation();
   await ensureLiveMonitoringFoundation();
+  await ensureAlarmEscalationFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });
   client.on('error',(e)=> console.error('MQTT error:', e.message));
   client.on('message', handleMessage);
   app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
+  startAlarmEscalationDeliveryWorker();
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
 
