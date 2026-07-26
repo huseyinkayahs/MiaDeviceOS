@@ -320,6 +320,18 @@
     .maintenance-badge-v521.scheduled { background:#e0f2fe; color:#075985; }
     .maintenance-badge-v521.completed { background:#dcfce7; color:#166534; }
     .maintenance-badge-v521.runtime { background:#ede9fe; color:#5b21b6; }
+    #inventorySection { min-width:0; overflow:hidden; }
+    .inventory-flow-v523 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 14px; margin:12px 0; border-radius:16px; background:#f4f1ff; border:1px dashed #b7a9e7; }
+    .inventory-flow-v523 span { background:#fff; border:1px solid #d8d0f2; padding:7px 10px; border-radius:999px; font-weight:800; font-size:12px; }
+    .inventory-panel-v523 { margin:16px 0; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:linear-gradient(180deg,#fff,#faf9ff); }
+    .inventory-panel-v523 h3 { margin:0 0 12px; }
+    .inventory-stock-v523 { min-width:135px; }
+    .inventory-stock-v523 strong { display:block; font-size:16px; }
+    .inventory-stock-v523 small { color:var(--fb-muted); }
+    .inventory-low-v523 { color:#9f1d2d; font-weight:900; }
+    .inventory-ok-v523 { color:#166534; font-weight:900; }
+    .maintenance-badge-v521.low_stock, .maintenance-badge-v521.out_of_stock { background:#ffe8ec; color:#9f1d2d; }
+    .maintenance-badge-v521.in_stock { background:#dcfce7; color:#166534; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -369,7 +381,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.22.0 — Preventive Maintenance Scheduler aktif.</p>
+      <p id="adminVersionLabel">v5.23.0 — Spare Parts & Inventory aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -393,12 +405,13 @@
       <div class="admin-nav-group-v517" data-nav-group="maintenance">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="maintenance" aria-expanded="false" aria-controls="maintenanceSubmenuV522">
           <span>🛠️ Maintenance</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">3</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="maintenanceSubmenuV522" class="admin-subnav-v517" data-admin-subnav="maintenance">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance"><span>Service Tickets</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance-plans"><span>Maintenance Plans</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="work-orders"><span>Work Orders</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="inventory"><span>Spare Parts & Inventory</span></button>
         </div>
       </div>
 
@@ -423,7 +436,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v5.22: Planlı bakım, otomatik iş emri ve bakım geçmişini tek merkezden yönet.
+      v5.23: Yedek parça stokları, hareketler ve bakım tüketimleri tek merkezde.
     </div>
   </aside>
 
@@ -452,7 +465,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.22.0: Bakım planları, otomatik iş emirleri ve servis ticketları birlikte yönetilebilir.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.23.0: Bakım, iş emri ve yedek parça stokları birlikte yönetilebilir.</p>
       </div>
     </div>
 
@@ -919,6 +932,59 @@
     <div id="maintenanceWorkOrderHistory" class="maintenance-history-v521"><h3>İş Emri Geçmişi</h3><span class="muted">Bir iş emrindeki Geçmiş düğmesine bas.</span></div>
   </section>
 
+  <section id="inventorySection" class="card wide admin-card" data-admin-view="inventory">
+    <div class="section-title-row">
+      <div><h2>Spare Parts & Inventory</h2><p class="muted">Yedek parça kartlarını, stok giriş/çıkışlarını, minimum stok seviyelerini ve bakım iş emri tüketimlerini yönet.</p></div>
+      <button id="refreshInventoryBtn" class="secondary-btn">Stokları Yenile</button>
+    </div>
+    <div id="inventorySummary">Stok özeti yükleniyor...</div>
+    <div class="inventory-flow-v523"><span>Parça Kartı</span><b>→</b><span>Stok Girişi</span><b>→</b><span>Bakım İş Emri</span><b>→</b><span>Parça Tüketimi</span><b>→</b><span>Minimum Stok Uyarısı</span></div>
+
+    <div class="maintenance-v522-toolbar">
+      <label>Stok Durumu<select id="inventoryStockFilter"><option value="all">all</option><option value="low">low stock</option><option value="out">out of stock</option><option value="in_stock">in stock</option><option value="disabled">disabled</option></select></label>
+      <label>Kategori<select id="inventoryCategoryFilter"><option value="all">all</option></select></label>
+      <label>Arama<input id="inventorySearchFilter" type="text" placeholder="Parça no, SKU, ad, konum, tedarikçi"></label>
+      <div class="admin-form-actions"><button id="applyInventoryFiltersBtn" class="primary-btn">Filtrele</button></div>
+    </div>
+
+    <div class="inventory-panel-v523">
+      <h3>Yeni Yedek Parça Kartı</h3>
+      <div class="admin-form-grid">
+        <label>Parça Adı<input id="inventoryPartName" type="text" placeholder="Örn: Egzoz fan kayışı"></label>
+        <label>SKU / Ürün Kodu<input id="inventoryPartSku" type="text" placeholder="KYS-001"></label>
+        <label>Kategori<input id="inventoryPartCategory" type="text" placeholder="mekanik / filtre / elektrik"></label>
+        <label>Birim<input id="inventoryPartUnit" type="text" value="adet"></label>
+        <label>Konum<input id="inventoryPartLocation" type="text" placeholder="Raf A-01"></label>
+        <label>Tedarikçi<input id="inventoryPartSupplier" type="text" placeholder="Firma adı"></label>
+        <label>Başlangıç Stoku<input id="inventoryPartInitialStock" type="number" min="0" step="0.001" value="0"></label>
+        <label>Minimum Stok<input id="inventoryPartMinStock" type="number" min="0" step="0.001" value="1"></label>
+        <label>Sipariş Miktarı<input id="inventoryPartReorderQty" type="number" min="0" step="0.001" value="5"></label>
+        <label>Birim Maliyet<input id="inventoryPartUnitCost" type="number" min="0" step="0.01" value="0"></label>
+        <label class="maintenance-wide-v521">Açıklama<textarea id="inventoryPartDescription" placeholder="Teknik özellik, uyumlu makine ve satın alma notları"></textarea></label>
+        <div class="admin-form-actions"><button id="createInventoryPartBtn" class="primary-btn">Parça Kartı Oluştur</button></div>
+      </div>
+      <div id="inventoryPartResult" class="mini-status">Yeni parça kartı bekleniyor.</div>
+    </div>
+
+    <div class="inventory-panel-v523">
+      <h3>Stok Hareketi</h3>
+      <div class="admin-form-grid">
+        <label>Parça<select id="inventoryMovementPart"><option value="">Parça seç...</option></select></label>
+        <label>Hareket<select id="inventoryMovementType"><option value="purchase">purchase / giriş</option><option value="consumption">consumption / çıkış</option><option value="return">return / iade giriş</option><option value="adjustment">adjustment / fark</option></select></label>
+        <label>Miktar<input id="inventoryMovementQuantity" type="number" step="0.001" value="1"></label>
+        <label>Yeni Birim Maliyet<input id="inventoryMovementUnitCost" type="number" min="0" step="0.01" placeholder="Boşsa korunur"></label>
+        <label>Referans No<input id="inventoryMovementReference" type="text" placeholder="Fatura / irsaliye / sayım"></label>
+        <label class="maintenance-wide-v521">Not<input id="inventoryMovementNote" type="text" placeholder="Stok hareketi açıklaması"></label>
+        <div class="admin-form-actions"><button id="createInventoryMovementBtn" class="primary-btn">Stok Hareketi Kaydet</button></div>
+      </div>
+      <div id="inventoryMovementResult" class="mini-status">Stok hareketi bekleniyor.</div>
+    </div>
+
+    <div class="kpi-panel-v59"><h3>Yedek Parçalar</h3><div id="inventoryPartsTable">Parçalar yükleniyor...</div></div>
+    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Son Stok Hareketleri</h3><div id="inventoryMovementsTable">Hareketler yükleniyor...</div></div>
+    <div id="inventoryPartHistory" class="maintenance-history-v521"><h3>Parça Geçmişi</h3><span class="muted">Bir parçadaki Geçmiş düğmesine bas.</span></div>
+  </section>
+
   <section class="card wide admin-card" data-admin-view="permissions">
     <h2>Permission Overview</h2>
     <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
@@ -1253,7 +1319,7 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.22.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.23.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
     if (brand) brand.textContent = `v${safeVersion} — Preventive Maintenance Scheduler aktif.`;
@@ -1426,6 +1492,10 @@
       title:'Maintenance Work Orders',
       desc:'Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.'
     },
+    inventory: {
+      title:'Spare Parts & Inventory',
+      desc:'Yedek parça kartları, stok hareketleri, minimum stok uyarıları ve iş emri tüketimleri.'
+    },
     tenants: {
       title:'Customers / Tenants',
       desc:'Customer, tenant, site ve atölye yönetimi.'
@@ -1466,7 +1536,8 @@
     reports:'system',
     maintenance:'maintenance',
     'maintenance-plans':'maintenance',
-    'work-orders':'maintenance'
+    'work-orders':'maintenance',
+    inventory:'maintenance'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -2052,7 +2123,7 @@
       {label:'Termin',html:true,value:r=>data.can_manage?`<input class="maintenance-wo-due" type="datetime-local" value="${esc(fmtDateTimeLocal(r.due_at))}">${r.overdue?maintenanceBadge('overdue'):''}`:`${esc(fmtDate(r.due_at))}`},
       {label:'Checklist',html:true,value:r=>workOrderChecklistProgress(r)},
       {label:'Süre',value:r=>r.duration_minutes?`${r.duration_minutes} dk`:'-'},
-      {label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="save-maintenance-work-order" data-id="${esc(r.id)}">Kaydet</button> ${r.status!=='completed'?`<button class="primary-btn mini-btn" data-action="complete-maintenance-work-order" data-id="${esc(r.id)}">Tamamla</button>`:''} <button class="secondary-btn mini-btn" data-action="add-maintenance-work-order-note" data-id="${esc(r.id)}">Not</button> <button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">Geçmiş</button>`:`<button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">Geçmiş</button>`}
+      {label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="save-maintenance-work-order" data-id="${esc(r.id)}">Kaydet</button> ${r.status!=='completed'?`<button class="primary-btn mini-btn" data-action="complete-maintenance-work-order" data-id="${esc(r.id)}">Tamamla</button> <button class="secondary-btn mini-btn" data-action="consume-inventory-part" data-id="${esc(r.id)}">Parça Kullan</button>`:''} <button class="secondary-btn mini-btn" data-action="add-maintenance-work-order-note" data-id="${esc(r.id)}">Not</button> <button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">Geçmiş</button>`:`<button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">Geçmiş</button>`}
     ],data.work_orders||[]);
   }
 
@@ -2060,7 +2131,61 @@
     const target=document.getElementById('maintenanceWorkOrderHistory');if(!target)return;const o=data.work_order||{};
     target.innerHTML=`<h3>${esc(o.work_order_no||'İş Emri')} — ${esc(o.title||'-')}</h3><p class="mini-status">${maintenanceBadge(o.status)} ${maintenanceBadge(o.priority)} · Makine: <strong>${esc(o.machine_name||o.machine_code||'-')}</strong> · Plan: <strong>${esc(o.plan_no||'-')}</strong> · Tamamlandı: <strong>${esc(fmtDate(o.completed_at))}</strong></p>
       <h4>İşlem Geçmişi</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Olay',value:r=>r.event_type},{label:'Durum',value:r=>`${r.old_status||'-'} → ${r.new_status||'-'}`},{label:'Actor',value:r=>r.actor_email},{label:'Not',value:r=>r.note||'-'},{label:'Detay',value:r=>compactJson(r.metadata)}],data.events||[])}
+      <h4>Kullanılan Stok Parçaları</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Parça',value:r=>`${r.part_no} · ${r.part_name}`},{label:'Miktar',value:r=>`${fmtMetric(r.quantity)} ${r.unit}`},{label:'Birim Maliyet',value:r=>fmtMetric(r.unit_cost)},{label:'Toplam',value:r=>fmtMetric(r.total_cost)},{label:'Teknisyen',value:r=>r.consumed_by||'-'},{label:'Not',value:r=>r.note||'-'}],data.parts_used||[])}
       <h4>Bildirim Teslimatları</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Kanal',value:r=>r.channel},{label:'Durum',value:r=>r.status},{label:'Provider ID',value:r=>r.provider_message_id||'-'},{label:'Hata',value:r=>r.error_message||'-'}],data.deliveries||[])}`;
+  }
+
+
+  let inventoryPartRows = new Map();
+
+  function inventoryQueryString() {
+    const params=new URLSearchParams();
+    params.set('stock',document.getElementById('inventoryStockFilter')?.value||'all');
+    const category=document.getElementById('inventoryCategoryFilter')?.value||'all';if(category!=='all')params.set('category',category);
+    const q=document.getElementById('inventorySearchFilter')?.value.trim();if(q)params.set('q',q);
+    return params.toString();
+  }
+
+  function inventoryStockBadge(part) {
+    if (part.out_of_stock) return maintenanceBadge('out_of_stock');
+    if (part.low_stock) return maintenanceBadge('low_stock');
+    return maintenanceBadge('in_stock');
+  }
+
+  function renderInventory(data) {
+    const summary=document.getElementById('inventorySummary');const partsTarget=document.getElementById('inventoryPartsTable');const movesTarget=document.getElementById('inventoryMovementsTable');if(!summary||!partsTarget||!movesTarget)return;
+    const x=data.summary||{};
+    summary.innerHTML=`<div class="kpi-grid-v59">
+      <div class="kpi-card-v59"><span>Toplam Parça</span><strong>${esc(x.total||0)}</strong><small>${esc(x.enabled||0)} aktif stok kartı</small></div>
+      <div class="kpi-card-v59"><span>Minimum Altı</span><strong>${esc(x.low_stock||0)}</strong><small>Sipariş veya satın alma bekliyor</small></div>
+      <div class="kpi-card-v59"><span>Stok Tükendi</span><strong>${esc(x.out_of_stock||0)}</strong><small>Bakım tüketimine kapalı</small></div>
+      <div class="kpi-card-v59"><span>Stok Değeri</span><strong>${fmtMetric(x.stock_value||0)}</strong><small>Birim maliyet × mevcut stok</small></div>
+    </div><p class="mini-status">Stok yönetimi: <strong>${data.can_manage?'Açık':'Sadece görüntüleme'}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}</p>`;
+    inventoryPartRows=new Map((data.parts||[]).map(row=>[String(row.id),row]));
+    const categoryFilter=document.getElementById('inventoryCategoryFilter');if(categoryFilter&&document.activeElement!==categoryFilter){const current=categoryFilter.value;categoryFilter.innerHTML=`<option value="all">all</option>${(data.categories||[]).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}`;if([...categoryFilter.options].some(o=>o.value===current))categoryFilter.value=current;}
+    const movementSelect=document.getElementById('inventoryMovementPart');if(movementSelect&&document.activeElement!==movementSelect){const current=movementSelect.value;movementSelect.innerHTML=`<option value="">Parça seç...</option>${(data.parts||[]).filter(p=>p.enabled).map(p=>`<option value="${esc(p.id)}">${esc(`${p.part_no} · ${p.name} · ${fmtMetric(p.current_stock)} ${p.unit}`)}</option>`).join('')}`;if([...movementSelect.options].some(o=>o.value===current))movementSelect.value=current;}
+    partsTarget.innerHTML=table([
+      {label:'Parça',html:true,value:r=>`<div class="maintenance-ticket-title-v521"><strong>${esc(r.part_no)} · ${esc(r.name)}</strong><small>SKU: ${esc(r.sku||'-')} · ${esc(r.description||'')}</small></div>`},
+      {label:'Kategori / Birim',value:r=>`${r.category||'-'} · ${r.unit||'-'}`},
+      {label:'Stok',html:true,value:r=>`<div class="inventory-stock-v523"><strong class="${r.low_stock?'inventory-low-v523':'inventory-ok-v523'}">${fmtMetric(r.current_stock)} ${esc(r.unit)}</strong><small>${inventoryStockBadge(r)} · Min: ${fmtMetric(r.min_stock)}</small></div>`},
+      {label:'Sipariş',html:true,value:r=>data.can_manage?`<input class="inventory-part-reorder" type="number" min="0" step="0.001" value="${esc(r.reorder_qty||0)}">`:`${fmtMetric(r.reorder_qty)} ${r.unit}`},
+      {label:'Konum',html:true,value:r=>data.can_manage?`<input class="inventory-part-location" value="${esc(r.location||'')}" placeholder="Raf / depo">`:esc(r.location||'-')},
+      {label:'Tedarikçi',html:true,value:r=>data.can_manage?`<input class="inventory-part-supplier" value="${esc(r.supplier||'')}" placeholder="Tedarikçi">`:esc(r.supplier||'-')},
+      {label:'Birim Maliyet',html:true,value:r=>data.can_manage?`<input class="inventory-part-cost" type="number" min="0" step="0.01" value="${esc(r.unit_cost||0)}"><small>Toplam: ${fmtMetric(r.stock_value||0)}</small>`:fmtMetric(r.unit_cost)},
+      {label:'Min Stok',html:true,value:r=>data.can_manage?`<input class="inventory-part-min" type="number" min="0" step="0.001" value="${esc(r.min_stock||0)}">`:fmtMetric(r.min_stock)},
+      {label:'Aktif',html:true,value:r=>data.can_manage?`<select class="inventory-part-enabled"><option value="true" ${r.enabled?'selected':''}>true</option><option value="false" ${!r.enabled?'selected':''}>false</option></select>`:String(r.enabled)},
+      {label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="save-inventory-part" data-id="${esc(r.id)}">Kaydet</button> <button class="primary-btn mini-btn" data-action="inventory-movement-for-part" data-id="${esc(r.id)}">Hareket</button> <button class="secondary-btn mini-btn" data-action="show-inventory-history" data-id="${esc(r.id)}">Geçmiş</button>`:`<button class="secondary-btn mini-btn" data-action="show-inventory-history" data-id="${esc(r.id)}">Geçmiş</button>`}
+    ],data.parts||[]);
+    movesTarget.innerHTML=table([
+      {label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Parça',value:r=>`${r.part_no} · ${r.part_name}`},{label:'Hareket',html:true,value:r=>maintenanceBadge(r.movement_type)},{label:'Değişim',value:r=>`${Number(r.quantity_change)>0?'+':''}${fmtMetric(r.quantity_change)} ${r.unit}`},{label:'Bakiye',value:r=>`${fmtMetric(r.balance_before)} → ${fmtMetric(r.balance_after)} ${r.unit}`},{label:'Referans',value:r=>r.reference_no||r.reference_type||'-'},{label:'Actor',value:r=>r.actor_email||'-'},{label:'Not',value:r=>r.note||'-'}
+    ],data.recent_movements||[]);
+  }
+
+  function renderInventoryHistory(data) {
+    const target=document.getElementById('inventoryPartHistory');if(!target)return;const p=data.part||{};
+    target.innerHTML=`<h3>${esc(p.part_no||'Parça')} — ${esc(p.name||'-')}</h3><p class="mini-status">${inventoryStockBadge(p)} · Stok: <strong>${fmtMetric(p.current_stock)} ${esc(p.unit||'')}</strong> · Minimum: <strong>${fmtMetric(p.min_stock)}</strong> · Konum: <strong>${esc(p.location||'-')}</strong></p>
+      <h4>Stok Hareketleri</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Tip',value:r=>r.movement_type},{label:'Değişim',value:r=>`${Number(r.quantity_change)>0?'+':''}${fmtMetric(r.quantity_change)}`},{label:'Bakiye',value:r=>`${fmtMetric(r.balance_before)} → ${fmtMetric(r.balance_after)}`},{label:'Referans',value:r=>r.reference_no||r.reference_type||'-'},{label:'Actor',value:r=>r.actor_email||'-'},{label:'Not',value:r=>r.note||'-'}],data.movements||[])}
+      <h4>Bakım İş Emri Tüketimleri</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'İş Emri',value:r=>r.work_order_no},{label:'Makine',value:r=>`${r.machine_name||'-'} (${r.machine_code||'-'})`},{label:'Miktar',value:r=>`${fmtMetric(r.quantity)} ${p.unit||''}`},{label:'Durum',value:r=>r.status},{label:'Teknisyen',value:r=>r.consumed_by||'-'},{label:'Not',value:r=>r.note||'-'}],data.work_order_usages||[])}`;
   }
 
   function renderAlarmCenter(data) {
@@ -2820,7 +2945,8 @@
       ...(can('VIEW_MAINTENANCE') ? [
         ['maintenance-tickets', `/api/admin/maintenance-tickets?${maintenanceTicketQueryString()}`, renderMaintenanceTickets, 'maintenanceTicketsTable'],
         ['maintenance-plans', '/api/admin/maintenance-plans', renderMaintenancePlans, 'maintenancePlansTable'],
-        ['maintenance-work-orders', `/api/admin/maintenance-work-orders?${maintenanceWorkOrderQueryString()}`, renderMaintenanceWorkOrders, 'maintenanceWorkOrdersTable']
+        ['maintenance-work-orders', `/api/admin/maintenance-work-orders?${maintenanceWorkOrderQueryString()}`, renderMaintenanceWorkOrders, 'maintenanceWorkOrdersTable'],
+        ['inventory', `/api/admin/inventory?${inventoryQueryString()}`, renderInventory, 'inventoryPartsTable']
       ] : []),
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
@@ -3188,7 +3314,7 @@
 
   async function saveMaintenanceWorkOrder(button,complete=false) {
     const tr=button.closest('tr');const due=tr.querySelector('.maintenance-wo-due')?.value;const body={status:complete?'completed':tr.querySelector('.maintenance-wo-status').value,priority:tr.querySelector('.maintenance-wo-priority').value,assignee:tr.querySelector('.maintenance-wo-assignee').value.trim()||null,due_at:due?new Date(due).toISOString():null};
-    if(complete){const order=maintenanceWorkOrderRows.get(String(button.dataset.id));if((order?.checklist||[]).length&&!confirm(`Kontrol listesindeki ${(order.checklist||[]).length} maddenin tamamlandığını onaylıyor musun?`))return null;const note=prompt('Tamamlanma notu:','Bakım tamamlandı.');if(note===null)return null;const parts=prompt('Kullanılan parçalar (her satır veya virgülle):','')||'';const duration=prompt('Gerçek bakım süresi (dakika):','60');body.completion_note=note;body.note=note;body.parts_used=parts.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);body.duration_minutes=Number(duration||0);body.checklist_results=(order?.checklist||[]).map((item,index)=>({index,item:typeof item==='object'?(item.item||item.label||JSON.stringify(item)):String(item),done:true,completed_at:new Date().toISOString()}));}
+    if(complete){const order=maintenanceWorkOrderRows.get(String(button.dataset.id));if((order?.checklist||[]).length&&!confirm(`Kontrol listesindeki ${(order.checklist||[]).length} maddenin tamamlandığını onaylıyor musun?`))return null;if(!confirm('Kullanılan stok parçalarını Parça Kullan düğmesiyle eklediğini onaylıyor musun?'))return null;const note=prompt('Tamamlanma notu:','Bakım tamamlandı.');if(note===null)return null;const duration=prompt('Gerçek bakım süresi (dakika):','60');body.completion_note=note;body.note=note;body.duration_minutes=Number(duration||0);body.checklist_results=(order?.checklist||[]).map((item,index)=>({index,item:typeof item==='object'?(item.item||item.label||JSON.stringify(item)):String(item),done:true,completed_at:new Date().toISOString()}));}
     return apiJson(`/api/admin/maintenance-work-orders/${encodeURIComponent(button.dataset.id)}`,{method:'PATCH',body:JSON.stringify(body)});
   }
 
@@ -3252,6 +3378,30 @@
     renderMaintenanceTicketHistory(data);
     setAdminView('maintenance');
     document.getElementById('maintenanceTicketHistory')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+
+  async function createInventoryPart() {
+    return apiJson('/api/admin/inventory/parts',{method:'POST',body:JSON.stringify({
+      name:document.getElementById('inventoryPartName').value.trim(),sku:document.getElementById('inventoryPartSku').value.trim(),category:document.getElementById('inventoryPartCategory').value.trim(),unit:document.getElementById('inventoryPartUnit').value.trim(),location:document.getElementById('inventoryPartLocation').value.trim(),supplier:document.getElementById('inventoryPartSupplier').value.trim(),initial_stock:Number(document.getElementById('inventoryPartInitialStock').value||0),min_stock:Number(document.getElementById('inventoryPartMinStock').value||0),reorder_qty:Number(document.getElementById('inventoryPartReorderQty').value||0),unit_cost:Number(document.getElementById('inventoryPartUnitCost').value||0),description:document.getElementById('inventoryPartDescription').value.trim(),enabled:true
+    })});
+  }
+
+  async function saveInventoryPart(button) {
+    const tr=button.closest('tr');return apiJson(`/api/admin/inventory/parts/${encodeURIComponent(button.dataset.id)}`,{method:'PATCH',body:JSON.stringify({location:tr.querySelector('.inventory-part-location').value.trim(),supplier:tr.querySelector('.inventory-part-supplier').value.trim(),unit_cost:Number(tr.querySelector('.inventory-part-cost').value||0),min_stock:Number(tr.querySelector('.inventory-part-min').value||0),reorder_qty:Number(tr.querySelector('.inventory-part-reorder').value||0),enabled:tr.querySelector('.inventory-part-enabled').value==='true'})});
+  }
+
+  async function createInventoryMovement(partId=null) {
+    const id=partId||document.getElementById('inventoryMovementPart').value;const type=document.getElementById('inventoryMovementType').value;const qty=Number(document.getElementById('inventoryMovementQuantity').value||0);const unitCost=document.getElementById('inventoryMovementUnitCost').value;return apiJson(`/api/admin/inventory/parts/${encodeURIComponent(id)}/movements`,{method:'POST',body:JSON.stringify({movement_type:type,quantity:qty,unit_cost:unitCost===''?null:Number(unitCost),reference_type:'manual',reference_no:document.getElementById('inventoryMovementReference').value.trim(),note:document.getElementById('inventoryMovementNote').value.trim()})});
+  }
+
+  async function showInventoryHistory(button) {
+    const data=await getJson(`/api/admin/inventory/parts/${encodeURIComponent(button.dataset.id)}/history`);renderInventoryHistory(data);setAdminView('inventory');document.getElementById('inventoryPartHistory')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  async function consumeInventoryPart(button) {
+    const available=[...inventoryPartRows.values()].filter(p=>p.enabled&&Number(p.current_stock)>0);if(!available.length)throw new Error('Stokta kullanılabilir parça yok. Önce Inventory ekranından stok girişi yap.');
+    const list=available.slice(0,30).map(p=>`${p.part_no}: ${p.name} (${fmtMetric(p.current_stock)} ${p.unit})`).join('\n');const code=prompt(`Kullanılacak parça numarası:\n\n${list}`,available[0].part_no);if(code===null)return null;const part=available.find(p=>String(p.part_no).toLowerCase()===String(code).trim().toLowerCase()||String(p.sku||'').toLowerCase()===String(code).trim().toLowerCase());if(!part)throw new Error('Parça numarası bulunamadı.');const quantity=prompt(`Kullanılan miktar (${part.unit}) — mevcut ${fmtMetric(part.current_stock)}:`,`1`);if(quantity===null)return null;const note=prompt('Parça kullanım notu:','Bakım iş emrinde kullanıldı.')||'';return apiJson(`/api/admin/maintenance-work-orders/${encodeURIComponent(button.dataset.id)}/consume-part`,{method:'POST',body:JSON.stringify({part_id:part.id,quantity:Number(quantity),note})});
   }
 
   async function createDeviceProvisionToken() {
@@ -3483,6 +3633,18 @@
       if (action === 'show-maintenance-work-order-history') {
         await showMaintenanceWorkOrderHistory(button);status.textContent='İş emri geçmişi yüklendi.';
       }
+      if (action === 'consume-inventory-part') {
+        const result=await consumeInventoryPart(button);if(result){await loadAdmin();await showMaintenanceWorkOrderHistory(button);status.textContent=`Parça stoktan düşüldü: ${result.part?.part_no||'-'} · Kalan ${fmtMetric(result.part?.current_stock)} ${result.part?.unit||''}`;}else status.textContent='Parça kullanımı iptal edildi.';
+      }
+      if (action === 'save-inventory-part') {
+        const result=await saveInventoryPart(button);await loadAdmin();status.textContent=`Parça kartı güncellendi: ${result.part?.part_no||'-'}`;
+      }
+      if (action === 'inventory-movement-for-part') {
+        setAdminView('inventory');document.getElementById('inventoryMovementPart').value=button.dataset.id;document.getElementById('inventoryMovementQuantity').focus();document.getElementById('inventoryMovementResult').textContent='Parça seçildi. Hareket türü ve miktarı gir.';status.textContent='Stok hareketi formuna geçildi.';
+      }
+      if (action === 'show-inventory-history') {
+        await showInventoryHistory(button);status.textContent='Parça stok geçmişi yüklendi.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -3533,6 +3695,10 @@
     const runMaintenanceSchedulerBtn = document.getElementById('runMaintenanceSchedulerBtn');
     const refreshMaintenanceWorkOrdersBtn = document.getElementById('refreshMaintenanceWorkOrdersBtn');
     const applyMaintenanceWorkOrderFiltersBtn = document.getElementById('applyMaintenanceWorkOrderFiltersBtn');
+    const refreshInventoryBtn = document.getElementById('refreshInventoryBtn');
+    const applyInventoryFiltersBtn = document.getElementById('applyInventoryFiltersBtn');
+    const createInventoryPartBtn = document.getElementById('createInventoryPartBtn');
+    const createInventoryMovementBtn = document.getElementById('createInventoryMovementBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -3553,6 +3719,10 @@
     if (refreshMaintenancePlansBtn) refreshMaintenancePlansBtn.addEventListener('click', loadAdmin);
     if (refreshMaintenanceWorkOrdersBtn) refreshMaintenanceWorkOrdersBtn.addEventListener('click', loadAdmin);
     if (applyMaintenanceWorkOrderFiltersBtn) applyMaintenanceWorkOrderFiltersBtn.addEventListener('click', loadAdmin);
+    if (refreshInventoryBtn) refreshInventoryBtn.addEventListener('click', loadAdmin);
+    if (applyInventoryFiltersBtn) applyInventoryFiltersBtn.addEventListener('click', loadAdmin);
+    if (createInventoryPartBtn) createInventoryPartBtn.addEventListener('click', async()=>{createInventoryPartBtn.disabled=true;document.getElementById('inventoryPartResult').textContent='Parça kartı oluşturuluyor...';try{const result=await createInventoryPart();await loadAdmin();document.getElementById('inventoryPartResult').textContent=`Parça kartı oluşturuldu: ${result.part?.part_no||'-'}`;}catch(e){document.getElementById('inventoryPartResult').textContent=e.message;}finally{createInventoryPartBtn.disabled=false;}});
+    if (createInventoryMovementBtn) createInventoryMovementBtn.addEventListener('click', async()=>{createInventoryMovementBtn.disabled=true;document.getElementById('inventoryMovementResult').textContent='Stok hareketi kaydediliyor...';try{const result=await createInventoryMovement();await loadAdmin();document.getElementById('inventoryMovementResult').textContent=`Hareket kaydedildi: ${result.part?.part_no||'-'} · Yeni stok ${fmtMetric(result.part?.current_stock)} ${result.part?.unit||''}`;}catch(e){document.getElementById('inventoryMovementResult').textContent=e.message;}finally{createInventoryMovementBtn.disabled=false;}});
     if (createMaintenancePlanBtn) createMaintenancePlanBtn.addEventListener('click', async () => {
       createMaintenancePlanBtn.disabled=true;document.getElementById('maintenancePlanResult').textContent='Bakım planı oluşturuluyor...';
       try{const result=await createMaintenancePlan();await loadAdmin();document.getElementById('maintenancePlanResult').textContent=`Plan oluşturuldu: ${result.plan?.plan_no||'-'}`;}

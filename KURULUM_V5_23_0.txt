@@ -1,0 +1,37 @@
+FactoryBox One v5.23.0 Kurulum
+
+1. Çalışan backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine çıkarın.
+3. Dosya değiştirme sorusunda üzerine yazmayı kabul edin.
+4. PowerShell açın:
+
+cd "C:\New DeviceOs Project\platform\backend"
+npm.cmd start
+
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sol üstte v5.23.0 yazdığını kontrol edin.
+7. Maintenance > Spare Parts & Inventory ekranını açın.
+
+İlk test:
+- Parça Adı: Lazer Egzoz Filtresi
+- SKU: FILTRE-001
+- Kategori: filtre
+- Birim: adet
+- Konum: Raf A-01
+- Başlangıç Stoku: 5
+- Minimum Stok: 2
+- Sipariş Miktarı: 5
+- Birim Maliyet: 250
+
+Parça kartını oluşturduktan sonra:
+- purchase hareketiyle 2 adet giriş yapın.
+- Stok değerinin 7 olduğunu kontrol edin.
+- Work Orders ekranında aktif bir iş emrinde Parça Kullan düğmesine basın.
+- FILTRE-001 seçip 1 adet tüketin.
+- Stok değerinin 6 olduğunu kontrol edin.
+- İş emri Geçmiş ekranında kullanılan parçanın göründüğünü kontrol edin.
+- Parça Geçmiş ekranında consumption hareketini kontrol edin.
+
+Not:
+- Sistem stok miktarını sıfırın altına düşürmez.
+- current_stock <= min_stock olduğunda minimum stok uyarısı görünür.

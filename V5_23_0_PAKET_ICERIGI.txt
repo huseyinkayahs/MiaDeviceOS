@@ -1,0 +1,20 @@
+FactoryBox One v5.23.0 — Spare Parts & Inventory
+
+Bu paket yalnızca değişen/yeni dosyaları içerir:
+
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- docs/V5_23_SPARE_PARTS_INVENTORY.md
+- V5_23_0_PAKET_ICERIGI.txt
+- KURULUM_V5_23_0.txt
+
+Öne çıkan özellikler:
+- Yedek parça stok kartları
+- Stok giriş, çıkış, iade ve adjustment hareketleri
+- Minimum stok ve stok tükendi uyarıları
+- Birim maliyet ve toplam stok değeri
+- Parça hareket geçmişi
+- Bakım iş emrinde Parça Kullan işlemi
+- Negatif stok koruması
+- İş emri ve stok hareketi bağlantısı
+- Audit log kayıtları

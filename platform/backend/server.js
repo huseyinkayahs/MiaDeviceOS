@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.22.0';
+const APP_VERSION = '5.23.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -4013,8 +4013,247 @@ app.post('/api/admin/maintenance-work-orders/:id/notes',adminRequired,permission
 });
 
 app.get('/api/admin/maintenance-work-orders/:id/history',adminRequired,permissionRequired('VIEW_MAINTENANCE'),async(req,res)=>{
-  try{await ensurePreventiveMaintenanceFoundation();const order=await maintenanceWorkOrderRow(req.params.id);if(!order)return res.status(404).json({status:'not_found',message:'Work order not found'});const events=await pool.query(`SELECT id::text,event_type,old_status,new_status,note,actor_email,metadata,created_at FROM maintenance_work_order_events WHERE work_order_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200`,[order.id]);const deliveries=await pool.query(`SELECT id::text,channel,status,target,provider_message_id,error_message,created_at FROM maintenance_notification_deliveries WHERE work_order_id=$1 ORDER BY created_at DESC`,[order.id]);res.json({status:'ok',version:APP_VERSION,work_order:order,events:events.rows,deliveries:deliveries.rows});}
+  try{await ensureInventoryFoundation();const order=await maintenanceWorkOrderRow(req.params.id);if(!order)return res.status(404).json({status:'not_found',message:'Work order not found'});const events=await pool.query(`SELECT id::text,event_type,old_status,new_status,note,actor_email,metadata,created_at FROM maintenance_work_order_events WHERE work_order_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200`,[order.id]);const deliveries=await pool.query(`SELECT id::text,channel,status,target,provider_message_id,error_message,created_at FROM maintenance_notification_deliveries WHERE work_order_id=$1 ORDER BY created_at DESC`,[order.id]);const parts=await pool.query(`SELECT u.id::text,u.quantity::float8,u.unit_cost::float8,u.note,u.consumed_by,u.created_at,p.id::text AS part_id,p.part_no,p.sku,p.name AS part_name,p.unit,(u.quantity*u.unit_cost)::float8 AS total_cost FROM maintenance_work_order_parts u JOIN spare_parts p ON p.id=u.part_id WHERE u.work_order_id=$1 ORDER BY u.created_at DESC,u.id DESC`,[order.id]);res.json({status:'ok',version:APP_VERSION,work_order:order,events:events.rows,deliveries:deliveries.rows,parts_used:parts.rows});}
   catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+
+// -----------------------------------------------------------------------------
+// v5.23.0 Spare Parts & Inventory
+// -----------------------------------------------------------------------------
+const INVENTORY_MOVEMENT_TYPES = ['opening','purchase','consumption','return','adjustment'];
+
+function makeSparePartNo() {
+  const stamp = new Date().toISOString().slice(0,10).replaceAll('-','');
+  return `SP-${stamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function inventoryQuantity(value, label='quantity', {min=-100000000,max=100000000,allowZero=false,fallback=null}={}) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max || (!allowZero && n === 0)) {
+    const error = new Error(`${label} must be ${allowZero ? 'between' : 'non-zero and between'} ${min} and ${max}`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return Math.round(n * 1000) / 1000;
+}
+
+function inventoryMoney(value, label='unit_cost', fallback=null) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1000000000) {
+    const error = new Error(`${label} must be between 0 and 1000000000`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return Math.round(n * 10000) / 10000;
+}
+
+async function ensureInventoryFoundation() {
+  await ensurePreventiveMaintenanceFoundation();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS spare_parts (
+      id bigserial PRIMARY KEY,
+      part_no text NOT NULL UNIQUE,
+      sku text,
+      name text NOT NULL,
+      description text,
+      category text,
+      unit text NOT NULL DEFAULT 'adet',
+      location text,
+      supplier text,
+      unit_cost numeric(14,4) NOT NULL DEFAULT 0,
+      current_stock numeric(14,3) NOT NULL DEFAULT 0,
+      min_stock numeric(14,3) NOT NULL DEFAULT 0,
+      reorder_qty numeric(14,3) NOT NULL DEFAULT 0,
+      enabled boolean NOT NULL DEFAULT true,
+      created_by text,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT spare_parts_stock_nonnegative CHECK (current_stock >= 0),
+      CONSTRAINT spare_parts_min_stock_nonnegative CHECK (min_stock >= 0),
+      CONSTRAINT spare_parts_reorder_nonnegative CHECK (reorder_qty >= 0),
+      CONSTRAINT spare_parts_cost_nonnegative CHECK (unit_cost >= 0)
+    )
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_spare_parts_sku_lower ON spare_parts(lower(sku)) WHERE sku IS NOT NULL AND btrim(sku)<>''`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_spare_parts_stock ON spare_parts(enabled,current_stock,min_stock)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_spare_parts_name ON spare_parts(name)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS inventory_movements (
+      id bigserial PRIMARY KEY,
+      part_id bigint NOT NULL REFERENCES spare_parts(id) ON DELETE RESTRICT,
+      movement_type text NOT NULL,
+      quantity_change numeric(14,3) NOT NULL,
+      balance_before numeric(14,3) NOT NULL,
+      balance_after numeric(14,3) NOT NULL,
+      unit_cost numeric(14,4),
+      reference_type text,
+      reference_id text,
+      reference_no text,
+      note text,
+      actor_email text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT inventory_movement_type_check CHECK (movement_type IN ('opening','purchase','consumption','return','adjustment')),
+      CONSTRAINT inventory_movement_quantity_nonzero CHECK (quantity_change <> 0),
+      CONSTRAINT inventory_movement_balance_nonnegative CHECK (balance_after >= 0)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_inventory_movements_part_created ON inventory_movements(part_id,created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_inventory_movements_reference ON inventory_movements(reference_type,reference_id)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_work_order_parts (
+      id bigserial PRIMARY KEY,
+      work_order_id bigint NOT NULL REFERENCES maintenance_work_orders(id) ON DELETE CASCADE,
+      part_id bigint NOT NULL REFERENCES spare_parts(id) ON DELETE RESTRICT,
+      movement_id bigint REFERENCES inventory_movements(id) ON DELETE SET NULL,
+      quantity numeric(14,3) NOT NULL,
+      unit_cost numeric(14,4) NOT NULL DEFAULT 0,
+      note text,
+      consumed_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT maintenance_work_order_part_quantity_positive CHECK (quantity > 0)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_work_order_parts_order ON maintenance_work_order_parts(work_order_id,created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_work_order_parts_part ON maintenance_work_order_parts(part_id,created_at DESC)`);
+}
+
+async function inventoryPartRow(id, clientOrPool=pool) {
+  return oneWith(clientOrPool, `
+    SELECT p.id::text,p.part_no,p.sku,p.name,p.description,p.category,p.unit,p.location,p.supplier,
+      p.unit_cost::float8 AS unit_cost,p.current_stock::float8 AS current_stock,p.min_stock::float8 AS min_stock,
+      p.reorder_qty::float8 AS reorder_qty,p.enabled,p.created_by,p.updated_by,p.created_at,p.updated_at,
+      (p.enabled AND p.current_stock <= p.min_stock) AS low_stock,
+      (p.current_stock <= 0) AS out_of_stock,
+      (p.current_stock * p.unit_cost)::float8 AS stock_value
+    FROM spare_parts p WHERE p.id=$1 LIMIT 1
+  `,[String(id)]);
+}
+
+async function oneWith(clientOrPool, query, params=[]) {
+  const result = await clientOrPool.query(query, params);
+  return result.rows[0] || null;
+}
+
+async function createInventoryMovement(client,{partId,movementType,quantityChange,unitCost=null,referenceType=null,referenceId=null,referenceNo=null,note=null,actorEmail='system'}) {
+  const type = maintenanceChoice(movementType, INVENTORY_MOVEMENT_TYPES, 'movement_type');
+  const change = inventoryQuantity(quantityChange, 'quantity_change');
+  const part = await oneWith(client, `SELECT id::text,part_no,name,unit,current_stock::float8 AS current_stock,unit_cost::float8 AS unit_cost FROM spare_parts WHERE id=$1 FOR UPDATE`,[String(partId)]);
+  if (!part) { const e=new Error('Spare part not found');e.statusCode=404;throw e; }
+  const before = Number(part.current_stock || 0);
+  const after = Math.round((before + change) * 1000) / 1000;
+  if (after < 0) { const e=new Error(`Insufficient stock. Available: ${before} ${part.unit}`);e.statusCode=409;throw e; }
+  const nextUnitCost = unitCost === null || unitCost === undefined || unitCost === '' ? Number(part.unit_cost || 0) : inventoryMoney(unitCost);
+  await client.query(`UPDATE spare_parts SET current_stock=$2,unit_cost=$3,updated_by=$4,updated_at=now() WHERE id=$1`,[part.id,after,nextUnitCost,actorEmail]);
+  const movement = await oneWith(client, `
+    INSERT INTO inventory_movements(part_id,movement_type,quantity_change,balance_before,balance_after,unit_cost,reference_type,reference_id,reference_no,note,actor_email)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    RETURNING id::text,part_id::text,movement_type,quantity_change::float8,balance_before::float8,balance_after::float8,unit_cost::float8,reference_type,reference_id,reference_no,note,actor_email,created_at
+  `,[part.id,type,change,before,after,nextUnitCost,referenceType,referenceId,referenceNo,note,actorEmail]);
+  return {movement,part:{...part,current_stock:after,unit_cost:nextUnitCost}};
+}
+
+app.get('/api/admin/inventory',adminRequired,permissionRequired('VIEW_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureInventoryFoundation();
+    const stock=String(req.query.stock||'all').toLowerCase();
+    const category=String(req.query.category||'all').trim();
+    const q=String(req.query.q||'').trim();
+    const params=[];const where=[];
+    if(stock==='low')where.push(`p.enabled=true AND p.current_stock<=p.min_stock`);
+    else if(stock==='out')where.push(`p.current_stock<=0`);
+    else if(stock==='in_stock')where.push(`p.current_stock>p.min_stock`);
+    else if(stock==='disabled')where.push(`p.enabled=false`);
+    else if(stock!=='all'){const e=new Error('Invalid stock filter');e.statusCode=400;throw e;}
+    if(category&&category!=='all'){params.push(category);where.push(`COALESCE(p.category,'')=$${params.length}`);}
+    if(q){params.push(`%${q}%`);where.push(`(p.part_no ILIKE $${params.length} OR p.sku ILIKE $${params.length} OR p.name ILIKE $${params.length} OR p.location ILIKE $${params.length} OR p.supplier ILIKE $${params.length})`);}
+    const rows=await pool.query(`
+      SELECT p.id::text,p.part_no,p.sku,p.name,p.description,p.category,p.unit,p.location,p.supplier,
+        p.unit_cost::float8 AS unit_cost,p.current_stock::float8 AS current_stock,p.min_stock::float8 AS min_stock,
+        p.reorder_qty::float8 AS reorder_qty,p.enabled,p.created_at,p.updated_at,
+        (p.enabled AND p.current_stock<=p.min_stock) AS low_stock,(p.current_stock<=0) AS out_of_stock,
+        (p.current_stock*p.unit_cost)::float8 AS stock_value
+      FROM spare_parts p ${where.length?'WHERE '+where.join(' AND '):''}
+      ORDER BY (p.enabled AND p.current_stock<=p.min_stock) DESC,p.enabled DESC,p.name ASC LIMIT 1000
+    `,params);
+    const summary=await one(`
+      SELECT count(*)::int total,count(*) FILTER(WHERE enabled)::int enabled,
+        count(*) FILTER(WHERE enabled AND current_stock<=min_stock)::int low_stock,
+        count(*) FILTER(WHERE enabled AND current_stock<=0)::int out_of_stock,
+        COALESCE(ROUND(SUM(current_stock*unit_cost)::numeric,2),0)::float8 AS stock_value
+      FROM spare_parts
+    `);
+    const categories=(await pool.query(`SELECT DISTINCT category FROM spare_parts WHERE category IS NOT NULL AND btrim(category)<>'' ORDER BY category`)).rows.map(r=>r.category);
+    const recent=(await pool.query(`
+      SELECT m.id::text,m.movement_type,m.quantity_change::float8,m.balance_before::float8,m.balance_after::float8,m.unit_cost::float8,
+        m.reference_type,m.reference_id,m.reference_no,m.note,m.actor_email,m.created_at,
+        p.id::text AS part_id,p.part_no,p.name AS part_name,p.unit
+      FROM inventory_movements m JOIN spare_parts p ON p.id=m.part_id ORDER BY m.created_at DESC,m.id DESC LIMIT 100
+    `)).rows;
+    res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),can_manage:!authConfig().enabled||hasPermission(req.user,'MANAGE_MAINTENANCE'),summary,parts:rows.rows,categories,recent_movements:recent,options:{movement_types:INVENTORY_MOVEMENT_TYPES}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/inventory/parts',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  let client;
+  try{
+    await ensureInventoryFoundation();const body=req.body||{};const actor=req.user||getSession(req)?.user||{};
+    const opening=inventoryQuantity(body.initial_stock,'initial_stock',{min:0,allowZero:true,fallback:0});
+    client=await pool.connect();await client.query('BEGIN');
+    const inserted=await oneWith(client,`INSERT INTO spare_parts(part_no,sku,name,description,category,unit,location,supplier,unit_cost,current_stock,min_stock,reorder_qty,enabled,created_by,updated_by)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,0,$10,$11,$12,$13,$13) RETURNING id::text`,[
+      makeSparePartNo(),maintenanceText(body.sku,'sku',{max:120}),maintenanceText(body.name,'name',{required:true,max:240}),maintenanceText(body.description,'description',{max:4000}),maintenanceText(body.category,'category',{max:120}),maintenanceText(body.unit||'adet','unit',{required:true,max:40}),maintenanceText(body.location,'location',{max:200}),maintenanceText(body.supplier,'supplier',{max:240}),inventoryMoney(body.unit_cost,'unit_cost',0),inventoryQuantity(body.min_stock,'min_stock',{min:0,allowZero:true,fallback:0}),inventoryQuantity(body.reorder_qty,'reorder_qty',{min:0,allowZero:true,fallback:0}),body.enabled===undefined?true:Boolean(body.enabled),actor.email||'admin']);
+    if(opening>0)await createInventoryMovement(client,{partId:inserted.id,movementType:'opening',quantityChange:opening,unitCost:body.unit_cost,referenceType:'opening_balance',referenceId:inserted.id,note:'Initial stock',actorEmail:actor.email||'admin'});
+    await client.query('COMMIT');client.release();client=null;const part=await inventoryPartRow(inserted.id);await writeAuditLog(req,{action:'create_spare_part',entity_type:'spare_part',entity_id:part.id,new_values:part,metadata:{part_no:part.part_no}});res.status(201).json({status:'ok',version:APP_VERSION,part});
+  }catch(e){if(client){try{await client.query('ROLLBACK')}catch{}client.release()}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/inventory/parts/:id',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureInventoryFoundation();const id=String(req.params.id);const old=await inventoryPartRow(id);if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Spare part not found'});const b=req.body||{};const actor=req.user||getSession(req)?.user||{};
+    await pool.query(`UPDATE spare_parts SET sku=$2,name=$3,description=$4,category=$5,unit=$6,location=$7,supplier=$8,unit_cost=$9,min_stock=$10,reorder_qty=$11,enabled=$12,updated_by=$13,updated_at=now() WHERE id=$1`,[
+      id,b.sku!==undefined?maintenanceText(b.sku,'sku',{max:120}):old.sku,b.name!==undefined?maintenanceText(b.name,'name',{required:true,max:240}):old.name,b.description!==undefined?maintenanceText(b.description,'description',{max:4000}):old.description,b.category!==undefined?maintenanceText(b.category,'category',{max:120}):old.category,b.unit!==undefined?maintenanceText(b.unit,'unit',{required:true,max:40}):old.unit,b.location!==undefined?maintenanceText(b.location,'location',{max:200}):old.location,b.supplier!==undefined?maintenanceText(b.supplier,'supplier',{max:240}):old.supplier,b.unit_cost!==undefined?inventoryMoney(b.unit_cost,'unit_cost',0):old.unit_cost,b.min_stock!==undefined?inventoryQuantity(b.min_stock,'min_stock',{min:0,allowZero:true,fallback:0}):old.min_stock,b.reorder_qty!==undefined?inventoryQuantity(b.reorder_qty,'reorder_qty',{min:0,allowZero:true,fallback:0}):old.reorder_qty,b.enabled===undefined?old.enabled:Boolean(b.enabled),actor.email||'admin']);
+    const part=await inventoryPartRow(id);await writeAuditLog(req,{action:'update_spare_part',entity_type:'spare_part',entity_id:id,old_values:old,new_values:part,metadata:{part_no:part.part_no}});res.json({status:'ok',version:APP_VERSION,part});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/inventory/parts/:id/movements',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  let client;
+  try{
+    await ensureInventoryFoundation();const id=String(req.params.id);const b=req.body||{};const actor=req.user||getSession(req)?.user||{};const type=maintenanceChoice(b.movement_type,INVENTORY_MOVEMENT_TYPES.filter(x=>x!=='opening'),'movement_type');
+    client=await pool.connect();await client.query('BEGIN');const locked=await oneWith(client,`SELECT current_stock::float8 AS current_stock FROM spare_parts WHERE id=$1 FOR UPDATE`,[id]);if(!locked){const e=new Error('Spare part not found');e.statusCode=404;throw e;}
+    let change;
+    if(type==='adjustment'&&b.new_stock!==undefined&&b.new_stock!==null&&b.new_stock!==''){const target=inventoryQuantity(b.new_stock,'new_stock',{min:0,allowZero:true});change=Math.round((target-Number(locked.current_stock||0))*1000)/1000;if(change===0){const e=new Error('Adjustment does not change stock');e.statusCode=400;throw e;}}
+    else {const qty=inventoryQuantity(b.quantity,'quantity',{min:type==='adjustment'?-100000000:0,allowZero:false});change=type==='consumption'?-Math.abs(qty):(type==='adjustment'?qty:Math.abs(qty));}
+    const result=await createInventoryMovement(client,{partId:id,movementType:type,quantityChange:change,unitCost:b.unit_cost,referenceType:maintenanceText(b.reference_type,'reference_type',{max:120}),referenceId:maintenanceText(b.reference_id,'reference_id',{max:200}),referenceNo:maintenanceText(b.reference_no,'reference_no',{max:200}),note:maintenanceText(b.note,'note',{max:2000}),actorEmail:actor.email||'admin'});
+    await client.query('COMMIT');client.release();client=null;const part=await inventoryPartRow(id);await writeAuditLog(req,{action:'create_inventory_movement',entity_type:'spare_part',entity_id:id,new_values:result.movement,metadata:{part_no:part.part_no,balance_after:part.current_stock}});res.status(201).json({status:'ok',version:APP_VERSION,part,movement:result.movement});
+  }catch(e){if(client){try{await client.query('ROLLBACK')}catch{}client.release()}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.get('/api/admin/inventory/parts/:id/history',adminRequired,permissionRequired('VIEW_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureInventoryFoundation();const part=await inventoryPartRow(req.params.id);if(!part)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Spare part not found'});
+    const movements=(await pool.query(`SELECT id::text,movement_type,quantity_change::float8,balance_before::float8,balance_after::float8,unit_cost::float8,reference_type,reference_id,reference_no,note,actor_email,created_at FROM inventory_movements WHERE part_id=$1 ORDER BY created_at DESC,id DESC LIMIT 500`,[part.id])).rows;
+    const usages=(await pool.query(`SELECT u.id::text,u.quantity::float8,u.unit_cost::float8,u.note,u.consumed_by,u.created_at,w.id::text AS work_order_id,w.work_order_no,w.title,w.status,m.code AS machine_code,m.name AS machine_name FROM maintenance_work_order_parts u JOIN maintenance_work_orders w ON w.id=u.work_order_id JOIN machines m ON m.id=w.machine_id WHERE u.part_id=$1 ORDER BY u.created_at DESC LIMIT 500`,[part.id])).rows;
+    res.json({status:'ok',version:APP_VERSION,part,movements,work_order_usages:usages});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/maintenance-work-orders/:id/consume-part',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  let client;
+  try{
+    await ensureInventoryFoundation();const orderId=String(req.params.id);const b=req.body||{};const partId=String(b.part_id||'');const qty=inventoryQuantity(b.quantity,'quantity',{min:0});const note=maintenanceText(b.note,'note',{max:2000});const actor=req.user||getSession(req)?.user||{};
+    client=await pool.connect();await client.query('BEGIN');const order=await oneWith(client,`SELECT id::text,work_order_no,title,status,parts_used FROM maintenance_work_orders WHERE id=$1 FOR UPDATE`,[orderId]);if(!order){const e=new Error('Work order not found');e.statusCode=404;throw e;}if(['completed','cancelled'].includes(order.status)){const e=new Error('Completed or cancelled work order cannot consume parts');e.statusCode=409;throw e;}
+    const movementResult=await createInventoryMovement(client,{partId,movementType:'consumption',quantityChange:-Math.abs(qty),referenceType:'maintenance_work_order',referenceId:order.id,referenceNo:order.work_order_no,note:note||`Consumed for ${order.work_order_no}`,actorEmail:actor.email||'admin'});
+    const usage=await oneWith(client,`INSERT INTO maintenance_work_order_parts(work_order_id,part_id,movement_id,quantity,unit_cost,note,consumed_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id::text,work_order_id::text,part_id::text,movement_id::text,quantity::float8,unit_cost::float8,note,consumed_by,created_at`,[order.id,partId,movementResult.movement.id,qty,movementResult.part.unit_cost,note,actor.email||'admin']);
+    const partsUsed=Array.isArray(order.parts_used)?order.parts_used:[];partsUsed.push({part_id:partId,part_no:movementResult.part.part_no,name:movementResult.part.name,quantity:qty,unit:movementResult.part.unit,unit_cost:movementResult.part.unit_cost,usage_id:usage.id,consumed_at:usage.created_at,consumed_by:actor.email||'admin'});
+    await client.query(`UPDATE maintenance_work_orders SET parts_used=$2::jsonb,updated_by=$3,updated_at=now() WHERE id=$1`,[order.id,JSON.stringify(partsUsed),actor.email||'admin']);
+    await addMaintenanceWorkOrderEvent(client,{workOrderId:order.id,eventType:'part_consumed',oldStatus:order.status,newStatus:order.status,note,actorEmail:actor.email||'admin',metadata:{part_id:partId,part_no:movementResult.part.part_no,quantity:qty,unit:movementResult.part.unit,balance_after:movementResult.movement.balance_after}});
+    await client.query('COMMIT');client.release();client=null;const workOrder=await maintenanceWorkOrderRow(order.id);const part=await inventoryPartRow(partId);await writeAuditLog(req,{action:'consume_spare_part',entity_type:'maintenance_work_order',entity_id:order.id,new_values:usage,metadata:{work_order_no:order.work_order_no,part_no:part.part_no,quantity:qty}});res.status(201).json({status:'ok',version:APP_VERSION,work_order:workOrder,part,usage});
+  }catch(e){if(client){try{await client.query('ROLLBACK')}catch{}client.release()}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
 });
 
 
@@ -10406,6 +10645,7 @@ async function start() {
   await ensureNotificationSettingsFoundation();
   await ensureMaintenanceFoundation();
   await ensurePreventiveMaintenanceFoundation();
+  await ensureInventoryFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });
