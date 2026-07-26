@@ -1,0 +1,24 @@
+FactoryBox One v5.18.0
+Notification Settings & Channel Test Pack
+
+Bu paket yalnızca değişen dosyaları içerir:
+
+platform/backend/server.js
+platform/backend/public/admin.html
+
+Eklenenler:
+- System Settings > Notifications alt menüsü
+- Telegram READY / NOT READY ayrıntıları
+- Email READY / NOT READY ayrıntıları
+- Telegram test mesajı
+- Email test mesajı
+- Delivery Worker ON / OFF yönetimi
+- Otomatik worker ve çalışma aralığı yönetimi
+- Batch size yönetimi
+- Bot token ve SMTP şifresi için maskeli görünüm
+- Bildirim ayarlarının veritabanında kalıcı saklanması
+- Kanal testi geçmişi
+- Ayar değişiklikleri için audit log
+
+Not:
+Gizli alanlar panelden geri okunmaz. Yeni değer girilmezse mevcut token veya şifre korunur.

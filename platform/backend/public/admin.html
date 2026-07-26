@@ -258,6 +258,16 @@
     #alarmSlaSection .admin-table-wrap { width:100%; max-width:100%; overflow-x:auto; }
     #alarmEscalationQueueSection { min-width:0; overflow:hidden; }
     #alarmEscalationQueueSection .admin-table-wrap { width:100%; max-width:100%; overflow-x:auto; }
+    #notificationSettingsSection { min-width:0; overflow:hidden; }
+    .notification-channel-grid-v518 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin:14px 0; }
+    .notification-channel-card-v518 { border:1px solid var(--fb-border); border-radius:18px; background:#fff; padding:16px; min-width:0; }
+    .notification-channel-card-v518 h3 { margin:0 0 8px; }
+    .notification-channel-card-v518 .channel-state { display:inline-flex; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:800; }
+    .notification-channel-card-v518 .channel-state.ready { background:#dcfce7; color:#166534; }
+    .notification-channel-card-v518 .channel-state.not-ready { background:#fee2e2; color:#991b1b; }
+    .notification-channel-card-v518 .channel-state.disabled { background:#e2e8f0; color:#475569; }
+    .notification-secret-note-v518 { margin-top:6px; font-size:12px; color:var(--fb-muted); }
+    .notification-test-actions-v518 { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-top:12px; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -307,7 +317,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.17.0 — alarm ekranları tek açılır menü altında toplandı.</p>
+      <p id="adminVersionLabel">v5.18.0 — bildirim kanalları ve test ayarları tek ekranda.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -325,6 +335,16 @@
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="analytics"><span>Alarm Analytics</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="sla"><span>Alarm SLA</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Escalation Delivery</span></button>
+        </div>
+      </div>
+
+      <div class="admin-nav-group-v517" data-nav-group="system">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
+          <span>⚙️ System Settings</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">1</span><span class="admin-nav-chevron-v517">⌄</span></span>
+        </button>
+        <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Notifications</span></button>
         </div>
       </div>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
@@ -366,7 +386,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.16.1: SLA kural önceliği, Delivery Worker, Queue ve Notification History aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.18.0: Notification Settings, kanal testleri ve Delivery Worker yönetimi aktif.</p>
       </div>
     </div>
 
@@ -572,6 +592,69 @@
       <h3>Escalation Olay Geçmişi</h3>
       <div id="alarmEscalationEventsTable">Escalation olayları yükleniyor...</div>
     </div>
+  </section>
+
+
+  <section id="notificationSettingsSection" class="card wide admin-card" data-admin-view="notifications">
+    <div class="section-title-row">
+      <div>
+        <h2>Notification Settings / Channel Tests</h2>
+        <p class="muted">v5.18: Telegram, Email ve Delivery Worker ayarlarını tek ekrandan yönet ve test et.</p>
+      </div>
+      <div class="admin-topbar-actions-v58">
+        <button id="refreshNotificationSettingsBtn" class="secondary-btn">Ayarları Yenile</button>
+        <button id="saveNotificationSettingsBtn" class="primary-btn">Ayarları Kaydet</button>
+      </div>
+    </div>
+
+    <div id="notificationSettingsStatus">Bildirim ayarları yükleniyor...</div>
+
+    <h3>Delivery Worker</h3>
+    <div class="admin-form-grid">
+      <label>Delivery Enabled<select id="notificationDeliveryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+      <label>Auto Worker<select id="notificationAutoEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Çalışma Aralığı (sn)<input id="notificationIntervalSec" type="number" min="15" max="3600" value="60"></label>
+      <label>Batch Size<input id="notificationBatchSize" type="number" min="1" max="100" value="20"></label>
+    </div>
+
+    <div class="notification-channel-grid-v518">
+      <div class="notification-channel-card-v518">
+        <h3>Telegram</h3>
+        <div id="notificationTelegramState">Durum yükleniyor...</div>
+        <div class="admin-form-grid">
+          <label>Enabled<select id="notificationTelegramEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+          <label>Default Chat ID<input id="notificationTelegramChatId" type="text" placeholder="Telegram chat ID"></label>
+          <label>Bot Token<input id="notificationTelegramToken" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut token korunur"></label>
+        </div>
+        <p class="notification-secret-note-v518">Bot token panelde gösterilmez. Yeni token girilmezse mevcut değer korunur.</p>
+        <div class="notification-test-actions-v518">
+          <label>Test Chat ID<input id="notificationTelegramTestTarget" type="text" placeholder="Boş = varsayılan chat ID"></label>
+          <button id="testTelegramNotificationBtn" class="secondary-btn">Telegram Test Mesajı</button>
+        </div>
+      </div>
+
+      <div class="notification-channel-card-v518">
+        <h3>Email / SMTP</h3>
+        <div id="notificationEmailState">Durum yükleniyor...</div>
+        <div class="admin-form-grid">
+          <label>Enabled<select id="notificationEmailEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+          <label>SMTP Host<input id="notificationSmtpHost" type="text" placeholder="smtp.example.com"></label>
+          <label>SMTP Port<input id="notificationSmtpPort" type="number" min="1" max="65535" value="587"></label>
+          <label>Secure<select id="notificationSmtpSecure"><option value="false">false</option><option value="true">true</option></select></label>
+          <label>SMTP User<input id="notificationSmtpUser" type="text"></label>
+          <label>SMTP Password<input id="notificationSmtpPass" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut şifre korunur"></label>
+          <label>From<input id="notificationSmtpFrom" type="text"></label>
+          <label>Default Recipients<input id="notificationEmailDefaultTo" type="text" placeholder="mail1@firma.com, mail2@firma.com"></label>
+        </div>
+        <p class="notification-secret-note-v518">SMTP şifresi panelde gösterilmez. Yeni şifre girilmezse mevcut değer korunur.</p>
+        <div class="notification-test-actions-v518">
+          <label>Test Email<input id="notificationEmailTestTarget" type="email" placeholder="Boş = varsayılan alıcı"></label>
+          <button id="testEmailNotificationBtn" class="secondary-btn">Email Test Mesajı</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="notificationSettingsResult" class="mini-status">Ayar değişikliği veya kanal testi bekleniyor.</div>
   </section>
 
   <section class="card wide admin-card" data-admin-view="permissions">
@@ -907,11 +990,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.17.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.18.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Alarm menüsü ve alt ekran navigasyonu düzenlendi.`;
-    if (overview) overview.textContent = `v${safeVersion}: Alarm Center, Analytics, SLA ve Escalation tek menü altında.`;
+    if (brand) brand.textContent = `v${safeVersion} — Notification Settings ve kanal testleri eklendi.`;
+    if (overview) overview.textContent = `v${safeVersion}: Telegram, Email ve Delivery Worker ayarları tek ekranda.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1056,6 +1139,10 @@
       title:'Escalation Delivery',
       desc:'SLA dışı alarm kuyruğu, Email/Telegram teslimatı ve gönderim geçmişi.'
     },
+    notifications: {
+      title:'Notification Settings',
+      desc:'Telegram, Email, test mesajları ve Delivery Worker çalışma ayarları.'
+    },
     tenants: {
       title:'Customers / Tenants',
       desc:'Customer, tenant, site ve atölye yönetimi.'
@@ -1090,7 +1177,8 @@
     alarms:'alarm',
     analytics:'alarm',
     sla:'alarm',
-    escalations:'alarm'
+    escalations:'alarm',
+    notifications:'system'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -1793,6 +1881,76 @@
     ], data.events || []);
   }
 
+
+  function notificationStateHtml(enabled, configured, label) {
+    const cls = !enabled ? 'disabled' : (configured ? 'ready' : 'not-ready');
+    const text = !enabled ? 'DISABLED' : (configured ? 'READY' : 'NOT READY');
+    return `<span class="channel-state ${cls}">${esc(label)}: ${text}</span>`;
+  }
+
+  function notificationLastTestText(test) {
+    if (!test) return 'Henüz test yapılmadı.';
+    const detail = test.status === 'delivered'
+      ? `Başarılı · Provider ID: ${test.provider_message_id || '-'}`
+      : `Başarısız · ${test.error_message || '-'}`;
+    return `${detail} · ${fmtDate(test.created_at)}`;
+  }
+
+  function renderNotificationSettings(data) {
+    const delivery = data.delivery || {};
+    const telegram = data.telegram || {};
+    const email = data.email || {};
+    const latest = data.latest_delivery || null;
+    const canManage = Boolean(data.can_manage);
+
+    const setValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.value = value ?? '';
+    };
+    setValue('notificationDeliveryEnabled', String(Boolean(delivery.enabled)));
+    setValue('notificationAutoEnabled', String(Boolean(delivery.auto_enabled)));
+    setValue('notificationIntervalSec', delivery.interval_sec || 60);
+    setValue('notificationBatchSize', delivery.batch_size || 20);
+    setValue('notificationTelegramEnabled', String(Boolean(telegram.enabled)));
+    setValue('notificationEmailEnabled', String(Boolean(email.enabled)));
+    setValue('notificationSmtpHost', email.host || '');
+    setValue('notificationSmtpPort', email.port || 587);
+    setValue('notificationSmtpSecure', String(Boolean(email.secure)));
+    setValue('notificationSmtpUser', email.user || '');
+    setValue('notificationSmtpFrom', email.from || '');
+    setValue('notificationEmailDefaultTo', email.default_to || '');
+
+    const telegramChat = document.getElementById('notificationTelegramChatId');
+    if (telegramChat && document.activeElement !== telegramChat && !telegramChat.value) {
+      telegramChat.placeholder = telegram.chat_id_configured ? `Mevcut: ${telegram.chat_id_masked}` : 'Telegram chat ID';
+    }
+    const telegramToken = document.getElementById('notificationTelegramToken');
+    if (telegramToken) telegramToken.placeholder = telegram.token_configured ? `Mevcut token: ${telegram.token_masked}` : 'Telegram bot token gerekli';
+    const smtpPass = document.getElementById('notificationSmtpPass');
+    if (smtpPass) smtpPass.placeholder = email.password_configured ? `Mevcut şifre: ${email.password_masked}` : 'SMTP şifresi gerekli';
+
+    const status = document.getElementById('notificationSettingsStatus');
+    if (status) {
+      status.innerHTML = `
+        <div class="kpi-grid-v59">
+          <div class="kpi-card-v59"><span>Delivery</span><strong>${delivery.enabled ? 'ON' : 'OFF'}</strong><small>Escalation teslimatı</small></div>
+          <div class="kpi-card-v59"><span>Auto Worker</span><strong>${delivery.auto_enabled ? 'ON' : 'OFF'}</strong><small>${esc(delivery.interval_sec || 60)} sn · batch ${esc(delivery.batch_size || 20)}</small></div>
+          <div class="kpi-card-v59"><span>Son Teslimat</span><strong>${latest ? esc(String(latest.delivery_status || '-').toUpperCase()) : '-'}</strong><small>${latest ? esc(fmtDate(latest.last_attempt_at)) : 'Henüz kayıt yok'}</small></div>
+          <div class="kpi-card-v59"><span>Ayar Kaynağı</span><strong>${data.settings_source === 'database' ? 'DB' : 'ENV'}</strong><small>${esc(data.updated_by || 'Ortam değişkenleri')}</small></div>
+        </div>`;
+    }
+
+    const telegramState = document.getElementById('notificationTelegramState');
+    if (telegramState) telegramState.innerHTML = `${notificationStateHtml(telegram.enabled, telegram.configured, 'Telegram')}<p class="muted">Chat ID: ${esc(telegram.chat_id_masked || 'yok')}<br>${esc(notificationLastTestText(telegram.last_test))}</p>`;
+    const emailState = document.getElementById('notificationEmailState');
+    if (emailState) emailState.innerHTML = `${notificationStateHtml(email.enabled, email.configured, 'Email')}<p class="muted">${esc(email.host || 'SMTP host yok')} · ${esc(email.default_to || 'varsayılan alıcı yok')}<br>${esc(notificationLastTestText(email.last_test))}</p>`;
+
+    ['saveNotificationSettingsBtn','testTelegramNotificationBtn','testEmailNotificationBtn'].forEach(id => {
+      const button = document.getElementById(id);
+      if (button) button.disabled = !canManage;
+    });
+  }
+
   function renderCounts(counts) {
     const el = document.getElementById('adminCounts');
     if (!el) return;
@@ -2076,6 +2234,7 @@
       ['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary'],
       ['alarm-escalation-delivery-status', '/api/admin/alarm-escalation/delivery-status', renderAlarmEscalationDeliveryStatus, 'alarmEscalationDeliveryStatus'],
       ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
+      ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -2339,6 +2498,38 @@
     });
   }
 
+
+  async function saveNotificationSettings() {
+    const body = {
+      delivery_enabled:document.getElementById('notificationDeliveryEnabled').value === 'true',
+      auto_delivery_enabled:document.getElementById('notificationAutoEnabled').value === 'true',
+      interval_sec:Number(document.getElementById('notificationIntervalSec').value),
+      batch_size:Number(document.getElementById('notificationBatchSize').value),
+      telegram_enabled:document.getElementById('notificationTelegramEnabled').value === 'true',
+      telegram_chat_id:document.getElementById('notificationTelegramChatId').value.trim(),
+      telegram_bot_token:document.getElementById('notificationTelegramToken').value.trim(),
+      email_enabled:document.getElementById('notificationEmailEnabled').value === 'true',
+      smtp_host:document.getElementById('notificationSmtpHost').value.trim(),
+      smtp_port:Number(document.getElementById('notificationSmtpPort').value),
+      smtp_secure:document.getElementById('notificationSmtpSecure').value === 'true',
+      smtp_user:document.getElementById('notificationSmtpUser').value.trim(),
+      smtp_pass:document.getElementById('notificationSmtpPass').value,
+      smtp_from:document.getElementById('notificationSmtpFrom').value.trim(),
+      email_default_to:document.getElementById('notificationEmailDefaultTo').value.trim()
+    };
+    const data = await apiJson('/api/admin/notification-settings', {method:'PATCH',body:JSON.stringify(body)});
+    document.getElementById('notificationTelegramToken').value = '';
+    document.getElementById('notificationSmtpPass').value = '';
+    return data;
+  }
+
+  async function testNotificationChannel(channel) {
+    const body = channel === 'telegram'
+      ? {chat_id:document.getElementById('notificationTelegramTestTarget').value.trim()}
+      : {to:document.getElementById('notificationEmailTestTarget').value.trim()};
+    return apiJson(`/api/admin/notification-settings/test-${channel}`, {method:'POST',body:JSON.stringify(body)});
+  }
+
   async function createDeviceProvisionToken() {
     const customer_code = document.getElementById('deviceCustomerCode').value.trim();
     const site_code = document.getElementById('deviceSiteCode').value.trim();
@@ -2549,6 +2740,10 @@
     const deliverAlarmEscalationsBtn = document.getElementById('deliverAlarmEscalationsBtn');
     const refreshAlarmEscalationEventsBtn = document.getElementById('refreshAlarmEscalationEventsBtn');
     const applyAlarmEscalationFiltersBtn = document.getElementById('applyAlarmEscalationFiltersBtn');
+    const refreshNotificationSettingsBtn = document.getElementById('refreshNotificationSettingsBtn');
+    const saveNotificationSettingsBtn = document.getElementById('saveNotificationSettingsBtn');
+    const testTelegramNotificationBtn = document.getElementById('testTelegramNotificationBtn');
+    const testEmailNotificationBtn = document.getElementById('testEmailNotificationBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -2561,6 +2756,46 @@
     if (refreshAlarmSlaBtn) refreshAlarmSlaBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmEscalationEventsBtn) refreshAlarmEscalationEventsBtn.addEventListener('click', loadAdmin);
     if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click', loadAdmin);
+    if (refreshNotificationSettingsBtn) refreshNotificationSettingsBtn.addEventListener('click', loadAdmin);
+    if (saveNotificationSettingsBtn) saveNotificationSettingsBtn.addEventListener('click', async () => {
+      saveNotificationSettingsBtn.disabled = true;
+      document.getElementById('notificationSettingsResult').textContent = 'Bildirim ayarları kaydediliyor...';
+      try {
+        await saveNotificationSettings();
+        await loadAdmin();
+        document.getElementById('notificationSettingsResult').textContent = 'Ayarlar kaydedildi. Worker yeni ayarlarla yeniden başlatıldı.';
+      } catch(e) {
+        document.getElementById('notificationSettingsResult').textContent = e.message;
+      } finally {
+        saveNotificationSettingsBtn.disabled = false;
+      }
+    });
+    if (testTelegramNotificationBtn) testTelegramNotificationBtn.addEventListener('click', async () => {
+      testTelegramNotificationBtn.disabled = true;
+      document.getElementById('notificationSettingsResult').textContent = 'Telegram test mesajı gönderiliyor...';
+      try {
+        const result = await testNotificationChannel('telegram');
+        await loadAdmin();
+        document.getElementById('notificationSettingsResult').textContent = `Telegram test mesajı gönderildi. Provider ID: ${result.message_id || '-'}`;
+      } catch(e) {
+        document.getElementById('notificationSettingsResult').textContent = e.message;
+      } finally {
+        testTelegramNotificationBtn.disabled = false;
+      }
+    });
+    if (testEmailNotificationBtn) testEmailNotificationBtn.addEventListener('click', async () => {
+      testEmailNotificationBtn.disabled = true;
+      document.getElementById('notificationSettingsResult').textContent = 'Email test mesajı gönderiliyor...';
+      try {
+        const result = await testNotificationChannel('email');
+        await loadAdmin();
+        document.getElementById('notificationSettingsResult').textContent = `Email test mesajı gönderildi. Provider ID: ${result.email?.message_id || '-'}`;
+      } catch(e) {
+        document.getElementById('notificationSettingsResult').textContent = e.message;
+      } finally {
+        testEmailNotificationBtn.disabled = false;
+      }
+    });
     if (deliverAlarmEscalationsBtn) deliverAlarmEscalationsBtn.addEventListener('click', async () => {
       deliverAlarmEscalationsBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Bekleyen escalation olayları gönderiliyor...';

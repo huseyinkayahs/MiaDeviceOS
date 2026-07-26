@@ -1,0 +1,22 @@
+FACTORYBOX ONE v5.18.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içindeki dosyaları FactoryBox ana proje klasörünün üzerine kopyalayın.
+3. Dosyaların üzerine yazılmasını kabul edin.
+4. Backend'i yeniden başlatın:
+
+   npm.cmd start
+
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sol üstte v5.18.0 yazdığını kontrol edin.
+7. System Settings > Notifications ekranını açın.
+8. Telegram kartının READY olduğunu kontrol edin.
+9. Telegram Test Mesajı düğmesini deneyin.
+10. Email kullanıyorsanız SMTP alanlarını kaydedip Email Test Mesajı düğmesini deneyin.
+
+İlk açılışta notification_settings ve notification_channel_tests tabloları otomatik oluşturulur.
+
+GÜVENLİK NOTU
+- Bot token ve SMTP şifresi açık şekilde gösterilmez.
+- Gizli alanı boş bırakırsanız mevcut değer korunur.
+- Ayar kaydı audit log'a yazılır.

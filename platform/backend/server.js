@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.17.0';
+const APP_VERSION = '5.18.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -92,29 +92,42 @@ function alarmEscalationQueueEnabled() {
   return String(process.env.ALARM_ESCALATION_QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
 }
 
+let notificationRuntimeSettings = {};
+
+function runtimeNotificationValue(key, fallback) {
+  const value = notificationRuntimeSettings[key];
+  return value === null || value === undefined ? fallback : value;
+}
+
+function runtimeBoolean(key, envName, fallback) {
+  const value = runtimeNotificationValue(key, process.env[envName]);
+  if (value === null || value === undefined || value === '') return fallback;
+  return String(value).toLowerCase() === 'true';
+}
+
 function alarmEscalationDeliveryEnabled() {
-  return String(process.env.ALARM_ESCALATION_DELIVERY_ENABLED || 'true').toLowerCase() !== 'false';
+  return runtimeBoolean('delivery_enabled', 'ALARM_ESCALATION_DELIVERY_ENABLED', true);
 }
 
 function alarmEscalationAutoDeliveryEnabled() {
-  return String(process.env.ALARM_ESCALATION_AUTO_DELIVERY_ENABLED || 'false').toLowerCase() === 'true';
+  return runtimeBoolean('auto_delivery_enabled', 'ALARM_ESCALATION_AUTO_DELIVERY_ENABLED', false);
 }
 
 function alarmEscalationDeliveryIntervalSec() {
-  const value = Number(process.env.ALARM_ESCALATION_DELIVERY_INTERVAL_SEC || 60);
+  const value = Number(runtimeNotificationValue('interval_sec', process.env.ALARM_ESCALATION_DELIVERY_INTERVAL_SEC || 60));
   return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 15), 3600) : 60;
 }
 
 function alarmEscalationDeliveryBatchSize() {
-  const value = Number(process.env.ALARM_ESCALATION_DELIVERY_BATCH_SIZE || 20);
+  const value = Number(runtimeNotificationValue('batch_size', process.env.ALARM_ESCALATION_DELIVERY_BATCH_SIZE || 20));
   return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 1), 100) : 20;
 }
 
 function telegramEscalationConfig() {
-  const token = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
-  const defaultChatId = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+  const token = String(runtimeNotificationValue('telegram_bot_token', process.env.TELEGRAM_BOT_TOKEN || '') || '').trim();
+  const defaultChatId = String(runtimeNotificationValue('telegram_chat_id', process.env.TELEGRAM_CHAT_ID || '') || '').trim();
   return {
-    enabled:String(process.env.TELEGRAM_ESCALATION_ENABLED || 'true').toLowerCase() !== 'false',
+    enabled:runtimeBoolean('telegram_enabled', 'TELEGRAM_ESCALATION_ENABLED', true),
     token,
     defaultChatId,
     configured:Boolean(token && defaultChatId)
@@ -3427,6 +3440,160 @@ async function loadAlarmEscalationSnapshot() {
   return {rules:rulesResult.rows, activeAlarms, summary};
 }
 
+
+async function ensureNotificationSettingsFoundation() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      id smallint PRIMARY KEY DEFAULT 1 CHECK (id=1),
+      delivery_enabled boolean,
+      auto_delivery_enabled boolean,
+      interval_sec integer,
+      batch_size integer,
+      telegram_enabled boolean,
+      telegram_bot_token text,
+      telegram_chat_id text,
+      email_enabled boolean,
+      smtp_host text,
+      smtp_port integer,
+      smtp_secure boolean,
+      smtp_user text,
+      smtp_pass text,
+      smtp_from text,
+      email_default_to text,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`INSERT INTO notification_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notification_channel_tests (
+      id bigserial PRIMARY KEY,
+      channel text NOT NULL,
+      status text NOT NULL,
+      target_masked text,
+      provider_message_id text,
+      error_message text,
+      actor_email text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_notification_channel_tests_channel_created
+    ON notification_channel_tests(channel, created_at DESC)
+  `);
+  await loadNotificationRuntimeSettings();
+}
+
+async function loadNotificationRuntimeSettings() {
+  const row = await one(`SELECT * FROM notification_settings WHERE id=1`);
+  notificationRuntimeSettings = row || {};
+  return notificationRuntimeSettings;
+}
+
+function notificationBoolInput(value, fallback) {
+  if (value === undefined) return fallback;
+  if (typeof value === 'boolean') return value;
+  return String(value).toLowerCase() === 'true';
+}
+
+function notificationIntInput(value, fallback, min, max) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(Math.max(Math.floor(number), min), max);
+}
+
+function notificationTextInput(value, fallback = '', max = 1000) {
+  if (value === undefined) return fallback;
+  return String(value || '').trim().slice(0, max);
+}
+
+function notificationSecretInput(value, fallback = '') {
+  const clean = String(value || '').trim();
+  if (!clean || clean.includes('••••') || clean === '********') return fallback;
+  return clean.slice(0, 4000);
+}
+
+function maskNotificationValue(value, visibleEnd = 4) {
+  const clean = String(value || '').trim();
+  if (!clean) return '';
+  if (clean.length <= visibleEnd) return '••••';
+  return `${'•'.repeat(Math.min(12, Math.max(6, clean.length - visibleEnd)))}${clean.slice(-visibleEnd)}`;
+}
+
+async function lastNotificationTests() {
+  const result = await pool.query(`
+    SELECT DISTINCT ON (channel)
+      channel,status,target_masked,provider_message_id,error_message,actor_email,created_at
+    FROM notification_channel_tests
+    ORDER BY channel, created_at DESC
+  `);
+  return Object.fromEntries(result.rows.map(row => [row.channel, row]));
+}
+
+async function recordNotificationTest({channel, status, target, providerMessageId = null, errorMessage = null, actorEmail = null}) {
+  return one(`
+    INSERT INTO notification_channel_tests(channel,status,target_masked,provider_message_id,error_message,actor_email)
+    VALUES($1,$2,$3,$4,$5,$6)
+    RETURNING *
+  `, [channel, status, maskNotificationValue(target), providerMessageId, errorMessage, actorEmail]);
+}
+
+async function notificationSettingsSnapshot(actor = null) {
+  await ensureNotificationSettingsFoundation();
+  const email = emailConfig();
+  const telegram = telegramEscalationConfig();
+  const lastTests = await lastNotificationTests();
+  const latestDelivery = await one(`
+    SELECT delivery_status,channel,provider_message_id,last_error,delivered_at,failed_at,last_attempt_at
+    FROM alarm_escalation_events
+    WHERE last_attempt_at IS NOT NULL
+    ORDER BY last_attempt_at DESC
+    LIMIT 1
+  `);
+  const overrideKeys = [
+    'delivery_enabled','auto_delivery_enabled','interval_sec','batch_size',
+    'telegram_enabled','telegram_bot_token','telegram_chat_id',
+    'email_enabled','smtp_host','smtp_port','smtp_secure','smtp_user','smtp_pass','smtp_from','email_default_to'
+  ];
+  const hasOverrides = overrideKeys.some(key => notificationRuntimeSettings[key] !== null && notificationRuntimeSettings[key] !== undefined);
+  return {
+    can_manage:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
+    settings_source:hasOverrides ? 'database' : 'environment',
+    delivery:{
+      enabled:alarmEscalationDeliveryEnabled(),
+      auto_enabled:alarmEscalationAutoDeliveryEnabled(),
+      interval_sec:alarmEscalationDeliveryIntervalSec(),
+      batch_size:alarmEscalationDeliveryBatchSize()
+    },
+    telegram:{
+      enabled:telegram.enabled,
+      configured:telegram.configured,
+      token_configured:Boolean(telegram.token),
+      token_masked:maskNotificationValue(telegram.token),
+      chat_id_configured:Boolean(telegram.defaultChatId),
+      chat_id_masked:maskNotificationValue(telegram.defaultChatId),
+      last_test:lastTests.telegram || null
+    },
+    email:{
+      enabled:email.enabled,
+      configured:email.configured,
+      host:email.host,
+      port:email.port,
+      secure:email.secure,
+      user:email.user,
+      password_configured:Boolean(email.pass),
+      password_masked:maskNotificationValue(email.pass),
+      from:email.from,
+      default_to:email.defaultTo,
+      last_test:lastTests.email || null
+    },
+    latest_delivery:latestDelivery || null,
+    updated_at:notificationRuntimeSettings.updated_at || null,
+    updated_by:notificationRuntimeSettings.updated_by || null
+  };
+}
+
 function escalationEventLimit(raw, fallback = 100, max = 500) {
   const value = Number(raw || fallback);
   if (!Number.isFinite(value)) return fallback;
@@ -3678,6 +3845,124 @@ async function processAlarmEscalationDeliveries({limit, eventId = null, trigger 
     results
   };
 }
+
+
+app.get('/api/admin/notification-settings', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    const actor = req.user || getSession(req)?.user || null;
+    const snapshot = await notificationSettingsSnapshot(actor);
+    res.json({status:'ok', version:APP_VERSION, ...snapshot});
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.patch('/api/admin/notification-settings', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureNotificationSettingsFoundation();
+    const current = notificationRuntimeSettings || {};
+    const body = req.body || {};
+    const next = {
+      delivery_enabled:notificationBoolInput(body.delivery_enabled, current.delivery_enabled),
+      auto_delivery_enabled:notificationBoolInput(body.auto_delivery_enabled, current.auto_delivery_enabled),
+      interval_sec:notificationIntInput(body.interval_sec, current.interval_sec, 15, 3600),
+      batch_size:notificationIntInput(body.batch_size, current.batch_size, 1, 100),
+      telegram_enabled:notificationBoolInput(body.telegram_enabled, current.telegram_enabled),
+      telegram_bot_token:notificationSecretInput(body.telegram_bot_token, current.telegram_bot_token),
+      telegram_chat_id:notificationSecretInput(body.telegram_chat_id, current.telegram_chat_id),
+      email_enabled:notificationBoolInput(body.email_enabled, current.email_enabled),
+      smtp_host:notificationTextInput(body.smtp_host, current.smtp_host, 500),
+      smtp_port:notificationIntInput(body.smtp_port, current.smtp_port, 1, 65535),
+      smtp_secure:notificationBoolInput(body.smtp_secure, current.smtp_secure),
+      smtp_user:notificationTextInput(body.smtp_user, current.smtp_user, 500),
+      smtp_pass:notificationSecretInput(body.smtp_pass, current.smtp_pass),
+      smtp_from:notificationTextInput(body.smtp_from, current.smtp_from, 500),
+      email_default_to:notificationTextInput(body.email_default_to, current.email_default_to, 2000)
+    };
+    const actorEmail = req.user?.email || getSession(req)?.user?.email || 'system';
+    const oldSnapshot = await notificationSettingsSnapshot(req.user || null);
+    await pool.query(`
+      UPDATE notification_settings SET
+        delivery_enabled=$1, auto_delivery_enabled=$2, interval_sec=$3, batch_size=$4,
+        telegram_enabled=$5, telegram_bot_token=$6, telegram_chat_id=$7,
+        email_enabled=$8, smtp_host=$9, smtp_port=$10, smtp_secure=$11,
+        smtp_user=$12, smtp_pass=$13, smtp_from=$14, email_default_to=$15,
+        updated_by=$16, updated_at=now()
+      WHERE id=1
+    `, [
+      next.delivery_enabled,next.auto_delivery_enabled,next.interval_sec,next.batch_size,
+      next.telegram_enabled,next.telegram_bot_token,next.telegram_chat_id,
+      next.email_enabled,next.smtp_host,next.smtp_port,next.smtp_secure,
+      next.smtp_user,next.smtp_pass,next.smtp_from,next.email_default_to,actorEmail
+    ]);
+    await loadNotificationRuntimeSettings();
+    restartAlarmEscalationDeliveryWorker();
+    const snapshot = await notificationSettingsSnapshot(req.user || null);
+    await writeAuditLog(req, {
+      action:'update_notification_settings',
+      entity_type:'notification_settings',
+      entity_id:'global',
+      old_values:{delivery:oldSnapshot.delivery,telegram:{enabled:oldSnapshot.telegram.enabled,configured:oldSnapshot.telegram.configured},email:{enabled:oldSnapshot.email.enabled,configured:oldSnapshot.email.configured}},
+      new_values:{delivery:snapshot.delivery,telegram:{enabled:snapshot.telegram.enabled,configured:snapshot.telegram.configured},email:{enabled:snapshot.email.enabled,configured:snapshot.email.configured}},
+      metadata:{secrets_changed:Boolean(body.telegram_bot_token || body.smtp_pass)}
+    });
+    res.json({status:'ok', version:APP_VERSION, ...snapshot});
+  } catch(e) {
+    res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/notification-settings/test-telegram', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  const actorEmail = req.user?.email || getSession(req)?.user?.email || 'system';
+  const cfg = telegramEscalationConfig();
+  const target = notificationTextInput(req.body?.chat_id, cfg.defaultChatId, 500);
+  try {
+    if (!cfg.enabled) throw new Error('Telegram channel is disabled');
+    if (!cfg.token) throw new Error('Telegram bot token is not configured');
+    if (!target) throw new Error('Telegram chat id is not configured');
+    const response = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        chat_id:target,
+        text:`FactoryBox v${APP_VERSION} test mesajı\n\nTelegram bildirim kanalı hazır ve çalışıyor.`,
+        disable_web_page_preview:true
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) throw new Error(payload.description || `Telegram HTTP ${response.status}`);
+    const messageId = payload.result?.message_id ? String(payload.result.message_id) : null;
+    const test = await recordNotificationTest({channel:'telegram',status:'delivered',target,providerMessageId:messageId,actorEmail});
+    await writeAuditLog(req, {action:'test_telegram_notification',entity_type:'notification_channel',entity_id:'telegram',old_values:null,new_values:{status:'delivered',message_id:messageId},metadata:{target:maskNotificationValue(target)}});
+    res.json({status:'ok',version:APP_VERSION,sent:true,message_id:messageId,test});
+  } catch(e) {
+    const message = String(e.message || e).slice(0,500);
+    const test = await recordNotificationTest({channel:'telegram',status:'failed',target,errorMessage:message,actorEmail});
+    res.status(500).json({status:'error',version:APP_VERSION,sent:false,message,test});
+  }
+});
+
+app.post('/api/admin/notification-settings/test-email', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  const actorEmail = req.user?.email || getSession(req)?.user?.email || 'system';
+  const cfg = emailConfig();
+  const target = notificationTextInput(req.body?.to, cfg.defaultTo, 2000);
+  try {
+    const result = await sendReportEmail({
+      to:target,
+      subject:`FactoryBox v${APP_VERSION} Email Test`,
+      html:emailShellHtml('FactoryBox Email Test', `<h1 style="margin:0 0 12px;color:#102033;">Bildirim kanalı hazır</h1><p>FactoryBox v${APP_VERSION} test e-postası başarıyla gönderildi.</p>`),
+      text:`FactoryBox v${APP_VERSION} test e-postası. Email bildirim kanalı hazır ve çalışıyor.`
+    });
+    if (!result.sent) throw new Error(result.reason || 'Email could not be sent');
+    const test = await recordNotificationTest({channel:'email',status:'delivered',target,providerMessageId:result.message_id,actorEmail});
+    await writeAuditLog(req, {action:'test_email_notification',entity_type:'notification_channel',entity_id:'email',old_values:null,new_values:{status:'delivered',message_id:result.message_id},metadata:{target:maskNotificationValue(target)}});
+    res.json({status:'ok',version:APP_VERSION,sent:true,email:result,test});
+  } catch(e) {
+    const message = String(e.message || e).slice(0,500);
+    const test = await recordNotificationTest({channel:'email',status:'failed',target,errorMessage:message,actorEmail});
+    res.status(500).json({status:'error',version:APP_VERSION,sent:false,message,test});
+  }
+});
 
 app.get('/api/admin/alarm-escalation/delivery-status', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
   try {
@@ -7914,19 +8199,25 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
 
 
 function emailConfig() {
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secureEnv = String(process.env.SMTP_SECURE || '').toLowerCase();
+  const host = String(runtimeNotificationValue('smtp_host', process.env.SMTP_HOST || '') || '').trim();
+  const port = Number(runtimeNotificationValue('smtp_port', process.env.SMTP_PORT || 587));
+  const secureRaw = runtimeNotificationValue('smtp_secure', process.env.SMTP_SECURE || '');
+  const user = String(runtimeNotificationValue('smtp_user', process.env.SMTP_USER || '') || '').trim();
+  const pass = String(runtimeNotificationValue('smtp_pass', process.env.SMTP_PASS || '') || '');
+  const from = String(runtimeNotificationValue('smtp_from', process.env.SMTP_FROM || user) || '').trim();
+  const defaultTo = String(runtimeNotificationValue('email_default_to', process.env.REPORT_EMAIL_TO || '') || '').trim();
+  const secure = String(secureRaw).toLowerCase() === 'true' || port === 465;
 
   return {
-    enabled: String(process.env.EMAIL_REPORTS_ENABLED || 'true').toLowerCase() !== 'false',
-    host: process.env.SMTP_HOST || '',
-    port,
-    secure: secureEnv === 'true' || port === 465,
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || '',
-    defaultTo: process.env.REPORT_EMAIL_TO || '',
-    configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && (process.env.SMTP_FROM || process.env.SMTP_USER))
+    enabled:runtimeBoolean('email_enabled', 'EMAIL_REPORTS_ENABLED', true),
+    host,
+    port:Number.isFinite(port) ? port : 587,
+    secure,
+    user,
+    pass,
+    from,
+    defaultTo,
+    configured:Boolean(host && user && pass && from)
   };
 }
 
@@ -8008,7 +8299,7 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v5.7.0</p>
+    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v${APP_VERSION}</p>
   </div>
 </body>
 </html>`;
@@ -8179,7 +8470,15 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 
 
 let alarmEscalationDeliveryTimer = null;
+let alarmEscalationDeliveryKickoffTimer = null;
 let alarmEscalationDeliveryRunning = false;
+
+function stopAlarmEscalationDeliveryWorker() {
+  if (alarmEscalationDeliveryTimer) clearInterval(alarmEscalationDeliveryTimer);
+  if (alarmEscalationDeliveryKickoffTimer) clearTimeout(alarmEscalationDeliveryKickoffTimer);
+  alarmEscalationDeliveryTimer = null;
+  alarmEscalationDeliveryKickoffTimer = null;
+}
 
 function startAlarmEscalationDeliveryWorker() {
   if (!alarmEscalationDeliveryEnabled() || !alarmEscalationAutoDeliveryEnabled()) {
@@ -8208,8 +8507,14 @@ function startAlarmEscalationDeliveryWorker() {
 
   alarmEscalationDeliveryTimer = setInterval(run, alarmEscalationDeliveryIntervalSec() * 1000);
   alarmEscalationDeliveryTimer.unref?.();
-  setTimeout(run, 2500).unref?.();
+  alarmEscalationDeliveryKickoffTimer = setTimeout(run, 2500);
+  alarmEscalationDeliveryKickoffTimer.unref?.();
   console.log(`Alarm escalation auto delivery: every ${alarmEscalationDeliveryIntervalSec()} sec`);
+}
+
+function restartAlarmEscalationDeliveryWorker() {
+  stopAlarmEscalationDeliveryWorker();
+  startAlarmEscalationDeliveryWorker();
 }
 
 async function start() {
@@ -8224,6 +8529,7 @@ async function start() {
   await ensureAssetManagementFoundation();
   await ensureLiveMonitoringFoundation();
   await ensureAlarmEscalationFoundation();
+  await ensureNotificationSettingsFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });
