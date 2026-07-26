@@ -1,0 +1,9 @@
+FactoryBox One v5.24.1 OEE Duplicate Cleanup Hotfix
+
+Paket yalnızca değişen dosyaları içerir:
+
+platform/backend/server.js
+platform/backend/public/admin.html
+docs/V5_24_1_OEE_DUPLICATE_CLEANUP_HOTFIX.md
+V5_24_1_PAKET_ICERIGI.txt
+KURULUM_V5_24_1.txt

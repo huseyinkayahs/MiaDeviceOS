@@ -356,6 +356,25 @@
     .live-toolbar-v511 { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:12px 0; }
     .live-updated-v511 { color:var(--fb-muted); font-size:13px; }
 
+
+    .oee-flow-v524 { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:9px; margin:14px 0 18px; padding:12px; border:1px dashed #b9c9db; border-radius:16px; background:#f8fbff; }
+    .oee-flow-v524 span { padding:7px 11px; border-radius:999px; background:#fff; border:1px solid var(--fb-border); font-weight:800; font-size:12px; }
+    .oee-panel-v524 { margin:16px 0; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:#fff; box-shadow:0 10px 22px rgba(20,45,75,.04); }
+    .oee-panel-v524 h3 { margin:0 0 12px; }
+    .oee-score-v524 { min-width:110px; }
+    .oee-score-v524 strong { display:block; font-size:20px; color:var(--fb-primary); }
+    .oee-score-v524 small { color:var(--fb-muted); }
+    .oee-progress-v524 { min-width:140px; }
+    .oee-progress-v524 header { display:flex; justify-content:space-between; gap:8px; font-size:12px; font-weight:800; }
+    .oee-progress-v524 div { height:8px; margin-top:6px; border-radius:999px; background:#e8eef5; overflow:hidden; }
+    .oee-progress-v524 i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#315b85,#20a37a); }
+    .oee-health-v524 { display:inline-flex; padding:5px 9px; border-radius:999px; font-weight:900; font-size:11px; text-transform:uppercase; }
+    .oee-health-v524.on_target { background:#e8f8f2; color:#116149; }
+    .oee-health-v524.watch { background:#fff4d9; color:#8a5a00; }
+    .oee-health-v524.critical { background:#ffe8ec; color:#9f1d2d; }
+    .oee-health-v524.no_production { background:#eef3f8; color:#46586f; }
+    .oee-form-result-v524 { margin-top:10px; }
+
     @media (max-width: 980px) {
       .admin-shell-v58 { grid-template-columns:1fr; }
       .admin-sidebar-v58 {
@@ -381,13 +400,14 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.23.0 — Spare Parts & Inventory aktif.</p>
+      <p id="adminVersionLabel">v5.24.1 — OEE kayıt temizleme ve tekrar koruması aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
     <nav class="admin-nav-v58" aria-label="Admin panel menüsü">
       <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>📊 Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="live"><span>🟢 Live Monitoring</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="oee"><span>📈 OEE & Downtime</span><span class="admin-nav-pill-v58">1</span></button>
 
       <div class="admin-nav-group-v517" data-nav-group="alarm">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="alarm" aria-expanded="false" aria-controls="alarmSubmenuV517">
@@ -436,7 +456,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v5.23: Yedek parça stokları, hareketler ve bakım tüketimleri tek merkezde.
+      v5.24.1: OEE kayıtları, tekrar koruması ve manuel test temizliği tek merkezde.
     </div>
   </aside>
 
@@ -465,7 +485,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.23.0: Bakım, iş emri ve yedek parça stokları birlikte yönetilebilir.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.24.1: OEE analizleri, kayıt silme ve test verisi temizleme aktif.</p>
       </div>
     </div>
 
@@ -487,6 +507,74 @@
     <div id="liveMonitoringSummary" class="mini-status">Canlı izleme özeti yükleniyor...</div>
     <div id="liveMachineCards" class="live-grid-v511">Makine kartları yükleniyor...</div>
     <div id="liveMachineTable">Makine telemetri tablosu yükleniyor...</div>
+  </section>
+
+  <section id="oeeAnalyticsSection" class="card wide admin-card" data-admin-view="oee">
+    <div class="section-title-row">
+      <div><h2>Machine Downtime & OEE Analytics</h2><p class="muted">Makine duruşlarını, üretim adetlerini ve Availability × Performance × Quality üzerinden OEE değerlerini izle.</p></div>
+      <button id="refreshOeeAnalyticsBtn" class="secondary-btn">OEE Verilerini Yenile</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>Başlangıç<input id="oeeFromFilter" type="date"></label>
+      <label>Bitiş<input id="oeeToFilter" type="date"></label>
+      <label>Makine<select id="oeeMachineFilter"><option value="all">Tüm makineler</option></select></label>
+      <div class="admin-form-actions"><button id="applyOeeFiltersBtn" class="primary-btn">Analizi Uygula</button></div>
+      <div class="admin-form-actions"><button id="syncOeeMachineStatesBtn" class="secondary-btn">STOPPED Sinyallerini Aktar</button></div>
+      <div class="admin-form-actions"><button id="cleanupOeeManualRecordsBtn" class="secondary-btn">Seçili Manuel Test Kayıtlarını Temizle</button></div>
+    </div>
+    <div id="oeeAnalyticsResult" class="mini-status">OEE verileri yükleniyor...</div>
+    <div class="mini-status">OEE hesabı seçili tarih aralığındaki bütün üretim ve duruş kayıtlarını toplar. Aynı test kaydını tekrar eklemek sonucu değiştirir.</div>
+    <div id="oeeSummary">OEE KPI özeti yükleniyor...</div>
+    <div class="oee-flow-v524"><span>Planlı Üretim Süresi</span><b>−</b><span>Duruş</span><b>=</b><span>Availability</span><b>×</b><span>Performance</span><b>×</b><span>Quality</span><b>=</b><span>OEE</span></div>
+
+    <div class="oee-panel-v524">
+      <h3>Makine OEE Ayarları</h3>
+      <div class="admin-form-grid">
+        <label>Makine<select id="oeeSettingsMachine"><option value="">Makine seç...</option></select></label>
+        <label>Günlük Planlı Süre (dk)<input id="oeePlannedMinutes" type="number" min="1" max="1440" value="480"></label>
+        <label>İdeal Çevrim (sn/adet)<input id="oeeIdealCycleSec" type="number" min="0.001" step="0.001" value="60"></label>
+        <label>Hedef OEE (%)<input id="oeeTargetPct" type="number" min="1" max="100" step="0.1" value="85"></label>
+        <label>OEE Takibi<select id="oeeEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+        <div class="admin-form-actions"><button id="saveOeeSettingsBtn" class="primary-btn">OEE Ayarlarını Kaydet</button></div>
+      </div>
+      <div id="oeeSettingsResult" class="mini-status oee-form-result-v524">Makine ayarı bekleniyor.</div>
+    </div>
+
+    <div class="oee-panel-v524">
+      <h3>Üretim Kaydı</h3>
+      <div class="admin-form-grid">
+        <label>Makine<select id="oeeProductionMachine"><option value="">Makine seç...</option></select></label>
+        <label>Tarih<input id="oeeProductionDate" type="date"></label>
+        <label>Vardiya<input id="oeeProductionShift" type="text" value="general" placeholder="A / B / general"></label>
+        <label>Toplam Adet<input id="oeeProductionTotal" type="number" min="0" value="100"></label>
+        <label>Sağlam Adet<input id="oeeProductionGood" type="number" min="0" value="95"></label>
+        <label>Hatalı Adet<input id="oeeProductionReject" type="number" min="0" value="5"></label>
+        <label class="maintenance-wide-v521">Not<textarea id="oeeProductionNote" placeholder="Üretim emri veya vardiya açıklaması"></textarea></label>
+        <div class="admin-form-actions"><button id="createOeeProductionBtn" class="primary-btn">Üretim Kaydı Ekle</button></div>
+      </div>
+      <div id="oeeProductionResult" class="mini-status oee-form-result-v524">Üretim kaydı bekleniyor.</div>
+    </div>
+
+    <div class="oee-panel-v524">
+      <h3>Duruş Kaydı</h3>
+      <div class="admin-form-grid">
+        <label>Makine<select id="oeeDowntimeMachine"><option value="">Makine seç...</option></select></label>
+        <label>Kategori<select id="oeeDowntimeCategory"><option value="unplanned">unplanned</option><option value="planned">planned</option></select></label>
+        <label>Neden<select id="oeeDowntimeReason"><option value="breakdown">breakdown</option><option value="material_wait">material_wait</option><option value="operator_wait">operator_wait</option><option value="setup">setup</option><option value="changeover">changeover</option><option value="planned_maintenance">planned_maintenance</option><option value="quality_stop">quality_stop</option><option value="power">power</option><option value="safety">safety</option><option value="other">other</option></select></label>
+        <label>Başlangıç<input id="oeeDowntimeStart" type="datetime-local"></label>
+        <label>Bitiş<input id="oeeDowntimeEnd" type="datetime-local"></label>
+        <label>Neden Açıklaması<input id="oeeDowntimeReasonText" type="text" placeholder="Örn: Egzoz fanı arızası"></label>
+        <label class="maintenance-wide-v521">Not<textarea id="oeeDowntimeNote" placeholder="Duruşta yapılan işlem ve açıklama"></textarea></label>
+        <div class="admin-form-actions"><button id="createOeeDowntimeBtn" class="primary-btn">Duruş Kaydı Ekle</button></div>
+      </div>
+      <div id="oeeDowntimeResult" class="mini-status oee-form-result-v524">Duruş kaydı bekleniyor.</div>
+    </div>
+
+    <div class="kpi-panel-v59"><h3>Makine Bazlı OEE</h3><div id="oeeMachinesTable">Makine OEE tablosu yükleniyor...</div></div>
+    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Günlük OEE Trendi</h3><div id="oeeDailyTrendTable">Günlük trend yükleniyor...</div></div>
+    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Son Üretim Kayıtları</h3><div id="oeeProductionTable">Üretim kayıtları yükleniyor...</div></div>
+    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Son Duruş Kayıtları</h3><div id="oeeDowntimeTable">Duruş kayıtları yükleniyor...</div></div>
   </section>
 
   
@@ -1319,11 +1407,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.23.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.24.1').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Preventive Maintenance Scheduler aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Bakım planları, otomatik iş emirleri ve tamamlanma geçmişi aktif.`;
+    if (brand) brand.textContent = `v${safeVersion} — Machine Downtime & OEE Analytics aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Makine duruşları, üretim kayıtları ve OEE KPI analizleri aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1451,6 +1539,10 @@
     live: {
       title:'Live Monitoring',
       desc:'Makine canlı durumları, son telemetri ve bağlantı sağlığı.'
+    },
+    oee: {
+      title:'Machine Downtime & OEE Analytics',
+      desc:'Availability, Performance, Quality, OEE, üretim adetleri ve duruş nedenleri.'
     },
     alarms: {
       title:'Alarm Center',
@@ -2186,6 +2278,62 @@
     target.innerHTML=`<h3>${esc(p.part_no||'Parça')} — ${esc(p.name||'-')}</h3><p class="mini-status">${inventoryStockBadge(p)} · Stok: <strong>${fmtMetric(p.current_stock)} ${esc(p.unit||'')}</strong> · Minimum: <strong>${fmtMetric(p.min_stock)}</strong> · Konum: <strong>${esc(p.location||'-')}</strong></p>
       <h4>Stok Hareketleri</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Tip',value:r=>r.movement_type},{label:'Değişim',value:r=>`${Number(r.quantity_change)>0?'+':''}${fmtMetric(r.quantity_change)}`},{label:'Bakiye',value:r=>`${fmtMetric(r.balance_before)} → ${fmtMetric(r.balance_after)}`},{label:'Referans',value:r=>r.reference_no||r.reference_type||'-'},{label:'Actor',value:r=>r.actor_email||'-'},{label:'Not',value:r=>r.note||'-'}],data.movements||[])}
       <h4>Bakım İş Emri Tüketimleri</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'İş Emri',value:r=>r.work_order_no},{label:'Makine',value:r=>`${r.machine_name||'-'} (${r.machine_code||'-'})`},{label:'Miktar',value:r=>`${fmtMetric(r.quantity)} ${p.unit||''}`},{label:'Durum',value:r=>r.status},{label:'Teknisyen',value:r=>r.consumed_by||'-'},{label:'Not',value:r=>r.note||'-'}],data.work_order_usages||[])}`;
+  }
+
+
+  let oeeMachineRows = new Map();
+
+  function oeeDefaultDates() {
+    const toInput=document.getElementById('oeeToFilter');const fromInput=document.getElementById('oeeFromFilter');
+    const today=new Date();const to=today.toISOString().slice(0,10);const from=new Date(Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate()-6)).toISOString().slice(0,10);
+    if(toInput&&!toInput.value)toInput.value=to;if(fromInput&&!fromInput.value)fromInput.value=from;
+    const productionDate=document.getElementById('oeeProductionDate');if(productionDate&&!productionDate.value)productionDate.value=to;
+    const start=document.getElementById('oeeDowntimeStart');const end=document.getElementById('oeeDowntimeEnd');
+    if(start&&!start.value){const d=new Date(Date.now()-30*60000);start.value=fmtDateTimeLocal(d.toISOString());}
+    if(end&&!end.value)end.value=fmtDateTimeLocal(new Date().toISOString());
+  }
+
+  function oeeQueryString() {
+    oeeDefaultDates();const params=new URLSearchParams();params.set('from',document.getElementById('oeeFromFilter')?.value||'');params.set('to',document.getElementById('oeeToFilter')?.value||'');params.set('machine_id',document.getElementById('oeeMachineFilter')?.value||'all');return params.toString();
+  }
+
+  function oeeHealthBadge(value) { return `<span class="oee-health-v524 ${esc(value||'no_production')}">${esc(String(value||'no_production').replaceAll('_',' '))}</span>`; }
+
+  function oeeProgress(label,value) {
+    const pct=Math.min(Math.max(Number(value||0),0),100);return `<div class="oee-progress-v524"><header><span>${esc(label)}</span><strong>%${fmtMetric(pct)}</strong></header><div><i style="width:${pct}%"></i></div></div>`;
+  }
+
+  function syncOeeSettingInputs(machineId) {
+    const row=oeeMachineRows.get(String(machineId));if(!row)return;
+    const planned=document.getElementById('oeePlannedMinutes');const ideal=document.getElementById('oeeIdealCycleSec');const target=document.getElementById('oeeTargetPct');const enabled=document.getElementById('oeeEnabled');
+    if(planned)planned.value=row.planned_minutes_per_day||480;if(ideal)ideal.value=row.ideal_cycle_sec||60;if(target)target.value=row.target_oee_pct||85;if(enabled)enabled.value=String(row.enabled!==false);
+  }
+
+  function renderOeeAnalytics(data) {
+    const summary=document.getElementById('oeeSummary');const machinesTarget=document.getElementById('oeeMachinesTable');if(!summary||!machinesTarget)return;const x=data.summary||{};
+    summary.innerHTML=`<div class="kpi-grid-v59"><div class="kpi-card-v59"><span>Availability</span><strong>%${fmtMetric(x.availability_pct||0)}</strong><small>Planlı süre içinde çalışabilirlik</small></div><div class="kpi-card-v59"><span>Performance</span><strong>%${fmtMetric(x.performance_pct||0)}</strong><small>İdeal çevrime göre hız</small></div><div class="kpi-card-v59"><span>Quality</span><strong>%${fmtMetric(x.quality_pct||0)}</strong><small>${esc(x.good_count||0)} sağlam / ${esc(x.total_count||0)} toplam</small></div><div class="kpi-card-v59"><span>OEE</span><strong>%${fmtMetric(x.oee_pct||0)}</strong><small>A × P × Q</small></div></div>`;
+    const range=document.getElementById('oeeAnalyticsResult');if(range)range.innerHTML=`Analiz aralığı: <strong>${esc(data.range?.from||'-')} → ${esc(data.range?.to||'-')}</strong> · Makine: <strong>${esc(x.machine_count||0)}</strong> · Plansız duruş: <strong>${fmtDuration(x.unplanned_downtime_sec||0)}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}`;
+    oeeMachineRows=new Map((data.machines||[]).map(row=>[String(row.machine_id),row]));
+    const machineOptions=(data.machines||[]).map(m=>`<option value="${esc(m.machine_id)}">${esc(`${m.machine_name||m.machine_code} (${m.machine_code})`)}</option>`).join('');
+    ['oeeSettingsMachine','oeeProductionMachine','oeeDowntimeMachine'].forEach(id=>{const el=document.getElementById(id);if(!el||document.activeElement===el)return;const current=el.value;el.innerHTML=`<option value="">Makine seç...</option>${machineOptions}`;if([...el.options].some(o=>o.value===current))el.value=current;else if(el.options.length>1)el.selectedIndex=1;});
+    const filter=document.getElementById('oeeMachineFilter');if(filter&&document.activeElement!==filter&&filter.options.length<=1){const current=filter.value||'all';filter.innerHTML=`<option value="all">Tüm makineler</option>${machineOptions}`;if([...filter.options].some(o=>o.value===current))filter.value=current;}
+    const settingSelect=document.getElementById('oeeSettingsMachine');if(settingSelect?.value)syncOeeSettingInputs(settingSelect.value);
+    machinesTarget.innerHTML=table([
+      {label:'Makine',html:true,value:r=>`<div class="maintenance-ticket-title-v521"><strong>${esc(r.machine_name||r.machine_code)}</strong><small>${esc(r.customer_code||'-')}/${esc(r.site_code||'-')} · ${esc(r.machine_code)}</small></div>`},
+      {label:'Durum',html:true,value:r=>oeeHealthBadge(r.health)},
+      {label:'Availability',html:true,value:r=>oeeProgress('A',r.availability_pct)},
+      {label:'Performance',html:true,value:r=>oeeProgress('P',r.performance_pct)},
+      {label:'Quality',html:true,value:r=>oeeProgress('Q',r.quality_pct)},
+      {label:'OEE',html:true,value:r=>oeeProgress('OEE',r.oee_pct)},
+      {label:'Üretim',value:r=>`${r.good_count}/${r.total_count} sağlam · ${r.reject_count} hata`},
+      {label:'Duruş',value:r=>`Plansız ${fmtDuration(r.unplanned_downtime_sec)} · Planlı ${fmtDuration(r.planned_downtime_sec)}`},
+      {label:'Sinyal',value:r=>`RUN ${fmtDuration(r.signal_run_sec)} · STOP ${fmtDuration(r.signal_stop_sec)}`},
+      {label:'Hedef',value:r=>`%${fmtMetric(r.target_oee_pct)} · ${fmtMetric(r.ideal_cycle_sec)} sn/adet`}
+    ],data.machines||[]);
+    const trend=document.getElementById('oeeDailyTrendTable');if(trend)trend.innerHTML=table([{label:'Tarih',value:r=>r.date},{label:'Availability',value:r=>`%${fmtMetric(r.availability_pct)}`},{label:'Performance',value:r=>`%${fmtMetric(r.performance_pct)}`},{label:'Quality',value:r=>`%${fmtMetric(r.quality_pct)}`},{label:'OEE',html:true,value:r=>oeeProgress('OEE',r.oee_pct)},{label:'Üretim',value:r=>`${r.good_count}/${r.total_count}`},{label:'Plansız Duruş',value:r=>fmtDuration(r.unplanned_downtime_sec)}],data.daily_trend||[]);
+    const machineName=id=>{const row=oeeMachineRows.get(String(id));return row?`${row.machine_name||row.machine_code} (${row.machine_code})`:'-';};
+    const production=document.getElementById('oeeProductionTable');if(production)production.innerHTML=table([{label:'Tarih',value:r=>r.production_date},{label:'Makine',value:r=>machineName(r.machine_id)},{label:'Vardiya',value:r=>r.shift_code},{label:'Toplam',value:r=>r.total_count},{label:'Sağlam',value:r=>r.good_count},{label:'Hatalı',value:r=>r.reject_count},{label:'Quality',value:r=>r.total_count?`%${fmtMetric(Number(r.good_count)/Number(r.total_count)*100)}`:'%0'},{label:'Kaynak',value:r=>r.source},{label:'Actor',value:r=>r.recorded_by||'-'},{label:'Not',value:r=>r.note||'-'},{label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="delete-oee-production" data-id="${esc(r.id)}">Sil</button>`:'-'}],data.production_records||[]);
+    const downtime=document.getElementById('oeeDowntimeTable');if(downtime)downtime.innerHTML=table([{label:'Başlangıç',value:r=>fmtDate(r.started_at)},{label:'Bitiş',value:r=>fmtDate(r.ended_at)},{label:'Makine',value:r=>machineName(r.machine_id)},{label:'Kategori',html:true,value:r=>maintenanceBadge(r.category)},{label:'Neden',value:r=>`${r.reason_code}${r.reason_text?' · '+r.reason_text:''}`},{label:'Süre',value:r=>fmtDuration(r.duration_sec)},{label:'Kaynak',value:r=>r.source},{label:'Actor',value:r=>r.recorded_by||'-'},{label:'Not',value:r=>r.note||'-'},{label:'Aksiyon',html:true,value:r=>{if(!data.can_manage)return '-';const close=!r.ended_at?`<button class="primary-btn mini-btn" data-action="close-oee-downtime" data-id="${esc(r.id)}">Şimdi Bitir</button> `:'';return `${close}<button class="secondary-btn mini-btn" data-action="delete-oee-downtime" data-id="${esc(r.id)}">Sil</button>`;}}],data.downtime_records||[]);
   }
 
   function renderAlarmCenter(data) {
@@ -2934,6 +3082,7 @@
     const tasks = [
       ['dashboard-summary', '/api/admin/dashboard-summary', renderDashboardSummary, 'adminDashboardSummary'],
       ['live-monitoring', '/api/admin/live-monitoring?limit=120', renderLiveMonitoring, 'liveMachineCards'],
+      ['oee-analytics', `/api/admin/oee-analytics?${oeeQueryString()}`, renderOeeAnalytics, 'oeeMachinesTable'],
       ['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable'],
       ['alarm-analytics', `/api/admin/alarm-analytics?${alarmAnalyticsQueryString()}`, renderAlarmAnalytics, 'alarmAnalyticsSummary'],
       ['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary'],
@@ -3381,6 +3530,43 @@
   }
 
 
+
+  async function saveOeeSettings() {
+    const machineId=document.getElementById('oeeSettingsMachine').value;if(!machineId)throw new Error('OEE ayarı için makine seç.');return apiJson(`/api/admin/oee/settings/${encodeURIComponent(machineId)}`,{method:'PATCH',body:JSON.stringify({planned_minutes_per_day:Number(document.getElementById('oeePlannedMinutes').value||480),ideal_cycle_sec:Number(document.getElementById('oeeIdealCycleSec').value||60),target_oee_pct:Number(document.getElementById('oeeTargetPct').value||85),enabled:document.getElementById('oeeEnabled').value==='true'})});
+  }
+
+  async function createOeeProduction() {
+    const machineId=document.getElementById('oeeProductionMachine').value;if(!machineId)throw new Error('Üretim kaydı için makine seç.');return apiJson('/api/admin/oee/production',{method:'POST',body:JSON.stringify({machine_id:machineId,production_date:document.getElementById('oeeProductionDate').value,shift_code:document.getElementById('oeeProductionShift').value.trim(),total_count:Number(document.getElementById('oeeProductionTotal').value||0),good_count:Number(document.getElementById('oeeProductionGood').value||0),reject_count:Number(document.getElementById('oeeProductionReject').value||0),source:'manual',note:document.getElementById('oeeProductionNote').value.trim()})});
+  }
+
+  async function createOeeDowntime() {
+    const machineId=document.getElementById('oeeDowntimeMachine').value;if(!machineId)throw new Error('Duruş kaydı için makine seç.');return apiJson('/api/admin/oee/downtime',{method:'POST',body:JSON.stringify({machine_id:machineId,category:document.getElementById('oeeDowntimeCategory').value,reason_code:document.getElementById('oeeDowntimeReason').value,reason_text:document.getElementById('oeeDowntimeReasonText').value.trim(),started_at:document.getElementById('oeeDowntimeStart').value,ended_at:document.getElementById('oeeDowntimeEnd').value||null,note:document.getElementById('oeeDowntimeNote').value.trim()})});
+  }
+
+  async function syncOeeMachineStates() {
+    oeeDefaultDates();return apiJson('/api/admin/oee/sync-machine-states',{method:'POST',body:JSON.stringify({from:document.getElementById('oeeFromFilter').value,to:document.getElementById('oeeToFilter').value})});
+  }
+
+  async function closeOeeDowntime(button) { return apiJson(`/api/admin/oee/downtime/${encodeURIComponent(button.dataset.id)}/close`,{method:'PATCH',body:JSON.stringify({})}); }
+
+  async function deleteOeeProduction(button) {
+    if(!window.confirm('Bu üretim kaydı silinsin mi? OEE sonucu yeniden hesaplanacaktır.'))return null;
+    return apiJson(`/api/admin/oee/production/${encodeURIComponent(button.dataset.id)}`,{method:'DELETE'});
+  }
+
+  async function deleteOeeDowntime(button) {
+    if(!window.confirm('Bu duruş kaydı silinsin mi? OEE sonucu yeniden hesaplanacaktır.'))return null;
+    return apiJson(`/api/admin/oee/downtime/${encodeURIComponent(button.dataset.id)}`,{method:'DELETE'});
+  }
+
+  async function cleanupOeeManualRecords() {
+    oeeDefaultDates();const machineId=document.getElementById('oeeMachineFilter').value;
+    if(!machineId||machineId==='all')throw new Error('Temizleme için önce tek bir makine seç.');
+    const from=document.getElementById('oeeFromFilter').value;const to=document.getElementById('oeeToFilter').value;
+    if(!window.confirm(`${from} → ${to} aralığındaki seçili makinenin bütün MANUEL üretim ve duruş test kayıtları silinsin mi?`))return null;
+    return apiJson('/api/admin/oee/cleanup-manual-records',{method:'POST',body:JSON.stringify({machine_id:machineId,from,to})});
+  }
+
   async function createInventoryPart() {
     return apiJson('/api/admin/inventory/parts',{method:'POST',body:JSON.stringify({
       name:document.getElementById('inventoryPartName').value.trim(),sku:document.getElementById('inventoryPartSku').value.trim(),category:document.getElementById('inventoryPartCategory').value.trim(),unit:document.getElementById('inventoryPartUnit').value.trim(),location:document.getElementById('inventoryPartLocation').value.trim(),supplier:document.getElementById('inventoryPartSupplier').value.trim(),initial_stock:Number(document.getElementById('inventoryPartInitialStock').value||0),min_stock:Number(document.getElementById('inventoryPartMinStock').value||0),reorder_qty:Number(document.getElementById('inventoryPartReorderQty').value||0),unit_cost:Number(document.getElementById('inventoryPartUnitCost').value||0),description:document.getElementById('inventoryPartDescription').value.trim(),enabled:true
@@ -3645,6 +3831,15 @@
       if (action === 'show-inventory-history') {
         await showInventoryHistory(button);status.textContent='Parça stok geçmişi yüklendi.';
       }
+      if (action === 'close-oee-downtime') {
+        const result=await closeOeeDowntime(button);await loadAdmin();status.textContent=`Duruş kaydı kapatıldı: ${fmtDuration(result.record?.duration_sec||0)}`;
+      }
+      if (action === 'delete-oee-production') {
+        const result=await deleteOeeProduction(button);if(result){await loadAdmin();status.textContent='Üretim kaydı silindi ve OEE yeniden hesaplandı.';}else status.textContent='Silme iptal edildi.';
+      }
+      if (action === 'delete-oee-downtime') {
+        const result=await deleteOeeDowntime(button);if(result){await loadAdmin();status.textContent='Duruş kaydı silindi ve OEE yeniden hesaplandı.';}else status.textContent='Silme iptal edildi.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -3665,6 +3860,13 @@
     const createMachineBtn = document.getElementById('createMachineBtn');
     const refreshMachinesBtn = document.getElementById('refreshMachinesBtn');
     const refreshLiveMonitoringBtn = document.getElementById('refreshLiveMonitoringBtn');
+    const refreshOeeAnalyticsBtn = document.getElementById('refreshOeeAnalyticsBtn');
+    const applyOeeFiltersBtn = document.getElementById('applyOeeFiltersBtn');
+    const syncOeeMachineStatesBtn = document.getElementById('syncOeeMachineStatesBtn');
+    const cleanupOeeManualRecordsBtn = document.getElementById('cleanupOeeManualRecordsBtn');
+    const saveOeeSettingsBtn = document.getElementById('saveOeeSettingsBtn');
+    const createOeeProductionBtn = document.getElementById('createOeeProductionBtn');
+    const createOeeDowntimeBtn = document.getElementById('createOeeDowntimeBtn');
     const refreshAlarmCenterBtn = document.getElementById('refreshAlarmCenterBtn');
     const applyAlarmFiltersBtn = document.getElementById('applyAlarmFiltersBtn');
     const refreshAlarmAnalyticsBtn = document.getElementById('refreshAlarmAnalyticsBtn');
@@ -3704,6 +3906,14 @@
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
     if (refreshMachinesBtn) refreshMachinesBtn.addEventListener('click', loadAdmin);
     if (refreshLiveMonitoringBtn) refreshLiveMonitoringBtn.addEventListener('click', loadAdmin);
+    if (refreshOeeAnalyticsBtn) refreshOeeAnalyticsBtn.addEventListener('click', loadAdmin);
+    if (applyOeeFiltersBtn) applyOeeFiltersBtn.addEventListener('click', loadAdmin);
+    document.getElementById('oeeSettingsMachine')?.addEventListener('change',e=>syncOeeSettingInputs(e.target.value));
+    if (saveOeeSettingsBtn) saveOeeSettingsBtn.addEventListener('click',async()=>{saveOeeSettingsBtn.disabled=true;document.getElementById('oeeSettingsResult').textContent='OEE ayarları kaydediliyor...';try{const result=await saveOeeSettings();await loadAdmin();document.getElementById('oeeSettingsResult').textContent=`OEE ayarları kaydedildi: ${fmtMetric(result.setting?.planned_minutes_per_day)} dk · ${fmtMetric(result.setting?.ideal_cycle_sec)} sn/adet · hedef %${fmtMetric(result.setting?.target_oee_pct)}`;}catch(e){document.getElementById('oeeSettingsResult').textContent=e.message;}finally{saveOeeSettingsBtn.disabled=false;}});
+    if (createOeeProductionBtn) createOeeProductionBtn.addEventListener('click',async()=>{createOeeProductionBtn.disabled=true;document.getElementById('oeeProductionResult').textContent='Üretim kaydı oluşturuluyor...';try{const result=await createOeeProduction();await loadAdmin();document.getElementById('oeeProductionResult').textContent=`Üretim kaydı eklendi: ${result.record?.good_count||0} sağlam / ${result.record?.total_count||0} toplam`;}catch(e){document.getElementById('oeeProductionResult').textContent=e.message;}finally{createOeeProductionBtn.disabled=false;}});
+    if (createOeeDowntimeBtn) createOeeDowntimeBtn.addEventListener('click',async()=>{createOeeDowntimeBtn.disabled=true;document.getElementById('oeeDowntimeResult').textContent='Duruş kaydı oluşturuluyor...';try{const result=await createOeeDowntime();await loadAdmin();document.getElementById('oeeDowntimeResult').textContent=`Duruş kaydı eklendi: ${result.record?.reason_code||'-'} · ${fmtDuration(result.record?.duration_sec||0)}`;}catch(e){document.getElementById('oeeDowntimeResult').textContent=e.message;}finally{createOeeDowntimeBtn.disabled=false;}});
+    if (syncOeeMachineStatesBtn) syncOeeMachineStatesBtn.addEventListener('click',async()=>{syncOeeMachineStatesBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='STOPPED durum sinyalleri duruş kayıtlarına aktarılıyor...';try{const result=await syncOeeMachineStates();await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Aktarım tamamlandı: ${result.result?.created_count||0} yeni duruş kaydı.`;}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{syncOeeMachineStatesBtn.disabled=false;}});
+    if (cleanupOeeManualRecordsBtn) cleanupOeeManualRecordsBtn.addEventListener('click',async()=>{cleanupOeeManualRecordsBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='Seçili manuel OEE test kayıtları temizleniyor...';try{const result=await cleanupOeeManualRecords();if(result){await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Temizlik tamamlandı: ${result.result?.production_deleted||0} üretim, ${result.result?.downtime_deleted||0} duruş kaydı silindi.`;}else document.getElementById('oeeAnalyticsResult').textContent='Temizlik iptal edildi.';}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{cleanupOeeManualRecordsBtn.disabled=false;}});
     if (refreshAlarmCenterBtn) refreshAlarmCenterBtn.addEventListener('click', loadAdmin);
     if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmAnalyticsBtn) refreshAlarmAnalyticsBtn.addEventListener('click', loadAdmin);

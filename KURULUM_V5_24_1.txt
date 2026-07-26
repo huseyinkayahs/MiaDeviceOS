@@ -1,0 +1,15 @@
+FactoryBox One v5.24.1 Kurulum
+
+1. Çalışan backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörüne çıkartın.
+3. Dosyaların üzerine yazılmasını onaylayın.
+4. PowerShell'de çalıştırın:
+
+cd "C:\New DeviceOs Project\platform\backend"
+npm.cmd start
+
+5. Admin panelinde Ctrl+F5 yapın.
+6. Sürümün v5.24.1 olduğunu kontrol edin.
+7. OEE & Downtime ekranında tek bir makine ve tarih seçin.
+8. Seçili Manuel Test Kayıtlarını Temizle düğmesiyle eski test kayıtlarını temizleyin.
+9. Bir üretim ve bir duruş kaydı ekleyerek OEE değerlerini yeniden kontrol edin.

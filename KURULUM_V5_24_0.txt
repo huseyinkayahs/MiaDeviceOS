@@ -1,0 +1,42 @@
+FactoryBox One v5.24.0 Kurulum
+================================
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox proje ana klasörünün üzerine çıkarın.
+3. Dosya değiştirme / üzerine yazma seçeneğini onaylayın.
+4. Backend klasöründe çalıştırın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sol üstte v5.24.0 yazdığını kontrol edin.
+7. OEE & Downtime ekranını açın.
+
+İlk Test
+--------
+
+Filtre başlangıç ve bitiş tarihini bugün yapın.
+
+OEE Ayarı:
+- Günlük planlı süre: 480 dakika
+- İdeal çevrim: 240 saniye/adet
+- Hedef OEE: %85
+
+Üretim Kaydı:
+- Toplam: 100
+- Sağlam: 95
+- Hatalı: 5
+
+Duruş Kaydı:
+- Kategori: unplanned
+- Neden: breakdown
+- Süre: 30 dakika
+
+Beklenen yaklaşık sonuç:
+- Availability: %93.8
+- Performance: %88.9
+- Quality: %95.0
+- OEE: %79.2
+
+Not: Sonuçların bu değerlere yakın olması için filtre yalnızca test gününü kapsamalıdır.

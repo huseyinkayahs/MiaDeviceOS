@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.23.0';
+const APP_VERSION = '5.24.1';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -4254,6 +4254,399 @@ app.post('/api/admin/maintenance-work-orders/:id/consume-part',adminRequired,per
     await addMaintenanceWorkOrderEvent(client,{workOrderId:order.id,eventType:'part_consumed',oldStatus:order.status,newStatus:order.status,note,actorEmail:actor.email||'admin',metadata:{part_id:partId,part_no:movementResult.part.part_no,quantity:qty,unit:movementResult.part.unit,balance_after:movementResult.movement.balance_after}});
     await client.query('COMMIT');client.release();client=null;const workOrder=await maintenanceWorkOrderRow(order.id);const part=await inventoryPartRow(partId);await writeAuditLog(req,{action:'consume_spare_part',entity_type:'maintenance_work_order',entity_id:order.id,new_values:usage,metadata:{work_order_no:order.work_order_no,part_no:part.part_no,quantity:qty}});res.status(201).json({status:'ok',version:APP_VERSION,work_order:workOrder,part,usage});
   }catch(e){if(client){try{await client.query('ROLLBACK')}catch{}client.release()}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+
+// -----------------------------------------------------------------------------
+// v5.24.0 Machine Downtime & OEE Analytics
+// -----------------------------------------------------------------------------
+const OEE_DOWNTIME_CATEGORIES = ['planned','unplanned'];
+const OEE_PRODUCTION_SOURCES = ['manual','mqtt','import'];
+const OEE_REASON_CODES = [
+  'planned_maintenance','changeover','setup','material_wait','operator_wait',
+  'breakdown','quality_stop','power','safety','signal_stop','other'
+];
+
+function oeeNumber(value, label, {min=0,max=1000000000,fallback=null,integer=false}={}) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < min || number > max) {
+    const error = new Error(`${label} must be between ${min} and ${max}`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return integer ? Math.floor(number) : Math.round(number * 1000) / 1000;
+}
+
+function oeeDate(value, label='date', fallback=null) {
+  const raw = String(value || fallback || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const error = new Error(`${label} must be YYYY-MM-DD`);
+    error.statusCode = 400;
+    throw error;
+  }
+  const parsed = new Date(`${raw}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0,10) !== raw) {
+    const error = new Error(`${label} is invalid`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return raw;
+}
+
+function oeeDateRange(fromRaw, toRaw) {
+  const today = new Date();
+  const todayText = today.toISOString().slice(0,10);
+  const defaultFrom = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 6)).toISOString().slice(0,10);
+  const from = oeeDate(fromRaw, 'from', defaultFrom);
+  const to = oeeDate(toRaw, 'to', todayText);
+  const fromDate = new Date(`${from}T00:00:00.000Z`);
+  const toDate = new Date(`${to}T00:00:00.000Z`);
+  const days = Math.floor((toDate - fromDate) / 86400000) + 1;
+  if (days < 1 || days > 31) {
+    const error = new Error('OEE date range must be between 1 and 31 days');
+    error.statusCode = 400;
+    throw error;
+  }
+  return {from,to,days,fromDate,toDate,endExclusive:new Date(toDate.getTime()+86400000)};
+}
+
+function oeeTimestamp(value, label, {required=true}={}) {
+  if ((value === null || value === undefined || value === '') && !required) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const error = new Error(`${label} is invalid`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return date.toISOString();
+}
+
+function oeePct(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return 0;
+  return Math.round(Math.min(Math.max(number,0),100) * 10) / 10;
+}
+
+function oeeOverlapSeconds(startValue, endValue, rangeStart, rangeEnd) {
+  const start = new Date(startValue);
+  const end = endValue ? new Date(endValue) : new Date();
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+  const left = Math.max(start.getTime(), rangeStart.getTime());
+  const right = Math.min(end.getTime(), rangeEnd.getTime());
+  return right > left ? Math.floor((right-left)/1000) : 0;
+}
+
+async function ensureOeeFoundation() {
+  await ensureLiveMonitoringFoundation();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS oee_machine_settings (
+      machine_id uuid PRIMARY KEY REFERENCES machines(id) ON DELETE CASCADE,
+      planned_minutes_per_day integer NOT NULL DEFAULT 480,
+      ideal_cycle_sec numeric(12,3) NOT NULL DEFAULT 60,
+      target_oee_pct numeric(5,2) NOT NULL DEFAULT 85,
+      enabled boolean NOT NULL DEFAULT true,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT oee_planned_minutes_check CHECK (planned_minutes_per_day BETWEEN 1 AND 1440),
+      CONSTRAINT oee_ideal_cycle_check CHECK (ideal_cycle_sec > 0),
+      CONSTRAINT oee_target_check CHECK (target_oee_pct BETWEEN 1 AND 100)
+    )
+  `);
+  await pool.query(`
+    INSERT INTO oee_machine_settings(machine_id)
+    SELECT id FROM machines
+    ON CONFLICT(machine_id) DO NOTHING
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS oee_production_records (
+      id bigserial PRIMARY KEY,
+      machine_id uuid NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
+      production_date date NOT NULL DEFAULT CURRENT_DATE,
+      shift_code text NOT NULL DEFAULT 'general',
+      total_count integer NOT NULL,
+      good_count integer NOT NULL,
+      reject_count integer NOT NULL,
+      source text NOT NULL DEFAULT 'manual',
+      note text,
+      recorded_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT oee_production_counts_nonnegative CHECK (total_count >= 0 AND good_count >= 0 AND reject_count >= 0),
+      CONSTRAINT oee_production_count_consistency CHECK (total_count = good_count + reject_count),
+      CONSTRAINT oee_production_source_check CHECK (source IN ('manual','mqtt','import'))
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_oee_production_machine_date ON oee_production_records(machine_id,production_date DESC,created_at DESC)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS oee_downtime_records (
+      id bigserial PRIMARY KEY,
+      machine_id uuid NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
+      category text NOT NULL DEFAULT 'unplanned',
+      reason_code text NOT NULL DEFAULT 'other',
+      reason_text text,
+      started_at timestamptz NOT NULL,
+      ended_at timestamptz,
+      duration_sec integer,
+      source text NOT NULL DEFAULT 'manual',
+      source_ref text,
+      note text,
+      recorded_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT oee_downtime_category_check CHECK (category IN ('planned','unplanned')),
+      CONSTRAINT oee_downtime_duration_check CHECK (duration_sec IS NULL OR duration_sec >= 0),
+      CONSTRAINT oee_downtime_time_check CHECK (ended_at IS NULL OR ended_at > started_at)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_oee_downtime_machine_started ON oee_downtime_records(machine_id,started_at DESC)`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_oee_downtime_source_ref ON oee_downtime_records(source,source_ref) WHERE source_ref IS NOT NULL`);
+}
+
+function oeeMachineStatus(row) {
+  if (Number(row.total_count || 0) <= 0) return 'no_production';
+  const target = Number(row.target_oee_pct || 85);
+  const oee = Number(row.oee_pct || 0);
+  if (oee >= target) return 'on_target';
+  if (oee >= target * 0.75) return 'watch';
+  return 'critical';
+}
+
+function calculateOeeMachineRow(machine, setting, productions, downtimes, stateEvents, range) {
+  const machineId = String(machine.id);
+  const plannedMinutes = Number(setting?.planned_minutes_per_day || 480);
+  const idealCycle = Number(setting?.ideal_cycle_sec || 60);
+  const targetOee = Number(setting?.target_oee_pct || 85);
+  const machineProductions = productions.filter(row => String(row.machine_id) === machineId);
+  const machineDowntimes = downtimes.filter(row => String(row.machine_id) === machineId);
+  const machineStates = stateEvents.filter(row => String(row.machine_id) === machineId);
+  const totalCount = machineProductions.reduce((sum,row)=>sum+Number(row.total_count||0),0);
+  const goodCount = machineProductions.reduce((sum,row)=>sum+Number(row.good_count||0),0);
+  const rejectCount = machineProductions.reduce((sum,row)=>sum+Number(row.reject_count||0),0);
+  let plannedDowntimeSec = 0;
+  let unplannedDowntimeSec = 0;
+  for (const row of machineDowntimes) {
+    const seconds = oeeOverlapSeconds(row.started_at,row.ended_at,range.fromDate,range.endExclusive);
+    if (row.category === 'planned') plannedDowntimeSec += seconds;
+    else unplannedDowntimeSec += seconds;
+  }
+  let signalRunSec = 0;
+  let signalStopSec = 0;
+  for (const row of machineStates) {
+    const seconds = oeeOverlapSeconds(row.started_at,row.ended_at,range.fromDate,range.endExclusive);
+    if (String(row.state).toUpperCase() === 'RUNNING') signalRunSec += seconds;
+    if (String(row.state).toUpperCase() === 'STOPPED') signalStopSec += seconds;
+  }
+  const grossPlannedSec = plannedMinutes * 60 * range.days;
+  const netPlannedSec = Math.max(grossPlannedSec - plannedDowntimeSec, 0);
+  const runTimeSec = Math.max(netPlannedSec - unplannedDowntimeSec, 0);
+  const availabilityPct = netPlannedSec > 0 ? oeePct(runTimeSec / netPlannedSec * 100) : 0;
+  const performancePct = runTimeSec > 0 && idealCycle > 0 ? oeePct((idealCycle * totalCount) / runTimeSec * 100) : 0;
+  const qualityPct = totalCount > 0 ? oeePct(goodCount / totalCount * 100) : 0;
+  const oeeValue = oeePct((availabilityPct / 100) * (performancePct / 100) * (qualityPct / 100) * 100);
+  const row = {
+    machine_id:machineId,
+    machine_code:machine.code,
+    machine_name:machine.name,
+    site_code:machine.site_code,
+    customer_code:machine.customer_code,
+    planned_minutes_per_day:plannedMinutes,
+    ideal_cycle_sec:idealCycle,
+    target_oee_pct:targetOee,
+    enabled:setting?.enabled !== false,
+    total_count:totalCount,
+    good_count:goodCount,
+    reject_count:rejectCount,
+    gross_planned_sec:grossPlannedSec,
+    planned_downtime_sec:plannedDowntimeSec,
+    net_planned_sec:netPlannedSec,
+    unplanned_downtime_sec:unplannedDowntimeSec,
+    run_time_sec:runTimeSec,
+    signal_run_sec:signalRunSec,
+    signal_stop_sec:signalStopSec,
+    availability_pct:availabilityPct,
+    performance_pct:performancePct,
+    quality_pct:qualityPct,
+    oee_pct:oeeValue
+  };
+  row.health = oeeMachineStatus(row);
+  return row;
+}
+
+function calculateOeeSummary(rows) {
+  const total = rows.reduce((acc,row)=>{
+    acc.net_planned_sec += Number(row.net_planned_sec||0);
+    acc.run_time_sec += Number(row.run_time_sec||0);
+    acc.unplanned_downtime_sec += Number(row.unplanned_downtime_sec||0);
+    acc.planned_downtime_sec += Number(row.planned_downtime_sec||0);
+    acc.total_count += Number(row.total_count||0);
+    acc.good_count += Number(row.good_count||0);
+    acc.reject_count += Number(row.reject_count||0);
+    acc.ideal_production_sec += Number(row.ideal_cycle_sec||0) * Number(row.total_count||0);
+    return acc;
+  },{net_planned_sec:0,run_time_sec:0,unplanned_downtime_sec:0,planned_downtime_sec:0,total_count:0,good_count:0,reject_count:0,ideal_production_sec:0});
+  const availability = total.net_planned_sec > 0 ? oeePct(total.run_time_sec/total.net_planned_sec*100) : 0;
+  const performance = total.run_time_sec > 0 ? oeePct(total.ideal_production_sec/total.run_time_sec*100) : 0;
+  const quality = total.total_count > 0 ? oeePct(total.good_count/total.total_count*100) : 0;
+  return {
+    machine_count:rows.length,
+    availability_pct:availability,
+    performance_pct:performance,
+    quality_pct:quality,
+    oee_pct:oeePct((availability/100)*(performance/100)*(quality/100)*100),
+    ...total
+  };
+}
+
+async function loadOeeData(range, machineId=null) {
+  const machineParams=[];
+  let machineWhere='';
+  if (machineId && machineId !== 'all') { machineParams.push(machineId); machineWhere=`WHERE m.id=$1`; }
+  const machines=(await pool.query(`
+    SELECT m.id::text,m.code,m.name,m.machine_type,m.status,s.code AS site_code,c.code AS customer_code,
+      o.planned_minutes_per_day,o.ideal_cycle_sec::float8 AS ideal_cycle_sec,o.target_oee_pct::float8 AS target_oee_pct,o.enabled
+    FROM machines m JOIN sites s ON s.id=m.site_id JOIN customers c ON c.id=s.customer_id
+    LEFT JOIN oee_machine_settings o ON o.machine_id=m.id
+    ${machineWhere}
+    ORDER BY c.code,s.code,m.code
+  `,machineParams)).rows;
+  const ids=machines.map(row=>row.id);
+  if (!ids.length) return {machines:[],productions:[],downtimes:[],states:[]};
+  const productions=(await pool.query(`
+    SELECT id::text,machine_id::text,production_date::text,shift_code,total_count,good_count,reject_count,source,note,recorded_by,created_at
+    FROM oee_production_records
+    WHERE machine_id=ANY($1::uuid[]) AND production_date BETWEEN $2::date AND $3::date
+    ORDER BY production_date DESC,created_at DESC
+  `,[ids,range.from,range.to])).rows;
+  const downtimes=(await pool.query(`
+    SELECT id::text,machine_id::text,category,reason_code,reason_text,started_at,ended_at,
+      COALESCE(duration_sec,GREATEST(0,EXTRACT(EPOCH FROM(COALESCE(ended_at,now())-started_at))::int)) AS duration_sec,
+      source,source_ref,note,recorded_by,created_at,updated_at
+    FROM oee_downtime_records
+    WHERE machine_id=ANY($1::uuid[]) AND started_at < ($3::date + interval '1 day') AND COALESCE(ended_at,now()) >= $2::date
+    ORDER BY started_at DESC
+  `,[ids,range.from,range.to])).rows;
+  const states=(await pool.query(`
+    SELECT id::text,machine_id::text,state,started_at,ended_at,duration_sec,source
+    FROM machine_state_events
+    WHERE machine_id=ANY($1::uuid[]) AND started_at < ($3::date + interval '1 day') AND COALESCE(ended_at,now()) >= $2::date
+    ORDER BY started_at DESC
+  `,[ids,range.from,range.to])).rows;
+  return {machines,productions,downtimes,states};
+}
+
+async function syncOeeDowntimeFromMachineStates(range, actorEmail='system') {
+  const result=await pool.query(`
+    INSERT INTO oee_downtime_records(machine_id,category,reason_code,reason_text,started_at,ended_at,duration_sec,source,source_ref,note,recorded_by)
+    SELECT e.machine_id,'unplanned','signal_stop','Makine STOPPED durum sinyali',e.started_at,e.ended_at,
+      GREATEST(0,EXTRACT(EPOCH FROM(e.ended_at-e.started_at))::int),'machine_state',e.id::text,'Machine state event aktarımı',$3
+    FROM machine_state_events e
+    WHERE e.state='STOPPED' AND e.ended_at IS NOT NULL
+      AND e.started_at < ($2::date + interval '1 day') AND e.ended_at >= $1::date
+    ON CONFLICT DO NOTHING
+    RETURNING id
+  `,[range.from,range.to,actorEmail]);
+  return {created_count:result.rowCount};
+}
+
+app.get('/api/admin/oee-analytics',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();
+    const range=oeeDateRange(req.query.from,req.query.to);
+    const machineId=String(req.query.machine_id||'all');
+    const data=await loadOeeData(range,machineId);
+    const rows=data.machines.map(machine=>calculateOeeMachineRow(machine,machine,data.productions,data.downtimes,data.states,range));
+    const summary=calculateOeeSummary(rows);
+    const dailyTrend=[];
+    for(let day=0;day<range.days;day+=1){
+      const date=new Date(range.fromDate.getTime()+day*86400000);const text=date.toISOString().slice(0,10);
+      const dayRange={from:text,to:text,days:1,fromDate:date,endExclusive:new Date(date.getTime()+86400000)};
+      const dayRows=data.machines.map(machine=>calculateOeeMachineRow(machine,machine,data.productions.filter(p=>p.production_date===text),data.downtimes,data.states,dayRange));
+      dailyTrend.push({date:text,...calculateOeeSummary(dayRows)});
+    }
+    res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),range:{from:range.from,to:range.to,days:range.days},can_manage:!authConfig().enabled||hasPermission(req.user,'MANAGE_MAINTENANCE'),summary,machines:rows,daily_trend:dailyTrend,production_records:data.productions.slice(0,100),downtime_records:data.downtimes.slice(0,100),options:{downtime_categories:OEE_DOWNTIME_CATEGORIES,reason_codes:OEE_REASON_CODES,production_sources:OEE_PRODUCTION_SOURCES}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/oee/settings/:machineId',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();const machineId=String(req.params.machineId);const old=await one(`SELECT machine_id::text,planned_minutes_per_day,ideal_cycle_sec::float8 AS ideal_cycle_sec,target_oee_pct::float8 AS target_oee_pct,enabled FROM oee_machine_settings WHERE machine_id=$1`,[machineId]);if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'OEE machine setting not found'});const b=req.body||{};const actor=req.user||getSession(req)?.user||{};
+    const planned=oeeNumber(b.planned_minutes_per_day,'planned_minutes_per_day',{min:1,max:1440,fallback:old.planned_minutes_per_day,integer:true});const ideal=oeeNumber(b.ideal_cycle_sec,'ideal_cycle_sec',{min:0.001,max:86400,fallback:old.ideal_cycle_sec});const target=oeeNumber(b.target_oee_pct,'target_oee_pct',{min:1,max:100,fallback:old.target_oee_pct});const enabled=b.enabled===undefined?old.enabled:Boolean(b.enabled);
+    const setting=await one(`UPDATE oee_machine_settings SET planned_minutes_per_day=$2,ideal_cycle_sec=$3,target_oee_pct=$4,enabled=$5,updated_by=$6,updated_at=now() WHERE machine_id=$1 RETURNING machine_id::text,planned_minutes_per_day,ideal_cycle_sec::float8 AS ideal_cycle_sec,target_oee_pct::float8 AS target_oee_pct,enabled,updated_by,updated_at`,[machineId,planned,ideal,target,enabled,actor.email||'admin']);
+    await writeAuditLog(req,{action:'update_oee_machine_settings',entity_type:'machine',entity_id:machineId,old_values:old,new_values:setting});res.json({status:'ok',version:APP_VERSION,setting});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/oee/production',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();const b=req.body||{};const machineId=String(b.machine_id||'');const machine=await one(`SELECT id::text,code,name FROM machines WHERE id=$1`,[machineId]);if(!machine)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Machine not found'});const total=oeeNumber(b.total_count,'total_count',{min:0,max:1000000000,integer:true});const good=oeeNumber(b.good_count,'good_count',{min:0,max:1000000000,integer:true});const reject=b.reject_count===undefined||b.reject_count===''?total-good:oeeNumber(b.reject_count,'reject_count',{min:0,max:1000000000,integer:true});if(good+reject!==total){const e=new Error('total_count must equal good_count + reject_count');e.statusCode=400;throw e;}const source=maintenanceChoice(b.source||'manual',OEE_PRODUCTION_SOURCES,'source');const actor=req.user||getSession(req)?.user||{};
+    const productionDate=oeeDate(b.production_date,'production_date',new Date().toISOString().slice(0,10));
+    const shiftCode=maintenanceText(b.shift_code,'shift_code',{max:60})||'general';
+    const note=maintenanceText(b.note,'note',{max:2000});
+    if(source==='manual'){
+      const duplicate=await one(`SELECT id::text,created_at FROM oee_production_records WHERE machine_id=$1 AND production_date=$2::date AND shift_code=$3 AND total_count=$4 AND good_count=$5 AND reject_count=$6 AND source='manual' AND COALESCE(note,'')=COALESCE($7,'') AND created_at>=now()-interval '5 minutes' ORDER BY created_at DESC LIMIT 1`,[machineId,productionDate,shiftCode,total,good,reject,note]);
+      if(duplicate)return res.status(409).json({status:'duplicate',version:APP_VERSION,message:'Aynı üretim kaydı son 5 dakika içinde zaten eklendi.',existing_record_id:duplicate.id});
+    }
+    const record=await one(`INSERT INTO oee_production_records(machine_id,production_date,shift_code,total_count,good_count,reject_count,source,note,recorded_by) VALUES($1,$2::date,$3,$4,$5,$6,$7,$8,$9) RETURNING id::text,machine_id::text,production_date::text,shift_code,total_count,good_count,reject_count,source,note,recorded_by,created_at`,[machineId,productionDate,shiftCode,total,good,reject,source,note,actor.email||'admin']);
+    await writeAuditLog(req,{action:'create_oee_production_record',entity_type:'machine',entity_id:machineId,new_values:record,metadata:{machine_code:machine.code}});res.status(201).json({status:'ok',version:APP_VERSION,record,machine});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/oee/downtime',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();const b=req.body||{};const machineId=String(b.machine_id||'');const machine=await one(`SELECT id::text,code,name FROM machines WHERE id=$1`,[machineId]);if(!machine)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Machine not found'});const category=maintenanceChoice(b.category||'unplanned',OEE_DOWNTIME_CATEGORIES,'category');const reasonCode=maintenanceChoice(b.reason_code||'other',OEE_REASON_CODES,'reason_code');const startedAt=oeeTimestamp(b.started_at,'started_at');const endedAt=oeeTimestamp(b.ended_at,'ended_at',{required:false});if(endedAt&&new Date(endedAt)<=new Date(startedAt)){const e=new Error('ended_at must be after started_at');e.statusCode=400;throw e;}const duration=endedAt?Math.floor((new Date(endedAt)-new Date(startedAt))/1000):null;const actor=req.user||getSession(req)?.user||{};
+    const reasonText=maintenanceText(b.reason_text,'reason_text',{max:240});
+    const note=maintenanceText(b.note,'note',{max:2000});
+    const duplicate=await one(`SELECT id::text,created_at FROM oee_downtime_records WHERE machine_id=$1 AND category=$2 AND reason_code=$3 AND COALESCE(reason_text,'')=COALESCE($4,'') AND started_at=$5::timestamptz AND ended_at IS NOT DISTINCT FROM $6::timestamptz AND source='manual' AND COALESCE(note,'')=COALESCE($7,'') AND created_at>=now()-interval '5 minutes' ORDER BY created_at DESC LIMIT 1`,[machineId,category,reasonCode,reasonText,startedAt,endedAt,note]);
+    if(duplicate)return res.status(409).json({status:'duplicate',version:APP_VERSION,message:'Aynı duruş kaydı son 5 dakika içinde zaten eklendi.',existing_record_id:duplicate.id});
+    const record=await one(`INSERT INTO oee_downtime_records(machine_id,category,reason_code,reason_text,started_at,ended_at,duration_sec,source,note,recorded_by) VALUES($1,$2,$3,$4,$5,$6,$7,'manual',$8,$9) RETURNING id::text,machine_id::text,category,reason_code,reason_text,started_at,ended_at,duration_sec,source,note,recorded_by,created_at`,[machineId,category,reasonCode,reasonText,startedAt,endedAt,duration,note,actor.email||'admin']);
+    await writeAuditLog(req,{action:'create_oee_downtime',entity_type:'machine',entity_id:machineId,new_values:record,metadata:{machine_code:machine.code}});res.status(201).json({status:'ok',version:APP_VERSION,record,machine});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/oee/downtime/:id/close',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();const id=String(req.params.id);const old=await one(`SELECT * FROM oee_downtime_records WHERE id=$1`,[id]);if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Downtime record not found'});if(old.ended_at)return res.status(409).json({status:'already_closed',version:APP_VERSION,message:'Downtime record is already closed'});const endedAt=oeeTimestamp(req.body?.ended_at||new Date().toISOString(),'ended_at');if(new Date(endedAt)<=new Date(old.started_at)){const e=new Error('ended_at must be after started_at');e.statusCode=400;throw e;}const actor=req.user||getSession(req)?.user||{};const record=await one(`UPDATE oee_downtime_records SET ended_at=$2,duration_sec=GREATEST(0,EXTRACT(EPOCH FROM($2::timestamptz-started_at))::int),updated_at=now() WHERE id=$1 RETURNING id::text,machine_id::text,category,reason_code,reason_text,started_at,ended_at,duration_sec,source,note,recorded_by,created_at,updated_at`,[id,endedAt]);await writeAuditLog(req,{action:'close_oee_downtime',entity_type:'oee_downtime',entity_id:id,old_values:old,new_values:record,metadata:{closed_by:actor.email||'admin'}});res.json({status:'ok',version:APP_VERSION,record});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+
+app.delete('/api/admin/oee/production/:id',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();const id=String(req.params.id);const old=await one(`SELECT id::text,machine_id::text,production_date::text,shift_code,total_count,good_count,reject_count,source,note,recorded_by,created_at FROM oee_production_records WHERE id=$1`,[id]);if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Production record not found'});
+    await pool.query(`DELETE FROM oee_production_records WHERE id=$1`,[id]);
+    await writeAuditLog(req,{action:'delete_oee_production_record',entity_type:'oee_production',entity_id:id,old_values:old});
+    res.json({status:'ok',version:APP_VERSION,deleted:old});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.delete('/api/admin/oee/downtime/:id',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensureOeeFoundation();const id=String(req.params.id);const old=await one(`SELECT id::text,machine_id::text,category,reason_code,reason_text,started_at,ended_at,duration_sec,source,source_ref,note,recorded_by,created_at FROM oee_downtime_records WHERE id=$1`,[id]);if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Downtime record not found'});
+    await pool.query(`DELETE FROM oee_downtime_records WHERE id=$1`,[id]);
+    await writeAuditLog(req,{action:'delete_oee_downtime_record',entity_type:'oee_downtime',entity_id:id,old_values:old});
+    res.json({status:'ok',version:APP_VERSION,deleted:old});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/oee/cleanup-manual-records',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  const client=await pool.connect();
+  try{
+    await ensureOeeFoundation();const b=req.body||{};const machineId=String(b.machine_id||'');if(!machineId||machineId==='all'){const e=new Error('Temizleme için tek bir makine seçilmelidir.');e.statusCode=400;throw e;}const machine=await one(`SELECT id::text,code,name FROM machines WHERE id=$1`,[machineId]);if(!machine)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Machine not found'});const range=oeeDateRange(b.from,b.to);
+    await client.query('BEGIN');
+    const production=(await client.query(`DELETE FROM oee_production_records WHERE machine_id=$1 AND source='manual' AND production_date BETWEEN $2::date AND $3::date RETURNING id::text`,[machineId,range.from,range.to])).rows;
+    const downtime=(await client.query(`DELETE FROM oee_downtime_records WHERE machine_id=$1 AND source='manual' AND started_at<($3::date+interval '1 day') AND COALESCE(ended_at,started_at)>=$2::date RETURNING id::text`,[machineId,range.from,range.to])).rows;
+    await client.query('COMMIT');
+    const result={machine_id:machineId,machine_code:machine.code,from:range.from,to:range.to,production_deleted:production.length,downtime_deleted:downtime.length,total_deleted:production.length+downtime.length};
+    await writeAuditLog(req,{action:'cleanup_oee_manual_records',entity_type:'machine',entity_id:machineId,new_values:result});
+    res.json({status:'ok',version:APP_VERSION,result});
+  }catch(e){try{await client.query('ROLLBACK');}catch{}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+  finally{client.release();}
+});
+
+app.post('/api/admin/oee/sync-machine-states',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{await ensureOeeFoundation();const range=oeeDateRange(req.body?.from,req.body?.to);const actor=req.user||getSession(req)?.user||{};const result=await syncOeeDowntimeFromMachineStates(range,actor.email||'admin');await writeAuditLog(req,{action:'sync_oee_machine_state_downtime',entity_type:'oee',entity_id:'global',new_values:{...result,range:{from:range.from,to:range.to}}});res.json({status:'ok',version:APP_VERSION,result,range:{from:range.from,to:range.to}});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
 });
 
 
@@ -10646,6 +11039,7 @@ async function start() {
   await ensureMaintenanceFoundation();
   await ensurePreventiveMaintenanceFoundation();
   await ensureInventoryFoundation();
+  await ensureOeeFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });
