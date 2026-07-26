@@ -272,6 +272,16 @@
     .scheduler-flow-v519 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0; padding:14px; border:1px dashed var(--fb-border); border-radius:16px; background:#f8fafc; }
     .scheduler-flow-v519 span { padding:7px 10px; border-radius:999px; background:#fff; border:1px solid var(--fb-border); font-size:12px; font-weight:700; }
     .scheduler-flow-v519 b { color:var(--fb-muted); }
+    #alarmReportsSection { min-width:0; overflow:hidden; }
+    .alarm-report-flow-v520 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0; padding:14px; border:1px dashed var(--fb-border); border-radius:16px; background:#f8fafc; }
+    .alarm-report-flow-v520 span { padding:7px 10px; border-radius:999px; background:#fff; border:1px solid var(--fb-border); font-size:12px; font-weight:700; }
+    .alarm-report-flow-v520 b { color:var(--fb-muted); }
+    .alarm-report-preview-v520 { margin:14px 0; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:linear-gradient(180deg,#fff,#f8fbff); }
+    .alarm-report-preview-v520 h3 { margin:0 0 10px; }
+    .alarm-report-mini-grid-v520 { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .alarm-report-mini-v520 { padding:11px; border:1px solid var(--fb-border); border-radius:14px; background:#fff; }
+    .alarm-report-mini-v520 span { display:block; color:var(--fb-muted); font-size:11px; text-transform:uppercase; font-weight:800; }
+    .alarm-report-mini-v520 strong { display:block; margin-top:5px; color:var(--fb-primary); font-size:20px; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -321,7 +331,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.19.0 — otomatik escalation scheduler ve retry yönetimi aktif.</p>
+      <p id="adminVersionLabel">v5.20.0 — günlük ve haftalık alarm rapor teslimatı aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -345,11 +355,12 @@
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
           <span>⚙️ System Settings</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">2</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">3</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Notifications</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Automation Scheduler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Reports</span></button>
         </div>
       </div>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
@@ -391,7 +402,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.19.0: Otomatik SLA tarama, retry/backoff ve Dead Letter yönetimi aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.20.0: Günlük ve haftalık alarm raporları Telegram/Email ile gönderilebilir.</p>
       </div>
     </div>
 
@@ -697,6 +708,51 @@
     <div class="kpi-panel-v59">
       <h3>Scheduler Çalışma Geçmişi</h3>
       <div id="automationSchedulerHistory">Çalışma geçmişi yükleniyor...</div>
+    </div>
+  </section>
+
+  <section id="alarmReportsSection" class="card wide admin-card" data-admin-view="reports">
+    <div class="section-title-row">
+      <div>
+        <h2>Daily / Weekly Alarm Reports</h2>
+        <p class="muted">v5.20: Alarm özetlerini günlük veya haftalık hazırlayıp Telegram ve Email üzerinden teslim eder.</p>
+      </div>
+      <div class="admin-topbar-actions-v58">
+        <button id="refreshAlarmReportsBtn" class="secondary-btn">Durumu Yenile</button>
+        <button id="runDailyAlarmReportBtn" class="secondary-btn">Günlük Rapor Gönder</button>
+        <button id="runWeeklyAlarmReportBtn" class="secondary-btn">Haftalık Rapor Gönder</button>
+        <button id="saveAlarmReportsBtn" class="primary-btn">Ayarları Kaydet</button>
+      </div>
+    </div>
+
+    <div id="alarmReportsStatus">Rapor ayarları yükleniyor...</div>
+
+    <div class="alarm-report-flow-v520">
+      <span>Alarm kayıtları</span><b>→</b><span>Günlük / haftalık özet</span><b>→</b><span>Telegram / Email</span><b>→</b><span>Teslimat geçmişi</span>
+    </div>
+
+    <h3>Rapor Planı</h3>
+    <div class="admin-form-grid">
+      <label>Report Scheduler<select id="alarmReportSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Saat Dilimi<input id="alarmReportTimezone" type="text" value="Europe/Istanbul" placeholder="Europe/Istanbul"></label>
+      <label>Kanallar<select id="alarmReportChannels"><option value="telegram">telegram</option><option value="email">email</option><option value="telegram,email">telegram + email</option></select></label>
+      <label>Telegram Chat ID'leri<input id="alarmReportTelegramChatIds" type="text" placeholder="Boş = Notifications varsayılanı"></label>
+      <label>Email Alıcıları<input id="alarmReportEmailRecipients" type="text" placeholder="Boş = Notifications varsayılanı"></label>
+      <label>Günlük Rapor<select id="alarmReportDailyEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+      <label>Günlük Gönderim Saati<input id="alarmReportDailyHour" type="number" min="0" max="23" value="8"></label>
+      <label>Haftalık Rapor<select id="alarmReportWeeklyEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+      <label>Haftalık Gönderim Günü<select id="alarmReportWeeklyDay"><option value="1">Pazartesi</option><option value="2">Salı</option><option value="3">Çarşamba</option><option value="4">Perşembe</option><option value="5">Cuma</option><option value="6">Cumartesi</option><option value="0">Pazar</option></select></label>
+      <label>Haftalık Gönderim Saati<input id="alarmReportWeeklyHour" type="number" min="0" max="23" value="8"></label>
+    </div>
+
+    <p class="notification-secret-note-v518">Günlük rapor önceki tamamlanmış günü, haftalık rapor önceki tamamlanmış 7 günü kapsar. Boş hedef alanlarında Notifications ekranındaki varsayılan alıcılar kullanılır.</p>
+    <div id="alarmReportsResult" class="mini-status">Ayar değişikliği veya manuel rapor gönderimi bekleniyor.</div>
+
+    <div id="alarmReportLatestPreview" class="alarm-report-preview-v520">Henüz rapor özeti yok.</div>
+
+    <div class="kpi-panel-v59">
+      <h3>Rapor Teslimat Geçmişi</h3>
+      <div id="alarmReportsHistory">Rapor geçmişi yükleniyor...</div>
     </div>
   </section>
 
@@ -1033,11 +1089,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.19.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.20.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Automatic Escalation Scheduler aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Otomatik SLA tarama, retry/backoff ve Dead Letter yönetimi aktif.`;
+    if (brand) brand.textContent = `v${safeVersion} — Alarm Report Delivery aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Günlük/haftalık alarm raporları ve otomatik kanal teslimatı aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1190,6 +1246,10 @@
       title:'Automation Scheduler',
       desc:'Otomatik SLA tarama, retry/backoff, teslimat ve Dead Letter yönetimi.'
     },
+    reports: {
+      title:'Alarm Reports',
+      desc:'Günlük ve haftalık alarm özetleri, Telegram/Email teslimatı ve rapor geçmişi.'
+    },
     tenants: {
       title:'Customers / Tenants',
       desc:'Customer, tenant, site ve atölye yönetimi.'
@@ -1226,7 +1286,8 @@
     sla:'alarm',
     escalations:'alarm',
     notifications:'system',
-    scheduler:'system'
+    scheduler:'system',
+    reports:'system'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -2052,6 +2113,79 @@
     });
   }
 
+
+  function renderAlarmReports(data) {
+    const scheduler = data.scheduler || {};
+    const daily = scheduler.daily || {};
+    const weekly = scheduler.weekly || {};
+    const readiness = data.channel_readiness || {};
+    const summary = data.summary || {};
+    const canManage = Boolean(data.can_manage);
+    const setValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.value = value ?? '';
+    };
+
+    setValue('alarmReportSchedulerEnabled', String(Boolean(scheduler.enabled)));
+    setValue('alarmReportTimezone', scheduler.timezone || 'Europe/Istanbul');
+    setValue('alarmReportChannels', (scheduler.channels || ['telegram']).join(','));
+    setValue('alarmReportTelegramChatIds', scheduler.telegram_chat_ids || '');
+    setValue('alarmReportEmailRecipients', scheduler.email_recipients || '');
+    setValue('alarmReportDailyEnabled', String(Boolean(daily.enabled)));
+    setValue('alarmReportDailyHour', daily.hour ?? 8);
+    setValue('alarmReportWeeklyEnabled', String(Boolean(weekly.enabled)));
+    setValue('alarmReportWeeklyDay', weekly.day ?? 1);
+    setValue('alarmReportWeeklyHour', weekly.hour ?? 8);
+
+    const status = document.getElementById('alarmReportsStatus');
+    if (status) status.innerHTML = `
+      <div class="kpi-grid-v59">
+        <div class="kpi-card-v59"><span>Report Scheduler</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${esc(scheduler.timezone || '-')} · ${esc((scheduler.channels || []).join(' + '))}</small></div>
+        <div class="kpi-card-v59"><span>Günlük Sonraki</span><strong>${daily.enabled ? esc(fmtDate(daily.next_run_at)) : '-'}</strong><small>${daily.enabled ? `Her gün ${String(daily.hour ?? 8).padStart(2,'0')}:00` : 'Günlük rapor kapalı'}</small></div>
+        <div class="kpi-card-v59"><span>Haftalık Sonraki</span><strong>${weekly.enabled ? esc(fmtDate(weekly.next_run_at)) : '-'}</strong><small>${weekly.enabled ? `${esc(weekly.day_name || '-')} ${String(weekly.hour ?? 8).padStart(2,'0')}:00` : 'Haftalık rapor kapalı'}</small></div>
+        <div class="kpi-card-v59"><span>Telegram</span><strong>${readiness.telegram?.configured && readiness.telegram?.target_configured ? 'READY' : 'NOT READY'}</strong><small>Bot ve hedef kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Email</span><strong>${readiness.email?.configured && readiness.email?.target_configured ? 'READY' : 'NOT READY'}</strong><small>SMTP ve hedef kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Teslimat</span><strong>${esc(summary.delivered || 0)}</strong><small>${esc(summary.failed || 0)} başarısız · ${esc(summary.partial || 0)} kısmi</small></div>
+      </div>`;
+
+    const latest = data.latest_report?.summary || null;
+    const preview = document.getElementById('alarmReportLatestPreview');
+    if (preview) {
+      if (!latest || !latest.metrics) preview.innerHTML = '<h3>Son Rapor Özeti</h3><p class="muted">Henüz oluşturulmuş rapor yok.</p>';
+      else {
+        const m = latest.metrics || {};
+        preview.innerHTML = `
+          <h3>Son Rapor Özeti — ${esc(latest.title || '-')}</h3>
+          <p class="muted">${esc(latest.period?.label || '-')} · ${esc(fmtDate(latest.generated_at))}</p>
+          <div class="alarm-report-mini-grid-v520">
+            <div class="alarm-report-mini-v520"><span>Toplam Alarm</span><strong>${esc(m.total_alarms || 0)}</strong></div>
+            <div class="alarm-report-mini-v520"><span>Critical</span><strong>${esc(m.critical_count || 0)}</strong></div>
+            <div class="alarm-report-mini-v520"><span>Şu An Aktif</span><strong>${esc(m.active_now || 0)}</strong></div>
+            <div class="alarm-report-mini-v520"><span>Ort. Ack</span><strong>${esc(m.avg_ack_minutes || 0)} dk</strong></div>
+            <div class="alarm-report-mini-v520"><span>Ort. Çözüm</span><strong>${esc(m.avg_resolve_minutes || 0)} dk</strong></div>
+            <div class="alarm-report-mini-v520"><span>SLA Escalation</span><strong>${esc(m.escalation_count || 0)}</strong></div>
+          </div>`;
+      }
+    }
+
+    const history = document.getElementById('alarmReportsHistory');
+    if (history) history.innerHTML = table([
+      {label:'Oluşma',value:r=>fmtDate(r.created_at)},
+      {label:'Rapor',value:r=>r.report_type === 'weekly' ? 'Haftalık' : 'Günlük'},
+      {label:'Trigger',value:r=>r.trigger || '-'},
+      {label:'Dönem',value:r=>`${fmtDate(r.period_start)} → ${fmtDate(r.period_end)}`},
+      {label:'Kanal',value:r=>r.channels || '-'},
+      {label:'Durum',value:r=>String(r.status || '-').toUpperCase()},
+      {label:'Provider ID',value:r=>r.provider_message_id || '-'},
+      {label:'Hata',value:r=>r.error_message || '-'}
+    ], data.history || []);
+
+    ['saveAlarmReportsBtn','runDailyAlarmReportBtn','runWeeklyAlarmReportBtn'].forEach(id => {
+      const button = document.getElementById(id);
+      if (button) button.disabled = !canManage;
+    });
+  }
+
   function renderCounts(counts) {
     const el = document.getElementById('adminCounts');
     if (!el) return;
@@ -2337,6 +2471,7 @@
       ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
+      ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus'],
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -2650,6 +2785,30 @@
     return apiJson('/api/admin/automation-scheduler/run-now', {method:'POST',body:JSON.stringify({})});
   }
 
+  async function saveAlarmReports() {
+    return apiJson('/api/admin/alarm-reports/settings', {
+      method:'PATCH',
+      body:JSON.stringify({
+        scheduler_enabled:document.getElementById('alarmReportSchedulerEnabled').value === 'true',
+        timezone:document.getElementById('alarmReportTimezone').value.trim(),
+        channels:document.getElementById('alarmReportChannels').value,
+        telegram_chat_ids:document.getElementById('alarmReportTelegramChatIds').value.trim(),
+        email_recipients:document.getElementById('alarmReportEmailRecipients').value.trim(),
+        daily_enabled:document.getElementById('alarmReportDailyEnabled').value === 'true',
+        daily_hour:Number(document.getElementById('alarmReportDailyHour').value),
+        weekly_enabled:document.getElementById('alarmReportWeeklyEnabled').value === 'true',
+        weekly_day:Number(document.getElementById('alarmReportWeeklyDay').value),
+        weekly_hour:Number(document.getElementById('alarmReportWeeklyHour').value)
+      })
+    });
+  }
+
+  async function runAlarmReportNow(reportType) {
+    return apiJson('/api/admin/alarm-reports/run-now', {
+      method:'POST',body:JSON.stringify({report_type:reportType})
+    });
+  }
+
   async function createDeviceProvisionToken() {
     const customer_code = document.getElementById('deviceCustomerCode').value.trim();
     const site_code = document.getElementById('deviceSiteCode').value.trim();
@@ -2867,6 +3026,10 @@
     const refreshAutomationSchedulerBtn = document.getElementById('refreshAutomationSchedulerBtn');
     const saveAutomationSchedulerBtn = document.getElementById('saveAutomationSchedulerBtn');
     const runAutomationSchedulerBtn = document.getElementById('runAutomationSchedulerBtn');
+    const refreshAlarmReportsBtn = document.getElementById('refreshAlarmReportsBtn');
+    const saveAlarmReportsBtn = document.getElementById('saveAlarmReportsBtn');
+    const runDailyAlarmReportBtn = document.getElementById('runDailyAlarmReportBtn');
+    const runWeeklyAlarmReportBtn = document.getElementById('runWeeklyAlarmReportBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -2881,6 +3044,46 @@
     if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click', loadAdmin);
     if (refreshNotificationSettingsBtn) refreshNotificationSettingsBtn.addEventListener('click', loadAdmin);
     if (refreshAutomationSchedulerBtn) refreshAutomationSchedulerBtn.addEventListener('click', loadAdmin);
+    if (refreshAlarmReportsBtn) refreshAlarmReportsBtn.addEventListener('click', loadAdmin);
+    if (saveAlarmReportsBtn) saveAlarmReportsBtn.addEventListener('click', async () => {
+      saveAlarmReportsBtn.disabled = true;
+      document.getElementById('alarmReportsResult').textContent = 'Alarm rapor ayarları kaydediliyor...';
+      try {
+        await saveAlarmReports();
+        await loadAdmin();
+        document.getElementById('alarmReportsResult').textContent = 'Rapor ayarları kaydedildi ve scheduler yeni planla başlatıldı.';
+      } catch(e) {
+        document.getElementById('alarmReportsResult').textContent = e.message;
+      } finally {
+        saveAlarmReportsBtn.disabled = false;
+      }
+    });
+    if (runDailyAlarmReportBtn) runDailyAlarmReportBtn.addEventListener('click', async () => {
+      runDailyAlarmReportBtn.disabled = true;
+      document.getElementById('alarmReportsResult').textContent = 'Günlük alarm raporu hazırlanıp gönderiliyor...';
+      try {
+        const result = await runAlarmReportNow('daily');
+        await loadAdmin();
+        document.getElementById('alarmReportsResult').textContent = `Günlük rapor gönderildi. Durum: ${String(result.status || '-').toUpperCase()} · Provider ID: ${result.delivery?.message_id || '-'}`;
+      } catch(e) {
+        document.getElementById('alarmReportsResult').textContent = e.message;
+      } finally {
+        runDailyAlarmReportBtn.disabled = false;
+      }
+    });
+    if (runWeeklyAlarmReportBtn) runWeeklyAlarmReportBtn.addEventListener('click', async () => {
+      runWeeklyAlarmReportBtn.disabled = true;
+      document.getElementById('alarmReportsResult').textContent = 'Haftalık alarm raporu hazırlanıp gönderiliyor...';
+      try {
+        const result = await runAlarmReportNow('weekly');
+        await loadAdmin();
+        document.getElementById('alarmReportsResult').textContent = `Haftalık rapor gönderildi. Durum: ${String(result.status || '-').toUpperCase()} · Provider ID: ${result.delivery?.message_id || '-'}`;
+      } catch(e) {
+        document.getElementById('alarmReportsResult').textContent = e.message;
+      } finally {
+        runWeeklyAlarmReportBtn.disabled = false;
+      }
+    });
     if (saveAutomationSchedulerBtn) saveAutomationSchedulerBtn.addEventListener('click', async () => {
       saveAutomationSchedulerBtn.disabled = true;
       document.getElementById('automationSchedulerResult').textContent = 'Scheduler ayarları kaydediliyor...';

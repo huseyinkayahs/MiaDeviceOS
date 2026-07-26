@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.19.0';
+const APP_VERSION = '5.20.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -150,6 +150,61 @@ function alarmEscalationRetryMaxDelaySec() {
 function alarmEscalationRetryMaxAttempts() {
   const value = Number(runtimeNotificationValue('retry_max_attempts', process.env.ALARM_ESCALATION_RETRY_MAX_ATTEMPTS || 5));
   return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 1), 20) : 5;
+}
+
+function alarmReportSchedulerEnabled() {
+  return runtimeBoolean('alarm_report_scheduler_enabled', 'ALARM_REPORT_SCHEDULER_ENABLED', false);
+}
+
+function validateAlarmReportTimezone(value) {
+  const timezone = String(value || 'Europe/Istanbul').trim() || 'Europe/Istanbul';
+  try {
+    new Intl.DateTimeFormat('en-US', {timeZone:timezone}).format(new Date());
+    return timezone;
+  } catch {
+    return 'Europe/Istanbul';
+  }
+}
+
+function alarmReportTimezone() {
+  return validateAlarmReportTimezone(runtimeNotificationValue('alarm_report_timezone', process.env.ALARM_REPORT_TIMEZONE || 'Europe/Istanbul'));
+}
+
+function alarmReportChannels() {
+  const raw = String(runtimeNotificationValue('alarm_report_channels', process.env.ALARM_REPORT_CHANNELS || 'telegram') || 'telegram').toLowerCase();
+  const channels = raw.split(/[,+]/).map(value => value.trim()).filter(value => ['telegram','email'].includes(value));
+  return [...new Set(channels.length ? channels : ['telegram'])];
+}
+
+function alarmReportTelegramChatIds() {
+  return String(runtimeNotificationValue('alarm_report_telegram_chat_ids', process.env.ALARM_REPORT_TELEGRAM_CHAT_IDS || '') || '').trim();
+}
+
+function alarmReportEmailRecipients() {
+  return String(runtimeNotificationValue('alarm_report_email_recipients', process.env.ALARM_REPORT_EMAIL_RECIPIENTS || '') || '').trim();
+}
+
+function alarmReportDailyEnabled() {
+  return runtimeBoolean('alarm_report_daily_enabled', 'ALARM_REPORT_DAILY_ENABLED', true);
+}
+
+function alarmReportDailyHour() {
+  const value = Number(runtimeNotificationValue('alarm_report_daily_hour', process.env.ALARM_REPORT_DAILY_HOUR || 8));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 0), 23) : 8;
+}
+
+function alarmReportWeeklyEnabled() {
+  return runtimeBoolean('alarm_report_weekly_enabled', 'ALARM_REPORT_WEEKLY_ENABLED', true);
+}
+
+function alarmReportWeeklyDay() {
+  const value = Number(runtimeNotificationValue('alarm_report_weekly_day', process.env.ALARM_REPORT_WEEKLY_DAY || 1));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 0), 6) : 1;
+}
+
+function alarmReportWeeklyHour() {
+  const value = Number(runtimeNotificationValue('alarm_report_weekly_hour', process.env.ALARM_REPORT_WEEKLY_HOUR || 8));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 0), 23) : 8;
 }
 
 function telegramEscalationConfig() {
@@ -3562,6 +3617,16 @@ async function ensureNotificationSettingsFoundation() {
       retry_base_delay_sec integer,
       retry_max_delay_sec integer,
       retry_max_attempts integer,
+      alarm_report_scheduler_enabled boolean,
+      alarm_report_timezone text,
+      alarm_report_channels text,
+      alarm_report_telegram_chat_ids text,
+      alarm_report_email_recipients text,
+      alarm_report_daily_enabled boolean,
+      alarm_report_daily_hour integer,
+      alarm_report_weekly_enabled boolean,
+      alarm_report_weekly_day integer,
+      alarm_report_weekly_hour integer,
       updated_by text,
       updated_at timestamptz NOT NULL DEFAULT now()
     )
@@ -3573,6 +3638,47 @@ async function ensureNotificationSettingsFoundation() {
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_base_delay_sec integer`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_max_delay_sec integer`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_max_attempts integer`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_scheduler_enabled boolean`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_timezone text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_channels text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_telegram_chat_ids text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_email_recipients text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_daily_enabled boolean`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_daily_hour integer`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_weekly_enabled boolean`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_weekly_day integer`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_weekly_hour integer`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alarm_report_deliveries (
+      id bigserial PRIMARY KEY,
+      report_key text NOT NULL UNIQUE,
+      report_type text NOT NULL CHECK (report_type IN ('daily','weekly')),
+      trigger text NOT NULL,
+      period_start timestamptz NOT NULL,
+      period_end timestamptz NOT NULL,
+      timezone text NOT NULL,
+      channels text NOT NULL,
+      recipients jsonb NOT NULL DEFAULT '{}'::jsonb,
+      status text NOT NULL CHECK (status IN ('processing','delivered','partial','failed','skipped')),
+      attempt_count integer NOT NULL DEFAULT 0,
+      summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+      provider_message_id text,
+      error_message text,
+      started_at timestamptz NOT NULL DEFAULT now(),
+      finished_at timestamptz,
+      delivered_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_report_deliveries_created
+    ON alarm_report_deliveries(created_at DESC)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_report_deliveries_status
+    ON alarm_report_deliveries(status, created_at DESC)
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS alarm_automation_scheduler_runs (
       id bigserial PRIMARY KEY,
@@ -3686,7 +3792,11 @@ async function notificationSettingsSnapshot(actor = null) {
     'delivery_enabled','auto_delivery_enabled','interval_sec','batch_size',
     'telegram_enabled','telegram_bot_token','telegram_chat_id',
     'email_enabled','smtp_host','smtp_port','smtp_secure','smtp_user','smtp_pass','smtp_from','email_default_to',
-    'scheduler_enabled','scheduler_interval_sec','retry_enabled','retry_base_delay_sec','retry_max_delay_sec','retry_max_attempts'
+    'scheduler_enabled','scheduler_interval_sec','retry_enabled','retry_base_delay_sec','retry_max_delay_sec','retry_max_attempts',
+    'alarm_report_scheduler_enabled','alarm_report_timezone','alarm_report_channels',
+    'alarm_report_telegram_chat_ids','alarm_report_email_recipients',
+    'alarm_report_daily_enabled','alarm_report_daily_hour',
+    'alarm_report_weekly_enabled','alarm_report_weekly_day','alarm_report_weekly_hour'
   ];
   const hasOverrides = overrideKeys.some(key => notificationRuntimeSettings[key] !== null && notificationRuntimeSettings[key] !== undefined);
   return {
@@ -4204,6 +4314,461 @@ app.post('/api/admin/automation-scheduler/run-now', adminRequired, permissionReq
     res.json({status:'ok',version:APP_VERSION,...result});
   } catch(e) {
     res.status(500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
+
+
+const alarmReportSchedulerState = {
+  running:false,
+  last_check_at:null,
+  last_result:null,
+  next_check_at:null
+};
+
+function alarmReportType(raw) {
+  const value = String(raw || 'daily').trim().toLowerCase();
+  return value === 'weekly' ? 'weekly' : 'daily';
+}
+
+function alarmReportWeekdayName(day) {
+  return ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][Number(day) || 0] || 'Pazartesi';
+}
+
+function zonedClockParts(date = new Date(), timezone = alarmReportTimezone()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone:timezone,
+    year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',
+    weekday:'short',hourCycle:'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const weekdayMap = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+  return {
+    year:Number(values.year),month:Number(values.month),day:Number(values.day),
+    hour:Number(values.hour),minute:Number(values.minute),second:Number(values.second),
+    weekday:weekdayMap[values.weekday] ?? 0,
+    date_key:`${values.year}-${values.month}-${values.day}`
+  };
+}
+
+function addDaysToDateKey(dateKey, days) {
+  const [year,month,day] = String(dateKey).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + Number(days || 0)));
+  return date.toISOString().slice(0,10);
+}
+
+async function localScheduleToUtc(dateKey, hour, timezone) {
+  const row = await one(`
+    SELECT (($1::date + ($2::int * interval '1 hour')) AT TIME ZONE $3)::timestamptz AS run_at
+  `, [dateKey, Number(hour || 0), timezone]);
+  return row?.run_at ? new Date(row.run_at).toISOString() : null;
+}
+
+async function nextAlarmReportSchedule(type, now = new Date()) {
+  const timezone = alarmReportTimezone();
+  const parts = zonedClockParts(now, timezone);
+  if (type === 'daily') {
+    if (!alarmReportDailyEnabled()) return null;
+    const hour = alarmReportDailyHour();
+    const dateKey = parts.hour < hour ? parts.date_key : addDaysToDateKey(parts.date_key, 1);
+    return localScheduleToUtc(dateKey, hour, timezone);
+  }
+  if (!alarmReportWeeklyEnabled()) return null;
+  const hour = alarmReportWeeklyHour();
+  const targetDay = alarmReportWeeklyDay();
+  let dayOffset = (targetDay - parts.weekday + 7) % 7;
+  if (dayOffset === 0 && parts.hour >= hour) dayOffset = 7;
+  return localScheduleToUtc(addDaysToDateKey(parts.date_key, dayOffset), hour, timezone);
+}
+
+async function alarmReportPeriod(type, now = new Date()) {
+  const reportType = alarmReportType(type);
+  const timezone = alarmReportTimezone();
+  const localToday = zonedClockParts(now, timezone).date_key;
+  const periodEndDate = localToday;
+  const periodStartDate = addDaysToDateKey(periodEndDate, reportType === 'weekly' ? -7 : -1);
+  const row = await one(`
+    SELECT
+      ($1::date::timestamp AT TIME ZONE $3)::timestamptz AS period_start,
+      ($2::date::timestamp AT TIME ZONE $3)::timestamptz AS period_end
+  `, [periodStartDate, periodEndDate, timezone]);
+  return {
+    report_type:reportType,
+    timezone,
+    local_start_date:periodStartDate,
+    local_end_date:periodEndDate,
+    period_start:new Date(row.period_start).toISOString(),
+    period_end:new Date(row.period_end).toISOString(),
+    label:reportType === 'weekly'
+      ? `${periodStartDate} – ${addDaysToDateKey(periodEndDate, -1)}`
+      : periodStartDate
+  };
+}
+
+function reportNumber(value, digits = 1) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Number(number.toFixed(digits));
+}
+
+async function buildAlarmReport(type, now = new Date()) {
+  await ensureAlarmEscalationFoundation();
+  const period = await alarmReportPeriod(type, now);
+  const params = [period.period_start, period.period_end];
+  const [metricsResult, topTypesResult, topMachinesResult, criticalResult] = await Promise.all([
+    one(`
+      SELECT
+        (SELECT count(*)::int FROM alarms WHERE started_at >= $1 AND started_at < $2) AS total_alarms,
+        (SELECT count(*)::int FROM alarms WHERE started_at >= $1 AND started_at < $2 AND lower(severity)='critical') AS critical_count,
+        (SELECT count(*)::int FROM alarms WHERE started_at >= $1 AND started_at < $2 AND lower(severity)='warning') AS warning_count,
+        (SELECT count(*)::int FROM alarms WHERE started_at >= $1 AND started_at < $2 AND lower(severity)='info') AS info_count,
+        (SELECT count(*)::int FROM alarms WHERE cleared_at >= $1 AND cleared_at < $2) AS cleared_count,
+        (SELECT count(*)::int FROM alarms WHERE status='active') AS active_now,
+        (SELECT count(*)::int FROM alarms WHERE started_at >= $1 AND started_at < $2 AND acknowledged_at IS NOT NULL) AS acknowledged_count,
+        (SELECT round(avg(EXTRACT(EPOCH FROM (acknowledged_at-started_at))/60.0)::numeric,1) FROM alarms WHERE started_at >= $1 AND started_at < $2 AND acknowledged_at IS NOT NULL) AS avg_ack_minutes,
+        (SELECT round(avg(EXTRACT(EPOCH FROM (cleared_at-started_at))/60.0)::numeric,1) FROM alarms WHERE started_at >= $1 AND started_at < $2 AND cleared_at IS NOT NULL) AS avg_resolve_minutes,
+        (SELECT count(*)::int FROM alarm_escalation_events WHERE detected_at >= $1 AND detected_at < $2) AS escalation_count,
+        (SELECT count(*)::int FROM alarm_escalation_events WHERE detected_at >= $1 AND detected_at < $2 AND delivery_status='delivered') AS escalation_delivered,
+        (SELECT count(*)::int FROM alarm_escalation_events WHERE detected_at >= $1 AND detected_at < $2 AND delivery_status IN ('failed','dead_letter')) AS escalation_failed
+    `, params),
+    pool.query(`
+      SELECT alarm_type, count(*)::int AS alarm_count,
+             (count(*) FILTER (WHERE lower(severity)='critical'))::int AS critical_count
+      FROM alarms
+      WHERE started_at >= $1 AND started_at < $2
+      GROUP BY alarm_type
+      ORDER BY alarm_count DESC, critical_count DESC, alarm_type
+      LIMIT 5
+    `, params),
+    pool.query(`
+      SELECT COALESCE(m.name,m.code,'Atanmamış') AS machine_name,
+             COALESCE(m.code,'-') AS machine_code,
+             count(*)::int AS alarm_count,
+             (count(*) FILTER (WHERE lower(a.severity)='critical'))::int AS critical_count
+      FROM alarms a
+      LEFT JOIN machines m ON m.id=a.machine_id
+      WHERE a.started_at >= $1 AND a.started_at < $2
+      GROUP BY m.id,m.name,m.code
+      ORDER BY alarm_count DESC, critical_count DESC, machine_name
+      LIMIT 5
+    `, params),
+    pool.query(`
+      SELECT a.alarm_type,a.severity,a.status,a.started_at,a.cleared_at,a.message,
+             COALESCE(m.name,m.code,'Atanmamış') AS machine_name,
+             COALESCE(m.code,'-') AS machine_code
+      FROM alarms a
+      LEFT JOIN machines m ON m.id=a.machine_id
+      WHERE a.started_at >= $1 AND a.started_at < $2 AND lower(a.severity)='critical'
+      ORDER BY a.started_at DESC
+      LIMIT 5
+    `, params)
+  ]);
+
+  const raw = metricsResult || {};
+  const metrics = {
+    total_alarms:Number(raw.total_alarms || 0),
+    critical_count:Number(raw.critical_count || 0),
+    warning_count:Number(raw.warning_count || 0),
+    info_count:Number(raw.info_count || 0),
+    cleared_count:Number(raw.cleared_count || 0),
+    active_now:Number(raw.active_now || 0),
+    acknowledged_count:Number(raw.acknowledged_count || 0),
+    avg_ack_minutes:reportNumber(raw.avg_ack_minutes),
+    avg_resolve_minutes:reportNumber(raw.avg_resolve_minutes),
+    escalation_count:Number(raw.escalation_count || 0),
+    escalation_delivered:Number(raw.escalation_delivered || 0),
+    escalation_failed:Number(raw.escalation_failed || 0)
+  };
+
+  return {
+    report_type:period.report_type,
+    title:period.report_type === 'weekly' ? 'Haftalık Alarm Raporu' : 'Günlük Alarm Raporu',
+    generated_at:new Date().toISOString(),
+    period,
+    metrics,
+    top_alarm_types:topTypesResult.rows,
+    top_machines:topMachinesResult.rows,
+    recent_critical:criticalResult.rows
+  };
+}
+
+function alarmReportText(report) {
+  const m = report.metrics || {};
+  const typeLines = (report.top_alarm_types || []).map((row,index) => `${index+1}. ${row.alarm_type}: ${row.alarm_count}`).join('\n') || '-';
+  const machineLines = (report.top_machines || []).map((row,index) => `${index+1}. ${row.machine_name}: ${row.alarm_count}`).join('\n') || '-';
+  return [
+    `FactoryBox ${report.title}`,
+    `Dönem: ${report.period?.label || '-'}`,
+    `Saat dilimi: ${report.period?.timezone || '-'}`,
+    '',
+    `Toplam alarm: ${m.total_alarms || 0}`,
+    `Critical / Warning / Info: ${m.critical_count || 0} / ${m.warning_count || 0} / ${m.info_count || 0}`,
+    `Temizlenen: ${m.cleared_count || 0}`,
+    `Şu an aktif: ${m.active_now || 0}`,
+    `Ort. acknowledge: ${m.avg_ack_minutes || 0} dk`,
+    `Ort. çözüm: ${m.avg_resolve_minutes || 0} dk`,
+    `SLA escalation: ${m.escalation_count || 0} (${m.escalation_delivered || 0} delivered / ${m.escalation_failed || 0} failed)`,
+    '',
+    'En sık alarm tipleri:',
+    typeLines,
+    '',
+    'En yoğun makineler:',
+    machineLines,
+    '',
+    `Oluşturulma: ${new Date(report.generated_at).toLocaleString('tr-TR')}`
+  ].join('\n').slice(0, 4000);
+}
+
+function alarmReportEmailHtml(report) {
+  const m = report.metrics || {};
+  const rows = (report.top_alarm_types || []).map(row => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${h(row.alarm_type)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(row.alarm_count)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(row.critical_count)}</td></tr>`).join('') || '<tr><td colspan="3" style="padding:10px;">Alarm kaydı yok.</td></tr>';
+  const machineRows = (report.top_machines || []).map(row => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${h(row.machine_name)} (${h(row.machine_code)})</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(row.alarm_count)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(row.critical_count)}</td></tr>`).join('') || '<tr><td colspan="3" style="padding:10px;">Makine kaydı yok.</td></tr>';
+  return emailShellHtml(`FactoryBox ${report.title}`, `
+    <h1 style="margin:0 0 8px;color:#102033;">FactoryBox ${h(report.title)}</h1>
+    <p style="margin:0 0 18px;color:#64748b;">Dönem: ${h(report.period?.label || '-')} · ${h(report.period?.timezone || '-')}</p>
+    <table style="width:100%;border-collapse:separate;border-spacing:8px;margin:0 -8px 18px;">
+      <tr>
+        <td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong style="font-size:24px;">${h(m.total_alarms || 0)}</strong><br>Toplam alarm</td>
+        <td style="background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:14px;"><strong style="font-size:24px;">${h(m.critical_count || 0)}</strong><br>Critical</td>
+        <td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong style="font-size:24px;">${h(m.active_now || 0)}</strong><br>Şu an aktif</td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Critical / Warning / Info</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(m.critical_count || 0)} / ${h(m.warning_count || 0)} / ${h(m.info_count || 0)}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Temizlenen</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(m.cleared_count || 0)}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Ortalama acknowledge</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(m.avg_ack_minutes || 0)} dk</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>Ortalama çözüm</strong></td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${h(m.avg_resolve_minutes || 0)} dk</td></tr>
+      <tr><td style="padding:8px;"><strong>SLA escalation</strong></td><td style="padding:8px;text-align:right;">${h(m.escalation_count || 0)} (${h(m.escalation_delivered || 0)} delivered / ${h(m.escalation_failed || 0)} failed)</td></tr>
+    </table>
+    <h2 style="font-size:18px;">En sık alarm tipleri</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;"><thead><tr><th style="text-align:left;padding:8px;background:#f1f5f9;">Alarm</th><th style="text-align:right;padding:8px;background:#f1f5f9;">Adet</th><th style="text-align:right;padding:8px;background:#f1f5f9;">Critical</th></tr></thead><tbody>${rows}</tbody></table>
+    <h2 style="font-size:18px;">En yoğun makineler</h2>
+    <table style="width:100%;border-collapse:collapse;"><thead><tr><th style="text-align:left;padding:8px;background:#f1f5f9;">Makine</th><th style="text-align:right;padding:8px;background:#f1f5f9;">Adet</th><th style="text-align:right;padding:8px;background:#f1f5f9;">Critical</th></tr></thead><tbody>${machineRows}</tbody></table>
+  `);
+}
+
+async function sendAlarmReportTelegram(report, targetValue = '') {
+  const cfg = telegramEscalationConfig();
+  if (!cfg.enabled) throw new Error('Telegram kanalı kapalı');
+  if (!cfg.token) throw new Error('Telegram bot token ayarlanmamış');
+  const chatIds = splitRecipientValues(targetValue || alarmReportTelegramChatIds() || cfg.defaultChatId);
+  if (!chatIds.length) throw new Error('Telegram chat ID ayarlanmamış');
+  const delivered = [];
+  for (const chatId of chatIds) {
+    const response = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+      method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({chat_id:chatId,text:alarmReportText(report),disable_web_page_preview:true})
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) throw new Error(payload.description || `Telegram HTTP ${response.status}`);
+    delivered.push({chat_id:chatId,message_id:payload.result?.message_id || null});
+  }
+  return {provider:'telegram',message_id:delivered.map(row => row.message_id).filter(Boolean).join(',') || null,delivered};
+}
+
+async function sendAlarmReportEmail(report, recipientValue = '') {
+  const result = await sendReportEmail({
+    to:recipientValue || alarmReportEmailRecipients(),
+    subject:`FactoryBox ${report.title} - ${report.period?.label || ''}`,
+    html:alarmReportEmailHtml(report),
+    text:alarmReportText(report)
+  });
+  if (!result.sent) throw new Error(result.reason || 'Alarm raporu e-postası gönderilemedi');
+  return {provider:'email',message_id:result.message_id || null,to:result.to || [],accepted:result.accepted || [],rejected:result.rejected || []};
+}
+
+async function deliverAlarmReport(report, options = {}) {
+  const channels = Array.isArray(options.channels) && options.channels.length ? options.channels : alarmReportChannels();
+  const results = [];
+  const errors = [];
+  for (const channel of channels) {
+    try {
+      if (channel === 'telegram') results.push(await sendAlarmReportTelegram(report, options.telegram_chat_ids));
+      else if (channel === 'email') results.push(await sendAlarmReportEmail(report, options.email_recipients));
+    } catch (error) {
+      errors.push({channel,message:String(error.message || error)});
+    }
+  }
+  if (!results.length) throw new Error(errors.map(row => `${row.channel}: ${row.message}`).join(' | ') || 'Aktif rapor kanalı bulunamadı');
+  return {
+    status:errors.length ? 'partial' : 'delivered',
+    providers:results,
+    errors,
+    message_id:results.map(row => row.message_id).filter(Boolean).join(',') || null
+  };
+}
+
+async function runAlarmReportDelivery({reportType = 'daily', trigger = 'manual', scheduled = false, now = new Date()} = {}) {
+  await ensureNotificationSettingsFoundation();
+  const type = alarmReportType(reportType);
+  const period = await alarmReportPeriod(type, now);
+  const reportKey = scheduled ? `scheduled-${type}-${period.local_end_date}` : `manual-${type}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+  const recipients = {telegram_chat_ids:alarmReportTelegramChatIds() || null,email_recipients:alarmReportEmailRecipients() || null};
+  const inserted = await one(`
+    INSERT INTO alarm_report_deliveries(
+      report_key,report_type,trigger,period_start,period_end,timezone,channels,recipients,status,attempt_count
+    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,'processing',1)
+    ON CONFLICT(report_key) DO NOTHING
+    RETURNING *
+  `, [reportKey,type,trigger,period.period_start,period.period_end,period.timezone,alarmReportChannels().join(','),JSON.stringify(recipients)]);
+  if (!inserted) return {status:'skipped',duplicate:true,report_key:reportKey,report_type:type,period};
+
+  try {
+    const report = await buildAlarmReport(type, now);
+    const delivery = await deliverAlarmReport(report, recipients);
+    const updated = await one(`
+      UPDATE alarm_report_deliveries SET
+        status=$2,summary=$3::jsonb,provider_message_id=$4,error_message=$5,
+        finished_at=now(),delivered_at=now(),updated_at=now()
+      WHERE id=$1
+      RETURNING *
+    `, [inserted.id,delivery.status,JSON.stringify(report),delivery.message_id,delivery.errors.length ? JSON.stringify(delivery.errors) : null]);
+    return {status:delivery.status,duplicate:false,delivery_id:String(updated.id),report_key:reportKey,report,delivery};
+  } catch (error) {
+    await pool.query(`
+      UPDATE alarm_report_deliveries SET status='failed',error_message=$2,finished_at=now(),updated_at=now()
+      WHERE id=$1
+    `, [inserted.id,String(error.message || error).slice(0,2000)]);
+    error.alarm_report_delivery_id = String(inserted.id);
+    throw error;
+  }
+}
+
+async function runDueAlarmReports({trigger = 'auto-report-scheduler', now = new Date()} = {}) {
+  if (!alarmReportSchedulerEnabled()) return {enabled:false,status:'disabled',results:[]};
+  if (alarmReportSchedulerState.running) return {enabled:true,status:'skipped',reason:'already_running',results:[]};
+  alarmReportSchedulerState.running = true;
+  alarmReportSchedulerState.last_check_at = new Date().toISOString();
+  const timezone = alarmReportTimezone();
+  const parts = zonedClockParts(now, timezone);
+  const due = [];
+  if (alarmReportDailyEnabled() && parts.hour >= alarmReportDailyHour()) due.push('daily');
+  if (alarmReportWeeklyEnabled() && parts.weekday === alarmReportWeeklyDay() && parts.hour >= alarmReportWeeklyHour()) due.push('weekly');
+  const results = [];
+  try {
+    for (const type of due) {
+      try {
+        results.push(await runAlarmReportDelivery({reportType:type,trigger,scheduled:true,now}));
+      } catch (error) {
+        results.push({status:'failed',report_type:type,message:String(error.message || error),delivery_id:error.alarm_report_delivery_id || null});
+      }
+    }
+    const result = {enabled:true,status:'completed',timezone,due,results,checked_at:new Date().toISOString()};
+    alarmReportSchedulerState.last_result = result;
+    return result;
+  } finally {
+    alarmReportSchedulerState.running = false;
+  }
+}
+
+async function alarmReportSettingsSnapshot(actor = null) {
+  await ensureNotificationSettingsFoundation();
+  const [dailyNext, weeklyNext, historyResult, counts] = await Promise.all([
+    nextAlarmReportSchedule('daily'),
+    nextAlarmReportSchedule('weekly'),
+    pool.query(`
+      SELECT id::text,report_key,report_type,trigger,period_start,period_end,timezone,channels,
+             recipients,status,attempt_count,provider_message_id,error_message,started_at,finished_at,delivered_at,created_at,summary
+      FROM alarm_report_deliveries
+      ORDER BY created_at DESC
+      LIMIT 30
+    `),
+    one(`
+      SELECT count(*)::int AS total,
+             (count(*) FILTER (WHERE status='delivered'))::int AS delivered,
+             (count(*) FILTER (WHERE status='partial'))::int AS partial,
+             (count(*) FILTER (WHERE status='failed'))::int AS failed
+      FROM alarm_report_deliveries
+    `)
+  ]);
+  const telegram = telegramEscalationConfig();
+  const email = emailConfig();
+  return {
+    can_manage:!authConfig().enabled || hasPermission(actor,'MANAGE_SITES'),
+    scheduler:{
+      enabled:alarmReportSchedulerEnabled(),
+      check_interval_sec:60,
+      timezone:alarmReportTimezone(),
+      channels:alarmReportChannels(),
+      telegram_chat_ids:alarmReportTelegramChatIds(),
+      email_recipients:alarmReportEmailRecipients(),
+      daily:{enabled:alarmReportDailyEnabled(),hour:alarmReportDailyHour(),next_run_at:dailyNext},
+      weekly:{enabled:alarmReportWeeklyEnabled(),day:alarmReportWeeklyDay(),day_name:alarmReportWeekdayName(alarmReportWeeklyDay()),hour:alarmReportWeeklyHour(),next_run_at:weeklyNext},
+      state:alarmReportSchedulerState
+    },
+    channel_readiness:{
+      telegram:{enabled:telegram.enabled,configured:telegram.configured,target_configured:Boolean(alarmReportTelegramChatIds() || telegram.defaultChatId)},
+      email:{enabled:email.enabled,configured:email.configured,target_configured:Boolean(alarmReportEmailRecipients() || email.defaultTo)}
+    },
+    summary:counts || {total:0,delivered:0,partial:0,failed:0},
+    history:historyResult.rows,
+    latest_report:historyResult.rows.find(row => row.summary && Object.keys(row.summary).length) || null,
+    updated_at:notificationRuntimeSettings.updated_at || null,
+    updated_by:notificationRuntimeSettings.updated_by || null
+  };
+}
+
+app.get('/api/admin/alarm-reports', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    const snapshot = await alarmReportSettingsSnapshot(req.user || getSession(req)?.user || null);
+    res.json({status:'ok',version:APP_VERSION,...snapshot});
+  } catch (e) {
+    res.status(500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
+
+app.patch('/api/admin/alarm-reports/settings', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureNotificationSettingsFoundation();
+    const body = req.body || {};
+    const current = notificationRuntimeSettings || {};
+    const rawChannels = Array.isArray(body.channels) ? body.channels.join(',') : String(body.channels || current.alarm_report_channels || 'telegram');
+    const channels = [...new Set(rawChannels.toLowerCase().split(/[,+]/).map(value => value.trim()).filter(value => ['telegram','email'].includes(value)))];
+    if (!channels.length) throw new Error('En az bir kanal seçilmelidir: telegram veya email');
+    const requestedTimezone = notificationTextInput(body.timezone,current.alarm_report_timezone || 'Europe/Istanbul',100);
+    const timezone = validateAlarmReportTimezone(requestedTimezone);
+    if (timezone !== requestedTimezone) throw new Error('Geçersiz saat dilimi. Örnek: Europe/Istanbul');
+    const next = {
+      scheduler_enabled:notificationBoolInput(body.scheduler_enabled,current.alarm_report_scheduler_enabled),
+      timezone,
+      channels:channels.join(','),
+      telegram_chat_ids:notificationTextInput(body.telegram_chat_ids,current.alarm_report_telegram_chat_ids || '',1000),
+      email_recipients:notificationTextInput(body.email_recipients,current.alarm_report_email_recipients || '',2000),
+      daily_enabled:notificationBoolInput(body.daily_enabled,current.alarm_report_daily_enabled),
+      daily_hour:notificationIntInput(body.daily_hour,current.alarm_report_daily_hour,0,23),
+      weekly_enabled:notificationBoolInput(body.weekly_enabled,current.alarm_report_weekly_enabled),
+      weekly_day:notificationIntInput(body.weekly_day,current.alarm_report_weekly_day,0,6),
+      weekly_hour:notificationIntInput(body.weekly_hour,current.alarm_report_weekly_hour,0,23)
+    };
+    const before = await alarmReportSettingsSnapshot(req.user || null);
+    const actorEmail = req.user?.email || getSession(req)?.user?.email || 'system';
+    await pool.query(`
+      UPDATE notification_settings SET
+        alarm_report_scheduler_enabled=$1,alarm_report_timezone=$2,alarm_report_channels=$3,
+        alarm_report_telegram_chat_ids=$4,alarm_report_email_recipients=$5,
+        alarm_report_daily_enabled=$6,alarm_report_daily_hour=$7,
+        alarm_report_weekly_enabled=$8,alarm_report_weekly_day=$9,alarm_report_weekly_hour=$10,
+        updated_by=$11,updated_at=now()
+      WHERE id=1
+    `, [next.scheduler_enabled,next.timezone,next.channels,next.telegram_chat_ids,next.email_recipients,next.daily_enabled,next.daily_hour,next.weekly_enabled,next.weekly_day,next.weekly_hour,actorEmail]);
+    await loadNotificationRuntimeSettings();
+    restartAlarmReportScheduler();
+    const snapshot = await alarmReportSettingsSnapshot(req.user || null);
+    await writeAuditLog(req,{action:'update_alarm_report_settings',entity_type:'alarm_report_settings',entity_id:'global',old_values:{scheduler:before.scheduler},new_values:{scheduler:snapshot.scheduler}});
+    res.json({status:'ok',version:APP_VERSION,...snapshot});
+  } catch (e) {
+    res.status(500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
+
+app.post('/api/admin/alarm-reports/run-now', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    const reportType = alarmReportType(req.body?.report_type);
+    const result = await runAlarmReportDelivery({reportType,trigger:'admin-panel',scheduled:false});
+    await writeAuditLog(req,{action:'run_alarm_report_now',entity_type:'alarm_report_delivery',entity_id:result.delivery_id || result.report_key,old_values:null,new_values:{report_type:reportType,status:result.status,provider_message_id:result.delivery?.message_id || null}});
+    res.json({status:'ok',version:APP_VERSION,...result});
+  } catch (e) {
+    res.status(500).json({status:'error',version:APP_VERSION,message:e.message,delivery_id:e.alarm_report_delivery_id || null});
   }
 });
 
@@ -8787,6 +9352,8 @@ let alarmEscalationDeliveryKickoffTimer = null;
 let alarmEscalationDeliveryRunning = false;
 let alarmAutomationSchedulerTimer = null;
 let alarmAutomationSchedulerKickoffTimer = null;
+let alarmReportSchedulerTimer = null;
+let alarmReportSchedulerKickoffTimer = null;
 
 function stopAlarmEscalationDeliveryWorker() {
   if (alarmEscalationDeliveryTimer) clearInterval(alarmEscalationDeliveryTimer);
@@ -8877,6 +9444,45 @@ function restartAlarmAutomationScheduler() {
   startAlarmAutomationScheduler();
 }
 
+
+function stopAlarmReportScheduler() {
+  if (alarmReportSchedulerTimer) clearInterval(alarmReportSchedulerTimer);
+  if (alarmReportSchedulerKickoffTimer) clearTimeout(alarmReportSchedulerKickoffTimer);
+  alarmReportSchedulerTimer = null;
+  alarmReportSchedulerKickoffTimer = null;
+  alarmReportSchedulerState.next_check_at = null;
+}
+
+function startAlarmReportScheduler() {
+  if (!alarmReportSchedulerEnabled()) {
+    console.log('Alarm report scheduler: disabled');
+    return;
+  }
+  if (alarmReportSchedulerTimer) return;
+  const intervalMs = 60 * 1000;
+  const run = async () => {
+    alarmReportSchedulerState.next_check_at = new Date(Date.now() + intervalMs).toISOString();
+    try {
+      const result = await runDueAlarmReports({trigger:'auto-report-scheduler'});
+      const delivered = result.results?.filter(row => ['delivered','partial'].includes(row.status)).length || 0;
+      if (delivered) console.log(`Alarm report scheduler: ${delivered} report delivered`);
+    } catch (error) {
+      console.error('Alarm report scheduler error:', error.message);
+    }
+  };
+  alarmReportSchedulerState.next_check_at = new Date(Date.now() + Math.min(intervalMs, 5000)).toISOString();
+  alarmReportSchedulerTimer = setInterval(run, intervalMs);
+  alarmReportSchedulerTimer.unref?.();
+  alarmReportSchedulerKickoffTimer = setTimeout(run, Math.min(intervalMs, 5000));
+  alarmReportSchedulerKickoffTimer.unref?.();
+  console.log(`Alarm report scheduler: daily ${alarmReportDailyHour()}:00, weekly ${alarmReportWeekdayName(alarmReportWeeklyDay())} ${alarmReportWeeklyHour()}:00 (${alarmReportTimezone()})`);
+}
+
+function restartAlarmReportScheduler() {
+  stopAlarmReportScheduler();
+  startAlarmReportScheduler();
+}
+
 async function start() {
   await pool.query('SELECT 1');
   await ensureEntities();
@@ -8898,6 +9504,7 @@ async function start() {
   app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
   startAlarmEscalationDeliveryWorker();
   startAlarmAutomationScheduler();
+  startAlarmReportScheduler();
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
 

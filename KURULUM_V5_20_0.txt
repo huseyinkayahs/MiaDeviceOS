@@ -1,0 +1,34 @@
+FACTORYBOX ONE v5.20.0 KURULUM
+================================
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine çıkarın.
+3. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+4. Backend klasöründe çalıştırın:
+
+   npm.cmd start
+
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sol üstte v5.20.0 yazdığını kontrol edin.
+7. System Settings > Alarm Reports ekranını açın.
+8. Kanalı telegram olarak seçin.
+9. Telegram Chat ID alanını boş bırakırsanız Notifications varsayılanı kullanılır.
+10. Ayarları Kaydet düğmesine basın.
+11. Günlük Rapor Gönder düğmesine basarak test edin.
+
+BEKLENEN TEST
+=============
+- Telegram'a FactoryBox Günlük Alarm Raporu mesajı gelir.
+- Teslimat geçmişinde DELIVERED görünür.
+- Son Rapor Özeti alanında KPI değerleri görünür.
+
+OTOMATİK PLAN ÖRNEĞİ
+====================
+Report Scheduler: true
+Saat Dilimi: Europe/Istanbul
+Kanallar: telegram
+Günlük Rapor: true
+Günlük Saat: 08
+Haftalık Rapor: true
+Haftalık Gün: Pazartesi
+Haftalık Saat: 08
