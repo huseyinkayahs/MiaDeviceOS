@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox SaaS Admin Panel</title>
+  <title>FactoryBox v6.0.1 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -393,6 +393,305 @@
       .admin-topbar-actions-v58 { justify-content:flex-start; }
       .kpi-two-col-v59 { grid-template-columns:1fr; }
     }
+
+
+    /* v6.0 Industrial Graphite navigation refresh */
+    body.admin-ui-v58 {
+      font-family:"Segoe UI Variable Text","Segoe UI",Roboto,Arial,sans-serif;
+      font-size:14px;
+      letter-spacing:.005em;
+    }
+    .admin-sidebar-v58 {
+      background:linear-gradient(180deg,#252b31 0%,#1c2126 58%,#15191d 100%);
+      border-right:1px solid #343b42;
+      box-shadow:16px 0 40px rgba(12,15,18,.16);
+    }
+    .admin-brand-v58 h1 { font-size:21px; font-weight:720; letter-spacing:-.02em; }
+    .admin-brand-v58 p { color:#adb6bf; font-size:12.5px; }
+    .admin-nav-title-v58 { color:#8f99a3; font-size:10.5px; font-weight:700; letter-spacing:.13em; }
+    .admin-nav-v58 { gap:4px; }
+    .admin-nav-link-v58 {
+      border-radius:8px;
+      padding:10px 12px;
+      color:#d7dde3;
+      font-family:inherit;
+      font-size:14px;
+      font-weight:600;
+      line-height:1.25;
+      letter-spacing:.005em;
+      border-left:3px solid transparent;
+    }
+    .admin-nav-link-v58:hover { background:#30373e; color:#fff; }
+    .admin-nav-link-v58.active {
+      background:linear-gradient(90deg,rgba(245,158,11,.22),rgba(245,158,11,.07));
+      color:#fff;
+      border-left-color:#f59e0b;
+      box-shadow:none;
+    }
+    .admin-subnav-v517 { margin-left:10px; padding-left:9px; border-left:1px solid #414951; }
+    .admin-subnav-link-v517 { font-size:13.5px; font-weight:560; color:#bfc7cf; }
+    .admin-nav-pill-v58 { background:#3a424a; color:#dce2e7; border:1px solid #4b555e; }
+    .admin-nav-link-v58.active .admin-nav-pill-v58 { background:#f59e0b; color:#201a10; border-color:#fbbf24; }
+    .admin-sidebar-footer-v58 { color:#929ca6; border-top-color:#343b42; }
+    body.fb-compact-ui .admin-nav-link-v58 { padding:8px 10px; font-size:13px; }
+    body.fb-compact-ui .admin-content-v58 { padding-top:14px; }
+    .general-settings-grid-v600 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+    .general-settings-grid-v600 .wide-setting-v600 { grid-column:span 2; }
+    .general-settings-note-v600 { margin-top:12px; padding:12px 14px; border:1px solid var(--fb-border); border-radius:10px; background:#f8fafc; color:var(--fb-muted); }
+    @media(max-width:980px){.general-settings-grid-v600{grid-template-columns:1fr 1fr}.general-settings-grid-v600 .wide-setting-v600{grid-column:span 2}}
+    @media(max-width:680px){.general-settings-grid-v600{grid-template-columns:1fr}.general-settings-grid-v600 .wide-setting-v600{grid-column:span 1}}
+
+
+    /* v6.0.1 Industrial content workspace and premium form controls */
+    :root {
+      --fb-bg:#edf1f4;
+      --fb-panel:#ffffff;
+      --fb-border:#cfd8df;
+      --fb-border-strong:#b9c4cc;
+      --fb-text:#172027;
+      --fb-muted:#66737d;
+      --fb-primary:#3f4a52;
+      --fb-primary-soft:#e9edef;
+      --fb-accent:#c06b19;
+      --fb-accent-dark:#9a5111;
+      --fb-accent-soft:#fff3e6;
+      --fb-success:#19705b;
+      --fb-shadow:0 14px 34px rgba(27,38,46,.09);
+      --fb-shadow-soft:0 7px 18px rgba(27,38,46,.06);
+    }
+    .admin-content-v58 {
+      background:
+        radial-gradient(circle at 92% 4%, rgba(192,107,25,.08), transparent 25%),
+        linear-gradient(180deg,#eef2f5 0%,#f5f7f8 42%,#edf1f4 100%);
+    }
+    .admin-topbar-v58 {
+      background:rgba(238,242,245,.94);
+      border-bottom:1px solid #cbd4db;
+      box-shadow:0 6px 18px rgba(28,39,47,.05);
+    }
+    .admin-topbar-v58 h2 { color:#1d272e; font-size:25px; font-weight:730; letter-spacing:-.025em; }
+    .admin-topbar-v58 p { color:#65737e; line-height:1.5; }
+    .admin-view-header-v58 {
+      position:relative;
+      overflow:hidden;
+      padding:18px 20px 18px 24px;
+      border:1px solid #cbd5dc;
+      border-radius:14px;
+      background:linear-gradient(135deg,#ffffff 0%,#f6f8f9 72%,#fff7ed 100%);
+      box-shadow:var(--fb-shadow-soft);
+    }
+    .admin-view-header-v58::before {
+      content:"";
+      position:absolute;
+      inset:0 auto 0 0;
+      width:5px;
+      background:linear-gradient(180deg,#d78632,#a95612);
+    }
+    .admin-view-header-v58 strong {
+      color:#8b551d;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.11em;
+      text-transform:uppercase;
+    }
+    .admin-view-header-v58 h3 { color:#1d272e; font-size:22px; font-weight:730; letter-spacing:-.02em; }
+    .admin-view-header-v58 p { max-width:920px; color:#66737d; font-size:14px; line-height:1.55; }
+    .admin-card {
+      position:relative;
+      padding:24px;
+      border:1px solid #cdd6dd;
+      border-radius:16px;
+      background:rgba(255,255,255,.98);
+      box-shadow:var(--fb-shadow);
+    }
+    .admin-card::after {
+      content:"";
+      position:absolute;
+      inset:0 0 auto 0;
+      height:3px;
+      border-radius:16px 16px 0 0;
+      background:linear-gradient(90deg,#555f66 0%,#c06b19 32%,#e0a564 65%,transparent 100%);
+      opacity:.88;
+      pointer-events:none;
+    }
+    .section-title-row {
+      margin:-4px -4px 20px;
+      padding:18px 18px;
+      border:1px solid #d8e0e5;
+      border-radius:13px;
+      background:linear-gradient(135deg,#fafbfc,#f2f5f6);
+      box-shadow:0 5px 15px rgba(26,38,47,.035);
+    }
+    .section-title-row h2 { margin:0 0 7px; color:#202a31; font-size:22px; font-weight:730; letter-spacing:-.02em; }
+    .section-title-row .muted,
+    .section-title-row p { max-width:980px; margin:0; color:#687681; line-height:1.55; }
+    .admin-form-grid {
+      gap:16px;
+      padding:18px;
+      border:1px solid #d8e0e5;
+      border-radius:13px;
+      background:linear-gradient(180deg,#fbfcfc,#f6f8f9);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    .admin-form-grid > label,
+    .general-settings-grid-v600 > label,
+    .maintenance-v522-toolbar > label {
+      display:flex;
+      flex-direction:column;
+      gap:7px;
+      color:#4b5963;
+      font-size:12.5px;
+      font-weight:720;
+      letter-spacing:.01em;
+    }
+    .admin-form-grid input,
+    .admin-form-grid select,
+    .admin-form-grid textarea,
+    .general-settings-grid-v600 input,
+    .general-settings-grid-v600 select,
+    .general-settings-grid-v600 textarea,
+    .maintenance-v522-toolbar input,
+    .maintenance-v522-toolbar select,
+    #auditSection input,
+    #auditSection select {
+      width:100%;
+      min-height:44px;
+      box-sizing:border-box;
+      border:1px solid #bdc8d0;
+      border-radius:10px;
+      padding:10px 13px;
+      background:#fff;
+      color:#202a31;
+      font:600 14px/1.35 "Segoe UI Variable Text","Segoe UI",Roboto,Arial,sans-serif;
+      outline:none;
+      box-shadow:0 1px 2px rgba(25,36,44,.04),inset 0 1px 1px rgba(25,36,44,.025);
+      transition:border-color .16s ease,box-shadow .16s ease,background .16s ease,transform .16s ease;
+    }
+    .admin-form-grid textarea,
+    .general-settings-grid-v600 textarea { min-height:92px; resize:vertical; }
+    .admin-form-grid select,
+    .general-settings-grid-v600 select,
+    .maintenance-v522-toolbar select,
+    #auditSection select {
+      appearance:none;
+      -webkit-appearance:none;
+      padding-right:43px;
+      cursor:pointer;
+      background-image:
+        linear-gradient(45deg,transparent 50%,#57636c 50%),
+        linear-gradient(135deg,#57636c 50%,transparent 50%),
+        linear-gradient(to right,#e0e6ea,#e0e6ea);
+      background-position:
+        calc(100% - 20px) 50%,
+        calc(100% - 15px) 50%,
+        calc(100% - 40px) 50%;
+      background-size:5px 5px,5px 5px,1px 22px;
+      background-repeat:no-repeat;
+    }
+    .admin-form-grid input:hover,
+    .admin-form-grid select:hover,
+    .admin-form-grid textarea:hover,
+    .general-settings-grid-v600 input:hover,
+    .general-settings-grid-v600 select:hover,
+    .maintenance-v522-toolbar input:hover,
+    .maintenance-v522-toolbar select:hover { border-color:#929fa8; }
+    .admin-form-grid input:focus,
+    .admin-form-grid select:focus,
+    .admin-form-grid textarea:focus,
+    .general-settings-grid-v600 input:focus,
+    .general-settings-grid-v600 select:focus,
+    .general-settings-grid-v600 textarea:focus,
+    .maintenance-v522-toolbar input:focus,
+    .maintenance-v522-toolbar select:focus {
+      border-color:#c06b19;
+      background:#fffdfb;
+      box-shadow:0 0 0 4px rgba(192,107,25,.13),0 4px 12px rgba(28,39,47,.06);
+    }
+    .primary-btn,
+    button:not(.admin-nav-link-v58):not(.secondary-btn):not(.mini-btn) {
+      border-color:#9d5617;
+      background:linear-gradient(180deg,#c77725,#a95814);
+      color:#fff;
+      box-shadow:0 6px 14px rgba(158,83,20,.19);
+    }
+    .primary-btn:hover,
+    button:not(.admin-nav-link-v58):not(.secondary-btn):not(.mini-btn):hover {
+      background:linear-gradient(180deg,#b9681d,#91470e);
+      transform:translateY(-1px);
+    }
+    .secondary-btn,
+    .link-btn {
+      border:1px solid #c6d0d7;
+      border-radius:10px;
+      background:linear-gradient(180deg,#fff,#f3f6f7);
+      color:#35434d;
+      font-weight:700;
+      box-shadow:0 3px 9px rgba(28,39,47,.055);
+    }
+    .secondary-btn:hover,
+    .link-btn:hover { border-color:#9ca8b0; background:#fff; color:#202a31; transform:translateY(-1px); }
+    .mini-status {
+      padding:12px 14px;
+      border:1px solid #d5dde3;
+      border-left:4px solid #c06b19;
+      border-radius:10px;
+      background:linear-gradient(90deg,#fff8f0,#f8fafb 40%);
+      color:#5d6972;
+      line-height:1.5;
+    }
+    .kpi-card-v59,
+    .kpi-panel-v59,
+    .notification-channel-card-v518,
+    .oee-panel-v524,
+    .maintenance-v522-panel,
+    .inventory-panel-v523,
+    .maintenance-create-v521,
+    .maintenance-history-v521 {
+      border-color:#d1dae0;
+      border-radius:13px;
+      box-shadow:var(--fb-shadow-soft);
+    }
+    .kpi-card-v59 { background:linear-gradient(145deg,#fff,#f4f6f7); }
+    .kpi-card-v59 strong { color:#38444c; }
+    .admin-table-wrap,
+    .admin-table-container {
+      border:1px solid #d3dce2;
+      border-radius:12px;
+      background:#fff;
+      box-shadow:0 5px 14px rgba(28,39,47,.045);
+    }
+    .admin-table th,
+    table th {
+      background:#edf1f3;
+      color:#52606a;
+      font-size:11.5px;
+      font-weight:800;
+      letter-spacing:.045em;
+      text-transform:uppercase;
+      border-bottom:1px solid #ccd6dc;
+    }
+    .admin-table td,
+    table td { border-bottom-color:#e2e7ea; }
+    .admin-table tbody tr:hover,
+    table tbody tr:hover { background:#fff8ef; }
+    .general-settings-grid-v600 {
+      padding:20px;
+      border:1px solid #d4dde3;
+      border-radius:13px;
+      background:linear-gradient(135deg,#fafbfc,#f4f6f7);
+    }
+    .general-settings-note-v600 {
+      border-left:4px solid #c06b19;
+      background:#fff8f0;
+      color:#5e6971;
+      line-height:1.55;
+    }
+    @media(max-width:720px){
+      .admin-card{padding:17px}
+      .section-title-row{padding:15px}
+      .admin-form-grid{padding:14px}
+    }
+
   </style>
 </head>
 <body class="admin-ui-v58">
@@ -400,18 +699,18 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.25.0 — Mobile Operator Panel aktif.</p>
+      <p id="adminVersionLabel">v6.0.1 — Tam çeviri ve endüstriyel içerik arayüzü aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
     <nav class="admin-nav-v58" aria-label="Admin panel menüsü">
-      <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>📊 Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="live"><span>🟢 Live Monitoring</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="oee"><span>📈 OEE & Downtime</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="live"><span>Canlı İzleme</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="oee"><span>OEE ve Duruş</span><span class="admin-nav-pill-v58">1</span></button>
 
       <div class="admin-nav-group-v517" data-nav-group="alarm">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="alarm" aria-expanded="false" aria-controls="alarmSubmenuV517">
-          <span>🚨 Alarm</span>
+          <span>Alarm</span>
           <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="alarmSubmenuV517" class="admin-subnav-v517" data-admin-subnav="alarm">
@@ -424,39 +723,40 @@
 
       <div class="admin-nav-group-v517" data-nav-group="maintenance">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="maintenance" aria-expanded="false" aria-controls="maintenanceSubmenuV522">
-          <span>🛠️ Maintenance</span>
+          <span>Bakım</span>
           <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="maintenanceSubmenuV522" class="admin-subnav-v517" data-admin-subnav="maintenance">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance"><span>Service Tickets</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance-plans"><span>Maintenance Plans</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="work-orders"><span>Work Orders</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="inventory"><span>Spare Parts & Inventory</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance"><span>Servis Talepleri</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance-plans"><span>Bakım Planları</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="work-orders"><span>İş Emirleri</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="inventory"><span>Yedek Parça ve Stok</span></button>
         </div>
       </div>
 
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
-          <span>⚙️ System Settings</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">3</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span>Sistem Ayarları</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Notifications</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Automation Scheduler</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Reports</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="general"><span>Genel Ayarlar</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Bildirimler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Otomasyon Zamanlayıcı</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporları</span></button>
         </div>
       </div>
-      <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>💳 Subscriptions</span><span class="admin-nav-pill-v58">2</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="assets"><span>🏭 Assets / Machines</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="devices"><span>📦 Device Registry</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="security"><span>🛡️ Security Activity</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>Müşteriler / Tenantlar</span><span class="admin-nav-pill-v58">2</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="users"><span>Kullanıcılar ve Davetler</span><span class="admin-nav-pill-v58">3</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>Roller ve Yetkiler</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>Abonelikler</span><span class="admin-nav-pill-v58">2</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="assets"><span>Varlıklar / Makineler</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="devices"><span>Cihaz Kayıtları</span><span class="admin-nav-pill-v58">1</span></button>
+      <button class="admin-nav-link-v58" data-admin-nav="security"><span>Güvenlik Aktiviteleri</span><span class="admin-nav-pill-v58">1</span></button>
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v5.25.0: Mobile Operator Panel, hızlı alarm ve bakım işlemleri aktif.
+      v6.0.1: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.
     </div>
   </aside>
 
@@ -470,8 +770,8 @@
       <div class="admin-topbar-actions-v58">
         <button id="refreshAdmin" class="secondary-btn">Yenile</button>
         <a class="secondary-btn link-btn" href="/admin.html">Dashboard</a>
-        <a class="secondary-btn link-btn" href="/operator.html">Operator</a>
-        <a class="secondary-btn link-btn" href="/login.html">Login</a>
+        <a class="secondary-btn link-btn" href="/operator.html">Operatör</a>
+        <a class="secondary-btn link-btn" href="/login.html">Giriş</a>
       </div>
     </header>
 
@@ -485,8 +785,8 @@
   <section class="card wide admin-card admin-view-active" data-admin-view="dashboard">
     <div class="section-title-row">
       <div>
-        <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.25.0: Mobile Operator Panel ve hızlı saha işlemleri aktif.</p>
+        <h2>Yönetim Özeti</h2>
+        <p id="adminOverviewVersionLabel" class="muted">v6.0.1: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.</p>
       </div>
     </div>
 
@@ -694,7 +994,7 @@
       <label>Kural Adı<input id="newAlarmRuleName" type="text" placeholder="örn: Lazer kritik alarm"></label>
       <label>Severity<select id="newAlarmRuleSeverity"><option value="all">all</option><option value="critical">critical</option><option value="warning">warning</option><option value="info">info</option></select></label>
       <label>Alarm Type<input id="newAlarmRuleType" type="text" placeholder="boş = tüm tipler"></label>
-      <label>Machine Code<input id="newAlarmRuleMachine" type="text" placeholder="boş = tüm makineler"></label>
+      <label>Makine Kodu<input id="newAlarmRuleMachine" type="text" placeholder="boş = tüm makineler"></label>
       <label>Acknowledge SLA (dk)<input id="newAlarmRuleAck" type="number" min="1" max="10080" value="15"></label>
       <label>Resolve SLA (dk)<input id="newAlarmRuleResolve" type="number" min="1" max="43200" value="120"></label>
       <label>Kanal<select id="newAlarmRuleChannel"><option value="dashboard">dashboard</option><option value="email">email</option><option value="telegram">telegram</option><option value="dashboard+email">dashboard+email</option><option value="dashboard+telegram">dashboard+telegram</option></select></label>
@@ -764,6 +1064,35 @@
   </section>
 
 
+  
+
+  <section id="generalSettingsSection" class="card wide admin-card" data-admin-view="general">
+    <div class="section-title-row">
+      <div>
+        <h2>Genel Ayarlar</h2>
+        <p class="muted">Panel dili, saat dilimi, tarih/saat biçimi, marka bilgileri ve varsayılan çalışma tercihleri.</p>
+      </div>
+      <div class="button-row">
+        <button id="refreshGeneralSettingsBtn" class="secondary-btn">Ayarları Yenile</button>
+        <button id="saveGeneralSettingsBtn">Ayarları Kaydet</button>
+      </div>
+    </div>
+    <div id="generalSettingsStatus" class="mini-status">Genel ayarlar yükleniyor...</div>
+    <div class="general-settings-grid-v600">
+      <label class="wide-setting-v600">Organization / Company Name<input id="generalOrganizationName" type="text" maxlength="160" placeholder="FactoryBox"></label>
+      <label>Factory / Site Name<input id="generalSiteName" type="text" maxlength="160" placeholder="Main Factory"></label>
+      <label>Panel Language<select id="generalLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
+      <label>Time Zone<select id="generalTimezone"></select></label>
+      <label>Date Format<select id="generalDateFormat"><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></label>
+      <label>Time Format<select id="generalTimeFormat"><option value="24h">24 Saat</option><option value="12h">12 Hour</option></select></label>
+      <label>Week Starts<select id="generalWeekStart"><option value="monday">Pazartesi</option><option value="sunday">Sunday</option></select></label>
+      <label>Auto Refresh<select id="generalAutoRefresh"><option value="0">Kapalı</option><option value="15">15 saniye</option><option value="30">30 saniye</option><option value="60">1 dakika</option><option value="120">2 dakika</option><option value="300">5 dakika</option></select></label>
+      <label>Default Opening Page<select id="generalDefaultView"></select></label>
+      <label>Compact Menu<select id="generalCompactMode"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
+    </div>
+    <div class="general-settings-note-v600">Dil değişikliği menüleri, ekran başlıklarını, düğmeleri, tablo başlıklarını, durum metinlerini ve sistem mesajlarını birlikte değiştirir.</div>
+  </section>
+
   <section id="notificationSettingsSection" class="card wide admin-card" data-admin-view="notifications">
     <div class="section-title-row">
       <div>
@@ -780,7 +1109,7 @@
 
     <h3>Delivery Worker</h3>
     <div class="admin-form-grid">
-      <label>Delivery Enabled<select id="notificationDeliveryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+      <label>Teslimat Aktif<select id="notificationDeliveryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
       <label>Auto Worker<select id="notificationAutoEnabled"><option value="false">false</option><option value="true">true</option></select></label>
       <label>Çalışma Aralığı (sn)<input id="notificationIntervalSec" type="number" min="15" max="3600" value="60"></label>
       <label>Batch Size<input id="notificationBatchSize" type="number" min="1" max="100" value="20"></label>
@@ -813,11 +1142,11 @@
           <label>SMTP User<input id="notificationSmtpUser" type="text"></label>
           <label>SMTP Password<input id="notificationSmtpPass" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut şifre korunur"></label>
           <label>From<input id="notificationSmtpFrom" type="text"></label>
-          <label>Default Recipients<input id="notificationEmailDefaultTo" type="text" placeholder="mail1@firma.com, mail2@firma.com"></label>
+          <label>Varsayılan Alıcılar<input id="notificationEmailDefaultTo" type="text" placeholder="mail1@firma.com, mail2@firma.com"></label>
         </div>
         <p class="notification-secret-note-v518">SMTP şifresi panelde gösterilmez. Yeni şifre girilmezse mevcut değer korunur.</p>
         <div class="notification-test-actions-v518">
-          <label>Test Email<input id="notificationEmailTestTarget" type="email" placeholder="Boş = varsayılan alıcı"></label>
+          <label>Test E-postası<input id="notificationEmailTestTarget" type="email" placeholder="Boş = varsayılan alıcı"></label>
           <button id="testEmailNotificationBtn" class="secondary-btn">Email Test Mesajı</button>
         </div>
       </div>
@@ -839,15 +1168,15 @@
       </div>
     </div>
 
-    <div id="automationSchedulerStatus">Scheduler durumu yükleniyor...</div>
+    <div id="automationSchedulerStatus">Zamanlayıcı durumu yükleniyor...</div>
 
     <div class="scheduler-flow-v519">
-      <span>Aktif alarm</span><b>→</b><span>SLA tarama</span><b>→</b><span>Pending kuyruk</span><b>→</b><span>Telegram / Email</span><b>→</b><span>Delivered</span>
+      <span>Aktif alarm</span><b>→</b><span>SLA tarama</span><b>→</b><span>Bekleyen kuyruk</span><b>→</b><span>Telegram / Email</span><b>→</b><span>Delivered</span>
     </div>
 
-    <h3>Scheduler Ayarları</h3>
+    <h3>Zamanlayıcı Ayarları</h3>
     <div class="admin-form-grid">
-      <label>Scheduler Enabled<select id="automationSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Zamanlayıcı Aktif<select id="automationSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
       <label>Çalışma Aralığı (sn)<input id="automationSchedulerIntervalSec" type="number" min="15" max="3600" value="60"></label>
       <label>Automatic Retry<select id="automationRetryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
       <label>İlk Retry Bekleme (sn)<input id="automationRetryBaseDelaySec" type="number" min="15" max="86400" value="60"></label>
@@ -858,7 +1187,7 @@
     <div id="automationSchedulerResult" class="mini-status">Ayar değişikliği veya manuel çalışma bekleniyor.</div>
 
     <div class="kpi-panel-v59">
-      <h3>Scheduler Çalışma Geçmişi</h3>
+      <h3>Zamanlayıcı Çalışma Geçmişi</h3>
       <div id="automationSchedulerHistory">Çalışma geçmişi yükleniyor...</div>
     </div>
   </section>
@@ -885,11 +1214,11 @@
 
     <h3>Rapor Planı</h3>
     <div class="admin-form-grid">
-      <label>Report Scheduler<select id="alarmReportSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Rapor Zamanlayıcısı<select id="alarmReportSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
       <label>Saat Dilimi<input id="alarmReportTimezone" type="text" value="Europe/Istanbul" placeholder="Europe/Istanbul"></label>
       <label>Kanallar<select id="alarmReportChannels"><option value="telegram">telegram</option><option value="email">email</option><option value="telegram,email">telegram + email</option></select></label>
       <label>Telegram Chat ID'leri<input id="alarmReportTelegramChatIds" type="text" placeholder="Boş = Notifications varsayılanı"></label>
-      <label>Email Alıcıları<input id="alarmReportEmailRecipients" type="text" placeholder="Boş = Notifications varsayılanı"></label>
+      <label>E-posta Alıcıları<input id="alarmReportEmailRecipients" type="text" placeholder="Boş = Notifications varsayılanı"></label>
       <label>Günlük Rapor<select id="alarmReportDailyEnabled"><option value="true">true</option><option value="false">false</option></select></label>
       <label>Günlük Gönderim Saati<input id="alarmReportDailyHour" type="number" min="0" max="23" value="8"></label>
       <label>Haftalık Rapor<select id="alarmReportWeeklyEnabled"><option value="true">true</option><option value="false">false</option></select></label>
@@ -970,14 +1299,14 @@
     <div class="maintenance-v522-flow"><span>Bakım Planı</span><b>→</b><span>Yaklaşan / Geciken</span><b>→</b><span>Otomatik İş Emri</span><b>→</b><span>Teknisyen</span><b>→</b><span>Tamamla</span><b>→</b><span>Sonraki Bakım</span></div>
 
     <div class="maintenance-v522-panel">
-      <h3>Bakım Scheduler</h3>
+      <h3>Bakım Zamanlayıcısı</h3>
       <div class="maintenance-v522-toolbar">
-        <label>Scheduler<select id="maintenanceSchedulerEnabled"><option value="true">ON</option><option value="false">OFF</option></select></label>
+        <label>Zamanlayıcı<select id="maintenanceSchedulerEnabled"><option value="true">ON</option><option value="false">OFF</option></select></label>
         <label>Tarama Aralığı (sn)<input id="maintenanceSchedulerInterval" type="number" min="15" max="3600" value="60"></label>
-        <div class="admin-form-actions"><button id="saveMaintenanceSchedulerBtn" class="primary-btn">Scheduler Kaydet</button></div>
+        <div class="admin-form-actions"><button id="saveMaintenanceSchedulerBtn" class="primary-btn">Zamanlayıcıyı Kaydet</button></div>
         <div class="admin-form-actions"><button id="runMaintenanceSchedulerBtn" class="secondary-btn">Şimdi Tara</button></div>
       </div>
-      <div id="maintenanceSchedulerResult" class="mini-status">Scheduler bilgisi bekleniyor.</div>
+      <div id="maintenanceSchedulerResult" class="mini-status">Zamanlayıcı bilgisi bekleniyor.</div>
     </div>
 
     <div class="maintenance-v522-panel">
@@ -1003,7 +1332,7 @@
     </div>
 
     <div class="kpi-panel-v59"><h3>Bakım Planları</h3><div id="maintenancePlansTable">Planlar yükleniyor...</div></div>
-    <div class="kpi-panel-v59"><h3>Scheduler Geçmişi</h3><div id="maintenanceSchedulerHistory">Scheduler geçmişi yükleniyor...</div></div>
+    <div class="kpi-panel-v59"><h3>Zamanlayıcı Geçmişi</h3><div id="maintenanceSchedulerHistory">Zamanlayıcı geçmişi yükleniyor...</div></div>
   </section>
 
   <section id="maintenanceWorkOrdersSection" class="card wide admin-card" data-admin-view="work-orders">
@@ -1023,7 +1352,7 @@
 
   <section id="inventorySection" class="card wide admin-card" data-admin-view="inventory">
     <div class="section-title-row">
-      <div><h2>Spare Parts & Inventory</h2><p class="muted">Yedek parça kartlarını, stok giriş/çıkışlarını, minimum stok seviyelerini ve bakım iş emri tüketimlerini yönet.</p></div>
+      <div><h2>Yedek Parça ve Stok</h2><p class="muted">Yedek parça kartlarını, stok giriş/çıkışlarını, minimum stok seviyelerini ve bakım iş emri tüketimlerini yönet.</p></div>
       <button id="refreshInventoryBtn" class="secondary-btn">Stokları Yenile</button>
     </div>
     <div id="inventorySummary">Stok özeti yükleniyor...</div>
@@ -1082,7 +1411,7 @@
 
   <section id="inviteSection" class="card wide admin-card" data-admin-view="users">
     <h2>Invite User / Tenant Access</h2>
-    <p class="muted">Yeni kullanıcıya customer/site erişimi ver ve davet maili gönder.</p>
+    <p class="muted">Yeni kullanıcıya müşteri/tesis erişimi ver ve davet e-postası gönder.</p>
 
     <div class="admin-form-grid">
       <label>
@@ -1125,12 +1454,12 @@
 
   <section class="card wide admin-card" data-admin-view="users">
     <h2>Kullanıcılar</h2>
-    <p class="muted">Her kullanıcı satırında mevcut role göre alacağı permission listesi görünür. Role değişince permission önizlemesi de değişir.</p>
+    <p class="muted">Her kullanıcı satırında mevcut role göre alacağı yetki listesi görünür. Rol değişince yetki önizlemesi de değişir.</p>
     <div id="usersTable">Yükleniyor...</div>
   </section>
 
   <section class="card wide admin-card" data-admin-view="tenants">
-    <h2>Customers / Tenants</h2>
+    <h2>Müşteriler / Tenantlar</h2>
     <p class="muted">v5.10: Yeni tenant oluşturma ve mevcut tenant düzenleme işlemleri MANAGE_CUSTOMERS yetkisine bağlıdır.</p>
 
     <div class="admin-form-grid">
@@ -1152,7 +1481,7 @@
         </select>
       </label>
       <div class="admin-form-actions">
-        <button id="createCustomerBtn" class="primary-btn">Customer Oluştur</button>
+        <button id="createCustomerBtn" class="primary-btn">Müşteri Oluştur</button>
       </div>
     </div>
     <div id="customerResult" class="mini-status muted"></div>
@@ -1175,8 +1504,8 @@
   <section id="assetManagementSection" class="card wide admin-card" data-admin-view="assets">
     <div class="section-title-row">
       <div>
-        <h2>Assets / Machines</h2>
-        <p class="muted">v5.10: Tenant ve site altındaki makineleri oluştur, düzenle ve durumunu yönet.</p>
+        <h2>Varlıklar / Makineler</h2>
+        <p class="muted">v5.10: Müşteri ve tesis altındaki makineleri oluştur, düzenle ve durumunu yönet.</p>
       </div>
       <button id="refreshMachinesBtn" class="secondary-btn">Makineleri Yenile</button>
     </div>
@@ -1218,7 +1547,7 @@
         </select>
       </label>
       <div class="admin-form-actions">
-        <button id="createMachineBtn" class="primary-btn">Machine Oluştur</button>
+        <button id="createMachineBtn" class="primary-btn">Makine Oluştur</button>
       </div>
     </div>
     <div id="machineResult" class="mini-status muted"></div>
@@ -1229,7 +1558,7 @@
     <div class="section-title-row">
       <div>
         <h2>Device Registry / Provisioning</h2>
-        <p class="muted">FactoryBox cihazlarını tenant, site ve makineye bağla; tek kullanımlık provisioning token üret.</p>
+        <p class="muted">FactoryBox cihazlarını müşteri, tesis ve makineye bağla; tek kullanımlık provisioning token üret.</p>
       </div>
       <button id="refreshDevicesBtn" class="secondary-btn">Cihazları Yenile</button>
     </div>
@@ -1279,7 +1608,7 @@
 
   <section class="card wide admin-card" data-admin-view="tenants">
     <h2>Sites / Atölyeler</h2>
-    <p class="muted">v5.10: Site oluşturma, düzenleme ve abonelik site limit kontrolü.</p>
+    <p class="muted">v5.10: Tesis oluşturma, düzenleme ve abonelik tesis limit kontrolü.</p>
 
     <div class="admin-form-grid">
       <label>
@@ -1391,6 +1720,512 @@
   let currentPermissions = [];
   let subscriptionPlanCodes = ['trial','starter','professional','enterprise'];
 
+  let generalSettings = {
+    organization_name:'FactoryBox', site_name:'Main Factory', language:'tr', timezone:'Europe/Istanbul',
+    date_format:'DD.MM.YYYY', time_format:'24h', week_start:'monday', auto_refresh_sec:30,
+    default_view:'dashboard', compact_mode:false
+  };
+  let currentLanguage = localStorage.getItem('factorybox_ui_language') || 'tr';
+  let generalSettingsOptions = {};
+  let adminAutoRefreshTimer = null;
+  let translationObserver = null;
+
+  const I18N_PAIRS = [
+    ['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],
+    ['Canlı İzleme','Live Monitoring'],['OEE ve Duruş','OEE & Downtime'],['Alarm Merkezi','Alarm Center'],
+    ['Alarm Analitiği','Alarm Analytics'],['Alarm SLA','Alarm SLA'],['Bildirim Teslimatı','Escalation Delivery'],
+    ['Bakım','Maintenance'],['Servis Talepleri','Service Tickets'],['Bakım Planları','Maintenance Plans'],
+    ['İş Emirleri','Work Orders'],['Yedek Parça ve Stok','Spare Parts & Inventory'],['Bildirimler','Notifications'],
+    ['Otomasyon Zamanlayıcı','Automation Scheduler'],['Alarm Raporları','Alarm Reports'],['Müşteriler / Tenantlar','Customers / Tenants'],
+    ['Kullanıcılar ve Davetler','Users & Invites'],['Roller ve Yetkiler','Roles & Permissions'],['Abonelikler','Subscriptions'],
+    ['Varlıklar / Makineler','Assets / Machines'],['Cihaz Kayıtları','Device Registry'],['Güvenlik Aktiviteleri','Security Activity'],
+    ['Ayarları Yenile','Refresh Settings'],['Ayarları Kaydet','Save Settings'],['Yenile','Refresh'],['Şimdi Çalıştır','Run Now'],
+    ['Şimdi Tara','Scan Now'],['Filtrele','Apply Filter'],['Analizi Uygula','Apply Analysis'],['Analizi Getir','Load Analysis'],
+    ['Oluştur','Create'],['Kaydet','Save'],['Sil','Delete'],['Kapat','Close'],['Başlat','Start'],['Tamamla','Complete'],
+    ['Geçmiş','History'],['Kopyala','Copy'],['İptal','Cancel'],['Onayla','Acknowledge'],['Ticket Aç','Create Ticket'],
+    ['Açık','On'],['Kapalı','Off'],['Yükleniyor...','Loading...'],['Genel ayarlar yükleniyor...','Loading general settings...'],
+    ['Başarılı','Successful'],['Başarısız','Failed'],['Hata','Error'],['Bekleyen','Pending'],['Teslim Edildi','Delivered'],
+    ['Aktif','Active'],['Pasif','Passive'],['Tümü','All'],['Durum','Status'],['Öncelik','Priority'],['Kategori','Category'],
+    ['Makine','Machine'],['Tüm makineler','All machines'],['Başlangıç','Start'],['Bitiş','End'],['Tarih','Date'],['Saat','Time'],
+    ['Saat Dilimi','Time Zone'],['Dil','Language'],['Panel Dili','Panel Language'],['Tarih Biçimi','Date Format'],
+    ['Saat Biçimi','Time Format'],['Hafta Başlangıcı','Week Starts'],['Otomatik Yenileme','Auto Refresh'],
+    ['Varsayılan Açılış Sayfası','Default Opening Page'],['Kompakt Menü','Compact Menu'],['Organizasyon / Şirket Adı','Organization / Company Name'],
+    ['Fabrika / Tesis Adı','Factory / Site Name'],['Pazartesi','Monday'],['Salı','Tuesday'],['Çarşamba','Wednesday'],
+    ['Perşembe','Thursday'],['Cuma','Friday'],['Cumartesi','Saturday'],['Pazar','Sunday'],['saniye','seconds'],['dakika','minutes'],
+    ['saat','hours'],['gün','days'],['Kapalı','Disabled'],['Açık','Enabled'],['Türkçe','Turkish'],['İngilizce','English'],
+    ['Sistem özeti, sürüm ve hızlı durum kartları.','System summary, version and quick status cards.'],
+    ['Panel dili, saat dilimi, tarih/saat biçimi, marka bilgileri ve varsayılan çalışma tercihleri.','Panel language, time zone, date/time format, branding and default operating preferences.'],
+    ['Dil değişikliği menüleri, ekran başlıklarını, düğmeleri, tablo başlıklarını, durum metinlerini ve sistem mesajlarını birlikte değiştirir.','Changing the language updates menus, screen titles, buttons, table headers, status texts and system messages together.'],
+    ['Genel ayarlar kaydedildi.','General settings saved.'],['Genel ayarlar yenilendi.','General settings refreshed.'],
+    ['Dashboard','Dashboard'],['Admin Overview','Admin Overview'],['Aktif bölüm','Active section'],['Operator','Operator'],['Login','Login'],
+    ['Makine Duruşu ve OEE Analitiği','Machine Downtime & OEE Analytics'],['Planlı Üretim Süresi','Planned Production Time'],
+    ['Duruş','Downtime'],['Kullanılabilirlik','Availability'],['Performans','Performance'],['Kalite','Quality'],
+    ['Makine OEE Ayarları','Machine OEE Settings'],['Günlük Planlı Süre (dk)','Daily Planned Time (min)'],
+    ['İdeal Çevrim (sn/adet)','Ideal Cycle (sec/unit)'],['Hedef OEE (%)','Target OEE (%)'],['OEE Takibi','OEE Tracking'],
+    ['Üretim Kaydı','Production Record'],['Toplam Adet','Total Count'],['Sağlam Adet','Good Count'],['Hatalı Adet','Reject Count'],
+    ['Not','Note'],['Duruş Kaydı','Downtime Record'],['Neden','Reason'],['Neden Açıklaması','Reason Description'],
+    ['Makine Bazlı OEE','Machine OEE'],['Günlük OEE Trendi','Daily OEE Trend'],['Son Üretim Kayıtları','Recent Production Records'],
+    ['Son Duruş Kayıtları','Recent Downtime Records'],['Alarm özeti yükleniyor...','Loading alarm summary...'],
+    ['Alarmlar yükleniyor...','Loading alarms...'],['Alarm Analitiğini Yenile','Refresh Alarm Analytics'],['Analiz Aralığı','Analysis Range'],
+    ['Son 7 gün','Last 7 days'],['Son 14 gün','Last 14 days'],['Son 30 gün','Last 30 days'],['Son 90 gün','Last 90 days'],
+    ['Günlük Alarm Trendi','Daily Alarm Trend'],['Acknowledge Hızı','Acknowledge Speed'],['En Çok Alarm Tipleri','Top Alarm Types'],
+    ['En Çok Alarm Üreten Makineler','Machines With Most Alarms'],['Yeni SLA Kuralı','New SLA Rule'],['Kural Adı','Rule Name'],
+    ['Acknowledge SLA (dk)','Acknowledge SLA (min)'],['Resolve SLA (dk)','Resolve SLA (min)'],['Kanal','Channel'],['Alıcılar','Recipients'],
+    ['Kural Oluştur','Create Rule'],['SLA Kuralları','SLA Rules'],['Aktif Alarm SLA Durumu','Active Alarm SLA Status'],
+    ['SLA Tara ve Kuyruğa Al','Scan SLA and Queue'],['Bekleyenleri Gönder','Send Pending'],['Geçmişi Yenile','Refresh History'],
+    ['Gönderim Durumu','Delivery Status'],['SLA Aşaması','SLA Stage'],['Bildirim Ayarları / Kanal Testleri','Notification Settings / Channel Tests'],
+    ['Delivery Worker','Delivery Worker'],['Çalışma Aralığı (sn)','Interval (sec)'],['Varsayılan Chat ID','Default Chat ID'],
+    ['Telegram Test Mesajı','Send Telegram Test'],['Email Test Mesajı','Send Email Test'],['İlk Retry Bekleme (sn)','Initial Retry Delay (sec)'],
+    ['Maks. Retry Bekleme (sn)','Max Retry Delay (sec)'],['Maks. Deneme','Max Attempts'],['Günlük / Haftalık Alarm Raporları','Daily / Weekly Alarm Reports'],
+    ['Günlük Rapor Gönder','Send Daily Report'],['Haftalık Rapor Gönder','Send Weekly Report'],['Rapor Planı','Report Schedule'],
+    ['Günlük Rapor','Daily Report'],['Haftalık Rapor','Weekly Report'],['Rapor Teslimat Geçmişi','Report Delivery History'],
+    ['Yeni Bakım Talebi','New Maintenance Request'],['Başlık','Title'],['Atanan','Assignee'],['Termin','Due Date'],['Açıklama','Description'],
+    ['Ticket Oluştur','Create Ticket'],['Bakım Ticketları','Maintenance Tickets'],['Ticket Geçmişi','Ticket History'],
+    ['Bakım Scheduler','Maintenance Scheduler'],['Yeni Bakım Planı','New Maintenance Plan'],['Plan Başlığı','Plan Title'],['Plan Tipi','Plan Type'],
+    ['Periyot','Interval'],['Hatırlatma (gün)','Reminder (days)'],['Tahmini Süre (dk)','Estimated Duration (min)'],['Bildirim','Notification'],
+    ['Kontrol Listesi','Checklist'],['Bakım Planı Oluştur','Create Maintenance Plan'],['İş Emri Geçmişi','Work Order History'],
+    ['Stokları Yenile','Refresh Inventory'],['Parça Kartı','Part Card'],['Stok Girişi','Stock Entry'],['Parça Tüketimi','Part Consumption'],
+    ['Minimum Stok Uyarısı','Minimum Stock Alert'],['Stok Durumu','Stock Status'],['Yeni Yedek Parça Kartı','New Spare Part Card'],
+    ['Parça Adı','Part Name'],['SKU / Ürün Kodu','SKU / Product Code'],['Birim','Unit'],['Konum','Location'],['Tedarikçi','Supplier'],
+    ['Başlangıç Stoku','Opening Stock'],['Minimum Stok','Minimum Stock'],['Sipariş Miktarı','Reorder Quantity'],['Birim Maliyet','Unit Cost'],
+    ['Parça Kartı Oluştur','Create Part Card'],['Stok Hareketi','Stock Movement'],['Hareket','Movement'],['Miktar','Quantity'],
+    ['Referans No','Reference No'],['Stok Hareketi Kaydet','Save Stock Movement'],['Yedek Parçalar','Spare Parts'],
+    ['Son Stok Hareketleri','Recent Stock Movements'],['Parça Geçmişi','Part History'],['Kullanıcılar','Users'],['Ad Soyad','Full Name'],
+    ['Mail Gönder','Send Email'],['Müşteri Adı','Customer Name'],['Müşteri Oluştur','Create Customer'],['Makineleri Yenile','Refresh Machines'],
+    ['Makine Adı','Machine Name'],['Makine Tipi','Machine Type'],['Makine Oluştur','Create Machine'],['Cihazları Yenile','Refresh Devices'],
+    ['Token Süresi','Token Lifetime'],['Provision Token Oluştur','Create Provision Token'],['Tesisler / Atölyeler','Sites / Workshops'],
+    ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
+    ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
+    ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
+    ['v6.0.1 — Tam çeviri ve endüstriyel içerik arayüzü aktif.','v6.0.1 — Full localization and industrial content UI are active.'],
+    ['v6.0.1: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.','v6.0.1: Full Turkish / English localization and content UI refresh are active.'],
+    ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
+    ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
+    ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
+    ['Makine kartları yükleniyor...','Loading machine cards...'],['Makine telemetri tablosu yükleniyor...','Loading machine telemetry table...'],
+    ['Makine duruşlarını, üretim adetlerini ve Availability × Performance × Quality üzerinden OEE değerlerini izle.','Monitor machine downtime, production counts and OEE through Availability × Performance × Quality.'],
+    ['OEE Verilerini Yenile','Refresh OEE Data'],['STOPPED Sinyallerini Aktar','Import STOPPED Signals'],
+    ['Seçili Manuel Test Kayıtlarını Temizle','Clean Selected Manual Test Records'],['OEE verileri yükleniyor...','Loading OEE data...'],
+    ['OEE hesabı seçili tarih aralığındaki bütün üretim ve duruş kayıtlarını toplar. Aynı test kaydını tekrar eklemek sonucu değiştirir.','The OEE calculation aggregates all production and downtime records in the selected date range. Adding the same test record again changes the result.'],
+    ['OEE KPI özeti yükleniyor...','Loading OEE KPI summary...'],['Makine seç...','Select machine...'],
+    ['OEE Ayarlarını Kaydet','Save OEE Settings'],['Makine ayarı bekleniyor.','Waiting for machine settings.'],
+    ['Vardiya','Shift'],['Üretim Kaydı Ekle','Add Production Record'],['Üretim kaydı bekleniyor.','Waiting for production record.'],
+    ['Duruş Kaydı Ekle','Add Downtime Record'],['Duruş kaydı bekleniyor.','Waiting for downtime record.'],
+    ['Makine OEE tablosu yükleniyor...','Loading machine OEE table...'],['Günlük trend yükleniyor...','Loading daily trend...'],
+    ['Üretim kayıtları yükleniyor...','Loading production records...'],['Duruş kayıtları yükleniyor...','Loading downtime records...'],
+    ['v5.12: Aktif alarm, alarm geçmişi, acknowledge ve clear işlemleri.','v5.12: Active alarms, alarm history, acknowledge and clear operations.'],
+    ['Alarmları Yenile','Refresh Alarms'],['Arama','Search'],['Alarm Analitiği / Müdahale KPI','Alarm Analytics / Response KPI'],
+    ['v5.13: Alarm yoğunluğu, acknowledge süresi, çözüm süresi ve en çok alarm üreten makineler.','v5.13: Alarm volume, acknowledge time, resolution time and machines generating the most alarms.'],
+    ['Analitiği Yenile','Refresh Analytics'],['Alarm analitiği yükleniyor...','Loading alarm analytics...'],
+    ['Alarm SLA / Escalation Kuralları','Alarm SLA / Escalation Rules'],
+    ['v5.14: Müdahale ve çözüm SLA süreleri, geciken aktif alarmlar ve kural öncelikleri.','v5.14: Response and resolution SLA times, overdue active alarms and rule priorities.'],
+    ['SLA Durumunu Yenile','Refresh SLA Status'],['Alarm SLA özeti yükleniyor...','Loading alarm SLA summary...'],
+    ['Alarm Tipi','Alarm Type'],['Kurallar yükleniyor...','Loading rules...'],['Aktif alarmlar yükleniyor...','Loading active alarms...'],
+    ['Alarm Escalation Kuyruğu / Bildirim Geçmişi','Alarm Escalation Queue / Notification History'],
+    ['v5.16: SLA dışı alarm kuyruğu, gerçek Email/Telegram teslimatı ve gönderim geçmişi.','v5.16: Overdue alarm queue, real Email/Telegram delivery and delivery history.'],
+    ['Delivery Worker durumu yükleniyor...','Loading Delivery Worker status...'],['Escalation Queue özeti yükleniyor...','Loading Escalation Queue summary...'],
+    ['Escalation Olay Geçmişi','Escalation Event History'],['Escalation olayları yükleniyor...','Loading escalation events...'],
+    ['Bildirim Ayarları / Kanal Testleri','Notification Settings / Channel Tests'],
+    ['v5.18: Telegram, Email ve Delivery Worker ayarlarını tek ekrandan yönet ve test et.','v5.18: Manage and test Telegram, Email and Delivery Worker settings from one screen.'],
+    ['Bildirim ayarları yükleniyor...','Loading notification settings...'],['Durum yükleniyor...','Loading status...'],
+    ['Bot token panelde gösterilmez. Yeni token girilmezse mevcut değer korunur.','The bot token is not displayed. The current value is preserved unless a new token is entered.'],
+    ['SMTP şifresi panelde gösterilmez. Yeni şifre girilmezse mevcut değer korunur.','The SMTP password is not displayed. The current value is preserved unless a new password is entered.'],
+    ['Ayar değişikliği veya kanal testi bekleniyor.','Waiting for a settings change or channel test.'],
+    ['Otomatik Alarm Escalation Zamanlayıcısı','Automatic Escalation Scheduler'],
+    ['v5.19: SLA taraması, otomatik teslimat, exponential retry/backoff ve Dead Letter yönetimi.','v5.19: SLA scanning, automatic delivery, exponential retry/backoff and Dead Letter management.'],
+    ['Durumu Yenile','Refresh Status'],['Scheduler durumu yükleniyor...','Loading scheduler status...'],['SLA tarama','SLA scan'],
+    ['Pending kuyruk','Pending queue'],['Scheduler Ayarları','Scheduler Settings'],['Scheduler Aktif','Scheduler Enabled'],
+    ['Otomatik Retry','Automatic Retry'],['Ayar değişikliği veya manuel çalışma bekleniyor.','Waiting for a settings change or manual run.'],
+    ['Scheduler Çalışma Geçmişi','Scheduler Run History'],['Çalışma geçmişi yükleniyor...','Loading run history...'],
+    ['Günlük / Haftalık Alarm Raporları','Daily / Weekly Alarm Reports'],
+    ['v5.20: Alarm özetlerini günlük veya haftalık hazırlayıp Telegram ve Email üzerinden teslim eder.','v5.20: Creates daily or weekly alarm summaries and delivers them through Telegram and Email.'],
+    ['Rapor ayarları yükleniyor...','Loading report settings...'],['Alarm kayıtları','Alarm records'],['Günlük / haftalık özet','Daily / weekly summary'],
+    ['Teslimat geçmişi','Delivery history'],['Rapor Scheduler','Report Scheduler'],['Telegram Chat ID\'leri','Telegram Chat IDs'],
+    ['Email Alıcıları','Email Recipients'],['Günlük Gönderim Saati','Daily Delivery Hour'],['Haftalık Gönderim Günü','Weekly Delivery Day'],
+    ['Haftalık Gönderim Saati','Weekly Delivery Hour'],
+    ['Günlük rapor önceki tamamlanmış günü, haftalık rapor önceki tamamlanmış 7 günü kapsar. Boş hedef alanlarında Notifications ekranındaki varsayılan alıcılar kullanılır.','The daily report covers the previous completed day and the weekly report covers the previous completed 7 days. Empty targets use the default recipients from Notifications.'],
+    ['Ayar değişikliği veya manuel rapor gönderimi bekleniyor.','Waiting for a settings change or manual report delivery.'],
+    ['Henüz rapor özeti yok.','No report summary yet.'],['Rapor geçmişi yükleniyor...','Loading report history...'],
+    ['Bakım ve Servis Talep Merkezi','Maintenance & Service Ticket Center'],
+    ['v5.21: Manuel veya alarm bağlantılı bakım talebi, atama, öncelik, termin, durum ve işlem geçmişi.','v5.21: Manual or alarm-linked maintenance requests, assignment, priority, due date, status and activity history.'],
+    ['Ticketları Yenile','Refresh Tickets'],['Bakım özeti yükleniyor...','Loading maintenance summary...'],['Alarm / Manuel Talep','Alarm / Manual Request'],
+    ['Atama + Termin','Assignment + Due Date'],['Yeni bakım talebi bekleniyor.','Waiting for a new maintenance request.'],
+    ['Ticketlar yükleniyor...','Loading tickets...'],['Bir ticket satırındaki Geçmiş düğmesine bas.','Click History on a ticket row.'],
+    ['Önleyici Bakım Planları','Preventive Maintenance Plans'],
+    ['Takvim veya çalışma saati bazlı bakım planları oluştur; yaklaşan bakımlar için otomatik iş emri aç.','Create calendar- or runtime-based maintenance plans and automatically open work orders for upcoming maintenance.'],
+    ['Planları Yenile','Refresh Plans'],['Bakım planları yükleniyor...','Loading maintenance plans...'],['Bakım Planı','Maintenance Plan'],
+    ['Yaklaşan / Geciken','Upcoming / Overdue'],['Otomatik İş Emri','Automatic Work Order'],['Teknisyen','Technician'],
+    ['Sonraki Bakım','Next Maintenance'],['Bakım Zamanlayıcısı','Maintenance Scheduler'],['Tarama Aralığı (sn)','Scan Interval (sec)'],
+    ['Scheduler Kaydet','Save Scheduler'],['Scheduler bilgisi bekleniyor.','Waiting for scheduler information.'],
+    ['Çalışma Saati Periyodu','Runtime Interval'],['İlk / Sonraki Tarih','First / Next Date'],['tümü','all'],
+    ['Yeni plan bekleniyor.','Waiting for a new plan.'],['Planlar yükleniyor...','Loading plans...'],['Scheduler Geçmişi','Scheduler History'],
+    ['Scheduler geçmişi yükleniyor...','Loading scheduler history...'],['Bakım İş Emirleri','Maintenance Work Orders'],
+    ['Planlı bakım iş emirlerini ata, başlat, kontrol listesini tamamla ve kullanılan parçalarla kapat.','Assign and start planned maintenance work orders, complete checklists and close them with used parts.'],
+    ['İş Emirlerini Yenile','Refresh Work Orders'],['İş emri özeti yükleniyor...','Loading work order summary...'],
+    ['İş emirleri yükleniyor...','Loading work orders...'],['Bir iş emrindeki Geçmiş düğmesine bas.','Click History on a work order.'],
+    ['Yedek parça kartlarını, stok giriş/çıkışlarını, minimum stok seviyelerini ve bakım iş emri tüketimlerini yönet.','Manage spare-part cards, stock entries/exits, minimum stock levels and maintenance work-order consumption.'],
+    ['Stok özeti yükleniyor...','Loading inventory summary...'],['Bakım İş Emri','Maintenance Work Order'],['Yeni parça kartı bekleniyor.','Waiting for a new part card.'],
+    ['Parça','Part'],['Parça seç...','Select part...'],['purchase / giriş','purchase / entry'],['consumption / çıkış','consumption / exit'],
+    ['return / iade giriş','return / return entry'],['adjustment / fark','adjustment / difference'],['Yeni Birim Maliyet','New Unit Cost'],
+    ['Stok hareketi bekleniyor.','Waiting for a stock movement.'],['Parçalar yükleniyor...','Loading parts...'],['Hareketler yükleniyor...','Loading movements...'],
+    ['Bir parçadaki Geçmiş düğmesine bas.','Click History on a part.'],['Yetki Özeti','Permission Overview'],
+    ['Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.','The active user role and permissions granted by the backend.'],
+    ['Kullanıcı Daveti / Tenant Erişimi','Invite User / Tenant Access'],
+    ['Yeni kullanıcıya müşteri/tesis erişimi ver ve davet e-postası gönder.','Grant customer/site access to a new user and send an invitation email.'],
+    ['Davet Oluştur + Mail','Create Invitation + Email'],
+    ['Her kullanıcı satırında mevcut role göre alacağı yetki listesi görünür. Rol değişince yetki önizlemesi de değişir.','Each user row shows the permissions granted by the selected role. The permission preview changes when the role changes.'],
+    ['v5.10: Yeni tenant oluşturma ve mevcut tenant düzenleme işlemleri MANAGE_CUSTOMERS yetkisine bağlıdır.','v5.10: Creating and editing tenants requires the MANAGE_CUSTOMERS permission.'],
+    ['Abonelik Planları','Subscription Plans'],['Ödeme sağlayıcısından bağımsız paket ve limit tanımları.','Payment-provider-independent plan and limit definitions.'],
+    ['Tenant Abonelikleri','Tenant Subscriptions'],['Plan, abonelik durumu ve gerçek zamanlı kullanım limiti zorlaması.','Plan, subscription status and real-time usage-limit enforcement.'],
+    ['Enforcement durumu yükleniyor...','Loading enforcement status...'],
+    ['v5.10: Müşteri ve tesis altındaki makineleri oluştur, düzenle ve durumunu yönet.','v5.10: Create, edit and manage the status of machines under tenants and sites.'],
+    ['Makine Adı','Machine Name'],['Makine Tipi','Machine Type'],['Makine Oluştur','Create Machine'],
+    ['Cihaz Kayıtları / Provisioning','Device Registry / Provisioning'],
+    ['FactoryBox cihazlarını müşteri, tesis ve makineye bağla; tek kullanımlık provisioning token üret.','Connect FactoryBox devices to tenants, sites and machines, and generate one-time provisioning tokens.'],
+    ['Tesisler / Atölyeler','Sites / Workshops'],['v5.10: Tesis oluşturma, düzenleme ve abonelik tesis limit kontrolü.','v5.10: Site creation, editing and subscription site-limit control.'],
+    ['Tesis Adı','Site Name'],['Lokasyon','Location'],['Tesis Oluştur','Create Site'],['Tenant Erişimi','Tenant Access'],
+    ['Güvenlik Aktiviteleri / Audit Log','Security Activity / Audit Log'],
+    ['AUDIT_VIEW yetkisi olan roller yönetim, giriş, davet, parola ve abonelik aktivitelerini filtreleyebilir.','Roles with AUDIT_VIEW can filter administration, login, invitation, password and subscription activities.'],
+    ['Sağlık','Health'],['Müşteri / Tesis','Customer / Site'],['Makine Durumu','Machine State'],['Makine Statüsü','Machine Status'],
+    ['Akım','Current'],['Sıcaklık','Temp'],['Cihazlar','Devices'],['Alarmlar','Alarms'],['Son Görülme','Last Seen'],
+    ['Makine / Kaynak','Machine / Source'],['Güncellendi','Updated'],['Aksiyon','Action'],['Olay','Event'],['Detay','Detail'],
+    ['Planlama','Schedule'],['Kontrol Listesi','Checklist'],['Sonraki Tarih','Next Date'],['Aktif İş Emri','Active Work Order'],
+    ['Tetikleyici','Trigger'],['İncelenen','Scanned'],['Vadesi Gelen','Due'],['Oluşan','Created'],['Atlanan','Skipped'],
+    ['İş Emri','Work Order'],['Plan / Başlık','Plan / Title'],['Süre','Duration'],['Toplam','Total'],['Provider ID','Provider ID'],
+    ['Kategori / Birim','Category / Unit'],['Stok','Stock'],['Sipariş','Reorder'],['Min Stok','Min Stock'],['Değişim','Change'],
+    ['Bakiye','Balance'],['Referans','Reference'],['Tip','Type'],['Üretim','Production'],['Sinyal','Signal'],['Hedef','Target'],
+    ['Plansız Duruş','Unplanned Downtime'],['Sağlam','Good'],['Hatalı','Reject'],['Kaynak','Source'],['Kritik','Critical'],
+    ['Uyarı','Warning'],['Ad','Name'],['Kapsam','Scope'],['Çözüm','Resolve'],['Yaş','Age'],['Oluşma','Created At'],
+    ['Aşama','Stage'],['Mesaj','Message'],['Deneme','Attempt'],['Son Deneme','Last Attempt'],['Sonraki Deneme','Next Attempt'],
+    ['Aktif / Geciken','Active / Overdue'],['Yeni / Tekrar','New / Duplicate'],['Rapor','Report'],['Dönem','Period'],
+    ['Rol','Role'],['Yetkiler','Permissions'],['Son Giriş','Last Login'],['Kod','Code'],['Ad','Name'],['Tesisler','Sites'],
+    ['Makineler','Machines'],['Kullanıcılar','Users'],['Oluşturuldu','Created'],['Deneme Süresi','Trial'],['Aylık','Monthly'],
+    ['Erişim','Access'],['Kullanıcı','User'],['Kullanıcı Rolü','User Role'],['Erişim Rolü','Access Role'],['Firmware','Firmware'],
+    ['MQTT Konusu','MQTT Topic'],['Provisioning','Provisioning'],['Token Bitişi','Token Expires'],['Varlık','Entity'],['Eski','Old'],['Yeni','New'],
+    ['Mail','Email'],['Bitiş Tarihi','Expires'],['Bağlantı','Link'],
+    ['Kontrol Paneli','Dashboard'],['Operatör','Operator'],['Giriş','Login'],['Yönetim Özeti','Admin Overview'],
+    ['Makine Kodu','Machine Code'],['Teslimat Aktif','Delivery Enabled'],['Varsayılan Alıcılar','Default Recipients'],
+    ['Test E-postası','Test Email'],['Zamanlayıcı','Scheduler'],['Zamanlayıcı durumu yükleniyor...','Loading scheduler status...'],
+    ['Bekleyen kuyruk','Pending queue'],['Zamanlayıcı Ayarları','Scheduler Settings'],['Zamanlayıcı Aktif','Scheduler Enabled'],
+    ['Zamanlayıcı Çalışma Geçmişi','Scheduler Run History'],['Rapor Zamanlayıcısı','Report Scheduler'],
+    ['E-posta Alıcıları','Email Recipients'],['Bakım Zamanlayıcısı','Maintenance Scheduler'],['Zamanlayıcıyı Kaydet','Save Scheduler'],
+    ['Zamanlayıcı bilgisi bekleniyor.','Waiting for scheduler information.'],['Zamanlayıcı Geçmişi','Scheduler History'],
+    ['Zamanlayıcı geçmişi yükleniyor...','Loading scheduler history...'],['Müşteri Kodu','Customer Code'],['Tesis Kodu','Site Code'],
+    ['Müşteri Oluştur','Create Customer'],['Makine Oluştur','Create Machine'],['İşlemi Yapan E-posta','Actor Email'],
+    ['Yeni kullanıcıya müşteri/tesis erişimi ver ve davet e-postası gönder.','Grant customer/site access to a new user and send an invitation email.'],
+    ['Her kullanıcı satırında mevcut role göre alacağı yetki listesi görünür. Rol değişince yetki önizlemesi de değişir.','Each user row shows the permissions granted by the selected role. The permission preview changes when the role changes.'],
+    ['v5.10: Müşteri ve tesis altındaki makineleri oluştur, düzenle ve durumunu yönet.','v5.10: Create, edit and manage machines under customers and sites.'],
+    ['FactoryBox cihazlarını müşteri, tesis ve makineye bağla; tek kullanımlık provisioning token üret.','Connect FactoryBox devices to customers, sites and machines and generate a one-time provisioning token.'],
+    ['v5.10: Tesis oluşturma, düzenleme ve abonelik tesis limit kontrolü.','v5.10: Site creation, editing and subscription site-limit control.'],
+    ['24 Saat','24 Hours'],['12 Saat','12 Hours'],['15 saniye','15 seconds'],['30 saniye','30 seconds'],['1 dakika','1 minute'],['2 dakika','2 minutes'],['5 dakika','5 minutes'],
+    ['Aktif alarm','Active alarm'],['E-posta Test Mesajı','Send Email Test'],['E-posta','Email'],
+
+    ["Admin panel menüsü", "Admin panel menu"],
+    ["Tam çeviri ve endüstriyel içerik arayüzü aktif.", "Full localization and industrial content UI are active."],
+    ["Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.", "Full Turkish / English localization and content UI refresh are active."],
+    ["Tüm sistem yetkileri", "All system permissions"],
+    ["Tüm tenant yönetimi", "Full tenant management"],
+    ["Customer/site/invite/billing görüntüleme/audit yönetimi", "Customer/site/invite/billing viewing and audit management"],
+    ["Dashboard + rapor + bakım planı, iş emri ve ticket işlemleri", "Dashboard + reports + maintenance plans, work orders and ticket operations"],
+    ["Sadece görüntüleme", "View only"],
+    ["Makine canlı durumları, son telemetri ve bağlantı sağlığı.", "Live machine states, latest telemetry and connection health."],
+    ["Availability, Performance, Quality, OEE, üretim adetleri ve duruş nedenleri.", "Availability, Performance, Quality, OEE, production counts and downtime reasons."],
+    ["Aktif alarm listesi, alarm geçmişi, acknowledge ve clear işlemleri.", "Active alarm list, alarm history, acknowledgement and clearing operations."],
+    ["Alarm trendi, acknowledge/çözüm süreleri ve makine bazlı alarm yoğunluğu.", "Alarm trends, acknowledgement/resolution times and machine-level alarm density."],
+    ["Müdahale/çözüm süreleri, escalation kuralları ve SLA dışı aktif alarmlar.", "Response/resolution times, escalation rules and active alarms outside SLA."],
+    ["SLA dışı alarm kuyruğu, Email/Telegram teslimatı ve gönderim geçmişi.", "Out-of-SLA alarm queue, Email/Telegram delivery and delivery history."],
+    ["Panel dili, saat dilimi, tarih/saat biçimi ve genel çalışma tercihleri.", "Panel language, time zone, date/time format and general operating preferences."],
+    ["Telegram, Email, test mesajları ve Delivery Worker çalışma ayarları.", "Telegram, Email, test messages and Delivery Worker settings."],
+    ["Otomatik SLA tarama, retry/backoff, teslimat ve Dead Letter yönetimi.", "Automatic SLA scanning, retry/backoff, delivery and Dead Letter management."],
+    ["Günlük ve haftalık alarm özetleri, Telegram/Email teslimatı ve rapor geçmişi.", "Daily and weekly alarm summaries, Telegram/Email delivery and report history."],
+    ["Bakım talepleri, alarm bağlantıları, atamalar, terminler ve ticket işlem geçmişi.", "Maintenance requests, alarm links, assignments, due dates and ticket activity history."],
+    ["Takvim veya çalışma saati bazlı periyodik bakım planları ve otomatik iş emri schedulerı.", "Calendar- or runtime-based periodic maintenance plans and automatic work-order scheduler."],
+    ["Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.", "Planned maintenance work orders, checklists, part usage and completion history."],
+    ["Yedek parça kartları, stok hareketleri, minimum stok uyarıları ve iş emri tüketimleri.", "Spare-part cards, stock movements, minimum-stock alerts and work-order consumption."],
+    ["Customer, tenant, site ve atölye yönetimi.", "Customer, tenant, site and workshop management."],
+    ["Kullanıcılar, davetler ve tenant erişim kayıtları.", "Users, invitations and tenant access records."],
+    ["Aktif rol, permission matrisi ve yetki görünümü.", "Active role, permission matrix and authorization overview."],
+    ["Planlar, abonelik durumu, deneme süresi ve kota kullanımı.", "Plans, subscription status, trial period and quota usage."],
+    ["Tenant, site ve makine kayıtlarını yönetme ekranı.", "Management screen for tenant, site and machine records."],
+    ["FactoryBox cihaz kayıtları ve provisioning token işlemleri.", "FactoryBox device records and provisioning-token operations."],
+    ["Audit log, güvenlik aktiviteleri, filtreleme ve CSV dışa aktarım.", "Audit logs, security activities, filtering and CSV export."],
+    ["Login gerekli. Önce login ekranından giriş yap.", "Login required. Sign in from the login screen first."],
+    ["Bu işlem için yetkin yok.", "You do not have permission for this operation."],
+    ["SLA içinde", "Within SLA"],
+    ["Çözüm gecikti", "Resolution overdue"],
+    ["Henüz test yapılmadı.", "No test has been run yet."],
+    ["SMTP şifresi gerekli", "SMTP password required"],
+    ["Henüz kayıt yok", "No records yet"],
+    ["Ortam değişkenleri", "Environment variables"],
+    ["varsayılan alıcı yok", "no default recipient"],
+    ["Şu an çalışıyor", "Running now"],
+    ["Otomatik planlandı", "Automatically scheduled"],
+    ["Scheduler kapalı", "Scheduler disabled"],
+    ["Retry kapalı", "Retry disabled"],
+    ["Günlük rapor kapalı", "Daily report disabled"],
+    ["Haftalık rapor kapalı", "Weekly report disabled"],
+    ["kapasite aşıldı", "capacity exceeded"],
+    ["Kullanılan stok parçalarını Parça Kullan düğmesiyle eklediğini onaylıyor musun?", "Do you confirm that used stock parts were added with the Use Part button?"],
+    ["Bakım tamamlandı.", "Maintenance completed."],
+    ["Gerçek bakım süresi (dakika):", "Actual maintenance duration (minutes):"],
+    ["İş emri notu:", "Work-order note:"],
+    ["Çözüm / kapatma notu:", "Resolution / closing note:"],
+    ["OEE ayarı için makine seç.", "Select a machine for OEE settings."],
+    ["Üretim kaydı için makine seç.", "Select a machine for the production record."],
+    ["Duruş kaydı için makine seç.", "Select a machine for the downtime record."],
+    ["Bu üretim kaydı silinsin mi? OEE sonucu yeniden hesaplanacaktır.", "Delete this production record? The OEE result will be recalculated."],
+    ["Bu duruş kaydı silinsin mi? OEE sonucu yeniden hesaplanacaktır.", "Delete this downtime record? The OEE result will be recalculated."],
+    ["Temizleme için önce tek bir makine seç.", "Select one machine before cleanup."],
+    ["Stokta kullanılabilir parça yok. Önce Inventory ekranından stok girişi yap.", "No usable parts are in stock. Add stock from the Inventory screen first."],
+    ["Parça numarası bulunamadı.", "Part number not found."],
+    ["Parça kullanım notu:", "Part usage note:"],
+    ["Bakım iş emrinde kullanıldı.", "Used in the maintenance work order."],
+    ["Davet maili gönderildi.", "Invitation email sent."],
+    ["İşlem yapılıyor...", "Processing..."],
+    ["Kullanıcı güncellendi. Permission kontrolü uygulandı.", "User updated. Permission checks were applied."],
+    ["Customer güncellendi. Activity history güncellendi.", "Customer updated. Activity history updated."],
+    ["Site güncellendi. Activity history güncellendi.", "Site updated. Activity history updated."],
+    ["Machine güncellendi. Activity history güncellendi.", "Machine updated. Activity history updated."],
+    ["Tenant aboneliği ve limit kontrolü güncellendi.", "Tenant subscription and limit enforcement updated."],
+    ["Cihaz durumu güncellendi. Activity history güncellendi.", "Device status updated. Activity history updated."],
+    ["Davet linki kopyalandı.", "Invitation link copied."],
+    ["Davet maili gönderildi / durum güncellendi.", "Invitation email sent / status updated."],
+    ["Davet iptal edildi. Activity history güncellendi.", "Invitation cancelled. Activity history updated."],
+    ["Alarm acknowledge edildi. Audit log güncellendi.", "Alarm acknowledged. Audit log updated."],
+    ["Alarm clear edildi. Audit log güncellendi.", "Alarm cleared. Audit log updated."],
+    ["Alarm SLA kuralı güncellendi. Audit log kaydedildi.", "Alarm SLA rule updated. Audit log saved."],
+    ["Escalation olayı teslim edildi olarak işaretlendi.", "Escalation event marked as delivered."],
+    ["Escalation olayı tekrar kuyruğa alındı.", "Escalation event requeued."],
+    ["Ticket geçmişi yüklendi.", "Ticket history loaded."],
+    ["İş emri notu eklendi.", "Work-order note added."],
+    ["İş emri geçmişi yüklendi.", "Work-order history loaded."],
+    ["Parça kullanımı iptal edildi.", "Part usage cancelled."],
+    ["Parça seçildi. Hareket türü ve miktarı gir.", "Part selected. Enter movement type and quantity."],
+    ["Stok hareketi formuna geçildi.", "Opened the stock movement form."],
+    ["Parça stok geçmişi yüklendi.", "Part stock history loaded."],
+    ["Üretim kaydı silindi ve OEE yeniden hesaplandı.", "Production record deleted and OEE recalculated."],
+    ["Duruş kaydı silindi ve OEE yeniden hesaplandı.", "Downtime record deleted and OEE recalculated."],
+    ["OEE ayarları kaydediliyor...", "Saving OEE settings..."],
+    ["Üretim kaydı oluşturuluyor...", "Creating production record..."],
+    ["Duruş kaydı oluşturuluyor...", "Creating downtime record..."],
+    ["STOPPED durum sinyalleri duruş kayıtlarına aktarılıyor...", "Importing STOPPED state signals into downtime records..."],
+    ["Seçili manuel OEE test kayıtları temizleniyor...", "Cleaning selected manual OEE test records..."],
+    ["Parça kartı oluşturuluyor...", "Creating part card..."],
+    ["Stok hareketi kaydediliyor...", "Saving stock movement..."],
+    ["Bakım planı oluşturuluyor...", "Creating maintenance plan..."],
+    ["Scheduler ayarları kaydedildi.", "Scheduler settings saved."],
+    ["Bakım ticketı oluşturuluyor...", "Creating maintenance ticket..."],
+    ["Alarm rapor ayarları kaydediliyor...", "Saving alarm report settings..."],
+    ["Rapor ayarları kaydedildi ve scheduler yeni planla başlatıldı.", "Report settings saved and scheduler restarted with the new schedule."],
+    ["Günlük alarm raporu hazırlanıp gönderiliyor...", "Preparing and sending daily alarm report..."],
+    ["Haftalık alarm raporu hazırlanıp gönderiliyor...", "Preparing and sending weekly alarm report..."],
+    ["Scheduler ayarları kaydediliyor...", "Saving scheduler settings..."],
+    ["Scheduler ayarları kaydedildi ve çalışma planı yenilendi.", "Scheduler settings saved and run schedule refreshed."],
+    ["SLA tarama ve otomatik teslimat çalıştırılıyor...", "Running SLA scan and automatic delivery..."],
+    ["Bildirim ayarları kaydediliyor...", "Saving notification settings..."],
+    ["Ayarlar kaydedildi. Worker yeni ayarlarla yeniden başlatıldı.", "Settings saved. Worker restarted with the new settings."],
+    ["Telegram test mesajı gönderiliyor...", "Sending Telegram test message..."],
+    ["Email test mesajı gönderiliyor...", "Sending Email test message..."],
+    ["Bekleyen escalation olayları gönderiliyor...", "Sending pending escalation events..."],
+    ["SLA dışı alarmlar taranıyor...", "Scanning alarms outside SLA..."],
+    ["Alarm SLA kuralı oluşturuluyor...", "Creating alarm SLA rule..."],
+    ["Alarm SLA kuralı oluşturuldu.", "Alarm SLA rule created."],
+    ["Audit CSV hazırlanıyor...", "Preparing audit CSV..."],
+    ["Customer oluşturuluyor...", "Creating customer..."],
+    ["Customer oluşturuldu. Trial abonelik ve audit kaydı hazır.", "Customer created. Trial subscription and audit record are ready."],
+    ["Site oluşturuluyor...", "Creating site..."],
+    ["Site oluşturuldu. Site quota ve audit kaydı uygulandı.", "Site created. Site quota and audit record applied."],
+    ["Machine oluşturuluyor...", "Creating machine..."],
+    ["Machine oluşturuldu. Asset listesi güncellendi.", "Machine created. Asset list updated."],
+    ["Provision token oluşturuluyor...", "Creating provisioning token..."],
+    ["Provision token oluşturuldu. Cihaz listesi güncellendi.", "Provisioning token created. Device list updated."],
+    ["Davet oluşturuluyor...", "Creating invitation..."],
+    ["Davet oluşturuldu. Mail durumu güncellendi.", "Invitation created. Email status updated."],
+    ["Genel ayarlar kaydediliyor...", "Saving general settings..."],
+    ["Üretim emri veya vardiya açıklaması", "Production order or shift description"],
+    ["Örn: Egzoz fanı arızası", "Example: Exhaust fan failure"],
+    ["Duruşta yapılan işlem ve açıklama", "Action performed and description during downtime"],
+    ["örn: laser01", "e.g. laser01"],
+    ["alarm tipi / mesaj", "alarm type / message"],
+    ["örn: Lazer kritik alarm", "e.g. Laser critical alarm"],
+    ["boş = tüm tipler", "empty = all types"],
+    ["boş = tüm makineler", "empty = all machines"],
+    ["Boş bırakılırsa mevcut token korunur", "Leave blank to keep the current token"],
+    ["Boş = varsayılan chat ID", "Blank = default chat ID"],
+    ["Boş bırakılırsa mevcut şifre korunur", "Leave blank to keep the current password"],
+    ["Boş = varsayılan alıcı", "Blank = default recipient"],
+    ["Boş = Notifications varsayılanı", "Blank = Notifications default"],
+    ["Ticket no, başlık, makine, atanan", "Ticket no, title, machine, assignee"],
+    ["Örn: Lazer egzoz fanı kontrolü", "Example: Laser exhaust fan inspection"],
+    ["Arıza, bakım ihtiyacı ve yapılacak iş...", "Failure, maintenance need and work to be performed..."],
+    ["Örn: Lazer aylık egzoz bakımı", "Example: Monthly laser exhaust maintenance"],
+    ["Bakım Ekibi", "Maintenance Team"],
+    ["Her satıra bir kontrol maddesi", "One checklist item per line"],
+    ["Bakım kapsamı, güvenlik adımları ve açıklamalar", "Maintenance scope, safety steps and notes"],
+    ["İş emri, plan, makine, atanan", "Work order, plan, machine, assignee"],
+    ["Parça no, SKU, ad, konum, tedarikçi", "Part no, SKU, name, location, supplier"],
+    ["Örn: Egzoz fan kayışı", "Example: Exhaust fan belt"],
+    ["Firma adı", "Company name"],
+    ["Teknik özellik, uyumlu makine ve satın alma notları", "Technical specification, compatible machine and purchasing notes"],
+    ["Boşsa korunur", "Kept when blank"],
+    ["Fatura / irsaliye / sayım", "Invoice / delivery note / count"],
+    ["Stok hareketi açıklaması", "Stock movement description"],
+    ["örn: mia-demo", "e.g. mia-demo"],
+    ["boş bırakılırsa tüm customer", "blank = all customers"],
+    ["örn: yeni-demo", "e.g. new-demo"],
+    ["Firma / Atölye adı", "Company / Workshop name"],
+    ["örn: site01", "e.g. site01"],
+    ["örn: laser02", "e.g. laser02"],
+    ["örn: factorybox-001", "e.g. factorybox-001"],
+    ["örn: site02", "e.g. site02"],
+    ["Atölye adı", "Workshop name"],
+    ["İstanbul", "Istanbul"],
+    ["örn: login_failed", "e.g. login_failed"],
+    ["tümü", "all"],
+    ["aktif", "active"],
+    ["onaylandı", "acknowledged"],
+    ["temizlendi", "cleared"],
+    ["kritik", "critical"],
+    ["uyarı", "warning"],
+    ["bilgi", "info"],
+    ["açık", "open"],
+    ["devam ediyor", "in_progress"],
+    ["beklemede", "waiting"],
+    ["çözüldü", "resolved"],
+    ["kapalı", "closed"],
+    ["iptal edildi", "cancelled"],
+    ["önleyici", "preventive"],
+    ["düzeltici", "corrective"],
+    ["kontrol", "inspection"],
+    ["elektrik", "electrical"],
+    ["mekanik", "mechanical"],
+    ["yazılım", "software"],
+    ["güvenlik", "safety"],
+    ["diğer", "other"],
+    ["düşük", "low"],
+    ["orta", "medium"],
+    ["yüksek", "high"],
+    ["planlı", "planned"],
+    ["plansız", "unplanned"],
+    ["arıza", "breakdown"],
+    ["malzeme bekleme", "material_wait"],
+    ["operatör bekleme", "operator_wait"],
+    ["kurulum", "setup"],
+    ["ürün değişimi", "changeover"],
+    ["planlı bakım", "planned_maintenance"],
+    ["kalite duruşu", "quality_stop"],
+    ["enerji", "power"],
+    ["günlük", "daily"],
+    ["haftalık", "weekly"],
+    ["aylık", "monthly"],
+    ["çalışma saati", "runtime hours"],
+    ["planlandı", "scheduled"],
+    ["tamamlandı", "completed"],
+    ["satın alma", "purchase"],
+    ["tüketim", "consumption"],
+    ["iade", "return"],
+    ["düzeltme", "adjustment"],
+    ["gönderildi", "sent"],
+    ["gönderilmedi", "not sent"],
+    ["yetki yok", "no permission"],
+    ["Tesisler / Atölyeler", "Sites / Workshops"],
+    ["Tesis Oluştur", "Create Site"],
+    ["Siteler / Atölyeler", "Sites / Workshops"],
+    ["Site Oluştur", "Create Site"],
+  ];
+  const I18N_SORTED = [...I18N_PAIRS].sort((a,b)=>Math.max(b[0].length,b[1].length)-Math.max(a[0].length,a[1].length));
+
+  const TURKISH_UI_NORMALIZATIONS = [
+    ['Delivery Worker status','Teslimat Servisi durumu'],['Scheduler status','Zamanlayıcı durumu'],['Report history','Rapor geçmişi'],['Alarm history','Alarm geçmişi'],['Alarm Center','Alarm Merkezi'],['Alarm Analytics','Alarm Analitiği'],['Live Monitoring','Canlı İzleme'],
+    ['Dashboard','Kontrol Paneli'],['Operator','Operatör'],['Login','Giriş'],['System Settings','Sistem Ayarları'],
+    ['General Settings','Genel Ayarlar'],['Notification Settings','Bildirim Ayarları'],['Notifications','Bildirimler'],
+    ['Automation Scheduler','Otomasyon Zamanlayıcı'],['Scheduler','Zamanlayıcı'],['Delivery Worker','Teslimat Servisi'],
+    ['Escalation Delivery','Bildirim Teslimatı'],['Escalation','Bildirim'],['Dead Letter','Hata Kuyruğu'],
+    ['retry/backoff','yeniden deneme/bekleme'],['Retry','Yeniden Deneme'],['Email','E-posta'],
+    ['Ticket History','Talep Geçmişi'],['Ticket','Talep'],['Work Orders','İş Emirleri'],['Work Order','İş Emri'],
+    ['Maintenance','Bakım'],['Inventory','Stok'],['Spare Parts','Yedek Parçalar'],
+    ['Customers','Müşteriler'],['Customer','Müşteri'],['Sites','Tesisler'],['Site','Tesis'],['Machines','Makineler'],['Machine','Makine'],['Users','Kullanıcılar'],['Invitations','Davetler'],['Subscriptions','Abonelikler'],['Assets','Varlıklar'],['Devices','Cihazlar'],['Reports','Raporlar'],['Device Registry','Cihaz Kayıtları'],
+    ['Provisioning','Cihaz Eşleştirme'],['Audit Log','Denetim Günlüğü'],['Audit log','Denetim günlüğü'],
+    ['Activity history','İşlem geçmişi'],['Permission','Yetki'],['Permissions','Yetkiler'],['Role','Rol'],
+    ['Status','Durum'],['Severity','Önem'],['Priority','Öncelik'],['Action','İşlem'],['Actor','İşlemi Yapan'],
+    ['Provider','Sağlayıcı'],['Scope','Kapsam'],['Resolve','Çözüm'],['Acknowledge','Onaylama'],
+    ['acknowledge','onaylama'],['clear','kapatma'],['Active section','Aktif bölüm'],['Started at','Başlama Zamanı'],['Ended at','Bitiş Zamanı'],
+    ['status','durum'],['history','geçmiş'],['settings','ayarlar'],['queue','kuyruk'],['delivery','teslimat'],['report','rapor'],['worker','servis'],['enabled','aktif'],['disabled','kapalı'],
+    ['Main Menu','Ana Menü'],['Refresh','Yenile'],['Search','Arama'],['Start','Başlangıç'],['End','Bitiş']
+  ].sort((a,b)=>b[0].length-a[0].length);
+
+  function normalizeTurkishUiText(value) {
+    let text=String(value??'');
+    for(const [source,target] of TURKISH_UI_NORMALIZATIONS){
+      const escaped=source.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      const start=/^[A-Za-z0-9]/.test(source)?'\\b':'';
+      const end=/[A-Za-z0-9]$/.test(source)?'\\b':'';
+      text=text.replace(new RegExp(start+escaped+end,'g'),target);
+    }
+    return text;
+  }
+
+  function translateTextValue(value, language=currentLanguage) {
+    const raw=String(value ?? '');
+    const leading=raw.match(/^\s*/)?.[0]||''; const trailing=raw.match(/\s*$/)?.[0]||''; let text=raw.trim();
+    if (!text) return raw;
+    const sourceIndex=language==='en'?0:1; const targetIndex=language==='en'?1:0;
+    for (const pair of I18N_SORTED) {
+      if (text===pair[0] || text===pair[1]) {
+        const translated=pair[targetIndex];
+        return leading+(language==='tr'?normalizeTurkishUiText(translated):translated)+trailing;
+      }
+    }
+    // Translate longer phrases inside dynamic status messages without touching short codes/identifiers.
+    for (const pair of I18N_SORTED) {
+      const source=pair[sourceIndex]; const target=pair[targetIndex];
+      if ((source.includes(' ') || source.length>=12) && source.length>=8 && text.includes(source)) {
+        text=text.split(source).join(target);
+      }
+    }
+    const dynamic = language==='en' ? [
+      [/^(\d+) gün$/, '$1 days'], [/^(\d+) saat$/, '$1 hours'], [/^(\d+) dk$/, '$1 min'], [/^(\d+) sn$/, '$1 sec'],
+      [/^(\d+) alarm$/, '$1 alarms'], [/^(\d+) ticket$/, '$1 tickets'], [/^Merhaba, (.+)$/, 'Hello, $1'],
+      [/^Kısmi hata: (.+)$/, 'Partial error: $1'], [/^Hata: (.+)$/, 'Error: $1']
+    ] : [
+      [/^(\d+) days?$/, '$1 gün'], [/^(\d+) hours?$/, '$1 saat'], [/^(\d+) min$/, '$1 dk'], [/^(\d+) sec$/, '$1 sn'],
+      [/^(\d+) alarms?$/, '$1 alarm'], [/^(\d+) tickets?$/, '$1 ticket'], [/^Hello, (.+)$/, 'Merhaba, $1'],
+      [/^Partial error: (.+)$/, 'Kısmi hata: $1'], [/^Error: (.+)$/, 'Hata: $1']
+    ];
+    for(const [pattern,replacement] of dynamic){if(pattern.test(text))return leading+text.replace(pattern,replacement)+trailing;}
+    return leading+(language==='tr'?normalizeTurkishUiText(text):text)+trailing;
+  }
+
+  function translateElement(root=document) {
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){
+      const parent=node.parentElement; if(!parent||['SCRIPT','STYLE','CODE','PRE'].includes(parent.tagName)||parent.closest('[data-i18n-ignore]')) return NodeFilter.FILTER_REJECT;
+      return node.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+    }});
+    const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node=>{const next=translateTextValue(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;});
+    root.querySelectorAll?.('[placeholder],[title],[aria-label]').forEach(el=>{
+      ['placeholder','title','aria-label'].forEach(attr=>{if(el.hasAttribute(attr)){const old=el.getAttribute(attr);const next=translateTextValue(old);if(next!==old)el.setAttribute(attr,next);}});
+    });
+  }
+
+  function applyTranslations(root=document) {
+    document.documentElement.lang=currentLanguage==='en'?'en':'tr';
+    translateElement(root);
+  }
+
+  function startTranslationObserver() {
+    if (translationObserver) return;
+    translationObserver=new MutationObserver(mutations=>{
+      translationObserver.disconnect();
+      for(const mutation of mutations){
+        mutation.addedNodes.forEach(node=>{if(node.nodeType===1)translateElement(node);else if(node.nodeType===3&&node.parentElement)translateElement(node.parentElement);});
+        if(mutation.type==='characterData'&&mutation.target.parentElement)translateElement(mutation.target.parentElement);
+      }
+      translationObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+    });
+    translationObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+  }
+
   const ROLE_MATRIX = {
     system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE','MANAGE_MAINTENANCE'],
     owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE','MANAGE_MAINTENANCE'],
@@ -1408,11 +2243,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.25.0').replace(/^v/i, '');
+    const safeVersion = String(version || '6.0.1').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Machine Downtime & OEE Analytics aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Makine duruşları, üretim kayıtları ve OEE KPI analizleri aktif.`;
+    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Full localization and industrial content UI are active.` : `v${safeVersion} — Tam çeviri ve endüstriyel içerik arayüzü aktif.`;
+    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Full Turkish / English localization and content UI refresh are active.` : `v${safeVersion}: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1470,8 +2305,14 @@
 
   function fmtDate(v) {
     if (!v) return '-';
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
+    const d=new Date(v); if(Number.isNaN(d.getTime())) return '-';
+    const tz=generalSettings.timezone||'Europe/Istanbul';
+    try {
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:generalSettings.time_format==='12h'}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+      const date=generalSettings.date_format==='MM/DD/YYYY'?`${parts.month}/${parts.day}/${parts.year}`:generalSettings.date_format==='YYYY-MM-DD'?`${parts.year}-${parts.month}-${parts.day}`:`${parts.day}.${parts.month}.${parts.year}`;
+      const dayPeriod=parts.dayPeriod?` ${parts.dayPeriod}`:'';
+      return `${date} ${parts.hour}:${parts.minute}:${parts.second}${dayPeriod}`;
+    } catch { return d.toLocaleString(currentLanguage==='en'?'en-US':'tr-TR'); }
   }
 
 
@@ -1486,10 +2327,11 @@
   function fmtDuration(seconds) {
     const total = Number(seconds || 0);
     if (!Number.isFinite(total) || total <= 0) return '-';
-    if (total < 60) return `${Math.round(total)} sn`;
-    if (total < 3600) return `${Math.round(total / 60)} dk`;
-    if (total < 86400) return `${Math.round(total / 3600)} sa`;
-    return `${Math.round(total / 86400)} gün`;
+    const en=currentLanguage==='en';
+    if (total < 60) return `${Math.round(total)} ${en?'sec':'sn'}`;
+    if (total < 3600) return `${Math.round(total / 60)} ${en?'min':'dk'}`;
+    if (total < 86400) return `${Math.round(total / 3600)} ${en?'hours':'sa'}`;
+    return `${Math.round(total / 86400)} ${en?'days':'gün'}`;
   }
 
   function liveHealthLabel(health) {
@@ -1533,97 +2375,42 @@
 
 
   const ADMIN_VIEWS = {
-    dashboard: {
-      title:'Dashboard',
-      desc:'Sistem özeti, sürüm ve hızlı durum kartları.'
-    },
-    live: {
-      title:'Live Monitoring',
-      desc:'Makine canlı durumları, son telemetri ve bağlantı sağlığı.'
-    },
-    oee: {
-      title:'Machine Downtime & OEE Analytics',
-      desc:'Availability, Performance, Quality, OEE, üretim adetleri ve duruş nedenleri.'
-    },
-    alarms: {
-      title:'Alarm Center',
-      desc:'Aktif alarm listesi, alarm geçmişi, acknowledge ve clear işlemleri.'
-    },
-    analytics: {
-      title:'Alarm Analytics',
-      desc:'Alarm trendi, acknowledge/çözüm süreleri ve makine bazlı alarm yoğunluğu.'
-    },
-    sla: {
-      title:'Alarm SLA',
-      desc:'Müdahale/çözüm süreleri, escalation kuralları ve SLA dışı aktif alarmlar.'
-    },
-    escalations: {
-      title:'Escalation Delivery',
-      desc:'SLA dışı alarm kuyruğu, Email/Telegram teslimatı ve gönderim geçmişi.'
-    },
-    notifications: {
-      title:'Notification Settings',
-      desc:'Telegram, Email, test mesajları ve Delivery Worker çalışma ayarları.'
-    },
-    scheduler: {
-      title:'Automation Scheduler',
-      desc:'Otomatik SLA tarama, retry/backoff, teslimat ve Dead Letter yönetimi.'
-    },
-    reports: {
-      title:'Alarm Reports',
-      desc:'Günlük ve haftalık alarm özetleri, Telegram/Email teslimatı ve rapor geçmişi.'
-    },
-    maintenance: {
-      title:'Maintenance & Service Tickets',
-      desc:'Bakım talepleri, alarm bağlantıları, atamalar, terminler ve ticket işlem geçmişi.'
-    },
-    'maintenance-plans': {
-      title:'Preventive Maintenance Plans',
-      desc:'Takvim veya çalışma saati bazlı periyodik bakım planları ve otomatik iş emri schedulerı.'
-    },
-    'work-orders': {
-      title:'Maintenance Work Orders',
-      desc:'Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.'
-    },
-    inventory: {
-      title:'Spare Parts & Inventory',
-      desc:'Yedek parça kartları, stok hareketleri, minimum stok uyarıları ve iş emri tüketimleri.'
-    },
-    tenants: {
-      title:'Customers / Tenants',
-      desc:'Customer, tenant, site ve atölye yönetimi.'
-    },
-    users: {
-      title:'Users & Invitations',
-      desc:'Kullanıcılar, davetler ve tenant erişim kayıtları.'
-    },
-    permissions: {
-      title:'Roles & Permissions',
-      desc:'Aktif rol, permission matrisi ve yetki görünümü.'
-    },
-    subscriptions: {
-      title:'Subscriptions',
-      desc:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.'
-    },
-    assets: {
-      title:'Assets / Machines',
-      desc:'Tenant, site ve makine kayıtlarını yönetme ekranı.'
-    },
-    devices: {
-      title:'Device Registry',
-      desc:'FactoryBox cihaz kayıtları ve provisioning token işlemleri.'
-    },
-    security: {
-      title:'Security Activity',
-      desc:'Audit log, güvenlik aktiviteleri, filtreleme ve CSV dışa aktarım.'
-    }
+    dashboard:{title_tr:'Kontrol Paneli',title_en:'Dashboard',desc_tr:'Sistem özeti, sürüm bilgisi ve hızlı durum kartları.',desc_en:'System summary, version information and quick status cards.'},
+    live:{title_tr:'Canlı İzleme',title_en:'Live Monitoring',desc_tr:'Makinelerin canlı durumları, son telemetri değerleri ve bağlantı sağlığı.',desc_en:'Live machine states, latest telemetry values and connection health.'},
+    oee:{title_tr:'Makine Duruşu ve OEE Analitiği',title_en:'Machine Downtime & OEE Analytics',desc_tr:'Kullanılabilirlik, performans, kalite, OEE, üretim adetleri ve duruş nedenleri.',desc_en:'Availability, performance, quality, OEE, production counts and downtime reasons.'},
+    alarms:{title_tr:'Alarm Merkezi',title_en:'Alarm Center',desc_tr:'Aktif alarm listesi, alarm geçmişi, onaylama ve kapatma işlemleri.',desc_en:'Active alarm list, alarm history, acknowledgement and clearing operations.'},
+    analytics:{title_tr:'Alarm Analitiği',title_en:'Alarm Analytics',desc_tr:'Alarm trendleri, onaylama ve çözüm süreleri ile makine bazlı alarm yoğunluğu.',desc_en:'Alarm trends, acknowledgement and resolution times, and machine-level alarm density.'},
+    sla:{title_tr:'Alarm SLA',title_en:'Alarm SLA',desc_tr:'Müdahale ve çözüm süreleri, bildirim kuralları ve SLA dışı aktif alarmlar.',desc_en:'Response and resolution times, escalation rules and active alarms outside SLA.'},
+    escalations:{title_tr:'Bildirim Teslimatı',title_en:'Escalation Delivery',desc_tr:'SLA dışı alarm kuyruğu, E-posta/Telegram teslimatı ve gönderim geçmişi.',desc_en:'Out-of-SLA alarm queue, Email/Telegram delivery and delivery history.'},
+    general:{title_tr:'Genel Ayarlar',title_en:'General Settings',desc_tr:'Panel dili, saat dilimi, tarih/saat biçimi ve genel çalışma tercihleri.',desc_en:'Panel language, time zone, date/time format and general operating preferences.'},
+    notifications:{title_tr:'Bildirim Ayarları',title_en:'Notification Settings',desc_tr:'Telegram, E-posta, test mesajları ve teslimat çalışanı ayarları.',desc_en:'Telegram, Email, test messages and delivery worker settings.'},
+    scheduler:{title_tr:'Otomasyon Zamanlayıcı',title_en:'Automation Scheduler',desc_tr:'Otomatik SLA taraması, yeniden deneme, teslimat ve Dead Letter yönetimi.',desc_en:'Automatic SLA scanning, retry, delivery and Dead Letter management.'},
+    reports:{title_tr:'Alarm Raporları',title_en:'Alarm Reports',desc_tr:'Günlük ve haftalık alarm özetleri, Telegram/E-posta teslimatı ve rapor geçmişi.',desc_en:'Daily and weekly alarm summaries, Telegram/Email delivery and report history.'},
+    maintenance:{title_tr:'Bakım ve Servis Talepleri',title_en:'Maintenance & Service Tickets',desc_tr:'Bakım talepleri, alarm bağlantıları, atamalar, terminler ve işlem geçmişi.',desc_en:'Maintenance requests, alarm links, assignments, due dates and activity history.'},
+    'maintenance-plans':{title_tr:'Önleyici Bakım Planları',title_en:'Preventive Maintenance Plans',desc_tr:'Takvim veya çalışma saati bazlı periyodik bakım planları ve otomatik iş emri zamanlayıcısı.',desc_en:'Calendar- or runtime-based preventive maintenance plans and automatic work-order scheduling.'},
+    'work-orders':{title_tr:'Bakım İş Emirleri',title_en:'Maintenance Work Orders',desc_tr:'Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.',desc_en:'Planned maintenance work orders, checklists, part usage and completion history.'},
+    inventory:{title_tr:'Yedek Parça ve Stok',title_en:'Spare Parts & Inventory',desc_tr:'Yedek parça kartları, stok hareketleri, minimum stok uyarıları ve iş emri tüketimleri.',desc_en:'Spare-part cards, stock movements, minimum-stock alerts and work-order consumption.'},
+    tenants:{title_tr:'Müşteriler / Tenantlar',title_en:'Customers / Tenants',desc_tr:'Müşteri, tenant, tesis ve atölye yönetimi.',desc_en:'Customer, tenant, site and workshop management.'},
+    users:{title_tr:'Kullanıcılar ve Davetler',title_en:'Users & Invitations',desc_tr:'Kullanıcılar, davetler ve tenant erişim kayıtları.',desc_en:'Users, invitations and tenant access records.'},
+    permissions:{title_tr:'Roller ve Yetkiler',title_en:'Roles & Permissions',desc_tr:'Aktif rol, yetki matrisi ve permission görünümü.',desc_en:'Active role, permission matrix and authorization overview.'},
+    subscriptions:{title_tr:'Abonelikler',title_en:'Subscriptions',desc_tr:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.',desc_en:'Plans, subscription status, trial period and quota usage.'},
+    assets:{title_tr:'Varlıklar / Makineler',title_en:'Assets / Machines',desc_tr:'Tenant, tesis ve makine kayıtlarını yönetme ekranı.',desc_en:'Management screen for tenant, site and machine records.'},
+    devices:{title_tr:'Cihaz Kayıtları',title_en:'Device Registry',desc_tr:'FactoryBox cihaz kayıtları ve provisioning token işlemleri.',desc_en:'FactoryBox device records and provisioning-token operations.'},
+    security:{title_tr:'Güvenlik Aktiviteleri',title_en:'Security Activity',desc_tr:'Denetim günlüğü, güvenlik aktiviteleri, filtreleme ve CSV dışa aktarımı.',desc_en:'Audit logs, security activity, filtering and CSV export.'}
   };
+
+  function getAdminViewMeta(key) {
+    const meta=ADMIN_VIEWS[key]||ADMIN_VIEWS.dashboard;
+    const en=currentLanguage==='en';
+    return {title:en?meta.title_en:meta.title_tr,desc:en?meta.desc_en:meta.desc_tr};
+  }
 
   const ADMIN_VIEW_GROUPS = {
     alarms:'alarm',
     analytics:'alarm',
     sla:'alarm',
     escalations:'alarm',
+    general:'system',
     notifications:'system',
     scheduler:'system',
     reports:'system',
@@ -1659,7 +2446,7 @@
 
   function setAdminView(view) {
     const key = ADMIN_VIEWS[view] ? view : 'dashboard';
-    const meta = ADMIN_VIEWS[key];
+    const meta = getAdminViewMeta(key);
 
     document.querySelectorAll('[data-admin-view]').forEach(section => {
       section.classList.toggle('admin-view-active', section.dataset.adminView === key);
@@ -1677,7 +2464,7 @@
     if (title) title.textContent = meta.title;
     if (desc) desc.textContent = meta.desc;
     if (header) {
-      header.innerHTML = `<strong>Aktif bölüm</strong><h3>${esc(meta.title)}</h3><p>${esc(meta.desc)}</p>`;
+      header.innerHTML = `<strong>${currentLanguage==='en'?'Active section':'Aktif bölüm'}</strong><h3>${esc(meta.title)}</h3><p>${esc(meta.desc)}</p>`;
     }
 
     localStorage.setItem('factorybox_admin_view', key);
@@ -1686,7 +2473,7 @@
   }
 
   function setupAdminNavigation() {
-    const initial = (location.hash || '').replace('#', '') || localStorage.getItem('factorybox_admin_view') || 'dashboard';
+    const initial = (location.hash || '').replace('#', '') || localStorage.getItem('factorybox_admin_view') || generalSettings.default_view || 'dashboard';
 
     document.querySelectorAll('[data-admin-group-toggle]').forEach(button => {
       const groupName = button.dataset.adminGroupToggle;
@@ -2702,7 +3489,7 @@
     const status = document.getElementById('automationSchedulerStatus');
     if (status) status.innerHTML = `
       <div class="kpi-grid-v59">
-        <div class="kpi-card-v59"><span>Scheduler</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${scheduler.running ? 'Şu an çalışıyor' : `${esc(scheduler.interval_sec || 60)} sn aralık`}</small></div>
+        <div class="kpi-card-v59"><span>Zamanlayıcı</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${scheduler.running ? 'Şu an çalışıyor' : `${esc(scheduler.interval_sec || 60)} sn aralık`}</small></div>
         <div class="kpi-card-v59"><span>Son Çalışma</span><strong>${esc(String(scheduler.last_run_status || '-').toUpperCase())}</strong><small>${esc(fmtDate(scheduler.last_run_finished_at || scheduler.last_run_started_at))}</small></div>
         <div class="kpi-card-v59"><span>Sonraki Çalışma</span><strong>${scheduler.enabled ? esc(fmtDate(scheduler.next_run_at)) : '-'}</strong><small>${scheduler.enabled ? 'Otomatik planlandı' : 'Scheduler kapalı'}</small></div>
         <div class="kpi-card-v59"><span>Retry Due</span><strong>${esc(queue.retry_due || 0)}</strong><small>${retry.enabled ? `Max ${esc(retry.max_attempts || 5)} deneme` : 'Retry kapalı'}</small></div>
@@ -2759,7 +3546,7 @@
     const status = document.getElementById('alarmReportsStatus');
     if (status) status.innerHTML = `
       <div class="kpi-grid-v59">
-        <div class="kpi-card-v59"><span>Report Scheduler</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${esc(scheduler.timezone || '-')} · ${esc((scheduler.channels || []).join(' + '))}</small></div>
+        <div class="kpi-card-v59"><span>Rapor Zamanlayıcısı</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${esc(scheduler.timezone || '-')} · ${esc((scheduler.channels || []).join(' + '))}</small></div>
         <div class="kpi-card-v59"><span>Günlük Sonraki</span><strong>${daily.enabled ? esc(fmtDate(daily.next_run_at)) : '-'}</strong><small>${daily.enabled ? `Her gün ${String(daily.hour ?? 8).padStart(2,'0')}:00` : 'Günlük rapor kapalı'}</small></div>
         <div class="kpi-card-v59"><span>Haftalık Sonraki</span><strong>${weekly.enabled ? esc(fmtDate(weekly.next_run_at)) : '-'}</strong><small>${weekly.enabled ? `${esc(weekly.day_name || '-')} ${String(weekly.hour ?? 8).padStart(2,'0')}:00` : 'Haftalık rapor kapalı'}</small></div>
         <div class="kpi-card-v59"><span>Telegram</span><strong>${readiness.telegram?.configured && readiness.telegram?.target_configured ? 'READY' : 'NOT READY'}</strong><small>Bot ve hedef kontrolü</small></div>
@@ -3063,6 +3850,65 @@
     ], data.invites || []);
   }
 
+
+  function applyGeneralSettings() {
+    currentLanguage=generalSettings.language||currentLanguage||'tr';
+    localStorage.setItem('factorybox_ui_language',currentLanguage);
+    document.body.classList.toggle('fb-compact-ui',Boolean(generalSettings.compact_mode));
+    const brand=document.querySelector('.admin-brand-v58 h1');
+    if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
+    const footer=document.querySelector('.admin-sidebar-footer-v58');
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.0.1`;
+    applyTranslations(document);
+    const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
+    if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
+    restartAdminAutoRefresh();
+  }
+
+  function restartAdminAutoRefresh() {
+    if(adminAutoRefreshTimer){clearInterval(adminAutoRefreshTimer);adminAutoRefreshTimer=null;}
+    const seconds=Number(generalSettings.auto_refresh_sec||0);
+    if(seconds>0) adminAutoRefreshTimer=setInterval(()=>loadAdmin(),seconds*1000);
+  }
+
+  function generalViewLabel(key) {
+    return getAdminViewMeta(key)?.title||key;
+  }
+
+  function renderGeneralSettings(data) {
+    generalSettingsOptions=data.options||generalSettingsOptions||{};
+    generalSettings={...generalSettings,...(data.settings||{})};
+    const s=generalSettings;
+    const tz=document.getElementById('generalTimezone');
+    if(tz) tz.innerHTML=(generalSettingsOptions.timezones||[s.timezone]).filter((v,i,a)=>v&&a.indexOf(v)===i).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    const dv=document.getElementById('generalDefaultView');
+    if(dv) dv.innerHTML=(generalSettingsOptions.default_views||Object.keys(ADMIN_VIEWS)).map(v=>`<option value="${esc(v)}">${esc(generalViewLabel(v))}</option>`).join('');
+    const set=(id,value)=>{const el=document.getElementById(id);if(el)el.value=String(value??'');};
+    set('generalOrganizationName',s.organization_name);set('generalSiteName',s.site_name);set('generalLanguage',s.language);
+    set('generalTimezone',s.timezone);set('generalDateFormat',s.date_format);set('generalTimeFormat',s.time_format);
+    set('generalWeekStart',s.week_start);set('generalAutoRefresh',s.auto_refresh_sec);set('generalDefaultView',s.default_view);
+    set('generalCompactMode',Boolean(s.compact_mode));
+    const status=document.getElementById('generalSettingsStatus');
+    if(status)status.textContent=`${s.organization_name||'FactoryBox'} · ${s.site_name||'-'} · ${s.language?.toUpperCase()} · ${s.timezone}`;
+    applyGeneralSettings();
+  }
+
+  async function loadGeneralSettings() {
+    const data=await getJson('/api/admin/general-settings');renderGeneralSettings(data);return data;
+  }
+
+  async function saveGeneralSettings() {
+    const value=id=>document.getElementById(id)?.value;
+    const data=await apiJson('/api/admin/general-settings',{method:'PATCH',body:JSON.stringify({
+      organization_name:value('generalOrganizationName'),site_name:value('generalSiteName'),language:value('generalLanguage'),
+      timezone:value('generalTimezone'),date_format:value('generalDateFormat'),time_format:value('generalTimeFormat'),
+      week_start:value('generalWeekStart'),auto_refresh_sec:Number(value('generalAutoRefresh')),default_view:value('generalDefaultView'),
+      compact_mode:value('generalCompactMode')==='true'
+    })});
+    renderGeneralSettings({...data,options:generalSettingsOptions});
+    return data;
+  }
+
   async function loadAdmin() {
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
@@ -3071,6 +3917,8 @@
     if (refreshBtn) refreshBtn.disabled = true;
 
     const errors = [];
+
+    try { await loadGeneralSettings(); } catch(e) { errors.push(`general-settings: ${e.message}`); setError('generalSettingsStatus',e.message); }
 
     try {
       const permissionData = await getJson('/api/admin/permissions');
@@ -3150,6 +3998,7 @@
       : 'Admin panel çalışıyor.';
 
     if (refreshBtn) refreshBtn.disabled = false;
+    applyTranslations(document);
   }
 
   async function saveUser(button) {
@@ -3848,7 +4697,8 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+    try { await loadGeneralSettings(); } catch {}
     setupAdminNavigation();
     const refreshBtn = document.getElementById('refreshAdmin');
     const createInviteBtn = document.getElementById('createInviteBtn');
@@ -4186,12 +5036,29 @@
       }
     });
 
+
+    const saveGeneralSettingsBtn=document.getElementById('saveGeneralSettingsBtn');
+    if(saveGeneralSettingsBtn)saveGeneralSettingsBtn.addEventListener('click',async()=>{
+      saveGeneralSettingsBtn.disabled=true;const status=document.getElementById('generalSettingsStatus');if(status)status.textContent='Genel ayarlar kaydediliyor...';
+      try{await saveGeneralSettings();if(status)status.textContent='Genel ayarlar kaydedildi.';applyTranslations(document);}
+      catch(e){if(status)status.textContent=e.message;}finally{saveGeneralSettingsBtn.disabled=false;}
+    });
+    const refreshGeneralSettingsBtn=document.getElementById('refreshGeneralSettingsBtn');
+    if(refreshGeneralSettingsBtn)refreshGeneralSettingsBtn.addEventListener('click',async()=>{
+      refreshGeneralSettingsBtn.disabled=true;const status=document.getElementById('generalSettingsStatus');
+      try{await loadGeneralSettings();if(status)status.textContent='Genel ayarlar yenilendi.';}catch(e){if(status)status.textContent=e.message;}finally{refreshGeneralSettingsBtn.disabled=false;}
+    });
+    const languagePreview=document.getElementById('generalLanguage');
+    if(languagePreview)languagePreview.addEventListener('change',()=>{currentLanguage=languagePreview.value;localStorage.setItem('factorybox_ui_language',currentLanguage);applyTranslations(document);const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||'dashboard';setAdminView(activeView);renderGeneralSettings({...generalSettingsOptions,settings:{...generalSettings,language:currentLanguage},options:generalSettingsOptions});});
+
     document.body.addEventListener('click', handleAction);
     document.body.addEventListener('change', (e) => {
       if (e.target && e.target.classList && e.target.classList.contains('user-role-select')) {
         updateUserPermissionPreview(e.target);
       }
     });
+    startTranslationObserver();
+    applyTranslations(document);
     loadAdmin();
   });
 })();

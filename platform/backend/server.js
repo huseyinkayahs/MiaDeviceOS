@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.25.0';
+const APP_VERSION = '6.0.1';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -5449,6 +5449,141 @@ async function scanAlarmEscalationsToQueue({trigger = 'scheduler'} = {}) {
   };
 }
 
+
+
+const GENERAL_SETTING_LANGUAGES = ['tr','en'];
+const GENERAL_SETTING_DATE_FORMATS = ['DD.MM.YYYY','MM/DD/YYYY','YYYY-MM-DD'];
+const GENERAL_SETTING_TIME_FORMATS = ['24h','12h'];
+const GENERAL_SETTING_WEEK_STARTS = ['monday','sunday'];
+const GENERAL_SETTING_DEFAULT_VIEWS = [
+  'dashboard','live','oee','alarms','analytics','sla','escalations','maintenance',
+  'maintenance-plans','work-orders','inventory','general','notifications','scheduler',
+  'reports','tenants','users','permissions','subscriptions','assets','devices','security'
+];
+const GENERAL_SETTING_TIMEZONES = [
+  'Europe/Istanbul','UTC','Europe/London','Europe/Berlin','Europe/Paris',
+  'America/New_York','America/Chicago','America/Los_Angeles','Asia/Dubai','Asia/Tokyo'
+];
+
+async function ensureGeneralSettingsFoundation() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS general_settings (
+      id smallint PRIMARY KEY DEFAULT 1 CHECK (id=1),
+      organization_name text NOT NULL DEFAULT 'FactoryBox',
+      site_name text NOT NULL DEFAULT 'Main Factory',
+      language text NOT NULL DEFAULT 'tr',
+      timezone text NOT NULL DEFAULT 'Europe/Istanbul',
+      date_format text NOT NULL DEFAULT 'DD.MM.YYYY',
+      time_format text NOT NULL DEFAULT '24h',
+      week_start text NOT NULL DEFAULT 'monday',
+      auto_refresh_sec integer NOT NULL DEFAULT 30,
+      default_view text NOT NULL DEFAULT 'dashboard',
+      compact_mode boolean NOT NULL DEFAULT false,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`INSERT INTO general_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS organization_name text NOT NULL DEFAULT 'FactoryBox'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS site_name text NOT NULL DEFAULT 'Main Factory'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS language text NOT NULL DEFAULT 'tr'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS timezone text NOT NULL DEFAULT 'Europe/Istanbul'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS date_format text NOT NULL DEFAULT 'DD.MM.YYYY'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS time_format text NOT NULL DEFAULT '24h'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS week_start text NOT NULL DEFAULT 'monday'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS auto_refresh_sec integer NOT NULL DEFAULT 30`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS default_view text NOT NULL DEFAULT 'dashboard'`);
+  await pool.query(`ALTER TABLE general_settings ADD COLUMN IF NOT EXISTS compact_mode boolean NOT NULL DEFAULT false`);
+}
+
+function generalSettingChoice(value, allowed, field, fallback) {
+  const clean=String(value ?? fallback ?? '').trim();
+  if (!allowed.includes(clean)) {
+    const error=new Error(`${field} is invalid`);
+    error.statusCode=400;
+    throw error;
+  }
+  return clean;
+}
+
+function generalSettingText(value, fallback, max=160) {
+  if (value === undefined) return String(fallback || '').slice(0,max);
+  return String(value || '').trim().slice(0,max);
+}
+
+function generalSettingTimezone(value, fallback='Europe/Istanbul') {
+  const clean=generalSettingText(value,fallback,100) || fallback;
+  try { new Intl.DateTimeFormat('en-US',{timeZone:clean}).format(new Date()); }
+  catch { const error=new Error('timezone is invalid'); error.statusCode=400; throw error; }
+  return clean;
+}
+
+async function generalSettingsSnapshot(actor=null) {
+  await ensureGeneralSettingsFoundation();
+  const settings=await one(`SELECT id,organization_name,site_name,language,timezone,date_format,time_format,week_start,auto_refresh_sec,default_view,compact_mode,updated_by,updated_at FROM general_settings WHERE id=1`);
+  return {
+    can_manage:!authConfig().enabled || hasPermission(actor,'MANAGE_SITES'),
+    settings,
+    options:{
+      languages:GENERAL_SETTING_LANGUAGES,
+      timezones:GENERAL_SETTING_TIMEZONES,
+      date_formats:GENERAL_SETTING_DATE_FORMATS,
+      time_formats:GENERAL_SETTING_TIME_FORMATS,
+      week_starts:GENERAL_SETTING_WEEK_STARTS,
+      auto_refresh_seconds:[0,15,30,60,120,300],
+      default_views:GENERAL_SETTING_DEFAULT_VIEWS
+    }
+  };
+}
+
+app.get('/api/ui-settings', authRequired, async(req,res)=>{
+  try {
+    const snapshot=await generalSettingsSnapshot(req.user||getSession(req)?.user||null);
+    res.json({status:'ok',version:APP_VERSION,settings:snapshot.settings});
+  } catch(error) {
+    res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+app.get('/api/admin/general-settings', adminRequired, permissionRequired('VIEW_DASHBOARD'), async(req,res)=>{
+  try {
+    const snapshot=await generalSettingsSnapshot(req.user||getSession(req)?.user||null);
+    res.json({status:'ok',version:APP_VERSION,...snapshot});
+  } catch(error) {
+    res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+app.patch('/api/admin/general-settings', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try {
+    await ensureGeneralSettingsFoundation();
+    const old=await one(`SELECT * FROM general_settings WHERE id=1`);
+    const body=req.body||{};
+    const organizationName=generalSettingText(body.organization_name,old.organization_name,160)||'FactoryBox';
+    const siteName=generalSettingText(body.site_name,old.site_name,160)||'Main Factory';
+    const language=generalSettingChoice(body.language,GENERAL_SETTING_LANGUAGES,'language',old.language);
+    const timezone=generalSettingTimezone(body.timezone,old.timezone);
+    const dateFormat=generalSettingChoice(body.date_format,GENERAL_SETTING_DATE_FORMATS,'date_format',old.date_format);
+    const timeFormat=generalSettingChoice(body.time_format,GENERAL_SETTING_TIME_FORMATS,'time_format',old.time_format);
+    const weekStart=generalSettingChoice(body.week_start,GENERAL_SETTING_WEEK_STARTS,'week_start',old.week_start);
+    const refreshRaw=body.auto_refresh_sec===undefined?old.auto_refresh_sec:Number(body.auto_refresh_sec);
+    const autoRefresh=[0,15,30,60,120,300].includes(refreshRaw)?refreshRaw:30;
+    const defaultView=generalSettingChoice(body.default_view,GENERAL_SETTING_DEFAULT_VIEWS,'default_view',old.default_view);
+    const compactMode=body.compact_mode===undefined?Boolean(old.compact_mode):Boolean(body.compact_mode);
+    const actor=req.user||getSession(req)?.user||{};
+    const settings=await one(`
+      UPDATE general_settings SET
+        organization_name=$1,site_name=$2,language=$3,timezone=$4,date_format=$5,time_format=$6,
+        week_start=$7,auto_refresh_sec=$8,default_view=$9,compact_mode=$10,updated_by=$11,updated_at=now()
+      WHERE id=1
+      RETURNING id,organization_name,site_name,language,timezone,date_format,time_format,week_start,auto_refresh_sec,default_view,compact_mode,updated_by,updated_at
+    `,[organizationName,siteName,language,timezone,dateFormat,timeFormat,weekStart,autoRefresh,defaultView,compactMode,actor.email||'admin']);
+    await writeAuditLog(req,{action:'update_general_settings',entity_type:'general_settings',entity_id:'global',old_values:old,new_values:settings});
+    res.json({status:'ok',version:APP_VERSION,settings});
+  } catch(error) {
+    res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
 
 async function ensureNotificationSettingsFoundation() {
   await pool.query(`
@@ -11386,6 +11521,7 @@ async function start() {
   await ensureLiveMonitoringFoundation();
   await ensureAlarmEscalationFoundation();
   await ensureNotificationSettingsFoundation();
+  await ensureGeneralSettingsFoundation();
   await ensureMaintenanceFoundation();
   await ensurePreventiveMaintenanceFoundation();
   await ensureInventoryFoundation();

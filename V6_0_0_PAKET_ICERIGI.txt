@@ -1,0 +1,24 @@
+FactoryBox One v6.0.0
+Admin UI Refresh, Localization & General Settings
+
+DEĞİŞEN DOSYALAR
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/public/operator.html
+
+DOKÜMANTASYON
+- docs/V6_0_ADMIN_UI_LOCALIZATION_GENERAL_SETTINGS.md
+- V6_0_0_PAKET_ICERIGI.txt
+- KURULUM_V6_0_0.txt
+
+KAPSAM
+- İkonsuz admin menüsü
+- Endüstriyel antrasit/grafit menü teması
+- Yenilenmiş menü fontu, punto ve boşlukları
+- Türkçe / English dil desteği
+- Genel Ayarlar ekranı
+- Saat dilimi ve tarih/saat biçimleri
+- Otomatik yenileme ve varsayılan ekran
+- Organizasyon ve tesis adı
+- Kompakt menü modu
+- Mobil Operator Panel ayar uyumu

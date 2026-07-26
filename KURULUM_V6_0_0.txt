@@ -1,0 +1,18 @@
+FACTORYBOX ONE v6.0.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine kopyalayın.
+3. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+4. Backend klasörüne geçin:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+
+5. Backend'i başlatın:
+
+   npm.cmd start
+
+6. Admin panelinde Ctrl + F5 yapın.
+7. Sol üstte v6.0.0 sürümünü kontrol edin.
+8. Sistem Ayarları > Genel Ayarlar ekranını açın.
+9. Türkçe ve English dil seçeneklerini ayrı ayrı test edin.
+10. Saat dilimi, tarih/saat biçimi ve otomatik yenileme ayarlarını kaydedin.

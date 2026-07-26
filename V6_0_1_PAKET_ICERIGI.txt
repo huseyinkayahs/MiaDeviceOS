@@ -1,0 +1,8 @@
+FactoryBox One v6.0.1 - UI & Translation Hotfix
+
+Değişen dosyalar:
+- platform/backend/public/admin.html
+- platform/backend/server.js
+- docs/V6_0_1_UI_TRANSLATION_HOTFIX.md
+
+Bu paket yalnızca değişen dosyaları içerir ve proje ana klasörünün üzerine kopyalanmalıdır.

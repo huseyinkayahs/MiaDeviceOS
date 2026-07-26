@@ -1,0 +1,9 @@
+FACTORYBOX ONE v6.0.1 KURULUM
+
+1. Backend uygulamasını durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine kopyalayın.
+3. Dosyaların üzerine yazılmasını onaylayın.
+4. platform\backend klasöründe npm.cmd start komutunu çalıştırın.
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sürümün v6.0.1 olduğunu doğrulayın.
+7. Genel Ayarlar ekranında Türkçe ve English seçeneklerini ayrı ayrı test edin.
