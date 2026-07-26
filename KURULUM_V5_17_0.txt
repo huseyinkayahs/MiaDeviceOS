@@ -1,0 +1,12 @@
+FACTORYBOX ONE v5.17.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP dosyasini acin.
+3. ZIP icindeki dosyalari FactoryBox ana proje klasorunun uzerine kopyalayin.
+4. Dosyalari degistir / uzerine yaz secenegini kabul edin.
+5. Backend'i yeniden baslatin: npm.cmd start
+6. Admin panelinde Ctrl + F5 yapin.
+7. Sol ustte v5.17.0 yazdigini kontrol edin.
+8. Sol menudeki Alarm basligina tiklayin.
+9. Dort alt menunun acildigini kontrol edin.
+10. Her alt menunun ilgili ekrani actigini test edin.

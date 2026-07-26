@@ -95,6 +95,64 @@
       color:var(--fb-primary);
       box-shadow:0 12px 24px rgba(0,0,0,.18);
     }
+    .admin-nav-group-v517 {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .admin-nav-group-toggle-v517 {
+      position:relative;
+    }
+    .admin-nav-group-v517.child-active > .admin-nav-group-toggle-v517 {
+      background:rgba(255,255,255,.12);
+      color:#fff;
+    }
+    .admin-nav-group-right-v517 {
+      display:flex !important;
+      align-items:center;
+      gap:7px !important;
+    }
+    .admin-nav-chevron-v517 {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:18px;
+      height:18px;
+      font-size:15px;
+      line-height:1;
+      transition:transform .18s ease;
+    }
+    .admin-nav-group-v517.open .admin-nav-chevron-v517 {
+      transform:rotate(180deg);
+    }
+    .admin-subnav-v517 {
+      max-height:0;
+      overflow:hidden;
+      opacity:0;
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+      padding-left:14px;
+      transition:max-height .22s ease, opacity .16s ease;
+    }
+    .admin-subnav-v517.open {
+      max-height:320px;
+      opacity:1;
+    }
+    .admin-subnav-link-v517 {
+      min-height:39px;
+      padding:9px 11px 9px 16px;
+      border-radius:12px;
+      font-size:13px;
+      font-weight:700;
+      border-left:2px solid rgba(255,255,255,.16);
+    }
+    .admin-subnav-link-v517:hover {
+      border-left-color:rgba(255,255,255,.55);
+    }
+    .admin-subnav-link-v517.active {
+      border-left-color:#fff;
+    }
     .admin-nav-pill-v58 {
       min-width:24px;
       padding:2px 7px;
@@ -249,17 +307,26 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.16.1 — SLA kural önceliği düzeltildi; Email / Telegram Delivery Worker aktif.</p>
+      <p id="adminVersionLabel">v5.17.0 — alarm ekranları tek açılır menü altında toplandı.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
     <nav class="admin-nav-v58" aria-label="Admin panel menüsü">
       <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>📊 Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="live"><span>🟢 Live Monitoring</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="alarms"><span>🚨 Alarm Center</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="analytics"><span>📈 Alarm Analytics</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="sla"><span>⏱️ Alarm SLA</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="escalations"><span>📣 Escalation Delivery</span><span class="admin-nav-pill-v58">1</span></button>
+
+      <div class="admin-nav-group-v517" data-nav-group="alarm">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="alarm" aria-expanded="false" aria-controls="alarmSubmenuV517">
+          <span>🚨 Alarm</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
+        </button>
+        <div id="alarmSubmenuV517" class="admin-subnav-v517" data-admin-subnav="alarm">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="alarms"><span>Alarm Center</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="analytics"><span>Alarm Analytics</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="sla"><span>Alarm SLA</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Escalation Delivery</span></button>
+        </div>
+      </div>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>👥 Users & Invites</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>🔐 Roles & Permissions</span><span class="admin-nav-pill-v58">1</span></button>
@@ -840,11 +907,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.14.2').replace(/^v/i, '');
+    const safeVersion = String(version || '5.17.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Email / Telegram Escalation Delivery Worker aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Escalation Delivery, Queue, Alarm SLA, Analytics ve Alarm Center.`;
+    if (brand) brand.textContent = `v${safeVersion} — Alarm menüsü ve alt ekran navigasyonu düzenlendi.`;
+    if (overview) overview.textContent = `v${safeVersion}: Alarm Center, Analytics, SLA ve Escalation tek menü altında.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1019,6 +1086,37 @@
     }
   };
 
+  const ADMIN_VIEW_GROUPS = {
+    alarms:'alarm',
+    analytics:'alarm',
+    sla:'alarm',
+    escalations:'alarm'
+  };
+
+  function setAdminNavGroupOpen(groupName, open, persist = true) {
+    const group = document.querySelector(`[data-nav-group="${groupName}"]`);
+    const toggle = document.querySelector(`[data-admin-group-toggle="${groupName}"]`);
+    const subnav = document.querySelector(`[data-admin-subnav="${groupName}"]`);
+    if (!group || !toggle || !subnav) return;
+
+    group.classList.toggle('open', Boolean(open));
+    subnav.classList.toggle('open', Boolean(open));
+    toggle.setAttribute('aria-expanded', String(Boolean(open)));
+
+    if (persist) {
+      localStorage.setItem(`factorybox_admin_group_${groupName}`, open ? 'open' : 'closed');
+    }
+  }
+
+  function syncAdminNavGroups(activeView) {
+    document.querySelectorAll('[data-nav-group]').forEach(group => {
+      const groupName = group.dataset.navGroup;
+      const childActive = ADMIN_VIEW_GROUPS[activeView] === groupName;
+      group.classList.toggle('child-active', childActive);
+      if (childActive) setAdminNavGroupOpen(groupName, true, false);
+    });
+  }
+
   function setAdminView(view) {
     const key = ADMIN_VIEWS[view] ? view : 'dashboard';
     const meta = ADMIN_VIEWS[key];
@@ -1030,6 +1128,8 @@
     document.querySelectorAll('[data-admin-nav]').forEach(button => {
       button.classList.toggle('active', button.dataset.adminNav === key);
     });
+
+    syncAdminNavGroups(key);
 
     const title = document.getElementById('adminViewTitleV58');
     const desc = document.getElementById('adminViewDescV58');
@@ -1047,6 +1147,17 @@
 
   function setupAdminNavigation() {
     const initial = (location.hash || '').replace('#', '') || localStorage.getItem('factorybox_admin_view') || 'dashboard';
+
+    document.querySelectorAll('[data-admin-group-toggle]').forEach(button => {
+      const groupName = button.dataset.adminGroupToggle;
+      const savedState = localStorage.getItem(`factorybox_admin_group_${groupName}`);
+      setAdminNavGroupOpen(groupName, savedState === 'open', false);
+      button.addEventListener('click', () => {
+        const group = document.querySelector(`[data-nav-group="${groupName}"]`);
+        setAdminNavGroupOpen(groupName, !group?.classList.contains('open'));
+      });
+    });
+
     document.querySelectorAll('[data-admin-nav]').forEach(button => {
       button.addEventListener('click', () => setAdminView(button.dataset.adminNav));
     });

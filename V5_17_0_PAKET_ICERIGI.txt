@@ -1,0 +1,14 @@
+FactoryBox One v5.17.0 Admin Navigation Alarm Submenu Pack
+
+DEGISEN DOSYALAR
+- platform/backend/server.js
+- platform/backend/public/admin.html
+
+YENILIKLER
+- Alarm ekranlari tek Alarm ana menusu altinda toplandi.
+- Alarm Center, Alarm Analytics, Alarm SLA ve Escalation Delivery alt menu oldu.
+- Alarm menusu acilip kapanabilir hale getirildi.
+- Secili alarm alt menusu acik ve aktif gorunur.
+- Menu acik/kapali durumu tarayicida hatirlanir.
+- Mobil admin panel menusu ile uyum korundu.
+- Backend surumu v5.17.0 olarak guncellendi.
