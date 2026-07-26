@@ -1,0 +1,22 @@
+FactoryBox One v5.19.0 — Paket İçeriği
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+
+Dokümantasyon:
+- docs/V5_19_AUTOMATIC_ESCALATION_SCHEDULER.md
+- V5_19_0_PAKET_ICERIGI.txt
+- KURULUM_V5_19_0.txt
+
+Başlıca özellikler:
+- Automatic Escalation Scheduler
+- Otomatik SLA taraması
+- Pending olayları otomatik gönderme
+- Exponential retry/backoff
+- Maksimum deneme sayısı
+- Dead Letter kuyruğu
+- Scheduler çalışma geçmişi
+- Admin panelinden Şimdi Çalıştır
+- Scheduler ve retry ayarlarının veritabanında saklanması
+- Audit log kayıtları

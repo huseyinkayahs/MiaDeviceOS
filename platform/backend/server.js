@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.18.0';
+const APP_VERSION = '5.19.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -121,6 +121,35 @@ function alarmEscalationDeliveryIntervalSec() {
 function alarmEscalationDeliveryBatchSize() {
   const value = Number(runtimeNotificationValue('batch_size', process.env.ALARM_ESCALATION_DELIVERY_BATCH_SIZE || 20));
   return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 1), 100) : 20;
+}
+
+function alarmAutomationSchedulerEnabled() {
+  return runtimeBoolean('scheduler_enabled', 'ALARM_AUTOMATION_SCHEDULER_ENABLED', false);
+}
+
+function alarmAutomationSchedulerIntervalSec() {
+  const value = Number(runtimeNotificationValue('scheduler_interval_sec', process.env.ALARM_AUTOMATION_SCHEDULER_INTERVAL_SEC || 60));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 15), 3600) : 60;
+}
+
+function alarmEscalationRetryEnabled() {
+  return runtimeBoolean('retry_enabled', 'ALARM_ESCALATION_RETRY_ENABLED', true);
+}
+
+function alarmEscalationRetryBaseDelaySec() {
+  const value = Number(runtimeNotificationValue('retry_base_delay_sec', process.env.ALARM_ESCALATION_RETRY_BASE_DELAY_SEC || 60));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 15), 86400) : 60;
+}
+
+function alarmEscalationRetryMaxDelaySec() {
+  const base = alarmEscalationRetryBaseDelaySec();
+  const value = Number(runtimeNotificationValue('retry_max_delay_sec', process.env.ALARM_ESCALATION_RETRY_MAX_DELAY_SEC || 3600));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), base), 604800) : Math.max(base, 3600);
+}
+
+function alarmEscalationRetryMaxAttempts() {
+  const value = Number(runtimeNotificationValue('retry_max_attempts', process.env.ALARM_ESCALATION_RETRY_MAX_ATTEMPTS || 5));
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 1), 20) : 5;
 }
 
 function telegramEscalationConfig() {
@@ -3251,24 +3280,26 @@ async function ensureAlarmEscalationFoundation() {
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now(),
       CHECK (stage IN ('ack_overdue','resolve_overdue')),
-      CHECK (delivery_status IN ('pending','processing','delivered','failed','suppressed'))
+      CHECK (delivery_status IN ('pending','processing','delivered','failed','dead_letter','suppressed'))
     )
   `);
 
   await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS last_attempt_at timestamptz`);
   await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz`);
   await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS provider_message_id text`);
+  await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS dead_letter_at timestamptz`);
   await pool.query(`ALTER TABLE alarm_escalation_events ADD COLUMN IF NOT EXISTS delivery_metadata jsonb NOT NULL DEFAULT '{}'::jsonb`);
   await pool.query(`ALTER TABLE alarm_escalation_events DROP CONSTRAINT IF EXISTS alarm_escalation_events_delivery_status_check`);
   await pool.query(`
     ALTER TABLE alarm_escalation_events
     ADD CONSTRAINT alarm_escalation_events_delivery_status_check
-    CHECK (delivery_status IN ('pending','processing','delivered','failed','suppressed'))
+    CHECK (delivery_status IN ('pending','processing','delivered','failed','dead_letter','suppressed'))
   `);
 
   await pool.query(`
     UPDATE alarm_escalation_events
     SET delivery_status='pending',
+        next_attempt_at=now(),
         last_error=COALESCE(last_error,'Stale processing lock recovered'),
         updated_at=now()
     WHERE delivery_status='processing'
@@ -3283,6 +3314,11 @@ async function ensureAlarmEscalationFoundation() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_alarm_escalation_events_alarm_stage
     ON alarm_escalation_events(alarm_id, stage)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_escalation_events_retry_due
+    ON alarm_escalation_events(delivery_status, next_attempt_at, attempt_count)
   `);
 }
 
@@ -3440,6 +3476,66 @@ async function loadAlarmEscalationSnapshot() {
   return {rules:rulesResult.rows, activeAlarms, summary};
 }
 
+async function scanAlarmEscalationsToQueue({trigger = 'scheduler'} = {}) {
+  if (!alarmEscalationQueueEnabled()) {
+    return {enabled:false, scanned_active_count:0, overdue_count:0, created_count:0, duplicate_count:0, events:[]};
+  }
+
+  const snapshot = await loadAlarmEscalationSnapshot();
+  const overdue = snapshot.activeAlarms.filter(row =>
+    row.rule_id && ['ack_overdue','resolve_overdue'].includes(row.sla_status)
+  );
+  const created = [];
+
+  for (const alarm of overdue) {
+    const channel = String(alarm.escalation_channel || 'dashboard').trim() || 'dashboard';
+    const deliveryStatus = channel === 'dashboard' ? 'delivered' : 'pending';
+    const deliveredAt = deliveryStatus === 'delivered' ? new Date().toISOString() : null;
+    const eventKey = `alarm-${alarm.id}-${alarm.sla_status}-rule-${alarm.rule_id}`;
+    const metadata = JSON.stringify({
+      customer_code:alarm.customer_code || null,
+      site_code:alarm.site_code || null,
+      machine_code:alarm.machine_code || null,
+      rule_name:alarm.rule_name || null,
+      acknowledge_sla_minutes:alarm.acknowledge_sla_minutes,
+      resolve_sla_minutes:alarm.resolve_sla_minutes,
+      age_minutes:alarm.age_minutes,
+      trigger
+    });
+
+    const inserted = await one(`
+      INSERT INTO alarm_escalation_events(
+        event_key,alarm_id,rule_id,stage,severity,channel,recipients,
+        delivery_status,message,detected_at,delivered_at,next_attempt_at,metadata
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),$10,CASE WHEN $8='pending' THEN now() ELSE NULL END,$11::jsonb)
+      ON CONFLICT(event_key) DO NOTHING
+      RETURNING *
+    `, [
+      eventKey,
+      alarm.id,
+      alarm.rule_id,
+      alarm.sla_status,
+      alarm.severity || 'warning',
+      channel,
+      alarm.recipients || null,
+      deliveryStatus,
+      escalationEventMessage(alarm),
+      deliveredAt,
+      metadata
+    ]);
+    if (inserted) created.push(inserted);
+  }
+
+  return {
+    enabled:true,
+    scanned_active_count:snapshot.activeAlarms.length,
+    overdue_count:overdue.length,
+    created_count:created.length,
+    duplicate_count:Math.max(0, overdue.length - created.length),
+    events:created
+  };
+}
+
 
 async function ensureNotificationSettingsFoundation() {
   await pool.query(`
@@ -3460,11 +3556,46 @@ async function ensureNotificationSettingsFoundation() {
       smtp_pass text,
       smtp_from text,
       email_default_to text,
+      scheduler_enabled boolean,
+      scheduler_interval_sec integer,
+      retry_enabled boolean,
+      retry_base_delay_sec integer,
+      retry_max_delay_sec integer,
+      retry_max_attempts integer,
       updated_by text,
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
   await pool.query(`INSERT INTO notification_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS scheduler_enabled boolean`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS scheduler_interval_sec integer`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_enabled boolean`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_base_delay_sec integer`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_max_delay_sec integer`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_max_attempts integer`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alarm_automation_scheduler_runs (
+      id bigserial PRIMARY KEY,
+      trigger text NOT NULL,
+      status text NOT NULL,
+      started_at timestamptz NOT NULL DEFAULT now(),
+      finished_at timestamptz,
+      scanned_active_count integer NOT NULL DEFAULT 0,
+      overdue_count integer NOT NULL DEFAULT 0,
+      created_count integer NOT NULL DEFAULT 0,
+      duplicate_count integer NOT NULL DEFAULT 0,
+      retried_count integer NOT NULL DEFAULT 0,
+      delivered_count integer NOT NULL DEFAULT 0,
+      failed_count integer NOT NULL DEFAULT 0,
+      dead_letter_count integer NOT NULL DEFAULT 0,
+      error_message text,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_alarm_automation_scheduler_runs_started
+    ON alarm_automation_scheduler_runs(started_at DESC)
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS notification_channel_tests (
       id bigserial PRIMARY KEY,
@@ -3554,7 +3685,8 @@ async function notificationSettingsSnapshot(actor = null) {
   const overrideKeys = [
     'delivery_enabled','auto_delivery_enabled','interval_sec','batch_size',
     'telegram_enabled','telegram_bot_token','telegram_chat_id',
-    'email_enabled','smtp_host','smtp_port','smtp_secure','smtp_user','smtp_pass','smtp_from','email_default_to'
+    'email_enabled','smtp_host','smtp_port','smtp_secure','smtp_user','smtp_pass','smtp_from','email_default_to',
+    'scheduler_enabled','scheduler_interval_sec','retry_enabled','retry_base_delay_sec','retry_max_delay_sec','retry_max_attempts'
   ];
   const hasOverrides = overrideKeys.some(key => notificationRuntimeSettings[key] !== null && notificationRuntimeSettings[key] !== undefined);
   return {
@@ -3602,7 +3734,7 @@ function escalationEventLimit(raw, fallback = 100, max = 500) {
 
 function escalationEventStatus(raw) {
   const value = String(raw || 'all').trim().toLowerCase();
-  return ['all','pending','processing','delivered','failed','suppressed'].includes(value) ? value : 'all';
+  return ['all','pending','processing','delivered','failed','dead_letter','suppressed'].includes(value) ? value : 'all';
 }
 
 function escalationEventStage(raw) {
@@ -3731,6 +3863,43 @@ async function deliverEscalationEvent(event) {
   };
 }
 
+function escalationRetryDelaySec(attemptCount) {
+  const exponent = Math.max(0, Number(attemptCount || 1) - 1);
+  const delay = alarmEscalationRetryBaseDelaySec() * (2 ** Math.min(exponent, 20));
+  return Math.min(Math.floor(delay), alarmEscalationRetryMaxDelaySec());
+}
+
+async function prepareDueEscalationRetries() {
+  await ensureAlarmEscalationFoundation();
+  if (!alarmEscalationRetryEnabled()) return {enabled:false, retried_count:0, dead_letter_count:0};
+
+  const maxAttempts = alarmEscalationRetryMaxAttempts();
+  const dead = await pool.query(`
+    UPDATE alarm_escalation_events
+    SET delivery_status='dead_letter',
+        dead_letter_at=COALESCE(dead_letter_at,now()),
+        next_attempt_at=NULL,
+        updated_at=now()
+    WHERE delivery_status='failed'
+      AND attempt_count >= $1
+    RETURNING id
+  `, [maxAttempts]);
+
+  const retried = await pool.query(`
+    UPDATE alarm_escalation_events
+    SET delivery_status='pending',
+        failed_at=NULL,
+        next_attempt_at=now(),
+        updated_at=now()
+    WHERE delivery_status='failed'
+      AND attempt_count < $1
+      AND COALESCE(next_attempt_at,failed_at,updated_at) <= now()
+    RETURNING id
+  `, [maxAttempts]);
+
+  return {enabled:true, retried_count:retried.rowCount, dead_letter_count:dead.rowCount};
+}
+
 async function claimEscalationEvents(limit, eventId = null) {
   await ensureAlarmEscalationFoundation();
   const safeLimit = escalationEventLimit(limit, alarmEscalationDeliveryBatchSize(), 100);
@@ -3822,18 +3991,25 @@ async function processAlarmEscalationDeliveries({limit, eventId = null, trigger 
       results.push({id:event.id, status:'delivered', event:updated});
     } catch (error) {
       const message = String(error?.message || error || 'Unknown delivery error').slice(0, 500);
+      const retryEnabled = alarmEscalationRetryEnabled();
+      const maxAttempts = alarmEscalationRetryMaxAttempts();
+      const deadLetter = retryEnabled && Number(event.attempt_count || 0) >= maxAttempts;
+      const retryDelaySec = retryEnabled && !deadLetter ? escalationRetryDelaySec(event.attempt_count) : null;
+      const nextStatus = deadLetter ? 'dead_letter' : 'failed';
       const updated = await one(`
         UPDATE alarm_escalation_events
-        SET delivery_status='failed',
+        SET delivery_status=$2,
             failed_at=now(),
+            dead_letter_at=CASE WHEN $2='dead_letter' THEN now() ELSE NULL END,
             delivered_at=NULL,
-            last_error=$2,
-            delivery_metadata=COALESCE(delivery_metadata,'{}'::jsonb) || $3::jsonb,
+            next_attempt_at=CASE WHEN $3::int IS NULL THEN NULL ELSE now() + ($3::int * interval '1 second') END,
+            last_error=$4,
+            delivery_metadata=COALESCE(delivery_metadata,'{}'::jsonb) || $5::jsonb,
             updated_at=now()
         WHERE id=$1
         RETURNING *
-      `, [event.id, message, JSON.stringify({trigger, failed_at:new Date().toISOString()})]);
-      results.push({id:event.id, status:'failed', error:message, event:updated});
+      `, [event.id, nextStatus, retryDelaySec, message, JSON.stringify({trigger, failed_at:new Date().toISOString(), retry_delay_sec:retryDelaySec, max_attempts:maxAttempts})]);
+      results.push({id:event.id, status:nextStatus, error:message, retry_delay_sec:retryDelaySec, event:updated});
     }
   }
 
@@ -3842,10 +4018,194 @@ async function processAlarmEscalationDeliveries({limit, eventId = null, trigger 
     claimed_count:events.length,
     delivered_count:results.filter(item => item.status === 'delivered').length,
     failed_count:results.filter(item => item.status === 'failed').length,
+    dead_letter_count:results.filter(item => item.status === 'dead_letter').length,
     results
   };
 }
 
+
+const alarmAutomationSchedulerState = {
+  running:false,
+  last_run_started_at:null,
+  last_run_finished_at:null,
+  last_run_status:null,
+  last_error:null,
+  next_run_at:null
+};
+
+async function runAlarmAutomationCycle({trigger = 'manual'} = {}) {
+  if (alarmAutomationSchedulerState.running) {
+    return {status:'skipped', reason:'scheduler_already_running'};
+  }
+
+  alarmAutomationSchedulerState.running = true;
+  alarmAutomationSchedulerState.last_run_started_at = new Date().toISOString();
+  alarmAutomationSchedulerState.last_error = null;
+  const runRow = await one(`
+    INSERT INTO alarm_automation_scheduler_runs(trigger,status,started_at)
+    VALUES($1,'running',now())
+    RETURNING id::text
+  `, [trigger]);
+
+  try {
+    const scan = await scanAlarmEscalationsToQueue({trigger});
+    const retry = await prepareDueEscalationRetries();
+    const delivery = await processAlarmEscalationDeliveries({
+      limit:alarmEscalationDeliveryBatchSize(),
+      trigger:`scheduler:${trigger}`
+    });
+    const result = {
+      status:'completed',
+      trigger,
+      scan,
+      retry,
+      delivery,
+      dead_letter_count:Number(retry.dead_letter_count || 0) + Number(delivery.dead_letter_count || 0)
+    };
+
+    await pool.query(`
+      UPDATE alarm_automation_scheduler_runs SET
+        status='completed', finished_at=now(),
+        scanned_active_count=$2, overdue_count=$3, created_count=$4, duplicate_count=$5,
+        retried_count=$6, delivered_count=$7, failed_count=$8, dead_letter_count=$9,
+        metadata=$10::jsonb
+      WHERE id=$1
+    `, [
+      runRow.id,
+      scan.scanned_active_count || 0,
+      scan.overdue_count || 0,
+      scan.created_count || 0,
+      scan.duplicate_count || 0,
+      retry.retried_count || 0,
+      delivery.delivered_count || 0,
+      delivery.failed_count || 0,
+      result.dead_letter_count,
+      JSON.stringify({delivery_enabled:delivery.enabled, claimed_count:delivery.claimed_count || 0})
+    ]);
+
+    alarmAutomationSchedulerState.last_run_status = 'completed';
+    return result;
+  } catch (error) {
+    const message = String(error?.message || error || 'Unknown scheduler error').slice(0, 1000);
+    await pool.query(`
+      UPDATE alarm_automation_scheduler_runs
+      SET status='failed', finished_at=now(), error_message=$2
+      WHERE id=$1
+    `, [runRow.id, message]).catch(()=>{});
+    alarmAutomationSchedulerState.last_run_status = 'failed';
+    alarmAutomationSchedulerState.last_error = message;
+    throw error;
+  } finally {
+    alarmAutomationSchedulerState.running = false;
+    alarmAutomationSchedulerState.last_run_finished_at = new Date().toISOString();
+    alarmAutomationSchedulerState.next_run_at = alarmAutomationSchedulerEnabled()
+      ? new Date(Date.now() + alarmAutomationSchedulerIntervalSec() * 1000).toISOString()
+      : null;
+  }
+}
+
+async function alarmAutomationSchedulerSnapshot(actor = null) {
+  await ensureNotificationSettingsFoundation();
+  await ensureAlarmEscalationFoundation();
+  const history = await pool.query(`
+    SELECT id::text,trigger,status,started_at,finished_at,scanned_active_count,overdue_count,
+           created_count,duplicate_count,retried_count,delivered_count,failed_count,
+           dead_letter_count,error_message
+    FROM alarm_automation_scheduler_runs
+    ORDER BY started_at DESC
+    LIMIT 20
+  `);
+  const queue = await one(`
+    SELECT
+      count(*) FILTER (WHERE delivery_status='pending')::int AS pending,
+      count(*) FILTER (WHERE delivery_status='processing')::int AS processing,
+      count(*) FILTER (WHERE delivery_status='failed')::int AS failed,
+      count(*) FILTER (WHERE delivery_status='failed' AND COALESCE(next_attempt_at,failed_at,updated_at)<=now())::int AS retry_due,
+      count(*) FILTER (WHERE delivery_status='dead_letter')::int AS dead_letter,
+      count(*) FILTER (WHERE delivery_status='delivered')::int AS delivered
+    FROM alarm_escalation_events
+  `);
+  return {
+    can_manage:!authConfig().enabled || hasPermission(actor, 'MANAGE_SITES'),
+    scheduler:{
+      enabled:alarmAutomationSchedulerEnabled(),
+      interval_sec:alarmAutomationSchedulerIntervalSec(),
+      running:alarmAutomationSchedulerState.running,
+      last_run_started_at:alarmAutomationSchedulerState.last_run_started_at,
+      last_run_finished_at:alarmAutomationSchedulerState.last_run_finished_at,
+      last_run_status:alarmAutomationSchedulerState.last_run_status,
+      last_error:alarmAutomationSchedulerState.last_error,
+      next_run_at:alarmAutomationSchedulerState.next_run_at
+    },
+    retry:{
+      enabled:alarmEscalationRetryEnabled(),
+      base_delay_sec:alarmEscalationRetryBaseDelaySec(),
+      max_delay_sec:alarmEscalationRetryMaxDelaySec(),
+      max_attempts:alarmEscalationRetryMaxAttempts()
+    },
+    queue:queue || {},
+    history:history.rows
+  };
+}
+
+app.get('/api/admin/automation-scheduler', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    const snapshot = await alarmAutomationSchedulerSnapshot(req.user || getSession(req)?.user || null);
+    res.json({status:'ok',version:APP_VERSION,...snapshot});
+  } catch(e) {
+    res.status(500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
+
+app.patch('/api/admin/automation-scheduler', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    await ensureNotificationSettingsFoundation();
+    const current = notificationRuntimeSettings || {};
+    const body = req.body || {};
+    const next = {
+      scheduler_enabled:notificationBoolInput(body.scheduler_enabled,current.scheduler_enabled),
+      scheduler_interval_sec:notificationIntInput(body.scheduler_interval_sec,current.scheduler_interval_sec,15,3600),
+      retry_enabled:notificationBoolInput(body.retry_enabled,current.retry_enabled),
+      retry_base_delay_sec:notificationIntInput(body.retry_base_delay_sec,current.retry_base_delay_sec,15,86400),
+      retry_max_delay_sec:notificationIntInput(body.retry_max_delay_sec,current.retry_max_delay_sec,15,604800),
+      retry_max_attempts:notificationIntInput(body.retry_max_attempts,current.retry_max_attempts,1,20)
+    };
+    if (next.retry_max_delay_sec < next.retry_base_delay_sec) next.retry_max_delay_sec = next.retry_base_delay_sec;
+    const actorEmail = req.user?.email || getSession(req)?.user?.email || 'system';
+    const before = await alarmAutomationSchedulerSnapshot(req.user || null);
+    await pool.query(`
+      UPDATE notification_settings SET
+        scheduler_enabled=$1,scheduler_interval_sec=$2,retry_enabled=$3,
+        retry_base_delay_sec=$4,retry_max_delay_sec=$5,retry_max_attempts=$6,
+        updated_by=$7,updated_at=now()
+      WHERE id=1
+    `, [next.scheduler_enabled,next.scheduler_interval_sec,next.retry_enabled,next.retry_base_delay_sec,next.retry_max_delay_sec,next.retry_max_attempts,actorEmail]);
+    await loadNotificationRuntimeSettings();
+    restartAlarmAutomationScheduler();
+    restartAlarmEscalationDeliveryWorker();
+    const snapshot = await alarmAutomationSchedulerSnapshot(req.user || null);
+    await writeAuditLog(req,{
+      action:'update_alarm_automation_scheduler',entity_type:'automation_scheduler',entity_id:'global',
+      old_values:{scheduler:before.scheduler,retry:before.retry},new_values:{scheduler:snapshot.scheduler,retry:snapshot.retry}
+    });
+    res.json({status:'ok',version:APP_VERSION,...snapshot});
+  } catch(e) {
+    res.status(500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
+
+app.post('/api/admin/automation-scheduler/run-now', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
+  try {
+    const result = await runAlarmAutomationCycle({trigger:'admin-panel'});
+    await writeAuditLog(req,{
+      action:'run_alarm_automation_scheduler',entity_type:'automation_scheduler',entity_id:'manual-run',
+      old_values:null,new_values:{status:result.status,created_count:result.scan?.created_count || 0,retried_count:result.retry?.retried_count || 0,delivered_count:result.delivery?.delivered_count || 0,failed_count:result.delivery?.failed_count || 0,dead_letter_count:result.dead_letter_count || 0}
+    });
+    res.json({status:'ok',version:APP_VERSION,...result});
+  } catch(e) {
+    res.status(500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
 
 app.get('/api/admin/notification-settings', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
   try {
@@ -3897,6 +4257,7 @@ app.patch('/api/admin/notification-settings', adminRequired, permissionRequired(
     ]);
     await loadNotificationRuntimeSettings();
     restartAlarmEscalationDeliveryWorker();
+    restartAlarmAutomationScheduler();
     const snapshot = await notificationSettingsSnapshot(req.user || null);
     await writeAuditLog(req, {
       action:'update_notification_settings',
@@ -3974,6 +4335,7 @@ app.get('/api/admin/alarm-escalation/delivery-status', adminRequired, permission
         count(*) FILTER (WHERE delivery_status='pending')::int AS pending,
         count(*) FILTER (WHERE delivery_status='processing')::int AS processing,
         count(*) FILTER (WHERE delivery_status='failed')::int AS failed,
+        count(*) FILTER (WHERE delivery_status='dead_letter')::int AS dead_letter,
         count(*) FILTER (WHERE delivery_status='delivered')::int AS delivered
       FROM alarm_escalation_events
     `);
@@ -4073,6 +4435,7 @@ app.get('/api/admin/alarm-escalation/events', adminRequired, permissionRequired(
         e.next_attempt_at,
         e.delivered_at,
         e.failed_at,
+        e.dead_letter_at,
         e.provider_message_id,
         e.last_error,
         e.delivery_metadata,
@@ -4100,6 +4463,7 @@ app.get('/api/admin/alarm-escalation/events', adminRequired, permissionRequired(
         count(*) FILTER (WHERE delivery_status='processing')::int AS processing,
         count(*) FILTER (WHERE delivery_status='delivered')::int AS delivered,
         count(*) FILTER (WHERE delivery_status='failed')::int AS failed,
+        count(*) FILTER (WHERE delivery_status='dead_letter')::int AS dead_letter,
         count(*) FILTER (WHERE delivery_status='suppressed')::int AS suppressed,
         count(*) FILTER (WHERE stage='ack_overdue')::int AS ack_overdue,
         count(*) FILTER (WHERE stage='resolve_overdue')::int AS resolve_overdue
@@ -4127,69 +4491,16 @@ app.post('/api/admin/alarm-escalation/scan', adminRequired, permissionRequired('
     if (!alarmEscalationQueueEnabled()) {
       return res.status(503).json({status:'disabled', version:APP_VERSION, message:'Alarm escalation queue is disabled'});
     }
-
-    const snapshot = await loadAlarmEscalationSnapshot();
-    const overdue = snapshot.activeAlarms.filter(row =>
-      row.rule_id && ['ack_overdue','resolve_overdue'].includes(row.sla_status)
-    );
-    const created = [];
-
-    for (const alarm of overdue) {
-      const channel = String(alarm.escalation_channel || 'dashboard').trim() || 'dashboard';
-      const deliveryStatus = channel === 'dashboard' ? 'delivered' : 'pending';
-      const deliveredAt = deliveryStatus === 'delivered' ? new Date().toISOString() : null;
-      const eventKey = `alarm-${alarm.id}-${alarm.sla_status}-rule-${alarm.rule_id}`;
-      const metadata = JSON.stringify({
-        customer_code:alarm.customer_code || null,
-        site_code:alarm.site_code || null,
-        machine_code:alarm.machine_code || null,
-        rule_name:alarm.rule_name || null,
-        acknowledge_sla_minutes:alarm.acknowledge_sla_minutes,
-        resolve_sla_minutes:alarm.resolve_sla_minutes,
-        age_minutes:alarm.age_minutes
-      });
-
-      const inserted = await one(`
-        INSERT INTO alarm_escalation_events(
-          event_key,alarm_id,rule_id,stage,severity,channel,recipients,
-          delivery_status,message,detected_at,delivered_at,metadata
-        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),$10,$11::jsonb)
-        ON CONFLICT(event_key) DO NOTHING
-        RETURNING *
-      `, [
-        eventKey,
-        alarm.id,
-        alarm.rule_id,
-        alarm.sla_status,
-        alarm.severity || 'warning',
-        channel,
-        alarm.recipients || null,
-        deliveryStatus,
-        escalationEventMessage(alarm),
-        deliveredAt,
-        metadata
-      ]);
-      if (inserted) created.push(inserted);
-    }
-
+    const result = await scanAlarmEscalationsToQueue({trigger:'admin-panel'});
     await writeAuditLog(req, {
       action:'scan_alarm_escalations',
       entity_type:'alarm_escalation_queue',
       entity_id:'manual-scan',
       old_values:null,
-      new_values:{overdue_count:overdue.length, created_count:created.length},
-      metadata:{duplicate_count:Math.max(0, overdue.length - created.length)}
+      new_values:{overdue_count:result.overdue_count, created_count:result.created_count},
+      metadata:{duplicate_count:result.duplicate_count}
     });
-
-    res.json({
-      status:'ok',
-      version:APP_VERSION,
-      scanned_active_count:snapshot.activeAlarms.length,
-      overdue_count:overdue.length,
-      created_count:created.length,
-      duplicate_count:Math.max(0, overdue.length - created.length),
-      events:created
-    });
+    res.json({status:'ok',version:APP_VERSION,...result});
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
   }
@@ -4212,8 +4523,10 @@ app.patch('/api/admin/alarm-escalation/events/:id/status', adminRequired, permis
       SET delivery_status=$2,
           delivered_at=CASE WHEN $2='delivered' THEN COALESCE(delivered_at,now()) ELSE NULL END,
           failed_at=CASE WHEN $2='failed' THEN now() ELSE NULL END,
-          last_error=CASE WHEN $2='failed' THEN $3 ELSE NULL END,
-          next_attempt_at=CASE WHEN $2='pending' THEN now() ELSE next_attempt_at END,
+          dead_letter_at=CASE WHEN $2='dead_letter' THEN COALESCE(dead_letter_at,now()) ELSE NULL END,
+          last_error=CASE WHEN $2 IN ('failed','dead_letter') THEN $3 ELSE NULL END,
+          attempt_count=CASE WHEN $2='pending' THEN 0 ELSE attempt_count END,
+          next_attempt_at=CASE WHEN $2='pending' THEN now() ELSE NULL END,
           updated_at=now()
       WHERE id=$1
       RETURNING *
@@ -8472,6 +8785,8 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 let alarmEscalationDeliveryTimer = null;
 let alarmEscalationDeliveryKickoffTimer = null;
 let alarmEscalationDeliveryRunning = false;
+let alarmAutomationSchedulerTimer = null;
+let alarmAutomationSchedulerKickoffTimer = null;
 
 function stopAlarmEscalationDeliveryWorker() {
   if (alarmEscalationDeliveryTimer) clearInterval(alarmEscalationDeliveryTimer);
@@ -8481,6 +8796,10 @@ function stopAlarmEscalationDeliveryWorker() {
 }
 
 function startAlarmEscalationDeliveryWorker() {
+  if (alarmAutomationSchedulerEnabled()) {
+    console.log('Alarm escalation legacy auto delivery: disabled (automation scheduler active)');
+    return;
+  }
   if (!alarmEscalationDeliveryEnabled() || !alarmEscalationAutoDeliveryEnabled()) {
     console.log('Alarm escalation auto delivery: disabled');
     return;
@@ -8491,12 +8810,13 @@ function startAlarmEscalationDeliveryWorker() {
     if (alarmEscalationDeliveryRunning) return;
     alarmEscalationDeliveryRunning = true;
     try {
+      await prepareDueEscalationRetries();
       const result = await processAlarmEscalationDeliveries({
         limit:alarmEscalationDeliveryBatchSize(),
         trigger:'auto-worker'
       });
       if (result.claimed_count) {
-        console.log(`Alarm escalation worker: ${result.delivered_count} delivered, ${result.failed_count} failed`);
+        console.log(`Alarm escalation worker: ${result.delivered_count} delivered, ${result.failed_count} failed, ${result.dead_letter_count || 0} dead letter`);
       }
     } catch (error) {
       console.error('Alarm escalation worker error:', error.message);
@@ -8515,6 +8835,46 @@ function startAlarmEscalationDeliveryWorker() {
 function restartAlarmEscalationDeliveryWorker() {
   stopAlarmEscalationDeliveryWorker();
   startAlarmEscalationDeliveryWorker();
+}
+
+function stopAlarmAutomationScheduler() {
+  if (alarmAutomationSchedulerTimer) clearInterval(alarmAutomationSchedulerTimer);
+  if (alarmAutomationSchedulerKickoffTimer) clearTimeout(alarmAutomationSchedulerKickoffTimer);
+  alarmAutomationSchedulerTimer = null;
+  alarmAutomationSchedulerKickoffTimer = null;
+  alarmAutomationSchedulerState.next_run_at = null;
+}
+
+function startAlarmAutomationScheduler() {
+  if (!alarmAutomationSchedulerEnabled()) {
+    console.log('Alarm automation scheduler: disabled');
+    return;
+  }
+  if (alarmAutomationSchedulerTimer) return;
+
+  const intervalMs = alarmAutomationSchedulerIntervalSec() * 1000;
+  const run = async () => {
+    try {
+      const result = await runAlarmAutomationCycle({trigger:'auto-scheduler'});
+      if (result.status === 'completed') {
+        console.log(`Alarm automation scheduler: ${result.scan.created_count} created, ${result.retry.retried_count} retried, ${result.delivery.delivered_count} delivered`);
+      }
+    } catch (error) {
+      console.error('Alarm automation scheduler error:', error.message);
+    }
+  };
+
+  alarmAutomationSchedulerState.next_run_at = new Date(Date.now() + Math.min(intervalMs, 3000)).toISOString();
+  alarmAutomationSchedulerTimer = setInterval(run, intervalMs);
+  alarmAutomationSchedulerTimer.unref?.();
+  alarmAutomationSchedulerKickoffTimer = setTimeout(run, Math.min(intervalMs, 3000));
+  alarmAutomationSchedulerKickoffTimer.unref?.();
+  console.log(`Alarm automation scheduler: every ${alarmAutomationSchedulerIntervalSec()} sec`);
+}
+
+function restartAlarmAutomationScheduler() {
+  stopAlarmAutomationScheduler();
+  startAlarmAutomationScheduler();
 }
 
 async function start() {
@@ -8537,6 +8897,7 @@ async function start() {
   client.on('message', handleMessage);
   app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
   startAlarmEscalationDeliveryWorker();
+  startAlarmAutomationScheduler();
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
 

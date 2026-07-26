@@ -1,0 +1,25 @@
+FactoryBox One v5.19.0 Kurulum
+
+1. Backend'i durdurun.
+2. ZIP dosyasını açın.
+3. ZIP içindeki dosya ve klasörleri FactoryBox ana proje klasörünün üzerine kopyalayın.
+4. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+5. Backend klasöründe çalıştırın:
+
+   npm.cmd start
+
+6. Admin panelinde Ctrl + F5 yapın.
+7. Sol üstte v5.19.0 yazdığını kontrol edin.
+8. System Settings > Automation Scheduler ekranını açın.
+9. Önce Şimdi Çalıştır düğmesiyle manuel test yapın.
+10. Otomatik çalıştırmak için Scheduler Enabled = true seçip ayarları kaydedin.
+
+Önerilen ilk test ayarları:
+- Scheduler Enabled: false
+- Interval: 60
+- Automatic Retry: true
+- Retry Base Delay: 60
+- Retry Max Delay: 3600
+- Max Attempts: 5
+
+Manuel test başarılı olduktan sonra Scheduler Enabled değerini true yapabilirsiniz.

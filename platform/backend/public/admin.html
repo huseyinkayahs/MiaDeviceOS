@@ -268,6 +268,10 @@
     .notification-channel-card-v518 .channel-state.disabled { background:#e2e8f0; color:#475569; }
     .notification-secret-note-v518 { margin-top:6px; font-size:12px; color:var(--fb-muted); }
     .notification-test-actions-v518 { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-top:12px; }
+    #automationSchedulerSection { min-width:0; overflow:hidden; }
+    .scheduler-flow-v519 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0; padding:14px; border:1px dashed var(--fb-border); border-radius:16px; background:#f8fafc; }
+    .scheduler-flow-v519 span { padding:7px 10px; border-radius:999px; background:#fff; border:1px solid var(--fb-border); font-size:12px; font-weight:700; }
+    .scheduler-flow-v519 b { color:var(--fb-muted); }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -317,7 +321,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.18.0 — bildirim kanalları ve test ayarları tek ekranda.</p>
+      <p id="adminVersionLabel">v5.19.0 — otomatik escalation scheduler ve retry yönetimi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -341,10 +345,11 @@
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
           <span>⚙️ System Settings</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">1</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">2</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Notifications</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Automation Scheduler</span></button>
         </div>
       </div>
       <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>🏢 Customers / Tenants</span><span class="admin-nav-pill-v58">2</span></button>
@@ -386,7 +391,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.18.0: Notification Settings, kanal testleri ve Delivery Worker yönetimi aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.19.0: Otomatik SLA tarama, retry/backoff ve Dead Letter yönetimi aktif.</p>
       </div>
     </div>
 
@@ -570,6 +575,7 @@
           <option value="processing">processing</option>
           <option value="delivered">delivered</option>
           <option value="failed">failed</option>
+          <option value="dead_letter">dead_letter</option>
           <option value="suppressed">suppressed</option>
         </select>
       </label>
@@ -655,6 +661,43 @@
     </div>
 
     <div id="notificationSettingsResult" class="mini-status">Ayar değişikliği veya kanal testi bekleniyor.</div>
+  </section>
+
+  <section id="automationSchedulerSection" class="card wide admin-card" data-admin-view="scheduler">
+    <div class="section-title-row">
+      <div>
+        <h2>Automatic Escalation Scheduler</h2>
+        <p class="muted">v5.19: SLA taraması, otomatik teslimat, exponential retry/backoff ve Dead Letter yönetimi.</p>
+      </div>
+      <div class="admin-topbar-actions-v58">
+        <button id="refreshAutomationSchedulerBtn" class="secondary-btn">Durumu Yenile</button>
+        <button id="runAutomationSchedulerBtn" class="primary-btn">Şimdi Çalıştır</button>
+        <button id="saveAutomationSchedulerBtn" class="primary-btn">Ayarları Kaydet</button>
+      </div>
+    </div>
+
+    <div id="automationSchedulerStatus">Scheduler durumu yükleniyor...</div>
+
+    <div class="scheduler-flow-v519">
+      <span>Aktif alarm</span><b>→</b><span>SLA tarama</span><b>→</b><span>Pending kuyruk</span><b>→</b><span>Telegram / Email</span><b>→</b><span>Delivered</span>
+    </div>
+
+    <h3>Scheduler Ayarları</h3>
+    <div class="admin-form-grid">
+      <label>Scheduler Enabled<select id="automationSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Çalışma Aralığı (sn)<input id="automationSchedulerIntervalSec" type="number" min="15" max="3600" value="60"></label>
+      <label>Automatic Retry<select id="automationRetryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+      <label>İlk Retry Bekleme (sn)<input id="automationRetryBaseDelaySec" type="number" min="15" max="86400" value="60"></label>
+      <label>Maks. Retry Bekleme (sn)<input id="automationRetryMaxDelaySec" type="number" min="15" max="604800" value="3600"></label>
+      <label>Maks. Deneme<input id="automationRetryMaxAttempts" type="number" min="1" max="20" value="5"></label>
+    </div>
+
+    <div id="automationSchedulerResult" class="mini-status">Ayar değişikliği veya manuel çalışma bekleniyor.</div>
+
+    <div class="kpi-panel-v59">
+      <h3>Scheduler Çalışma Geçmişi</h3>
+      <div id="automationSchedulerHistory">Çalışma geçmişi yükleniyor...</div>
+    </div>
   </section>
 
   <section class="card wide admin-card" data-admin-view="permissions">
@@ -990,11 +1033,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.18.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.19.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Notification Settings ve kanal testleri eklendi.`;
-    if (overview) overview.textContent = `v${safeVersion}: Telegram, Email ve Delivery Worker ayarları tek ekranda.`;
+    if (brand) brand.textContent = `v${safeVersion} — Automatic Escalation Scheduler aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Otomatik SLA tarama, retry/backoff ve Dead Letter yönetimi aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1143,6 +1186,10 @@
       title:'Notification Settings',
       desc:'Telegram, Email, test mesajları ve Delivery Worker çalışma ayarları.'
     },
+    scheduler: {
+      title:'Automation Scheduler',
+      desc:'Otomatik SLA tarama, retry/backoff, teslimat ve Dead Letter yönetimi.'
+    },
     tenants: {
       title:'Customers / Tenants',
       desc:'Customer, tenant, site ve atölye yönetimi.'
@@ -1178,7 +1225,8 @@
     analytics:'alarm',
     sla:'alarm',
     escalations:'alarm',
-    notifications:'system'
+    notifications:'system',
+    scheduler:'system'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -1803,6 +1851,7 @@
       processing:'Gönderiliyor',
       delivered:'Teslim edildi',
       failed:'Başarısız',
+      dead_letter:'Dead Letter',
       suppressed:'Bastırıldı'
     };
     return labels[status] || status || '-';
@@ -1832,7 +1881,7 @@
         <div class="kpi-card-v59"><span>Delivery Worker</span><strong>${data.delivery_enabled ? 'ON' : 'OFF'}</strong><small>Otomatik: ${data.auto_delivery_enabled ? 'ON' : 'OFF'} · ${esc(data.interval_sec || 0)} sn</small></div>
         <div class="kpi-card-v59"><span>Email</span><strong>${emailReady ? 'READY' : 'NOT READY'}</strong><small>SMTP ve varsayılan alıcı kontrolü</small></div>
         <div class="kpi-card-v59"><span>Telegram</span><strong>${telegramReady ? 'READY' : 'NOT READY'}</strong><small>Bot token ve chat ID kontrolü</small></div>
-        <div class="kpi-card-v59"><span>Aktif İş</span><strong>${esc(q.processing || 0)}</strong><small>${esc(q.pending || 0)} bekliyor · ${esc(q.failed || 0)} başarısız</small></div>
+        <div class="kpi-card-v59"><span>Aktif İş</span><strong>${esc(q.processing || 0)}</strong><small>${esc(q.pending || 0)} bekliyor · ${esc(q.failed || 0)} başarısız · ${esc(q.dead_letter || 0)} dead letter</small></div>
       </div>
       <p class="mini-status">Batch: <strong>${esc(data.batch_size || 0)}</strong> · Manuel gönderim: <strong>${data.can_deliver ? 'Açık' : 'Yetki yok'}</strong></p>
     `;
@@ -1852,7 +1901,8 @@
         <div class="kpi-card-v59"><span>Bekliyor</span><strong>${esc(s.pending || 0)}</strong><small>Email / Telegram teslimatı bekliyor</small></div>
         <div class="kpi-card-v59"><span>Gönderiliyor</span><strong>${esc(s.processing || 0)}</strong><small>Worker tarafından işleniyor</small></div>
         <div class="kpi-card-v59"><span>Teslim Edildi</span><strong>${esc(s.delivered || 0)}</strong><small>Dashboard veya onaylanmış gönderim</small></div>
-        <div class="kpi-card-v59"><span>Başarısız</span><strong>${esc(s.failed || 0)}</strong><small>Tekrar kuyruğa alınabilir</small></div>
+        <div class="kpi-card-v59"><span>Başarısız</span><strong>${esc(s.failed || 0)}</strong><small>Retry zamanı bekleniyor</small></div>
+        <div class="kpi-card-v59"><span>Dead Letter</span><strong>${esc(s.dead_letter || 0)}</strong><small>Maksimum deneme aşıldı</small></div>
         <div class="kpi-card-v59"><span>Bastırıldı</span><strong>${esc(s.suppressed || 0)}</strong><small>Gönderim yapılmayacak</small></div>
       </div>
       <p class="mini-status">Kuyruk yönetimi: <strong>${data.can_manage_events ? 'Açık' : 'Sadece görüntüleme'}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}</p>
@@ -1870,12 +1920,13 @@
       {label:'Mesaj', value:r=>r.message || '-'},
       {label:'Deneme', value:r=>r.attempt_count || 0},
       {label:'Son Deneme', value:r=>fmtDate(r.last_attempt_at)},
+      {label:'Sonraki Deneme', value:r=>fmtDate(r.next_attempt_at)},
       {label:'Provider ID', value:r=>r.provider_message_id || '-'},
       {label:'Hata', value:r=>r.last_error || '-'},
       {label:'Aksiyon', html:true, value:r=>{
         if (!data.can_manage_events) return '<span class="muted">yetki yok</span>';
         if (r.delivery_status === 'pending') return `<button class="primary-btn mini-btn" data-action="deliver-escalation" data-id="${esc(r.id)}">Şimdi Gönder</button>`;
-        if (r.delivery_status === 'failed') return `<button class="secondary-btn mini-btn" data-action="retry-escalation" data-id="${esc(r.id)}">Tekrar Kuyruğa Al</button>`;
+        if (['failed','dead_letter'].includes(r.delivery_status)) return `<button class="secondary-btn mini-btn" data-action="retry-escalation" data-id="${esc(r.id)}">Tekrar Kuyruğa Al</button>`;
         return '<span class="muted">-</span>';
       }}
     ], data.events || []);
@@ -1948,6 +1999,56 @@
     ['saveNotificationSettingsBtn','testTelegramNotificationBtn','testEmailNotificationBtn'].forEach(id => {
       const button = document.getElementById(id);
       if (button) button.disabled = !canManage;
+    });
+  }
+
+  function renderAutomationScheduler(data) {
+    const scheduler = data.scheduler || {};
+    const retry = data.retry || {};
+    const queue = data.queue || {};
+    const canManage = Boolean(data.can_manage);
+    const setValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.value = value ?? '';
+    };
+
+    setValue('automationSchedulerEnabled', String(Boolean(scheduler.enabled)));
+    setValue('automationSchedulerIntervalSec', scheduler.interval_sec || 60);
+    setValue('automationRetryEnabled', String(Boolean(retry.enabled)));
+    setValue('automationRetryBaseDelaySec', retry.base_delay_sec || 60);
+    setValue('automationRetryMaxDelaySec', retry.max_delay_sec || 3600);
+    setValue('automationRetryMaxAttempts', retry.max_attempts || 5);
+
+    const status = document.getElementById('automationSchedulerStatus');
+    if (status) status.innerHTML = `
+      <div class="kpi-grid-v59">
+        <div class="kpi-card-v59"><span>Scheduler</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${scheduler.running ? 'Şu an çalışıyor' : `${esc(scheduler.interval_sec || 60)} sn aralık`}</small></div>
+        <div class="kpi-card-v59"><span>Son Çalışma</span><strong>${esc(String(scheduler.last_run_status || '-').toUpperCase())}</strong><small>${esc(fmtDate(scheduler.last_run_finished_at || scheduler.last_run_started_at))}</small></div>
+        <div class="kpi-card-v59"><span>Sonraki Çalışma</span><strong>${scheduler.enabled ? esc(fmtDate(scheduler.next_run_at)) : '-'}</strong><small>${scheduler.enabled ? 'Otomatik planlandı' : 'Scheduler kapalı'}</small></div>
+        <div class="kpi-card-v59"><span>Retry Due</span><strong>${esc(queue.retry_due || 0)}</strong><small>${retry.enabled ? `Max ${esc(retry.max_attempts || 5)} deneme` : 'Retry kapalı'}</small></div>
+        <div class="kpi-card-v59"><span>Pending</span><strong>${esc(queue.pending || 0)}</strong><small>Gönderim bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Dead Letter</span><strong>${esc(queue.dead_letter || 0)}</strong><small>Manuel inceleme gerekli</small></div>
+      </div>
+      ${scheduler.last_error ? `<p class="mini-status">Son hata: ${esc(scheduler.last_error)}</p>` : ''}
+    `;
+
+    const history = document.getElementById('automationSchedulerHistory');
+    if (history) history.innerHTML = table([
+      {label:'Başlangıç',value:r=>fmtDate(r.started_at)},
+      {label:'Trigger',value:r=>r.trigger || '-'},
+      {label:'Durum',value:r=>r.status || '-'},
+      {label:'Aktif / Overdue',value:r=>`${r.scanned_active_count || 0} / ${r.overdue_count || 0}`},
+      {label:'Yeni / Tekrar',value:r=>`${r.created_count || 0} / ${r.duplicate_count || 0}`},
+      {label:'Retry',value:r=>r.retried_count || 0},
+      {label:'Delivered',value:r=>r.delivered_count || 0},
+      {label:'Failed',value:r=>r.failed_count || 0},
+      {label:'Dead Letter',value:r=>r.dead_letter_count || 0},
+      {label:'Hata',value:r=>r.error_message || '-'}
+    ], data.history || []);
+
+    ['saveAutomationSchedulerBtn','runAutomationSchedulerBtn'].forEach(id => {
+      const button = document.getElementById(id);
+      if (button) button.disabled = !canManage || (id === 'runAutomationSchedulerBtn' && scheduler.running);
     });
   }
 
@@ -2235,6 +2336,7 @@
       ['alarm-escalation-delivery-status', '/api/admin/alarm-escalation/delivery-status', renderAlarmEscalationDeliveryStatus, 'alarmEscalationDeliveryStatus'],
       ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
+      ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -2530,6 +2632,24 @@
     return apiJson(`/api/admin/notification-settings/test-${channel}`, {method:'POST',body:JSON.stringify(body)});
   }
 
+  async function saveAutomationScheduler() {
+    return apiJson('/api/admin/automation-scheduler', {
+      method:'PATCH',
+      body:JSON.stringify({
+        scheduler_enabled:document.getElementById('automationSchedulerEnabled').value === 'true',
+        scheduler_interval_sec:Number(document.getElementById('automationSchedulerIntervalSec').value),
+        retry_enabled:document.getElementById('automationRetryEnabled').value === 'true',
+        retry_base_delay_sec:Number(document.getElementById('automationRetryBaseDelaySec').value),
+        retry_max_delay_sec:Number(document.getElementById('automationRetryMaxDelaySec').value),
+        retry_max_attempts:Number(document.getElementById('automationRetryMaxAttempts').value)
+      })
+    });
+  }
+
+  async function runAutomationSchedulerNow() {
+    return apiJson('/api/admin/automation-scheduler/run-now', {method:'POST',body:JSON.stringify({})});
+  }
+
   async function createDeviceProvisionToken() {
     const customer_code = document.getElementById('deviceCustomerCode').value.trim();
     const site_code = document.getElementById('deviceSiteCode').value.trim();
@@ -2744,6 +2864,9 @@
     const saveNotificationSettingsBtn = document.getElementById('saveNotificationSettingsBtn');
     const testTelegramNotificationBtn = document.getElementById('testTelegramNotificationBtn');
     const testEmailNotificationBtn = document.getElementById('testEmailNotificationBtn');
+    const refreshAutomationSchedulerBtn = document.getElementById('refreshAutomationSchedulerBtn');
+    const saveAutomationSchedulerBtn = document.getElementById('saveAutomationSchedulerBtn');
+    const runAutomationSchedulerBtn = document.getElementById('runAutomationSchedulerBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -2757,6 +2880,33 @@
     if (refreshAlarmEscalationEventsBtn) refreshAlarmEscalationEventsBtn.addEventListener('click', loadAdmin);
     if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click', loadAdmin);
     if (refreshNotificationSettingsBtn) refreshNotificationSettingsBtn.addEventListener('click', loadAdmin);
+    if (refreshAutomationSchedulerBtn) refreshAutomationSchedulerBtn.addEventListener('click', loadAdmin);
+    if (saveAutomationSchedulerBtn) saveAutomationSchedulerBtn.addEventListener('click', async () => {
+      saveAutomationSchedulerBtn.disabled = true;
+      document.getElementById('automationSchedulerResult').textContent = 'Scheduler ayarları kaydediliyor...';
+      try {
+        await saveAutomationScheduler();
+        await loadAdmin();
+        document.getElementById('automationSchedulerResult').textContent = 'Scheduler ayarları kaydedildi ve çalışma planı yenilendi.';
+      } catch(e) {
+        document.getElementById('automationSchedulerResult').textContent = e.message;
+      } finally {
+        saveAutomationSchedulerBtn.disabled = false;
+      }
+    });
+    if (runAutomationSchedulerBtn) runAutomationSchedulerBtn.addEventListener('click', async () => {
+      runAutomationSchedulerBtn.disabled = true;
+      document.getElementById('automationSchedulerResult').textContent = 'SLA tarama ve otomatik teslimat çalıştırılıyor...';
+      try {
+        const result = await runAutomationSchedulerNow();
+        await loadAdmin();
+        document.getElementById('automationSchedulerResult').textContent = `Çalışma tamamlandı: ${result.scan?.created_count || 0} yeni, ${result.retry?.retried_count || 0} retry, ${result.delivery?.delivered_count || 0} delivered, ${result.dead_letter_count || 0} dead letter.`;
+      } catch(e) {
+        document.getElementById('automationSchedulerResult').textContent = e.message;
+      } finally {
+        runAutomationSchedulerBtn.disabled = false;
+      }
+    });
     if (saveNotificationSettingsBtn) saveNotificationSettingsBtn.addEventListener('click', async () => {
       saveNotificationSettingsBtn.disabled = true;
       document.getElementById('notificationSettingsResult').textContent = 'Bildirim ayarları kaydediliyor...';
