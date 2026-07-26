@@ -1,0 +1,27 @@
+FactoryBox One v5.21.0
+Maintenance & Service Ticket Center Pack
+
+Bu paket yalnızca değişen dosyaları içerir.
+
+DOSYALAR
+=======
+platform/backend/server.js
+platform/backend/public/admin.html
+docs/V5_21_MAINTENANCE_SERVICE_TICKET_CENTER.md
+V5_21_0_PAKET_ICERIGI.txt
+KURULUM_V5_21_0.txt
+
+EKLENENLER
+=========
+- Maintenance & Tickets admin ekranı
+- Manuel bakım / servis ticketı oluşturma
+- Alarm Center üzerinden Ticket Aç işlemi
+- Makine ve alarm bağlantısı
+- Priority, category, assignee ve due date yönetimi
+- Open, In Progress, Waiting, Resolved, Closed ve Cancelled durumları
+- Geciken, kritik ve atanmamış ticket KPI'ları
+- Ticket notu ve ayrıntılı işlem geçmişi
+- Alarm başına aktif ticket tekrar engeli
+- VIEW_MAINTENANCE ve MANAGE_MAINTENANCE izinleri
+- Veritabanı migration işlemleri
+- Audit log kayıtları

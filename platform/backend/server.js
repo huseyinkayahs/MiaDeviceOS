@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.20.0';
+const APP_VERSION = '5.21.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -879,7 +879,9 @@ const ROLE_PERMISSIONS = {
     'AUDIT_VIEW',
     'SEND_REPORTS',
     'VIEW_REPORTS',
-    'VIEW_DASHBOARD'
+    'VIEW_DASHBOARD',
+    'VIEW_MAINTENANCE',
+    'MANAGE_MAINTENANCE'
   ],
   owner: [
     'ADMIN_VIEW',
@@ -893,7 +895,9 @@ const ROLE_PERMISSIONS = {
     'AUDIT_VIEW',
     'SEND_REPORTS',
     'VIEW_REPORTS',
-    'VIEW_DASHBOARD'
+    'VIEW_DASHBOARD',
+    'VIEW_MAINTENANCE',
+    'MANAGE_MAINTENANCE'
   ],
   admin: [
     'ADMIN_VIEW',
@@ -905,16 +909,21 @@ const ROLE_PERMISSIONS = {
     'AUDIT_VIEW',
     'SEND_REPORTS',
     'VIEW_REPORTS',
-    'VIEW_DASHBOARD'
+    'VIEW_DASHBOARD',
+    'VIEW_MAINTENANCE',
+    'MANAGE_MAINTENANCE'
   ],
   operator: [
     'SEND_REPORTS',
     'VIEW_REPORTS',
-    'VIEW_DASHBOARD'
+    'VIEW_DASHBOARD',
+    'VIEW_MAINTENANCE',
+    'MANAGE_MAINTENANCE'
   ],
   viewer: [
     'VIEW_REPORTS',
-    'VIEW_DASHBOARD'
+    'VIEW_DASHBOARD',
+    'VIEW_MAINTENANCE'
   ]
 };
 
@@ -3138,6 +3147,409 @@ app.post('/api/admin/alarms/:id/clear', adminRequired, permissionRequired('VIEW_
     res.json({status:'ok', version:APP_VERSION, alarm:updated});
   } catch(e) {
     res.status(500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+
+const MAINTENANCE_TICKET_STATUSES = ['open','in_progress','waiting','resolved','closed','cancelled'];
+const MAINTENANCE_TICKET_PRIORITIES = ['low','medium','high','critical'];
+const MAINTENANCE_TICKET_CATEGORIES = ['preventive','corrective','inspection','electrical','mechanical','software','safety','other'];
+const MAINTENANCE_TICKET_SOURCES = ['manual','alarm'];
+
+function maintenanceTicketLimit(raw, fallback = 100, max = 500) {
+  const value = Number(raw || fallback);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value), 1), max) : fallback;
+}
+
+function maintenanceChoice(value, allowed, label, fallback = null) {
+  const clean = String(value ?? fallback ?? '').trim().toLowerCase();
+  if (!allowed.includes(clean)) {
+    const error = new Error(`${label} must be one of: ${allowed.join(', ')}`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return clean;
+}
+
+function maintenanceText(value, label, {required=false, max=4000} = {}) {
+  const clean = String(value ?? '').trim();
+  if (required && !clean) {
+    const error = new Error(`${label} is required`);
+    error.statusCode = 400;
+    throw error;
+  }
+  if (clean.length > max) {
+    const error = new Error(`${label} is too long (max ${max})`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return clean || null;
+}
+
+function maintenanceDate(value, label='date') {
+  if (value === null || value === undefined || value === '') return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const error = new Error(`${label} is invalid`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return date.toISOString();
+}
+
+function makeMaintenanceTicketNo() {
+  const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+  return `MT-${stamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+async function ensureMaintenanceFoundation() {
+  await ensureAlarmCenterFoundation();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_tickets (
+      id bigserial PRIMARY KEY,
+      ticket_no text NOT NULL UNIQUE,
+      customer_id uuid,
+      site_id uuid,
+      machine_id uuid,
+      alarm_id bigint,
+      source text NOT NULL DEFAULT 'manual',
+      title text NOT NULL,
+      description text,
+      category text NOT NULL DEFAULT 'corrective',
+      priority text NOT NULL DEFAULT 'medium',
+      status text NOT NULL DEFAULT 'open',
+      assignee text,
+      reported_by text,
+      due_at timestamptz,
+      started_at timestamptz,
+      resolved_at timestamptz,
+      closed_at timestamptz,
+      resolution_note text,
+      created_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT maintenance_ticket_source_check CHECK (source IN ('manual','alarm')),
+      CONSTRAINT maintenance_ticket_category_check CHECK (category IN ('preventive','corrective','inspection','electrical','mechanical','software','safety','other')),
+      CONSTRAINT maintenance_ticket_priority_check CHECK (priority IN ('low','medium','high','critical')),
+      CONSTRAINT maintenance_ticket_status_check CHECK (status IN ('open','in_progress','waiting','resolved','closed','cancelled'))
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_ticket_events (
+      id bigserial PRIMARY KEY,
+      ticket_id bigint NOT NULL REFERENCES maintenance_tickets(id) ON DELETE CASCADE,
+      event_type text NOT NULL,
+      old_status text,
+      new_status text,
+      note text,
+      actor_email text,
+      metadata jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_tickets_status_due ON maintenance_tickets(status, due_at)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_tickets_machine_created ON maintenance_tickets(machine_id, created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_tickets_alarm ON maintenance_tickets(alarm_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_ticket_events_ticket ON maintenance_ticket_events(ticket_id, created_at DESC)`);
+}
+
+async function maintenanceMachineContext(machineId) {
+  if (!machineId) return null;
+  return one(`
+    SELECT m.id::text, m.code AS machine_code, m.name AS machine_name,
+           s.id::text AS site_id, s.code AS site_code,
+           c.id::text AS customer_id, c.code AS customer_code
+    FROM machines m
+    LEFT JOIN sites s ON s.id=m.site_id
+    LEFT JOIN customers c ON c.id=s.customer_id
+    WHERE m.id=$1
+    LIMIT 1
+  `, [String(machineId)]);
+}
+
+async function maintenanceTicketRow(id) {
+  return one(`
+    SELECT
+      t.id::text, t.ticket_no, t.source, t.title, t.description, t.category,
+      t.priority, t.status, t.assignee, t.reported_by, t.due_at, t.started_at,
+      t.resolved_at, t.closed_at, t.resolution_note, t.created_by,
+      t.created_at, t.updated_at, t.alarm_id::text,
+      m.id::text AS machine_id, m.code AS machine_code, m.name AS machine_name,
+      s.code AS site_code, c.code AS customer_code,
+      a.alarm_type, a.severity AS alarm_severity, a.status AS alarm_status,
+      (t.due_at IS NOT NULL AND t.due_at < now() AND t.status IN ('open','in_progress','waiting')) AS overdue
+    FROM maintenance_tickets t
+    LEFT JOIN machines m ON m.id=t.machine_id
+    LEFT JOIN sites s ON s.id=t.site_id
+    LEFT JOIN customers c ON c.id=t.customer_id
+    LEFT JOIN alarms a ON a.id=t.alarm_id
+    WHERE t.id=$1
+    LIMIT 1
+  `, [String(id)]);
+}
+
+async function addMaintenanceTicketEvent(clientOrPool, {ticketId, eventType, oldStatus=null, newStatus=null, note=null, actorEmail=null, metadata=null}) {
+  await clientOrPool.query(`
+    INSERT INTO maintenance_ticket_events(ticket_id,event_type,old_status,new_status,note,actor_email,metadata)
+    VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)
+  `, [ticketId,eventType,oldStatus,newStatus,note,actorEmail,JSON.stringify(metadata || null)]);
+}
+
+async function createMaintenanceTicketRecord(req, values) {
+  const actor = req.user || getSession(req)?.user || null;
+  const title = maintenanceText(values.title, 'title', {required:true, max:240});
+  const description = maintenanceText(values.description, 'description', {max:4000});
+  const source = maintenanceChoice(values.source || 'manual', MAINTENANCE_TICKET_SOURCES, 'source');
+  const category = maintenanceChoice(values.category || 'corrective', MAINTENANCE_TICKET_CATEGORIES, 'category');
+  const priority = maintenanceChoice(values.priority || 'medium', MAINTENANCE_TICKET_PRIORITIES, 'priority');
+  const status = maintenanceChoice(values.status || 'open', MAINTENANCE_TICKET_STATUSES, 'status');
+  const assignee = maintenanceText(values.assignee, 'assignee', {max:200});
+  const reportedBy = maintenanceText(values.reported_by || actor?.email || 'admin', 'reported_by', {max:200});
+  const dueAt = maintenanceDate(values.due_at, 'due_at');
+  const machine = await maintenanceMachineContext(values.machine_id);
+  if (values.machine_id && !machine) {
+    const error = new Error('Machine not found'); error.statusCode = 404; throw error;
+  }
+
+  const ticketNo = makeMaintenanceTicketNo();
+  const inserted = await one(`
+    INSERT INTO maintenance_tickets(
+      ticket_no,customer_id,site_id,machine_id,alarm_id,source,title,description,
+      category,priority,status,assignee,reported_by,due_at,created_by,started_at,
+      resolved_at,closed_at,resolution_note
+    ) VALUES(
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+      CASE WHEN $11='in_progress' THEN now() ELSE NULL END,
+      CASE WHEN $11='resolved' THEN now() ELSE NULL END,
+      CASE WHEN $11='closed' THEN now() ELSE NULL END,$16
+    )
+    RETURNING id::text
+  `, [
+    ticketNo,machine?.customer_id || values.customer_id || null,machine?.site_id || values.site_id || null,
+    machine?.id || values.machine_id || null,values.alarm_id || null,source,title,description,
+    category,priority,status,assignee,reportedBy,dueAt,actor?.email || 'admin',
+    maintenanceText(values.resolution_note, 'resolution_note', {max:4000})
+  ]);
+
+  await addMaintenanceTicketEvent(pool, {
+    ticketId:inserted.id,
+    eventType:'created',
+    oldStatus:null,
+    newStatus:status,
+    note:description,
+    actorEmail:actor?.email || 'admin',
+    metadata:{source, machine_id:machine?.id || null, alarm_id:values.alarm_id || null, priority, category}
+  });
+  return maintenanceTicketRow(inserted.id);
+}
+
+function maintenanceTicketQueryString(req) {
+  const params = [];
+  const where = [];
+  const add = (sql, value) => { params.push(value); where.push(sql.replace('?', `$${params.length}`)); };
+  const status = String(req.query.status || 'active').trim().toLowerCase();
+  if (status === 'active') where.push(`t.status IN ('open','in_progress','waiting')`);
+  else if (status && status !== 'all') add('t.status=?', maintenanceChoice(status, MAINTENANCE_TICKET_STATUSES, 'status'));
+  const priority = String(req.query.priority || 'all').trim().toLowerCase();
+  if (priority && priority !== 'all') add('t.priority=?', maintenanceChoice(priority, MAINTENANCE_TICKET_PRIORITIES, 'priority'));
+  const category = String(req.query.category || 'all').trim().toLowerCase();
+  if (category && category !== 'all') add('t.category=?', maintenanceChoice(category, MAINTENANCE_TICKET_CATEGORIES, 'category'));
+  const q = String(req.query.q || '').trim();
+  if (q) {
+    params.push(`%${q}%`);
+    where.push(`(t.ticket_no ILIKE $${params.length} OR t.title ILIKE $${params.length} OR t.description ILIKE $${params.length} OR t.assignee ILIKE $${params.length} OR m.code ILIKE $${params.length} OR m.name ILIKE $${params.length})`);
+  }
+  return {params, whereSql:where.length ? `WHERE ${where.join(' AND ')}` : ''};
+}
+
+app.get('/api/admin/maintenance-tickets', adminRequired, permissionRequired('VIEW_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const {params, whereSql} = maintenanceTicketQueryString(req);
+    const limit = maintenanceTicketLimit(req.query.limit, 100, 500);
+    params.push(limit);
+
+    const summary = await one(`
+      SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE status IN ('open','in_progress','waiting'))::int AS active,
+        count(*) FILTER (WHERE status='in_progress')::int AS in_progress,
+        count(*) FILTER (WHERE due_at < now() AND status IN ('open','in_progress','waiting'))::int AS overdue,
+        count(*) FILTER (WHERE priority='critical' AND status IN ('open','in_progress','waiting'))::int AS critical_active,
+        count(*) FILTER (WHERE COALESCE(NULLIF(assignee,''),'')='' AND status IN ('open','in_progress','waiting'))::int AS unassigned,
+        count(*) FILTER (WHERE status IN ('resolved','closed') AND updated_at >= now() - interval '30 days')::int AS completed_30d
+      FROM maintenance_tickets
+    `);
+
+    const rows = await pool.query(`
+      SELECT
+        t.id::text, t.ticket_no, t.source, t.title, t.description, t.category,
+        t.priority, t.status, t.assignee, t.reported_by, t.due_at, t.started_at,
+        t.resolved_at, t.closed_at, t.resolution_note, t.created_by,
+        t.created_at, t.updated_at, t.alarm_id::text,
+        m.id::text AS machine_id, m.code AS machine_code, m.name AS machine_name,
+        s.code AS site_code, c.code AS customer_code,
+        a.alarm_type, a.severity AS alarm_severity, a.status AS alarm_status,
+        (t.due_at IS NOT NULL AND t.due_at < now() AND t.status IN ('open','in_progress','waiting')) AS overdue
+      FROM maintenance_tickets t
+      LEFT JOIN machines m ON m.id=t.machine_id
+      LEFT JOIN sites s ON s.id=t.site_id
+      LEFT JOIN customers c ON c.id=t.customer_id
+      LEFT JOIN alarms a ON a.id=t.alarm_id
+      ${whereSql}
+      ORDER BY
+        CASE t.priority WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC,
+        t.due_at ASC NULLS LAST,
+        t.created_at DESC
+      LIMIT $${params.length}
+    `, params);
+
+    const machines = await pool.query(`
+      SELECT m.id::text, m.code, m.name, s.code AS site_code, c.code AS customer_code
+      FROM machines m
+      LEFT JOIN sites s ON s.id=m.site_id
+      LEFT JOIN customers c ON c.id=s.customer_id
+      WHERE COALESCE(m.status,'active') <> 'archived'
+      ORDER BY c.code, s.code, m.name
+      LIMIT 500
+    `);
+
+    res.json({
+      status:'ok', version:APP_VERSION, generated_at:new Date().toISOString(),
+      can_manage:!authConfig().enabled || hasPermission(req.user, 'MANAGE_MAINTENANCE'),
+      summary:summary || {}, tickets:rows.rows, machines:machines.rows,
+      options:{statuses:MAINTENANCE_TICKET_STATUSES, priorities:MAINTENANCE_TICKET_PRIORITIES, categories:MAINTENANCE_TICKET_CATEGORIES}
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/maintenance-tickets', adminRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const ticket = await createMaintenanceTicketRecord(req, {...req.body, source:'manual'});
+    await writeAuditLog(req, {action:'create_maintenance_ticket',entity_type:'maintenance_ticket',entity_id:ticket.id,old_values:null,new_values:ticket,metadata:{ticket_no:ticket.ticket_no,source:'manual'}});
+    res.status(201).json({status:'ok', version:APP_VERSION, ticket});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/maintenance-tickets/from-alarm/:alarmId', adminRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const alarmId = String(req.params.alarmId || '').trim();
+    const alarm = await one(`
+      SELECT a.id::text, a.alarm_type, a.severity, a.status, a.message, a.machine_id::text,
+             m.code AS machine_code, m.name AS machine_name
+      FROM alarms a LEFT JOIN machines m ON m.id=a.machine_id
+      WHERE a.id=$1 LIMIT 1
+    `, [alarmId]);
+    if (!alarm) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Alarm not found'});
+
+    const existing = await one(`
+      SELECT id::text, ticket_no, status FROM maintenance_tickets
+      WHERE alarm_id=$1 AND status NOT IN ('closed','cancelled')
+      ORDER BY created_at DESC LIMIT 1
+    `, [alarmId]);
+    if (existing) return res.status(409).json({status:'duplicate', version:APP_VERSION, message:`Bu alarm için aktif ticket zaten var: ${existing.ticket_no}`, ticket:existing});
+
+    const dueHours = alarm.severity === 'critical' ? 4 : (alarm.severity === 'warning' ? 24 : 72);
+    const ticket = await createMaintenanceTicketRecord(req, {
+      source:'alarm', alarm_id:alarmId, machine_id:alarm.machine_id,
+      title:req.body?.title || `${alarm.alarm_type || 'Alarm'} — ${alarm.machine_name || alarm.machine_code || 'Makine'}`,
+      description:req.body?.description || alarm.message || `Alarm ${alarm.alarm_type || ''} için bakım talebi`,
+      category:req.body?.category || 'corrective',
+      priority:req.body?.priority || (alarm.severity === 'critical' ? 'critical' : (alarm.severity === 'warning' ? 'high' : 'medium')),
+      assignee:req.body?.assignee || null,
+      due_at:req.body?.due_at || new Date(Date.now() + dueHours * 3600000).toISOString()
+    });
+    await writeAuditLog(req, {action:'create_maintenance_ticket_from_alarm',entity_type:'maintenance_ticket',entity_id:ticket.id,old_values:null,new_values:ticket,metadata:{ticket_no:ticket.ticket_no,alarm_id:alarmId}});
+    res.status(201).json({status:'ok', version:APP_VERSION, ticket});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.patch('/api/admin/maintenance-tickets/:id', adminRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  let client;
+  try {
+    await ensureMaintenanceFoundation();
+    const id = String(req.params.id || '').trim();
+    const oldTicket = await maintenanceTicketRow(id);
+    if (!oldTicket) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Maintenance ticket not found'});
+
+    const title = req.body?.title !== undefined ? maintenanceText(req.body.title, 'title', {required:true, max:240}) : oldTicket.title;
+    const description = req.body?.description !== undefined ? maintenanceText(req.body.description, 'description', {max:4000}) : oldTicket.description;
+    const category = req.body?.category !== undefined ? maintenanceChoice(req.body.category, MAINTENANCE_TICKET_CATEGORIES, 'category') : oldTicket.category;
+    const priority = req.body?.priority !== undefined ? maintenanceChoice(req.body.priority, MAINTENANCE_TICKET_PRIORITIES, 'priority') : oldTicket.priority;
+    const status = req.body?.status !== undefined ? maintenanceChoice(req.body.status, MAINTENANCE_TICKET_STATUSES, 'status') : oldTicket.status;
+    const assignee = req.body?.assignee !== undefined ? maintenanceText(req.body.assignee, 'assignee', {max:200}) : oldTicket.assignee;
+    const dueAt = req.body?.due_at !== undefined ? maintenanceDate(req.body.due_at, 'due_at') : oldTicket.due_at;
+    const resolutionNote = req.body?.resolution_note !== undefined ? maintenanceText(req.body.resolution_note, 'resolution_note', {max:4000}) : oldTicket.resolution_note;
+    const actor = req.user || getSession(req)?.user || null;
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const result = await client.query(`
+      UPDATE maintenance_tickets
+      SET title=$2, description=$3, category=$4, priority=$5, status=$6,
+          assignee=$7, due_at=$8, resolution_note=$9,
+          started_at=CASE WHEN $6='in_progress' THEN COALESCE(started_at,now()) WHEN $6='open' THEN NULL ELSE started_at END,
+          resolved_at=CASE WHEN $6='resolved' THEN COALESCE(resolved_at,now()) WHEN $6 IN ('open','in_progress','waiting') THEN NULL ELSE resolved_at END,
+          closed_at=CASE WHEN $6='closed' THEN COALESCE(closed_at,now()) WHEN $6 <> 'closed' THEN NULL ELSE closed_at END,
+          updated_at=now()
+      WHERE id=$1 RETURNING id::text
+    `, [id,title,description,category,priority,status,assignee,dueAt,resolutionNote]);
+    if (!result.rows[0]) { await client.query('ROLLBACK'); client.release(); client=null; return res.status(404).json({status:'not_found', message:'Maintenance ticket not found'}); }
+    const changedStatus = status !== oldTicket.status;
+    await addMaintenanceTicketEvent(client, {
+      ticketId:id, eventType:changedStatus ? 'status_changed' : 'updated',
+      oldStatus:oldTicket.status, newStatus:status,
+      note:req.body?.note || (changedStatus ? resolutionNote : null), actorEmail:actor?.email || 'admin',
+      metadata:{priority_before:oldTicket.priority,priority_after:priority,assignee_before:oldTicket.assignee,assignee_after:assignee,due_at:dueAt}
+    });
+    await client.query('COMMIT'); client.release(); client=null;
+    const ticket = await maintenanceTicketRow(id);
+    await writeAuditLog(req, {action:changedStatus ? 'change_maintenance_ticket_status' : 'update_maintenance_ticket',entity_type:'maintenance_ticket',entity_id:id,old_values:oldTicket,new_values:ticket,metadata:{ticket_no:ticket.ticket_no}});
+    res.json({status:'ok', version:APP_VERSION, ticket});
+  } catch(e) {
+    if (client) { try { await client.query('ROLLBACK'); } catch(_) {} client.release(); }
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.post('/api/admin/maintenance-tickets/:id/notes', adminRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const id = String(req.params.id || '').trim();
+    const ticket = await maintenanceTicketRow(id);
+    if (!ticket) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Maintenance ticket not found'});
+    const note = maintenanceText(req.body?.note, 'note', {required:true, max:4000});
+    const actor = req.user || getSession(req)?.user || null;
+    await addMaintenanceTicketEvent(pool, {ticketId:id,eventType:'note',oldStatus:ticket.status,newStatus:ticket.status,note,actorEmail:actor?.email || 'admin',metadata:null});
+    await pool.query(`UPDATE maintenance_tickets SET updated_at=now() WHERE id=$1`, [id]);
+    await writeAuditLog(req, {action:'add_maintenance_ticket_note',entity_type:'maintenance_ticket',entity_id:id,old_values:null,new_values:{note},metadata:{ticket_no:ticket.ticket_no}});
+    res.status(201).json({status:'ok', version:APP_VERSION});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+app.get('/api/admin/maintenance-tickets/:id/history', adminRequired, permissionRequired('VIEW_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const id = String(req.params.id || '').trim();
+    const ticket = await maintenanceTicketRow(id);
+    if (!ticket) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Maintenance ticket not found'});
+    const events = await pool.query(`
+      SELECT id::text,event_type,old_status,new_status,note,actor_email,metadata,created_at
+      FROM maintenance_ticket_events WHERE ticket_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200
+    `, [id]);
+    res.json({status:'ok', version:APP_VERSION, ticket, events:events.rows});
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
   }
 });
 
@@ -9496,6 +9908,7 @@ async function start() {
   await ensureLiveMonitoringFoundation();
   await ensureAlarmEscalationFoundation();
   await ensureNotificationSettingsFoundation();
+  await ensureMaintenanceFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });

@@ -282,6 +282,28 @@
     .alarm-report-mini-v520 { padding:11px; border:1px solid var(--fb-border); border-radius:14px; background:#fff; }
     .alarm-report-mini-v520 span { display:block; color:var(--fb-muted); font-size:11px; text-transform:uppercase; font-weight:800; }
     .alarm-report-mini-v520 strong { display:block; margin-top:5px; color:var(--fb-primary); font-size:20px; }
+    #maintenanceTicketsSection { min-width:0; overflow:hidden; }
+    .maintenance-flow-v521 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0; padding:14px; border:1px dashed var(--fb-border); border-radius:16px; background:#f8fafc; }
+    .maintenance-flow-v521 span { padding:7px 10px; border-radius:999px; background:#fff; border:1px solid var(--fb-border); font-size:12px; font-weight:700; }
+    .maintenance-flow-v521 b { color:var(--fb-muted); }
+    .maintenance-create-v521 { margin:16px 0; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:linear-gradient(180deg,#fff,#f8fbff); }
+    .maintenance-create-v521 h3 { margin:0 0 12px; }
+    .maintenance-wide-v521 { grid-column:1 / -1; }
+    .maintenance-badge-v521 { display:inline-flex; align-items:center; padding:5px 9px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+    .maintenance-badge-v521.open, .maintenance-badge-v521.medium { background:#e8f1fb; color:#123f67; }
+    .maintenance-badge-v521.in_progress { background:#fff4d9; color:#8a5a00; }
+    .maintenance-badge-v521.waiting, .maintenance-badge-v521.low { background:#eef3f8; color:#46586f; }
+    .maintenance-badge-v521.resolved { background:#e8f8f2; color:#116149; }
+    .maintenance-badge-v521.closed { background:#dcfce7; color:#166534; }
+    .maintenance-badge-v521.cancelled { background:#f1f5f9; color:#64748b; }
+    .maintenance-badge-v521.high { background:#ffedd5; color:#9a3412; }
+    .maintenance-badge-v521.critical, .maintenance-badge-v521.overdue { background:#ffe8ec; color:#9f1d2d; }
+    .maintenance-ticket-title-v521 { min-width:220px; }
+    .maintenance-ticket-title-v521 strong { display:block; margin-bottom:4px; }
+    .maintenance-ticket-title-v521 small { display:block; color:var(--fb-muted); line-height:1.35; }
+    .maintenance-history-v521 { margin-top:16px; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:#fff; }
+    .maintenance-history-v521 h3 { margin:0 0 10px; }
+    #maintenanceTicketDescription { min-height:92px; resize:vertical; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -331,7 +353,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.20.0 — günlük ve haftalık alarm rapor teslimatı aktif.</p>
+      <p id="adminVersionLabel">v5.21.0 — Maintenance & Service Ticket Center aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -351,6 +373,8 @@
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Escalation Delivery</span></button>
         </div>
       </div>
+
+      <button class="admin-nav-link-v58" data-admin-nav="maintenance"><span>🛠️ Maintenance & Tickets</span><span class="admin-nav-pill-v58">1</span></button>
 
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
@@ -373,7 +397,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      Menü sadece arayüz düzenidir; mevcut backend API ve iş kuralları korunur.
+      v5.21: Alarmdan veya manuel olarak bakım ticketı aç, ata ve tamamlanana kadar izle.
     </div>
   </aside>
 
@@ -402,7 +426,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.20.0: Günlük ve haftalık alarm raporları Telegram/Email ile gönderilebilir.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.21.0: Bakım talepleri, atama, termin ve alarm bağlantısı yönetilebilir.</p>
       </div>
     </div>
 
@@ -756,6 +780,55 @@
     </div>
   </section>
 
+  <section id="maintenanceTicketsSection" class="card wide admin-card" data-admin-view="maintenance">
+    <div class="section-title-row">
+      <div>
+        <h2>Maintenance & Service Ticket Center</h2>
+        <p class="muted">v5.21: Manuel veya alarm bağlantılı bakım talebi, atama, öncelik, termin, durum ve işlem geçmişi.</p>
+      </div>
+      <button id="refreshMaintenanceTicketsBtn" class="secondary-btn">Ticketları Yenile</button>
+    </div>
+
+    <div id="maintenanceTicketSummary">Bakım özeti yükleniyor...</div>
+
+    <div class="maintenance-flow-v521">
+      <span>Alarm / Manuel Talep</span><b>→</b><span>Ticket</span><b>→</b><span>Atama + Termin</span><b>→</b><span>In Progress</span><b>→</b><span>Resolved / Closed</span>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>Status<select id="maintenanceStatusFilter"><option value="active">active</option><option value="open">open</option><option value="in_progress">in_progress</option><option value="waiting">waiting</option><option value="resolved">resolved</option><option value="closed">closed</option><option value="cancelled">cancelled</option><option value="all">all</option></select></label>
+      <label>Priority<select id="maintenancePriorityFilter"><option value="all">all</option><option value="critical">critical</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select></label>
+      <label>Category<select id="maintenanceCategoryFilter"><option value="all">all</option><option value="preventive">preventive</option><option value="corrective">corrective</option><option value="inspection">inspection</option><option value="electrical">electrical</option><option value="mechanical">mechanical</option><option value="software">software</option><option value="safety">safety</option><option value="other">other</option></select></label>
+      <label>Arama<input id="maintenanceSearchFilter" type="text" placeholder="Ticket no, başlık, makine, atanan"></label>
+      <div class="admin-form-actions"><button id="applyMaintenanceFiltersBtn" class="primary-btn">Filtrele</button></div>
+    </div>
+
+    <div class="maintenance-create-v521">
+      <h3>Yeni Bakım Talebi</h3>
+      <div class="admin-form-grid">
+        <label>Başlık<input id="maintenanceTicketTitle" type="text" placeholder="Örn: Lazer egzoz fanı kontrolü"></label>
+        <label>Makine<select id="maintenanceTicketMachine"><option value="">Makine seç...</option></select></label>
+        <label>Kategori<select id="maintenanceTicketCategory"><option value="corrective">corrective</option><option value="preventive">preventive</option><option value="inspection">inspection</option><option value="electrical">electrical</option><option value="mechanical">mechanical</option><option value="software">software</option><option value="safety">safety</option><option value="other">other</option></select></label>
+        <label>Öncelik<select id="maintenanceTicketPriority"><option value="medium">medium</option><option value="high">high</option><option value="critical">critical</option><option value="low">low</option></select></label>
+        <label>Atanan<input id="maintenanceTicketAssignee" type="text" placeholder="Teknisyen / ekip / email"></label>
+        <label>Termin<input id="maintenanceTicketDueAt" type="datetime-local"></label>
+        <label class="maintenance-wide-v521">Açıklama<textarea id="maintenanceTicketDescription" placeholder="Arıza, bakım ihtiyacı ve yapılacak iş..."></textarea></label>
+        <div class="admin-form-actions"><button id="createMaintenanceTicketBtn" class="primary-btn">Ticket Oluştur</button></div>
+      </div>
+      <div id="maintenanceTicketResult" class="mini-status">Yeni bakım talebi bekleniyor.</div>
+    </div>
+
+    <div class="kpi-panel-v59">
+      <h3>Bakım Ticketları</h3>
+      <div id="maintenanceTicketsTable">Ticketlar yükleniyor...</div>
+    </div>
+
+    <div id="maintenanceTicketHistory" class="maintenance-history-v521">
+      <h3>Ticket Geçmişi</h3>
+      <span class="muted">Bir ticket satırındaki Geçmiş düğmesine bas.</span>
+    </div>
+  </section>
+
   <section class="card wide admin-card" data-admin-view="permissions">
     <h2>Permission Overview</h2>
     <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
@@ -1031,6 +1104,7 @@
           <option value="customer">customer</option>
           <option value="site">site</option>
           <option value="audit_log">audit_log</option>
+          <option value="maintenance_ticket">maintenance_ticket</option>
         </select>
       </label>
       <label>
@@ -1073,27 +1147,27 @@
   let subscriptionPlanCodes = ['trial','starter','professional','enterprise'];
 
   const ROLE_MATRIX = {
-    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    operator: ['SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD'],
-    viewer: ['VIEW_REPORTS','VIEW_DASHBOARD']
+    system_admin: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE','MANAGE_MAINTENANCE'],
+    owner: ['ADMIN_VIEW','MANAGE_USERS','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','MANAGE_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE','MANAGE_MAINTENANCE'],
+    admin: ['ADMIN_VIEW','MANAGE_CUSTOMERS','MANAGE_SITES','MANAGE_DEVICES','MANAGE_INVITES','VIEW_BILLING','AUDIT_VIEW','SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE','MANAGE_MAINTENANCE'],
+    operator: ['SEND_REPORTS','VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE','MANAGE_MAINTENANCE'],
+    viewer: ['VIEW_REPORTS','VIEW_DASHBOARD','VIEW_MAINTENANCE']
   };
 
   const ROLE_SUMMARY = {
     system_admin: 'Tüm sistem yetkileri',
     owner: 'Tüm tenant yönetimi',
     admin: 'Customer/site/invite/billing görüntüleme/audit yönetimi',
-    operator: 'Dashboard + rapor işlemleri',
+    operator: 'Dashboard + rapor + bakım ticket işlemleri',
     viewer: 'Sadece görüntüleme'
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.20.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.21.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Alarm Report Delivery aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Günlük/haftalık alarm raporları ve otomatik kanal teslimatı aktif.`;
+    if (brand) brand.textContent = `v${safeVersion} — Maintenance & Service Ticket Center aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Bakım ticketları, alarm bağlantısı, atama ve termin takibi aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1249,6 +1323,10 @@
     reports: {
       title:'Alarm Reports',
       desc:'Günlük ve haftalık alarm özetleri, Telegram/Email teslimatı ve rapor geçmişi.'
+    },
+    maintenance: {
+      title:'Maintenance & Service Tickets',
+      desc:'Bakım talepleri, alarm bağlantıları, atamalar, terminler ve ticket işlem geçmişi.'
     },
     tenants: {
       title:'Customers / Tenants',
@@ -1719,6 +1797,91 @@
     return `<span class="live-badge-v511 ${esc(cls)}">${esc(clean)}</span>`;
   }
 
+  function maintenanceTicketQueryString() {
+    const params = new URLSearchParams();
+    params.set('status', document.getElementById('maintenanceStatusFilter')?.value || 'active');
+    params.set('priority', document.getElementById('maintenancePriorityFilter')?.value || 'all');
+    params.set('category', document.getElementById('maintenanceCategoryFilter')?.value || 'all');
+    const q = document.getElementById('maintenanceSearchFilter')?.value.trim();
+    if (q) params.set('q', q);
+    params.set('limit', '150');
+    return params.toString();
+  }
+
+  function fmtDateTimeLocal(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  }
+
+  function maintenanceBadge(value, extra = '') {
+    const key = String(value || '-').toLowerCase();
+    return `<span class="maintenance-badge-v521 ${esc(key)} ${esc(extra)}">${esc(key.replaceAll('_',' '))}</span>`;
+  }
+
+  function renderMaintenanceTickets(data) {
+    const summaryTarget = document.getElementById('maintenanceTicketSummary');
+    const tableTarget = document.getElementById('maintenanceTicketsTable');
+    const machineSelect = document.getElementById('maintenanceTicketMachine');
+    const createBtn = document.getElementById('createMaintenanceTicketBtn');
+    if (!summaryTarget || !tableTarget) return;
+
+    const s = data.summary || {};
+    summaryTarget.innerHTML = `
+      <div class="kpi-grid-v59">
+        <div class="kpi-card-v59"><span>Aktif Ticket</span><strong>${esc(s.active || 0)}</strong><small>Açık, işlemde veya beklemede</small></div>
+        <div class="kpi-card-v59"><span>İşlemde</span><strong>${esc(s.in_progress || 0)}</strong><small>Teknisyen çalışması başladı</small></div>
+        <div class="kpi-card-v59"><span>Geciken</span><strong>${esc(s.overdue || 0)}</strong><small>Termin zamanı aşılmış aktif ticket</small></div>
+        <div class="kpi-card-v59"><span>Kritik Aktif</span><strong>${esc(s.critical_active || 0)}</strong><small>Öncelikli müdahale gerekli</small></div>
+        <div class="kpi-card-v59"><span>Atanmamış</span><strong>${esc(s.unassigned || 0)}</strong><small>Sorumlu bekleyen ticket</small></div>
+        <div class="kpi-card-v59"><span>30 Gün Tamamlanan</span><strong>${esc(s.completed_30d || 0)}</strong><small>Resolved veya Closed</small></div>
+      </div>
+      <p class="mini-status">Ticket yönetimi: <strong>${data.can_manage ? 'Açık' : 'Sadece görüntüleme'}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}</p>
+    `;
+
+    if (machineSelect && document.activeElement !== machineSelect) {
+      const current = machineSelect.value;
+      machineSelect.innerHTML = `<option value="">Makine seç...</option>${(data.machines || []).map(m => `<option value="${esc(m.id)}">${esc(`${m.customer_code || '-'}/${m.site_code || '-'} · ${m.name || m.code} (${m.code})`)}</option>`).join('')}`;
+      if ([...machineSelect.options].some(o => o.value === current)) machineSelect.value = current;
+    }
+    if (createBtn) createBtn.disabled = !data.can_manage;
+
+    const statuses = data.options?.statuses || ['open','in_progress','waiting','resolved','closed','cancelled'];
+    const priorities = data.options?.priorities || ['low','medium','high','critical'];
+    tableTarget.innerHTML = table([
+      {label:'Ticket', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="show-maintenance-history" data-id="${esc(r.id)}">${esc(r.ticket_no)}</button>`},
+      {label:'Başlık', html:true, value:r=>`<div class="maintenance-ticket-title-v521"><strong>${esc(r.title || '-')}</strong><small>${esc(r.description || '')}</small></div>`},
+      {label:'Makine / Kaynak', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'}) · ${r.source || 'manual'}${r.alarm_id ? ` · Alarm #${r.alarm_id}` : ''}`},
+      {label:'Kategori', value:r=>r.category || '-'},
+      {label:'Öncelik', html:true, value:r=>data.can_manage ? selectHtml('maintenance-ticket-priority', r.priority, priorities) : maintenanceBadge(r.priority)},
+      {label:'Durum', html:true, value:r=>data.can_manage ? selectHtml('maintenance-ticket-status', r.status, statuses) : maintenanceBadge(r.status)},
+      {label:'Atanan', html:true, value:r=>data.can_manage ? `<input class="maintenance-ticket-assignee" value="${esc(r.assignee || '')}" placeholder="Atanmamış">` : esc(r.assignee || 'Atanmamış')},
+      {label:'Termin', html:true, value:r=>data.can_manage ? `<input class="maintenance-ticket-due" type="datetime-local" value="${esc(fmtDateTimeLocal(r.due_at))}"><div>${r.overdue ? maintenanceBadge('overdue') : ''}</div>` : `${esc(fmtDate(r.due_at))}${r.overdue ? '<br>'+maintenanceBadge('overdue') : ''}`},
+      {label:'Güncellendi', value:r=>fmtDate(r.updated_at)},
+      {label:'Aksiyon', html:true, value:r=>data.can_manage ? `<button class="secondary-btn mini-btn" data-action="save-maintenance-ticket" data-id="${esc(r.id)}" data-status="${esc(r.status)}">Kaydet</button> <button class="secondary-btn mini-btn" data-action="add-maintenance-note" data-id="${esc(r.id)}">Not</button> <button class="secondary-btn mini-btn" data-action="show-maintenance-history" data-id="${esc(r.id)}">Geçmiş</button>` : `<button class="secondary-btn mini-btn" data-action="show-maintenance-history" data-id="${esc(r.id)}">Geçmiş</button>`}
+    ], data.tickets || []);
+  }
+
+  function renderMaintenanceTicketHistory(data) {
+    const target = document.getElementById('maintenanceTicketHistory');
+    if (!target) return;
+    const ticket = data.ticket || {};
+    target.innerHTML = `
+      <h3>${esc(ticket.ticket_no || 'Ticket')} — ${esc(ticket.title || '-')}</h3>
+      <p class="mini-status">${maintenanceBadge(ticket.status)} ${maintenanceBadge(ticket.priority)} · Makine: <strong>${esc(ticket.machine_name || ticket.machine_code || '-')}</strong> · Atanan: <strong>${esc(ticket.assignee || 'Atanmamış')}</strong> · Termin: <strong>${esc(fmtDate(ticket.due_at))}</strong></p>
+      ${table([
+        {label:'Tarih', value:r=>fmtDate(r.created_at)},
+        {label:'Olay', value:r=>r.event_type || '-'},
+        {label:'Durum', value:r=>`${r.old_status || '-'} → ${r.new_status || '-'}`},
+        {label:'Actor', value:r=>r.actor_email || '-'},
+        {label:'Not', value:r=>r.note || '-'},
+        {label:'Detay', value:r=>compactJson(r.metadata)}
+      ], data.events || [])}
+    `;
+  }
+
   function renderAlarmCenter(data) {
     const summaryTarget = document.getElementById('alarmCenterSummary');
     const tableTarget = document.getElementById('alarmCenterTable');
@@ -1749,6 +1912,7 @@
       {label:'Aksiyon', html:true, value:r=>`
         <button class="secondary-btn mini-btn" data-action="ack-alarm" data-id="${esc(r.id)}">Acknowledge</button>
         <button class="secondary-btn mini-btn" data-action="clear-alarm" data-id="${esc(r.id)}">Clear</button>
+        ${can('MANAGE_MAINTENANCE') ? `<button class="secondary-btn mini-btn" data-action="create-ticket-from-alarm" data-id="${esc(r.id)}">Ticket Aç</button>` : ''}
       `}
     ], alarms);
   }
@@ -2472,6 +2636,7 @@
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
       ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus'],
+      ...(can('VIEW_MAINTENANCE') ? [['maintenance-tickets', `/api/admin/maintenance-tickets?${maintenanceTicketQueryString()}`, renderMaintenanceTickets, 'maintenanceTicketsTable']] : []),
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -2809,6 +2974,65 @@
     });
   }
 
+  async function createMaintenanceTicket() {
+    const dueValue = document.getElementById('maintenanceTicketDueAt').value;
+    const body = {
+      title:document.getElementById('maintenanceTicketTitle').value.trim(),
+      machine_id:document.getElementById('maintenanceTicketMachine').value || null,
+      category:document.getElementById('maintenanceTicketCategory').value,
+      priority:document.getElementById('maintenanceTicketPriority').value,
+      assignee:document.getElementById('maintenanceTicketAssignee').value.trim(),
+      due_at:dueValue ? new Date(dueValue).toISOString() : null,
+      description:document.getElementById('maintenanceTicketDescription').value.trim()
+    };
+    const data = await apiJson('/api/admin/maintenance-tickets', {method:'POST',body:JSON.stringify(body)});
+    document.getElementById('maintenanceTicketTitle').value = '';
+    document.getElementById('maintenanceTicketDescription').value = '';
+    document.getElementById('maintenanceTicketAssignee').value = '';
+    document.getElementById('maintenanceTicketDueAt').value = '';
+    return data;
+  }
+
+  async function saveMaintenanceTicket(button) {
+    const tr = button.closest('tr');
+    const selectedStatus = tr.querySelector('.maintenance-ticket-status').value;
+    const oldStatus = button.dataset.status;
+    let resolution_note = null;
+    if (selectedStatus !== oldStatus && ['resolved','closed'].includes(selectedStatus)) {
+      resolution_note = prompt('Çözüm / kapatma notu:', '') || '';
+    }
+    const dueValue = tr.querySelector('.maintenance-ticket-due').value;
+    const body = {
+      priority:tr.querySelector('.maintenance-ticket-priority').value,
+      status:selectedStatus,
+      assignee:tr.querySelector('.maintenance-ticket-assignee').value.trim(),
+      due_at:dueValue ? new Date(dueValue).toISOString() : null,
+      note:selectedStatus !== oldStatus ? `Durum ${oldStatus} → ${selectedStatus}` : null
+    };
+    if (resolution_note !== null) body.resolution_note = resolution_note;
+    return apiJson(`/api/admin/maintenance-tickets/${encodeURIComponent(button.dataset.id)}`, {
+      method:'PATCH',
+      body:JSON.stringify(body)
+    });
+  }
+
+  async function addMaintenanceTicketNote(button) {
+    const note = prompt('Ticket notu:', '') || '';
+    if (!note.trim()) return null;
+    return apiJson(`/api/admin/maintenance-tickets/${encodeURIComponent(button.dataset.id)}/notes`, {method:'POST',body:JSON.stringify({note})});
+  }
+
+  async function createMaintenanceTicketFromAlarm(button) {
+    return apiJson(`/api/admin/maintenance-tickets/from-alarm/${encodeURIComponent(button.dataset.id)}`, {method:'POST',body:JSON.stringify({})});
+  }
+
+  async function showMaintenanceTicketHistory(button) {
+    const data = await getJson(`/api/admin/maintenance-tickets/${encodeURIComponent(button.dataset.id)}/history`);
+    renderMaintenanceTicketHistory(data);
+    setAdminView('maintenance');
+    document.getElementById('maintenanceTicketHistory')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
   async function createDeviceProvisionToken() {
     const customer_code = document.getElementById('deviceCustomerCode').value.trim();
     const site_code = document.getElementById('deviceSiteCode').value.trim();
@@ -2989,6 +3213,36 @@
         await loadAdmin();
         status.textContent = 'Escalation olayı tekrar kuyruğa alındı.';
       }
+
+
+      if (action === 'create-ticket-from-alarm') {
+        const result = await createMaintenanceTicketFromAlarm(button);
+        await loadAdmin();
+        setAdminView('maintenance');
+        status.textContent = `Bakım ticketı oluşturuldu: ${result.ticket?.ticket_no || '-'}`;
+      }
+
+      if (action === 'save-maintenance-ticket') {
+        const result = await saveMaintenanceTicket(button);
+        await loadAdmin();
+        status.textContent = `Bakım ticketı güncellendi: ${result.ticket?.ticket_no || '-'}`;
+      }
+
+      if (action === 'add-maintenance-note') {
+        const result = await addMaintenanceTicketNote(button);
+        if (result) {
+          await showMaintenanceTicketHistory(button);
+          await loadAdmin();
+          status.textContent = 'Ticket notu eklendi.';
+        } else {
+          status.textContent = 'Not ekleme iptal edildi.';
+        }
+      }
+
+      if (action === 'show-maintenance-history') {
+        await showMaintenanceTicketHistory(button);
+        status.textContent = 'Ticket geçmişi yüklendi.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -3030,6 +3284,9 @@
     const saveAlarmReportsBtn = document.getElementById('saveAlarmReportsBtn');
     const runDailyAlarmReportBtn = document.getElementById('runDailyAlarmReportBtn');
     const runWeeklyAlarmReportBtn = document.getElementById('runWeeklyAlarmReportBtn');
+    const refreshMaintenanceTicketsBtn = document.getElementById('refreshMaintenanceTicketsBtn');
+    const applyMaintenanceFiltersBtn = document.getElementById('applyMaintenanceFiltersBtn');
+    const createMaintenanceTicketBtn = document.getElementById('createMaintenanceTicketBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -3045,6 +3302,21 @@
     if (refreshNotificationSettingsBtn) refreshNotificationSettingsBtn.addEventListener('click', loadAdmin);
     if (refreshAutomationSchedulerBtn) refreshAutomationSchedulerBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmReportsBtn) refreshAlarmReportsBtn.addEventListener('click', loadAdmin);
+    if (refreshMaintenanceTicketsBtn) refreshMaintenanceTicketsBtn.addEventListener('click', loadAdmin);
+    if (applyMaintenanceFiltersBtn) applyMaintenanceFiltersBtn.addEventListener('click', loadAdmin);
+    if (createMaintenanceTicketBtn) createMaintenanceTicketBtn.addEventListener('click', async () => {
+      createMaintenanceTicketBtn.disabled = true;
+      document.getElementById('maintenanceTicketResult').textContent = 'Bakım ticketı oluşturuluyor...';
+      try {
+        const result = await createMaintenanceTicket();
+        await loadAdmin();
+        document.getElementById('maintenanceTicketResult').textContent = `Ticket oluşturuldu: ${result.ticket?.ticket_no || '-'}`;
+      } catch(e) {
+        document.getElementById('maintenanceTicketResult').textContent = e.message;
+      } finally {
+        createMaintenanceTicketBtn.disabled = false;
+      }
+    });
     if (saveAlarmReportsBtn) saveAlarmReportsBtn.addEventListener('click', async () => {
       saveAlarmReportsBtn.disabled = true;
       document.getElementById('alarmReportsResult').textContent = 'Alarm rapor ayarları kaydediliyor...';

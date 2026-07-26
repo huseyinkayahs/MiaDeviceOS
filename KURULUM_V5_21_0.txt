@@ -1,0 +1,34 @@
+FACTORYBOX ONE v5.21.0 KURULUM
+================================
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine çıkarın.
+3. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+4. Backend klasöründe çalıştırın:
+
+   npm.cmd start
+
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sol üstte v5.21.0 yazdığını kontrol edin.
+7. Maintenance & Tickets ekranını açın.
+8. Yeni Bakım Talebi alanından bir test ticketı oluşturun.
+9. Ticket durumunu in_progress yapıp Kaydet düğmesine basın.
+10. Not düğmesiyle bir işlem notu ekleyin.
+11. Geçmiş düğmesiyle event kaydını kontrol edin.
+
+ALARMDAN TICKET TESTİ
+=====================
+1. Alarm > Alarm Center ekranını açın.
+2. Aktif bir alarm satırında Ticket Aç düğmesine basın.
+3. Maintenance & Tickets ekranına geçildiğini kontrol edin.
+4. Ticket kaynağı alarm, makine ve alarm numarası dolu görünmelidir.
+5. Aynı alarmda tekrar Ticket Açılırsa aktif ticket tekrar engeli çalışmalıdır.
+
+BEKLENEN TEST
+=============
+- Manuel ticket oluşur.
+- Alarmdan ticket oluşur.
+- Priority, status, assignee ve termin kaydedilir.
+- In Progress / Resolved / Closed durumları çalışır.
+- Not ve Geçmiş kayıtları görünür.
+- Geciken ve kritik KPI sayaçları güncellenir.
