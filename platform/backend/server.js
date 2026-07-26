@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.21.0';
+const APP_VERSION = '5.22.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -3551,6 +3551,470 @@ app.get('/api/admin/maintenance-tickets/:id/history', adminRequired, permissionR
   } catch(e) {
     res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
   }
+});
+
+
+const MAINTENANCE_PLAN_SCHEDULE_TYPES = ['daily','weekly','monthly','runtime'];
+const MAINTENANCE_WORK_ORDER_STATUSES = ['scheduled','open','in_progress','waiting','completed','cancelled'];
+const MAINTENANCE_WORK_ORDER_SOURCES = ['automatic','manual'];
+let maintenanceSchedulerState = {
+  running:false,
+  last_run_at:null,
+  last_result:null,
+  next_run_at:null,
+  last_error:null
+};
+
+function maintenanceNumber(value, label, {min=0,max=1000000,fallback=null,integer=false}={}) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) {
+    const error = new Error(`${label} must be between ${min} and ${max}`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return integer ? Math.floor(n) : n;
+}
+
+function maintenanceJsonArray(value, label, maxItems=100) {
+  if (value === null || value === undefined || value === '') return [];
+  let parsed = value;
+  if (typeof value === 'string') {
+    const clean = value.trim();
+    if (!clean) return [];
+    try { parsed = JSON.parse(clean); }
+    catch { parsed = clean.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean); }
+  }
+  if (!Array.isArray(parsed)) {
+    const error = new Error(`${label} must be an array`); error.statusCode=400; throw error;
+  }
+  return parsed.slice(0,maxItems).map(item => {
+    if (typeof item === 'object' && item !== null) return item;
+    return String(item).trim();
+  }).filter(item => typeof item === 'object' || item);
+}
+
+function maintenanceChannels(value) {
+  const raw = Array.isArray(value) ? value.join(',') : String(value || 'dashboard');
+  const channels = raw.toLowerCase().split(/[,+]/).map(v=>v.trim()).filter(v=>['dashboard','telegram','email'].includes(v));
+  return [...new Set(channels.length ? channels : ['dashboard'])];
+}
+
+function makeMaintenancePlanNo() {
+  const stamp = new Date().toISOString().slice(0,10).replaceAll('-','');
+  return `MP-${stamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function makeMaintenanceWorkOrderNo() {
+  const stamp = new Date().toISOString().slice(0,10).replaceAll('-','');
+  return `WO-${stamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function calculateMaintenanceNextDue(scheduleType, intervalValue, fromValue=new Date()) {
+  if (scheduleType === 'runtime') return null;
+  const date = new Date(fromValue || Date.now());
+  if (Number.isNaN(date.getTime())) return null;
+  const interval = Math.max(1, Number(intervalValue || 1));
+  if (scheduleType === 'daily') date.setUTCDate(date.getUTCDate() + interval);
+  if (scheduleType === 'weekly') date.setUTCDate(date.getUTCDate() + interval * 7);
+  if (scheduleType === 'monthly') date.setUTCMonth(date.getUTCMonth() + interval);
+  return date.toISOString();
+}
+
+async function machineRuntimeHours(machineId) {
+  if (!machineId) return 0;
+  const row = await one(`
+    SELECT COALESCE(SUM(
+      CASE
+        WHEN state='RUNNING' AND ended_at IS NULL THEN GREATEST(0,EXTRACT(EPOCH FROM(now()-started_at)))
+        WHEN state='RUNNING' THEN GREATEST(0,COALESCE(duration_sec,EXTRACT(EPOCH FROM(ended_at-started_at))))
+        ELSE 0
+      END
+    ),0)::numeric / 3600 AS runtime_hours
+    FROM machine_state_events WHERE machine_id=$1
+  `,[String(machineId)]);
+  return Number(row?.runtime_hours || 0);
+}
+
+async function ensurePreventiveMaintenanceFoundation() {
+  await ensureMaintenanceFoundation();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_scheduler_settings (
+      id smallint PRIMARY KEY DEFAULT 1,
+      enabled boolean NOT NULL DEFAULT true,
+      interval_sec integer NOT NULL DEFAULT 60,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT maintenance_scheduler_singleton CHECK (id=1)
+    )
+  `);
+  await pool.query(`INSERT INTO maintenance_scheduler_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_plans (
+      id bigserial PRIMARY KEY,
+      plan_no text NOT NULL UNIQUE,
+      customer_id uuid,
+      site_id uuid,
+      machine_id uuid NOT NULL,
+      title text NOT NULL,
+      description text,
+      category text NOT NULL DEFAULT 'preventive',
+      priority text NOT NULL DEFAULT 'medium',
+      schedule_type text NOT NULL DEFAULT 'monthly',
+      interval_value integer NOT NULL DEFAULT 1,
+      runtime_interval_hours numeric(12,2),
+      checklist jsonb NOT NULL DEFAULT '[]'::jsonb,
+      assignee text,
+      estimated_minutes integer,
+      reminder_days integer NOT NULL DEFAULT 3,
+      notification_channels text NOT NULL DEFAULT 'dashboard',
+      enabled boolean NOT NULL DEFAULT true,
+      next_due_at timestamptz,
+      next_due_runtime_hours numeric(12,2),
+      last_completed_at timestamptz,
+      last_completed_runtime_hours numeric(12,2),
+      last_work_order_id bigint,
+      created_by text,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT maintenance_plan_category_check CHECK (category IN ('preventive','inspection','electrical','mechanical','software','safety','other')),
+      CONSTRAINT maintenance_plan_priority_check CHECK (priority IN ('low','medium','high','critical')),
+      CONSTRAINT maintenance_plan_schedule_check CHECK (schedule_type IN ('daily','weekly','monthly','runtime'))
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_work_orders (
+      id bigserial PRIMARY KEY,
+      work_order_no text NOT NULL UNIQUE,
+      plan_id bigint REFERENCES maintenance_plans(id) ON DELETE SET NULL,
+      customer_id uuid,
+      site_id uuid,
+      machine_id uuid NOT NULL,
+      source text NOT NULL DEFAULT 'automatic',
+      title text NOT NULL,
+      description text,
+      priority text NOT NULL DEFAULT 'medium',
+      status text NOT NULL DEFAULT 'scheduled',
+      assignee text,
+      due_at timestamptz,
+      started_at timestamptz,
+      completed_at timestamptz,
+      duration_minutes integer,
+      checklist jsonb NOT NULL DEFAULT '[]'::jsonb,
+      checklist_results jsonb NOT NULL DEFAULT '[]'::jsonb,
+      parts_used jsonb NOT NULL DEFAULT '[]'::jsonb,
+      completion_note text,
+      created_by text,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT maintenance_wo_priority_check CHECK (priority IN ('low','medium','high','critical')),
+      CONSTRAINT maintenance_wo_status_check CHECK (status IN ('scheduled','open','in_progress','waiting','completed','cancelled')),
+      CONSTRAINT maintenance_wo_source_check CHECK (source IN ('automatic','manual'))
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_work_order_events (
+      id bigserial PRIMARY KEY,
+      work_order_id bigint NOT NULL REFERENCES maintenance_work_orders(id) ON DELETE CASCADE,
+      event_type text NOT NULL,
+      old_status text,
+      new_status text,
+      note text,
+      actor_email text,
+      metadata jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_scheduler_runs (
+      id bigserial PRIMARY KEY,
+      trigger text NOT NULL,
+      status text NOT NULL,
+      reviewed_count integer NOT NULL DEFAULT 0,
+      due_count integer NOT NULL DEFAULT 0,
+      created_count integer NOT NULL DEFAULT 0,
+      skipped_count integer NOT NULL DEFAULT 0,
+      error_count integer NOT NULL DEFAULT 0,
+      details jsonb,
+      started_at timestamptz NOT NULL DEFAULT now(),
+      finished_at timestamptz
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_notification_deliveries (
+      id bigserial PRIMARY KEY,
+      work_order_id bigint REFERENCES maintenance_work_orders(id) ON DELETE CASCADE,
+      channel text NOT NULL,
+      status text NOT NULL,
+      target text,
+      provider_message_id text,
+      error_message text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_plans_due ON maintenance_plans(enabled,next_due_at)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_plans_machine ON maintenance_plans(machine_id,created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_wo_status_due ON maintenance_work_orders(status,due_at)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_wo_plan ON maintenance_work_orders(plan_id,created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_wo_events ON maintenance_work_order_events(work_order_id,created_at DESC)`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_maintenance_wo_active_plan ON maintenance_work_orders(plan_id) WHERE plan_id IS NOT NULL AND status NOT IN ('completed','cancelled')`);
+}
+
+async function maintenanceSchedulerSettings() {
+  await ensurePreventiveMaintenanceFoundation();
+  return await one(`SELECT enabled,interval_sec,updated_by,updated_at FROM maintenance_scheduler_settings WHERE id=1`) || {enabled:true,interval_sec:60};
+}
+
+async function maintenancePlanRow(id) {
+  const row = await one(`
+    SELECT p.id::text,p.plan_no,p.title,p.description,p.category,p.priority,p.schedule_type,p.interval_value,
+      p.runtime_interval_hours,p.checklist,p.assignee,p.estimated_minutes,p.reminder_days,p.notification_channels,
+      p.enabled,p.next_due_at,p.next_due_runtime_hours,p.last_completed_at,p.last_completed_runtime_hours,
+      p.last_work_order_id::text,p.created_by,p.updated_by,p.created_at,p.updated_at,
+      m.id::text AS machine_id,m.code AS machine_code,m.name AS machine_name,s.code AS site_code,c.code AS customer_code,
+      wo.id::text AS active_work_order_id,wo.work_order_no AS active_work_order_no,wo.status AS active_work_order_status,wo.due_at AS active_work_order_due
+    FROM maintenance_plans p
+    JOIN machines m ON m.id=p.machine_id
+    LEFT JOIN sites s ON s.id=p.site_id
+    LEFT JOIN customers c ON c.id=p.customer_id
+    LEFT JOIN LATERAL (
+      SELECT id,work_order_no,status,due_at FROM maintenance_work_orders w
+      WHERE w.plan_id=p.id AND w.status NOT IN ('completed','cancelled') ORDER BY w.created_at DESC LIMIT 1
+    ) wo ON true
+    WHERE p.id=$1 LIMIT 1
+  `,[String(id)]);
+  if (row) {
+    row.current_runtime_hours = await machineRuntimeHours(row.machine_id);
+    row.runtime_due = row.schedule_type === 'runtime' && row.next_due_runtime_hours !== null
+      ? row.current_runtime_hours >= Number(row.next_due_runtime_hours) : false;
+    row.calendar_overdue = row.next_due_at ? new Date(row.next_due_at).getTime() < Date.now() : false;
+  }
+  return row;
+}
+
+async function maintenanceWorkOrderRow(id) {
+  return one(`
+    SELECT w.id::text,w.work_order_no,w.plan_id::text,w.source,w.title,w.description,w.priority,w.status,w.assignee,w.due_at,
+      w.started_at,w.completed_at,w.duration_minutes,w.checklist,w.checklist_results,w.parts_used,w.completion_note,
+      w.created_by,w.updated_by,w.created_at,w.updated_at,
+      p.plan_no,p.schedule_type,p.interval_value,p.runtime_interval_hours,
+      m.id::text AS machine_id,m.code AS machine_code,m.name AS machine_name,s.code AS site_code,c.code AS customer_code,
+      (w.due_at IS NOT NULL AND w.due_at < now() AND w.status NOT IN ('completed','cancelled')) AS overdue
+    FROM maintenance_work_orders w
+    LEFT JOIN maintenance_plans p ON p.id=w.plan_id
+    JOIN machines m ON m.id=w.machine_id
+    LEFT JOIN sites s ON s.id=w.site_id
+    LEFT JOIN customers c ON c.id=w.customer_id
+    WHERE w.id=$1 LIMIT 1
+  `,[String(id)]);
+}
+
+async function addMaintenanceWorkOrderEvent(clientOrPool,{workOrderId,eventType,oldStatus=null,newStatus=null,note=null,actorEmail='system',metadata=null}) {
+  await clientOrPool.query(`INSERT INTO maintenance_work_order_events(work_order_id,event_type,old_status,new_status,note,actor_email,metadata) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)`,
+    [workOrderId,eventType,oldStatus,newStatus,note,actorEmail,JSON.stringify(metadata || null)]);
+}
+
+async function sendMaintenanceWorkOrderNotification(workOrder, channelsValue) {
+  const channels = maintenanceChannels(channelsValue).filter(c=>c!=='dashboard');
+  const results=[];
+  const text = [
+    '🛠️ FactoryBox Planlı Bakım İş Emri',
+    `İş Emri: ${workOrder.work_order_no}`,
+    `Plan: ${workOrder.plan_no || '-'}`,
+    `Makine: ${workOrder.machine_name || workOrder.machine_code || '-'}`,
+    `Başlık: ${workOrder.title}`,
+    `Öncelik: ${workOrder.priority}`,
+    `Termin: ${workOrder.due_at ? new Date(workOrder.due_at).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'}) : '-'}`,
+    `Atanan: ${workOrder.assignee || 'Atanmamış'}`
+  ].join('\n');
+  for (const channel of channels) {
+    try {
+      if (channel === 'telegram') {
+        const cfg=telegramEscalationConfig();
+        if (!cfg.enabled || !cfg.token || !cfg.defaultChatId) throw new Error('Telegram channel is not configured');
+        const response=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:cfg.defaultChatId,text})});
+        const payload=await response.json().catch(()=>({}));
+        if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram HTTP ${response.status}`);
+        const messageId=String(payload.result?.message_id || '');
+        await pool.query(`INSERT INTO maintenance_notification_deliveries(work_order_id,channel,status,target,provider_message_id) VALUES($1,'telegram','delivered',$2,$3)`,[workOrder.id,cfg.defaultChatId,messageId||null]);
+        results.push({channel,status:'delivered',message_id:messageId||null});
+      }
+      if (channel === 'email') {
+        const cfg=emailConfig();
+        if (!cfg.enabled || !cfg.configured || !cfg.defaultTo) throw new Error('Email channel is not configured');
+        const result=await sendReportEmail({to:cfg.defaultTo,subject:`FactoryBox Bakım İş Emri ${workOrder.work_order_no}`,text,html:`<pre style="font-family:Arial,sans-serif;white-space:pre-wrap">${text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</pre>`});
+        if (!result.sent) throw new Error(result.reason || 'Email not sent');
+        await pool.query(`INSERT INTO maintenance_notification_deliveries(work_order_id,channel,status,target,provider_message_id) VALUES($1,'email','delivered',$2,$3)`,[workOrder.id,cfg.defaultTo,result.message_id||null]);
+        results.push({channel,status:'delivered',message_id:result.message_id||null});
+      }
+    } catch(error) {
+      await pool.query(`INSERT INTO maintenance_notification_deliveries(work_order_id,channel,status,error_message) VALUES($1,$2,'failed',$3)`,[workOrder.id,channel,String(error.message||error).slice(0,1000)]);
+      results.push({channel,status:'failed',error:String(error.message||error)});
+    }
+  }
+  return results;
+}
+
+async function createMaintenanceWorkOrderFromPlan(plan,{source='automatic',actorEmail='system',force=false}={}) {
+  const existing=await one(`SELECT id::text,work_order_no,status FROM maintenance_work_orders WHERE plan_id=$1 AND status NOT IN ('completed','cancelled') ORDER BY created_at DESC LIMIT 1`,[plan.id]);
+  if (existing && !force) return {created:false,reason:'active_work_order_exists',work_order:existing};
+  const machine=await maintenanceMachineContext(plan.machine_id);
+  if (!machine) throw new Error('Maintenance plan machine not found');
+  const inserted=await one(`
+    INSERT INTO maintenance_work_orders(work_order_no,plan_id,customer_id,site_id,machine_id,source,title,description,priority,status,assignee,due_at,checklist,created_by,updated_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'scheduled',$10,$11,$12::jsonb,$13,$13) RETURNING id::text
+  `,[makeMaintenanceWorkOrderNo(),plan.id,machine.customer_id,machine.site_id,machine.id,source,plan.title,plan.description,plan.priority,plan.assignee,plan.next_due_at,JSON.stringify(plan.checklist||[]),actorEmail]);
+  await addMaintenanceWorkOrderEvent(pool,{workOrderId:inserted.id,eventType:'created',newStatus:'scheduled',actorEmail,metadata:{plan_id:plan.id,plan_no:plan.plan_no,source}});
+  const workOrder=await maintenanceWorkOrderRow(inserted.id);
+  const delivery=await sendMaintenanceWorkOrderNotification(workOrder,plan.notification_channels);
+  return {created:true,work_order:workOrder,delivery};
+}
+
+async function createMaintenancePlan(values,actorEmail='admin') {
+  const machine=await maintenanceMachineContext(values.machine_id);
+  if (!machine) { const e=new Error('Machine not found');e.statusCode=404;throw e; }
+  const scheduleType=maintenanceChoice(values.schedule_type||'monthly',MAINTENANCE_PLAN_SCHEDULE_TYPES,'schedule_type');
+  const intervalValue=maintenanceNumber(values.interval_value,'interval_value',{min:1,max:3650,fallback:1,integer:true});
+  const runtimeInterval=scheduleType==='runtime' ? maintenanceNumber(values.runtime_interval_hours,'runtime_interval_hours',{min:0.1,max:100000,fallback:100}) : null;
+  const currentRuntime=await machineRuntimeHours(machine.id);
+  const nextDueAt=scheduleType==='runtime' ? null : (maintenanceDate(values.next_due_at,'next_due_at') || calculateMaintenanceNextDue(scheduleType,intervalValue,new Date()));
+  const nextRuntime=scheduleType==='runtime' ? (maintenanceNumber(values.next_due_runtime_hours,'next_due_runtime_hours',{min:0,max:10000000,fallback:null}) ?? currentRuntime+runtimeInterval) : null;
+  const id=await one(`
+    INSERT INTO maintenance_plans(plan_no,customer_id,site_id,machine_id,title,description,category,priority,schedule_type,interval_value,runtime_interval_hours,
+      checklist,assignee,estimated_minutes,reminder_days,notification_channels,enabled,next_due_at,next_due_runtime_hours,created_by,updated_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17,$18,$19,$20,$20) RETURNING id::text
+  `,[makeMaintenancePlanNo(),machine.customer_id,machine.site_id,machine.id,maintenanceText(values.title,'title',{required:true,max:240}),maintenanceText(values.description,'description',{max:4000}),
+    maintenanceChoice(values.category||'preventive',['preventive','inspection','electrical','mechanical','software','safety','other'],'category'),
+    maintenanceChoice(values.priority||'medium',MAINTENANCE_TICKET_PRIORITIES,'priority'),scheduleType,intervalValue,runtimeInterval,JSON.stringify(maintenanceJsonArray(values.checklist,'checklist')),
+    maintenanceText(values.assignee,'assignee',{max:200}),maintenanceNumber(values.estimated_minutes,'estimated_minutes',{min:1,max:100000,fallback:null,integer:true}),
+    maintenanceNumber(values.reminder_days,'reminder_days',{min:0,max:365,fallback:3,integer:true}),maintenanceChannels(values.notification_channels).join(','),
+    values.enabled===undefined ? true : Boolean(values.enabled),nextDueAt,nextRuntime,actorEmail]);
+  return maintenancePlanRow(id.id);
+}
+
+async function scanPreventiveMaintenance({trigger='manual'}={}) {
+  if (maintenanceSchedulerState.running) return {status:'skipped',reason:'already_running'};
+  maintenanceSchedulerState.running=true;
+  maintenanceSchedulerState.last_error=null;
+  const run=await one(`INSERT INTO maintenance_scheduler_runs(trigger,status) VALUES($1,'running') RETURNING id::text,started_at`,[trigger]);
+  const result={status:'completed',reviewed_count:0,due_count:0,created_count:0,skipped_count:0,error_count:0,items:[]};
+  try {
+    const plans=(await pool.query(`SELECT * FROM maintenance_plans WHERE enabled=true ORDER BY next_due_at ASC NULLS LAST,id ASC LIMIT 1000`)).rows;
+    result.reviewed_count=plans.length;
+    for (const plan of plans) {
+      try {
+        const active=await one(`SELECT id::text,work_order_no,status FROM maintenance_work_orders WHERE plan_id=$1 AND status NOT IN ('completed','cancelled') LIMIT 1`,[plan.id]);
+        if (active) {result.skipped_count++;result.items.push({plan_no:plan.plan_no,status:'skipped',reason:'active_work_order_exists',work_order_no:active.work_order_no});continue;}
+        let due=false;
+        let currentRuntime=null;
+        if (plan.schedule_type==='runtime') {
+          currentRuntime=await machineRuntimeHours(plan.machine_id);
+          due=plan.next_due_runtime_hours!==null && currentRuntime>=Number(plan.next_due_runtime_hours);
+        } else if (plan.next_due_at) {
+          const dueAt=new Date(plan.next_due_at).getTime();
+          due=dueAt <= Date.now() + Math.max(0,Number(plan.reminder_days||0))*86400000;
+        }
+        if (!due) {result.skipped_count++;continue;}
+        result.due_count++;
+        const created=await createMaintenanceWorkOrderFromPlan(plan,{source:'automatic',actorEmail:`scheduler:${trigger}`});
+        if (created.created) {result.created_count++;result.items.push({plan_no:plan.plan_no,status:'created',work_order_no:created.work_order.work_order_no});}
+        else {result.skipped_count++;result.items.push({plan_no:plan.plan_no,status:'skipped',reason:created.reason});}
+      } catch(error) {
+        result.error_count++;result.items.push({plan_no:plan.plan_no,status:'error',error:String(error.message||error)});
+      }
+    }
+    await pool.query(`UPDATE maintenance_scheduler_runs SET status='completed',reviewed_count=$2,due_count=$3,created_count=$4,skipped_count=$5,error_count=$6,details=$7::jsonb,finished_at=now() WHERE id=$1`,
+      [run.id,result.reviewed_count,result.due_count,result.created_count,result.skipped_count,result.error_count,JSON.stringify(result.items.slice(0,100))]);
+    maintenanceSchedulerState.last_run_at=new Date().toISOString();
+    maintenanceSchedulerState.last_result=result;
+    return result;
+  } catch(error) {
+    maintenanceSchedulerState.last_error=String(error.message||error);
+    await pool.query(`UPDATE maintenance_scheduler_runs SET status='failed',error_count=1,details=$2::jsonb,finished_at=now() WHERE id=$1`,[run.id,JSON.stringify({error:maintenanceSchedulerState.last_error})]);
+    throw error;
+  } finally { maintenanceSchedulerState.running=false; }
+}
+
+app.get('/api/admin/maintenance-plans',adminRequired,permissionRequired('VIEW_MAINTENANCE'),async(req,res)=>{
+  try {
+    await ensurePreventiveMaintenanceFoundation();
+    const settings=await maintenanceSchedulerSettings();
+    const rows=(await pool.query(`SELECT id::text FROM maintenance_plans ORDER BY enabled DESC,next_due_at ASC NULLS LAST,created_at DESC LIMIT 500`)).rows;
+    const plans=[]; for(const row of rows) plans.push(await maintenancePlanRow(row.id));
+    const machines=await pool.query(`SELECT m.id::text,m.code,m.name,s.code AS site_code,c.code AS customer_code FROM machines m LEFT JOIN sites s ON s.id=m.site_id LEFT JOIN customers c ON c.id=s.customer_id WHERE COALESCE(m.status,'active')<>'archived' ORDER BY c.code,s.code,m.name LIMIT 500`);
+    const summary=await one(`SELECT count(*)::int total,count(*) FILTER(WHERE enabled)::int enabled,count(*) FILTER(WHERE enabled AND next_due_at<now())::int overdue_calendar,count(*) FILTER(WHERE enabled AND next_due_at BETWEEN now() AND now()+interval '7 days')::int due_7d FROM maintenance_plans`);
+    const history=await pool.query(`SELECT id::text,trigger,status,reviewed_count,due_count,created_count,skipped_count,error_count,started_at,finished_at FROM maintenance_scheduler_runs ORDER BY started_at DESC LIMIT 20`);
+    res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),can_manage:!authConfig().enabled||hasPermission(req.user,'MANAGE_MAINTENANCE'),summary,settings:{...settings,state:maintenanceSchedulerState},plans,machines:machines.rows,history:history.rows,options:{schedule_types:MAINTENANCE_PLAN_SCHEDULE_TYPES,priorities:MAINTENANCE_TICKET_PRIORITIES,categories:['preventive','inspection','electrical','mechanical','software','safety','other']}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/maintenance-plans',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const actor=req.user||getSession(req)?.user||{};const plan=await createMaintenancePlan(req.body||{},actor.email||'admin');await writeAuditLog(req,{action:'create_maintenance_plan',entity_type:'maintenance_plan',entity_id:plan.id,old_values:null,new_values:plan,metadata:{plan_no:plan.plan_no}});res.status(201).json({status:'ok',version:APP_VERSION,plan});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/maintenance-plans/:id',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{
+    await ensurePreventiveMaintenanceFoundation();const id=String(req.params.id);const old=await maintenancePlanRow(id);if(!old)return res.status(404).json({status:'not_found',message:'Maintenance plan not found'});
+    const body=req.body||{};const scheduleType=body.schedule_type!==undefined?maintenanceChoice(body.schedule_type,MAINTENANCE_PLAN_SCHEDULE_TYPES,'schedule_type'):old.schedule_type;
+    const intervalValue=body.interval_value!==undefined?maintenanceNumber(body.interval_value,'interval_value',{min:1,max:3650,integer:true}):Number(old.interval_value);
+    const runtimeInterval=scheduleType==='runtime'?(body.runtime_interval_hours!==undefined?maintenanceNumber(body.runtime_interval_hours,'runtime_interval_hours',{min:.1,max:100000}):Number(old.runtime_interval_hours||100)):null;
+    let nextDueAt=scheduleType==='runtime'?null:(body.next_due_at!==undefined?maintenanceDate(body.next_due_at,'next_due_at'):old.next_due_at);
+    let nextRuntime=scheduleType==='runtime'?(body.next_due_runtime_hours!==undefined?maintenanceNumber(body.next_due_runtime_hours,'next_due_runtime_hours',{min:0,max:10000000}):Number(old.next_due_runtime_hours||old.current_runtime_hours+runtimeInterval)):null;
+    const actor=req.user||getSession(req)?.user||{};
+    await pool.query(`UPDATE maintenance_plans SET title=$2,description=$3,category=$4,priority=$5,schedule_type=$6,interval_value=$7,runtime_interval_hours=$8,checklist=$9::jsonb,assignee=$10,estimated_minutes=$11,reminder_days=$12,notification_channels=$13,enabled=$14,next_due_at=$15,next_due_runtime_hours=$16,updated_by=$17,updated_at=now() WHERE id=$1`,[id,
+      body.title!==undefined?maintenanceText(body.title,'title',{required:true,max:240}):old.title,body.description!==undefined?maintenanceText(body.description,'description',{max:4000}):old.description,
+      body.category!==undefined?maintenanceChoice(body.category,['preventive','inspection','electrical','mechanical','software','safety','other'],'category'):old.category,
+      body.priority!==undefined?maintenanceChoice(body.priority,MAINTENANCE_TICKET_PRIORITIES,'priority'):old.priority,scheduleType,intervalValue,runtimeInterval,
+      JSON.stringify(body.checklist!==undefined?maintenanceJsonArray(body.checklist,'checklist'):old.checklist||[]),body.assignee!==undefined?maintenanceText(body.assignee,'assignee',{max:200}):old.assignee,
+      body.estimated_minutes!==undefined?maintenanceNumber(body.estimated_minutes,'estimated_minutes',{min:1,max:100000,fallback:null,integer:true}):old.estimated_minutes,
+      body.reminder_days!==undefined?maintenanceNumber(body.reminder_days,'reminder_days',{min:0,max:365,integer:true}):old.reminder_days,
+      body.notification_channels!==undefined?maintenanceChannels(body.notification_channels).join(','):old.notification_channels,
+      body.enabled!==undefined?Boolean(body.enabled):old.enabled,nextDueAt,nextRuntime,actor.email||'admin']);
+    const plan=await maintenancePlanRow(id);await writeAuditLog(req,{action:'update_maintenance_plan',entity_type:'maintenance_plan',entity_id:id,old_values:old,new_values:plan,metadata:{plan_no:plan.plan_no}});restartMaintenanceScheduler();res.json({status:'ok',version:APP_VERSION,plan});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/maintenance-plans/:id/generate-work-order',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const plan=await maintenancePlanRow(req.params.id);if(!plan)return res.status(404).json({status:'not_found',message:'Maintenance plan not found'});const actor=req.user||getSession(req)?.user||{};const result=await createMaintenanceWorkOrderFromPlan(plan,{source:'manual',actorEmail:actor.email||'admin'});if(!result.created)return res.status(409).json({status:'duplicate',version:APP_VERSION,message:`Aktif iş emri zaten var: ${result.work_order?.work_order_no||'-'}`,result});await writeAuditLog(req,{action:'generate_maintenance_work_order',entity_type:'maintenance_work_order',entity_id:result.work_order.id,old_values:null,new_values:result.work_order,metadata:{plan_no:plan.plan_no}});res.status(201).json({status:'ok',version:APP_VERSION,...result});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/maintenance-scheduler',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const old=await maintenanceSchedulerSettings();const enabled=req.body?.enabled===undefined?old.enabled:Boolean(req.body.enabled);const interval=maintenanceNumber(req.body?.interval_sec,'interval_sec',{min:15,max:3600,fallback:Number(old.interval_sec||60),integer:true});const actor=req.user||getSession(req)?.user||{};await pool.query(`UPDATE maintenance_scheduler_settings SET enabled=$1,interval_sec=$2,updated_by=$3,updated_at=now() WHERE id=1`,[enabled,interval,actor.email||'admin']);const settings=await maintenanceSchedulerSettings();restartMaintenanceScheduler();await writeAuditLog(req,{action:'update_maintenance_scheduler',entity_type:'maintenance_scheduler',entity_id:'global',old_values:old,new_values:settings});res.json({status:'ok',version:APP_VERSION,settings});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/maintenance-scheduler/run-now',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const result=await scanPreventiveMaintenance({trigger:'manual'});await writeAuditLog(req,{action:'run_maintenance_scheduler',entity_type:'maintenance_scheduler',entity_id:'manual',new_values:result});res.json({status:'ok',version:APP_VERSION,result});}
+  catch(e){res.status(500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.get('/api/admin/maintenance-work-orders',adminRequired,permissionRequired('VIEW_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const status=String(req.query.status||'active').toLowerCase();const q=String(req.query.q||'').trim();const params=[];const where=[];if(status==='active')where.push(`w.status NOT IN ('completed','cancelled')`);else if(status!=='all'){params.push(maintenanceChoice(status,MAINTENANCE_WORK_ORDER_STATUSES,'status'));where.push(`w.status=$${params.length}`);}if(q){params.push(`%${q}%`);where.push(`(w.work_order_no ILIKE $${params.length} OR w.title ILIKE $${params.length} OR w.assignee ILIKE $${params.length} OR m.code ILIKE $${params.length} OR m.name ILIKE $${params.length} OR p.plan_no ILIKE $${params.length})`);}const ids=await pool.query(`SELECT w.id::text FROM maintenance_work_orders w JOIN machines m ON m.id=w.machine_id LEFT JOIN maintenance_plans p ON p.id=w.plan_id ${where.length?'WHERE '+where.join(' AND '):''} ORDER BY CASE w.priority WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC,w.due_at ASC NULLS LAST,w.created_at DESC LIMIT 500`,params);const orders=[];for(const row of ids.rows)orders.push(await maintenanceWorkOrderRow(row.id));const summary=await one(`SELECT count(*)::int total,count(*) FILTER(WHERE status NOT IN ('completed','cancelled'))::int active,count(*) FILTER(WHERE status='in_progress')::int in_progress,count(*) FILTER(WHERE due_at<now() AND status NOT IN ('completed','cancelled'))::int overdue,count(*) FILTER(WHERE status='completed' AND completed_at>=now()-interval '30 days')::int completed_30d FROM maintenance_work_orders`);res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),can_manage:!authConfig().enabled||hasPermission(req.user,'MANAGE_MAINTENANCE'),summary,work_orders:orders,options:{statuses:MAINTENANCE_WORK_ORDER_STATUSES,priorities:MAINTENANCE_TICKET_PRIORITIES}});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/maintenance-work-orders/:id',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  let client;
+  try{
+    await ensurePreventiveMaintenanceFoundation();const id=String(req.params.id);const old=await maintenanceWorkOrderRow(id);if(!old)return res.status(404).json({status:'not_found',message:'Work order not found'});const body=req.body||{};const status=body.status!==undefined?maintenanceChoice(body.status,MAINTENANCE_WORK_ORDER_STATUSES,'status'):old.status;const actor=req.user||getSession(req)?.user||{};const assignee=body.assignee!==undefined?maintenanceText(body.assignee,'assignee',{max:200}):old.assignee;const dueAt=body.due_at!==undefined?maintenanceDate(body.due_at,'due_at'):old.due_at;const duration=body.duration_minutes!==undefined?maintenanceNumber(body.duration_minutes,'duration_minutes',{min:0,max:100000,fallback:null,integer:true}):old.duration_minutes;const checklistResults=body.checklist_results!==undefined?maintenanceJsonArray(body.checklist_results,'checklist_results',200):old.checklist_results||[];const partsUsed=body.parts_used!==undefined?maintenanceJsonArray(body.parts_used,'parts_used',200):old.parts_used||[];const completionNote=body.completion_note!==undefined?maintenanceText(body.completion_note,'completion_note',{max:4000}):old.completion_note;
+    client=await pool.connect();await client.query('BEGIN');await client.query(`UPDATE maintenance_work_orders SET status=$2,priority=$3,assignee=$4,due_at=$5,duration_minutes=$6,checklist_results=$7::jsonb,parts_used=$8::jsonb,completion_note=$9,started_at=CASE WHEN $2='in_progress' THEN COALESCE(started_at,now()) ELSE started_at END,completed_at=CASE WHEN $2='completed' THEN COALESCE(completed_at,now()) WHEN $2<>'completed' THEN NULL ELSE completed_at END,updated_by=$10,updated_at=now() WHERE id=$1`,[id,status,body.priority!==undefined?maintenanceChoice(body.priority,MAINTENANCE_TICKET_PRIORITIES,'priority'):old.priority,assignee,dueAt,duration,JSON.stringify(checklistResults),JSON.stringify(partsUsed),completionNote,actor.email||'admin']);await addMaintenanceWorkOrderEvent(client,{workOrderId:id,eventType:status!==old.status?'status_changed':'updated',oldStatus:old.status,newStatus:status,note:body.note||completionNote,actorEmail:actor.email||'admin',metadata:{assignee,due_at:dueAt,duration_minutes:duration}});
+    if(status==='completed'&&old.status!=='completed'&&old.plan_id){const plan=await maintenancePlanRow(old.plan_id);const runtime=await machineRuntimeHours(old.machine_id);const nextDue=plan.schedule_type==='runtime'?null:calculateMaintenanceNextDue(plan.schedule_type,plan.interval_value,new Date());const nextRuntime=plan.schedule_type==='runtime'?runtime+Number(plan.runtime_interval_hours||0):null;await client.query(`UPDATE maintenance_plans SET last_completed_at=now(),last_completed_runtime_hours=$2,last_work_order_id=$3,next_due_at=$4,next_due_runtime_hours=$5,updated_at=now(),updated_by=$6 WHERE id=$1`,[old.plan_id,runtime,id,nextDue,nextRuntime,actor.email||'admin']);}
+    await client.query('COMMIT');client.release();client=null;const order=await maintenanceWorkOrderRow(id);await writeAuditLog(req,{action:status==='completed'?'complete_maintenance_work_order':'update_maintenance_work_order',entity_type:'maintenance_work_order',entity_id:id,old_values:old,new_values:order,metadata:{work_order_no:order.work_order_no}});res.json({status:'ok',version:APP_VERSION,work_order:order});
+  }catch(e){if(client){try{await client.query('ROLLBACK')}catch{}client.release()}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/maintenance-work-orders/:id/notes',adminRequired,permissionRequired('MANAGE_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const order=await maintenanceWorkOrderRow(req.params.id);if(!order)return res.status(404).json({status:'not_found',message:'Work order not found'});const note=maintenanceText(req.body?.note,'note',{required:true,max:4000});const actor=req.user||getSession(req)?.user||{};await addMaintenanceWorkOrderEvent(pool,{workOrderId:order.id,eventType:'note',oldStatus:order.status,newStatus:order.status,note,actorEmail:actor.email||'admin'});res.status(201).json({status:'ok',version:APP_VERSION});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.get('/api/admin/maintenance-work-orders/:id/history',adminRequired,permissionRequired('VIEW_MAINTENANCE'),async(req,res)=>{
+  try{await ensurePreventiveMaintenanceFoundation();const order=await maintenanceWorkOrderRow(req.params.id);if(!order)return res.status(404).json({status:'not_found',message:'Work order not found'});const events=await pool.query(`SELECT id::text,event_type,old_status,new_status,note,actor_email,metadata,created_at FROM maintenance_work_order_events WHERE work_order_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200`,[order.id]);const deliveries=await pool.query(`SELECT id::text,channel,status,target,provider_message_id,error_message,created_at FROM maintenance_notification_deliveries WHERE work_order_id=$1 ORDER BY created_at DESC`,[order.id]);res.json({status:'ok',version:APP_VERSION,work_order:order,events:events.rows,deliveries:deliveries.rows});}
+  catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
 });
 
 
@@ -9766,6 +10230,8 @@ let alarmAutomationSchedulerTimer = null;
 let alarmAutomationSchedulerKickoffTimer = null;
 let alarmReportSchedulerTimer = null;
 let alarmReportSchedulerKickoffTimer = null;
+let maintenanceSchedulerTimer = null;
+let maintenanceSchedulerKickoffTimer = null;
 
 function stopAlarmEscalationDeliveryWorker() {
   if (alarmEscalationDeliveryTimer) clearInterval(alarmEscalationDeliveryTimer);
@@ -9895,6 +10361,36 @@ function restartAlarmReportScheduler() {
   startAlarmReportScheduler();
 }
 
+
+function stopMaintenanceScheduler() {
+  if (maintenanceSchedulerTimer) clearInterval(maintenanceSchedulerTimer);
+  if (maintenanceSchedulerKickoffTimer) clearTimeout(maintenanceSchedulerKickoffTimer);
+  maintenanceSchedulerTimer=null;
+  maintenanceSchedulerKickoffTimer=null;
+  maintenanceSchedulerState.next_run_at=null;
+}
+
+async function startMaintenanceScheduler() {
+  stopMaintenanceScheduler();
+  let settings;
+  try { settings=await maintenanceSchedulerSettings(); }
+  catch(error) { console.error('Maintenance scheduler settings error:',error.message); return; }
+  if (!settings.enabled) { console.log('Preventive maintenance scheduler: disabled'); return; }
+  const intervalSec=Math.min(Math.max(Number(settings.interval_sec||60),15),3600);
+  const intervalMs=intervalSec*1000;
+  const run=async()=>{
+    maintenanceSchedulerState.next_run_at=new Date(Date.now()+intervalMs).toISOString();
+    try { const result=await scanPreventiveMaintenance({trigger:'auto-scheduler'}); if(result.created_count) console.log(`Preventive maintenance scheduler: ${result.created_count} work order created`); }
+    catch(error){maintenanceSchedulerState.last_error=error.message;console.error('Preventive maintenance scheduler error:',error.message);}
+  };
+  maintenanceSchedulerState.next_run_at=new Date(Date.now()+Math.min(intervalMs,5000)).toISOString();
+  maintenanceSchedulerTimer=setInterval(run,intervalMs);maintenanceSchedulerTimer.unref?.();
+  maintenanceSchedulerKickoffTimer=setTimeout(run,Math.min(intervalMs,5000));maintenanceSchedulerKickoffTimer.unref?.();
+  console.log(`Preventive maintenance scheduler: every ${intervalSec} sec`);
+}
+
+function restartMaintenanceScheduler() { startMaintenanceScheduler().catch(error=>console.error('Maintenance scheduler restart error:',error.message)); }
+
 async function start() {
   await pool.query('SELECT 1');
   await ensureEntities();
@@ -9909,6 +10405,7 @@ async function start() {
   await ensureAlarmEscalationFoundation();
   await ensureNotificationSettingsFoundation();
   await ensureMaintenanceFoundation();
+  await ensurePreventiveMaintenanceFoundation();
   const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   client.on('close',()=>{ mqttConnected=false; });
@@ -9918,6 +10415,7 @@ async function start() {
   startAlarmEscalationDeliveryWorker();
   startAlarmAutomationScheduler();
   startAlarmReportScheduler();
+  startMaintenanceScheduler();
 }
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
 

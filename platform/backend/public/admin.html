@@ -304,6 +304,22 @@
     .maintenance-history-v521 { margin-top:16px; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:#fff; }
     .maintenance-history-v521 h3 { margin:0 0 10px; }
     #maintenanceTicketDescription { min-height:92px; resize:vertical; }
+    #maintenancePlansSection, #maintenanceWorkOrdersSection { min-width:0; overflow:hidden; }
+    .maintenance-v522-toolbar { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:14px 0; padding:14px; border:1px solid var(--fb-border); border-radius:16px; background:#f8fafc; }
+    .maintenance-v522-panel { margin:16px 0; padding:16px; border:1px solid var(--fb-border); border-radius:18px; background:linear-gradient(180deg,#fff,#f8fbff); }
+    .maintenance-v522-panel h3 { margin:0 0 12px; }
+    .maintenance-v522-checklist { min-height:104px; resize:vertical; }
+    .maintenance-v522-flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 14px; margin:12px 0; border-radius:16px; background:#edf7f4; border:1px dashed #9acbbb; }
+    .maintenance-v522-flow span { background:#fff; border:1px solid #c8dfd8; padding:7px 10px; border-radius:999px; font-weight:800; font-size:12px; }
+    .maintenance-v522-schedule { min-width:180px; line-height:1.45; }
+    .maintenance-v522-schedule strong { display:block; }
+    .maintenance-v522-schedule small { color:var(--fb-muted); }
+    .maintenance-v522-progress { min-width:120px; }
+    .maintenance-v522-progress-bar { height:7px; border-radius:999px; background:#e2e8f0; overflow:hidden; margin-top:5px; }
+    .maintenance-v522-progress-bar i { display:block; height:100%; background:#0f766e; border-radius:999px; }
+    .maintenance-badge-v521.scheduled { background:#e0f2fe; color:#075985; }
+    .maintenance-badge-v521.completed { background:#dcfce7; color:#166534; }
+    .maintenance-badge-v521.runtime { background:#ede9fe; color:#5b21b6; }
     .kpi-row-v59 { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--fb-border); }
     .kpi-row-v59:last-child { border-bottom:0; }
     .kpi-alerts-v59 { display:flex; flex-wrap:wrap; gap:8px; }
@@ -353,7 +369,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v5.21.0 — Maintenance & Service Ticket Center aktif.</p>
+      <p id="adminVersionLabel">v5.22.0 — Preventive Maintenance Scheduler aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -374,7 +390,17 @@
         </div>
       </div>
 
-      <button class="admin-nav-link-v58" data-admin-nav="maintenance"><span>🛠️ Maintenance & Tickets</span><span class="admin-nav-pill-v58">1</span></button>
+      <div class="admin-nav-group-v517" data-nav-group="maintenance">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="maintenance" aria-expanded="false" aria-controls="maintenanceSubmenuV522">
+          <span>🛠️ Maintenance</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">3</span><span class="admin-nav-chevron-v517">⌄</span></span>
+        </button>
+        <div id="maintenanceSubmenuV522" class="admin-subnav-v517" data-admin-subnav="maintenance">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance"><span>Service Tickets</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance-plans"><span>Maintenance Plans</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="work-orders"><span>Work Orders</span></button>
+        </div>
+      </div>
 
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
@@ -397,7 +423,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v5.21: Alarmdan veya manuel olarak bakım ticketı aç, ata ve tamamlanana kadar izle.
+      v5.22: Planlı bakım, otomatik iş emri ve bakım geçmişini tek merkezden yönet.
     </div>
   </aside>
 
@@ -426,7 +452,7 @@
     <div class="section-title-row">
       <div>
         <h2>Admin Overview</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v5.21.0: Bakım talepleri, atama, termin ve alarm bağlantısı yönetilebilir.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v5.22.0: Bakım planları, otomatik iş emirleri ve servis ticketları birlikte yönetilebilir.</p>
       </div>
     </div>
 
@@ -829,6 +855,70 @@
     </div>
   </section>
 
+  <section id="maintenancePlansSection" class="card wide admin-card" data-admin-view="maintenance-plans">
+    <div class="section-title-row">
+      <div>
+        <h2>Preventive Maintenance Plans</h2>
+        <p class="muted">Takvim veya çalışma saati bazlı bakım planları oluştur; yaklaşan bakımlar için otomatik iş emri aç.</p>
+      </div>
+      <button id="refreshMaintenancePlansBtn" class="secondary-btn">Planları Yenile</button>
+    </div>
+
+    <div id="maintenancePlanSummary">Bakım planları yükleniyor...</div>
+    <div class="maintenance-v522-flow"><span>Bakım Planı</span><b>→</b><span>Yaklaşan / Geciken</span><b>→</b><span>Otomatik İş Emri</span><b>→</b><span>Teknisyen</span><b>→</b><span>Tamamla</span><b>→</b><span>Sonraki Bakım</span></div>
+
+    <div class="maintenance-v522-panel">
+      <h3>Bakım Scheduler</h3>
+      <div class="maintenance-v522-toolbar">
+        <label>Scheduler<select id="maintenanceSchedulerEnabled"><option value="true">ON</option><option value="false">OFF</option></select></label>
+        <label>Tarama Aralığı (sn)<input id="maintenanceSchedulerInterval" type="number" min="15" max="3600" value="60"></label>
+        <div class="admin-form-actions"><button id="saveMaintenanceSchedulerBtn" class="primary-btn">Scheduler Kaydet</button></div>
+        <div class="admin-form-actions"><button id="runMaintenanceSchedulerBtn" class="secondary-btn">Şimdi Tara</button></div>
+      </div>
+      <div id="maintenanceSchedulerResult" class="mini-status">Scheduler bilgisi bekleniyor.</div>
+    </div>
+
+    <div class="maintenance-v522-panel">
+      <h3>Yeni Bakım Planı</h3>
+      <div class="admin-form-grid">
+        <label>Plan Başlığı<input id="maintenancePlanTitle" type="text" placeholder="Örn: Lazer aylık egzoz bakımı"></label>
+        <label>Makine<select id="maintenancePlanMachine"><option value="">Makine seç...</option></select></label>
+        <label>Kategori<select id="maintenancePlanCategory"><option value="preventive">preventive</option><option value="inspection">inspection</option><option value="electrical">electrical</option><option value="mechanical">mechanical</option><option value="software">software</option><option value="safety">safety</option><option value="other">other</option></select></label>
+        <label>Öncelik<select id="maintenancePlanPriority"><option value="medium">medium</option><option value="high">high</option><option value="critical">critical</option><option value="low">low</option></select></label>
+        <label>Plan Tipi<select id="maintenancePlanScheduleType"><option value="monthly">monthly</option><option value="weekly">weekly</option><option value="daily">daily</option><option value="runtime">runtime hours</option></select></label>
+        <label>Periyot<input id="maintenancePlanInterval" type="number" min="1" value="1"></label>
+        <label>Çalışma Saati Periyodu<input id="maintenancePlanRuntimeHours" type="number" min="0.1" step="0.1" value="100"></label>
+        <label>İlk / Sonraki Tarih<input id="maintenancePlanNextDue" type="datetime-local"></label>
+        <label>Hatırlatma (gün)<input id="maintenancePlanReminderDays" type="number" min="0" max="365" value="3"></label>
+        <label>Tahmini Süre (dk)<input id="maintenancePlanEstimatedMinutes" type="number" min="1" value="60"></label>
+        <label>Atanan<input id="maintenancePlanAssignee" type="text" placeholder="Bakım Ekibi"></label>
+        <label>Bildirim<select id="maintenancePlanChannels"><option value="dashboard">dashboard</option><option value="telegram">telegram</option><option value="email">email</option><option value="dashboard,telegram">dashboard + telegram</option><option value="dashboard,email">dashboard + email</option><option value="dashboard,telegram,email">tümü</option></select></label>
+        <label class="maintenance-wide-v521">Kontrol Listesi<textarea id="maintenancePlanChecklist" class="maintenance-v522-checklist" placeholder="Her satıra bir kontrol maddesi"></textarea></label>
+        <label class="maintenance-wide-v521">Açıklama<textarea id="maintenancePlanDescription" placeholder="Bakım kapsamı, güvenlik adımları ve açıklamalar"></textarea></label>
+        <div class="admin-form-actions"><button id="createMaintenancePlanBtn" class="primary-btn">Bakım Planı Oluştur</button></div>
+      </div>
+      <div id="maintenancePlanResult" class="mini-status">Yeni plan bekleniyor.</div>
+    </div>
+
+    <div class="kpi-panel-v59"><h3>Bakım Planları</h3><div id="maintenancePlansTable">Planlar yükleniyor...</div></div>
+    <div class="kpi-panel-v59"><h3>Scheduler Geçmişi</h3><div id="maintenanceSchedulerHistory">Scheduler geçmişi yükleniyor...</div></div>
+  </section>
+
+  <section id="maintenanceWorkOrdersSection" class="card wide admin-card" data-admin-view="work-orders">
+    <div class="section-title-row">
+      <div><h2>Maintenance Work Orders</h2><p class="muted">Planlı bakım iş emirlerini ata, başlat, kontrol listesini tamamla ve kullanılan parçalarla kapat.</p></div>
+      <button id="refreshMaintenanceWorkOrdersBtn" class="secondary-btn">İş Emirlerini Yenile</button>
+    </div>
+    <div id="maintenanceWorkOrderSummary">İş emri özeti yükleniyor...</div>
+    <div class="admin-form-grid">
+      <label>Status<select id="maintenanceWorkOrderStatusFilter"><option value="active">active</option><option value="scheduled">scheduled</option><option value="open">open</option><option value="in_progress">in_progress</option><option value="waiting">waiting</option><option value="completed">completed</option><option value="cancelled">cancelled</option><option value="all">all</option></select></label>
+      <label>Arama<input id="maintenanceWorkOrderSearch" type="text" placeholder="İş emri, plan, makine, atanan"></label>
+      <div class="admin-form-actions"><button id="applyMaintenanceWorkOrderFiltersBtn" class="primary-btn">Filtrele</button></div>
+    </div>
+    <div class="kpi-panel-v59"><h3>İş Emirleri</h3><div id="maintenanceWorkOrdersTable">İş emirleri yükleniyor...</div></div>
+    <div id="maintenanceWorkOrderHistory" class="maintenance-history-v521"><h3>İş Emri Geçmişi</h3><span class="muted">Bir iş emrindeki Geçmiş düğmesine bas.</span></div>
+  </section>
+
   <section class="card wide admin-card" data-admin-view="permissions">
     <h2>Permission Overview</h2>
     <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
@@ -1158,16 +1248,16 @@
     system_admin: 'Tüm sistem yetkileri',
     owner: 'Tüm tenant yönetimi',
     admin: 'Customer/site/invite/billing görüntüleme/audit yönetimi',
-    operator: 'Dashboard + rapor + bakım ticket işlemleri',
+    operator: 'Dashboard + rapor + bakım planı, iş emri ve ticket işlemleri',
     viewer: 'Sadece görüntüleme'
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '5.21.0').replace(/^v/i, '');
+    const safeVersion = String(version || '5.22.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = `v${safeVersion} — Maintenance & Service Ticket Center aktif.`;
-    if (overview) overview.textContent = `v${safeVersion}: Bakım ticketları, alarm bağlantısı, atama ve termin takibi aktif.`;
+    if (brand) brand.textContent = `v${safeVersion} — Preventive Maintenance Scheduler aktif.`;
+    if (overview) overview.textContent = `v${safeVersion}: Bakım planları, otomatik iş emirleri ve tamamlanma geçmişi aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -1328,6 +1418,14 @@
       title:'Maintenance & Service Tickets',
       desc:'Bakım talepleri, alarm bağlantıları, atamalar, terminler ve ticket işlem geçmişi.'
     },
+    'maintenance-plans': {
+      title:'Preventive Maintenance Plans',
+      desc:'Takvim veya çalışma saati bazlı periyodik bakım planları ve otomatik iş emri schedulerı.'
+    },
+    'work-orders': {
+      title:'Maintenance Work Orders',
+      desc:'Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.'
+    },
     tenants: {
       title:'Customers / Tenants',
       desc:'Customer, tenant, site ve atölye yönetimi.'
@@ -1365,7 +1463,10 @@
     escalations:'alarm',
     notifications:'system',
     scheduler:'system',
-    reports:'system'
+    reports:'system',
+    maintenance:'maintenance',
+    'maintenance-plans':'maintenance',
+    'work-orders':'maintenance'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -1880,6 +1981,86 @@
         {label:'Detay', value:r=>compactJson(r.metadata)}
       ], data.events || [])}
     `;
+  }
+
+  function maintenanceWorkOrderQueryString() {
+    const params=new URLSearchParams();
+    params.set('status',document.getElementById('maintenanceWorkOrderStatusFilter')?.value||'active');
+    const q=document.getElementById('maintenanceWorkOrderSearch')?.value.trim();
+    if(q) params.set('q',q);
+    return params.toString();
+  }
+
+  function maintenanceScheduleText(plan) {
+    if (plan.schedule_type === 'runtime') return `<strong>${esc(plan.runtime_interval_hours || 0)} çalışma saati</strong><small>Mevcut: ${fmtMetric(plan.current_runtime_hours,' sa')} · Hedef: ${fmtMetric(plan.next_due_runtime_hours,' sa')}</small>`;
+    const labels={daily:'gün',weekly:'hafta',monthly:'ay'};
+    return `<strong>Her ${esc(plan.interval_value || 1)} ${esc(labels[plan.schedule_type] || plan.schedule_type)}</strong><small>Sonraki: ${esc(fmtDate(plan.next_due_at))}</small>`;
+  }
+
+  function renderMaintenancePlans(data) {
+    const summary=document.getElementById('maintenancePlanSummary');
+    const tableTarget=document.getElementById('maintenancePlansTable');
+    const machineSelect=document.getElementById('maintenancePlanMachine');
+    if(!summary||!tableTarget)return;
+    const x=data.summary||{};const settings=data.settings||{};const state=settings.state||{};
+    summary.innerHTML=`<div class="kpi-grid-v59">
+      <div class="kpi-card-v59"><span>Toplam Plan</span><strong>${esc(x.total||0)}</strong><small>Tüm planlı bakım kayıtları</small></div>
+      <div class="kpi-card-v59"><span>Aktif Plan</span><strong>${esc(x.enabled||0)}</strong><small>Scheduler tarafından izleniyor</small></div>
+      <div class="kpi-card-v59"><span>7 Gün İçinde</span><strong>${esc(x.due_7d||0)}</strong><small>Yaklaşan takvim bakımları</small></div>
+      <div class="kpi-card-v59"><span>Geciken</span><strong>${esc(x.overdue_calendar||0)}</strong><small>Tarihi geçmiş planlar</small></div>
+    </div>`;
+    const schedulerEnabled=document.getElementById('maintenanceSchedulerEnabled');if(schedulerEnabled)schedulerEnabled.value=String(Boolean(settings.enabled));
+    const schedulerInterval=document.getElementById('maintenanceSchedulerInterval');if(schedulerInterval)schedulerInterval.value=settings.interval_sec||60;
+    const schedulerResult=document.getElementById('maintenanceSchedulerResult');if(schedulerResult)schedulerResult.innerHTML=`Scheduler: <strong>${settings.enabled?'ON':'OFF'}</strong> · Son çalışma: <strong>${esc(fmtDate(state.last_run_at))}</strong> · Sonraki: <strong>${esc(fmtDate(state.next_run_at))}</strong> · Sonuç: ${esc(state.last_result?`${state.last_result.created_count||0} iş emri / ${state.last_result.error_count||0} hata`:'-')}`;
+    if(machineSelect&&document.activeElement!==machineSelect){const current=machineSelect.value;machineSelect.innerHTML=`<option value="">Makine seç...</option>${(data.machines||[]).map(m=>`<option value="${esc(m.id)}">${esc(`${m.customer_code||'-'}/${m.site_code||'-'} · ${m.name||m.code} (${m.code})`)}</option>`).join('')}`;if([...machineSelect.options].some(o=>o.value===current))machineSelect.value=current;}
+    tableTarget.innerHTML=table([
+      {label:'Plan',html:true,value:r=>`<div class="maintenance-ticket-title-v521"><strong>${esc(r.plan_no)}</strong><small>${esc(r.title)}</small></div>`},
+      {label:'Makine',value:r=>`${r.machine_name||'-'} (${r.machine_code||'-'})`},
+      {label:'Planlama',html:true,value:r=>`<div class="maintenance-v522-schedule">${maintenanceScheduleText(r)}</div>`},
+      {label:'Öncelik',html:true,value:r=>maintenanceBadge(r.priority)},
+      {label:'Checklist',value:r=>`${(r.checklist||[]).length} madde · ${r.estimated_minutes||'-'} dk`},
+      {label:'Atanan',html:true,value:r=>data.can_manage?`<input class="maintenance-plan-assignee" value="${esc(r.assignee||'')}" placeholder="Atanmamış">`:esc(r.assignee||'Atanmamış')},
+      {label:'Aktif',html:true,value:r=>data.can_manage?`<select class="maintenance-plan-enabled"><option value="true" ${r.enabled?'selected':''}>true</option><option value="false" ${!r.enabled?'selected':''}>false</option></select>`:esc(String(r.enabled))},
+      {label:'Sonraki Tarih',html:true,value:r=>data.can_manage&&r.schedule_type!=='runtime'?`<input class="maintenance-plan-next-due" type="datetime-local" value="${esc(fmtDateTimeLocal(r.next_due_at))}">${r.calendar_overdue?maintenanceBadge('overdue'):''}`:(r.schedule_type==='runtime'?(r.runtime_due?maintenanceBadge('overdue'):'runtime') : esc(fmtDate(r.next_due_at)))},
+      {label:'Aktif İş Emri',html:true,value:r=>r.active_work_order_no?`${maintenanceBadge(r.active_work_order_status)}<br><strong>${esc(r.active_work_order_no)}</strong>`:'-'},
+      {label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="save-maintenance-plan" data-id="${esc(r.id)}" data-schedule="${esc(r.schedule_type)}">Kaydet</button> <button class="primary-btn mini-btn" data-action="generate-maintenance-work-order" data-id="${esc(r.id)}">İş Emri Aç</button>`:'-'}
+    ],data.plans||[]);
+    const history=document.getElementById('maintenanceSchedulerHistory');if(history)history.innerHTML=table([
+      {label:'Başlangıç',value:r=>fmtDate(r.started_at)},{label:'Trigger',value:r=>r.trigger},{label:'Durum',value:r=>r.status},{label:'İncelenen',value:r=>r.reviewed_count},{label:'Due',value:r=>r.due_count},{label:'Oluşan',value:r=>r.created_count},{label:'Atlanan',value:r=>r.skipped_count},{label:'Hata',value:r=>r.error_count}
+    ],data.history||[]);
+  }
+
+  let maintenanceWorkOrderRows = new Map();
+
+  function workOrderChecklistProgress(order) {
+    const total=(order.checklist||[]).length;const done=(order.checklist_results||[]).filter(x=>typeof x==='object'?x.done!==false:Boolean(x)).length;const pct=total?Math.round(done/total*100):(order.status==='completed'?100:0);
+    return `<div class="maintenance-v522-progress"><strong>${done}/${total}</strong><div class="maintenance-v522-progress-bar"><i style="width:${pct}%"></i></div></div>`;
+  }
+
+  function renderMaintenanceWorkOrders(data) {
+    const summary=document.getElementById('maintenanceWorkOrderSummary');const target=document.getElementById('maintenanceWorkOrdersTable');if(!summary||!target)return;const x=data.summary||{};
+    summary.innerHTML=`<div class="kpi-grid-v59"><div class="kpi-card-v59"><span>Aktif</span><strong>${esc(x.active||0)}</strong><small>Devam eden iş emirleri</small></div><div class="kpi-card-v59"><span>İşlemde</span><strong>${esc(x.in_progress||0)}</strong><small>Teknisyen çalışıyor</small></div><div class="kpi-card-v59"><span>Geciken</span><strong>${esc(x.overdue||0)}</strong><small>Termin aşılmış</small></div><div class="kpi-card-v59"><span>30 Gün Tamamlanan</span><strong>${esc(x.completed_30d||0)}</strong><small>Kapanan planlı bakım</small></div></div>`;
+    const statuses=data.options?.statuses||['scheduled','open','in_progress','waiting','completed','cancelled'];const priorities=data.options?.priorities||['low','medium','high','critical'];
+    maintenanceWorkOrderRows=new Map((data.work_orders||[]).map(row=>[String(row.id),row]));
+    target.innerHTML=table([
+      {label:'İş Emri',html:true,value:r=>`<button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">${esc(r.work_order_no)}</button>`},
+      {label:'Plan / Başlık',html:true,value:r=>`<div class="maintenance-ticket-title-v521"><strong>${esc(r.title)}</strong><small>${esc(r.plan_no||'Manuel')} · ${esc(r.source)}</small></div>`},
+      {label:'Makine',value:r=>`${r.machine_name||'-'} (${r.machine_code||'-'})`},
+      {label:'Öncelik',html:true,value:r=>data.can_manage?selectHtml('maintenance-wo-priority',r.priority,priorities):maintenanceBadge(r.priority)},
+      {label:'Durum',html:true,value:r=>data.can_manage?selectHtml('maintenance-wo-status',r.status,statuses):maintenanceBadge(r.status)},
+      {label:'Atanan',html:true,value:r=>data.can_manage?`<input class="maintenance-wo-assignee" value="${esc(r.assignee||'')}" placeholder="Atanmamış">`:esc(r.assignee||'Atanmamış')},
+      {label:'Termin',html:true,value:r=>data.can_manage?`<input class="maintenance-wo-due" type="datetime-local" value="${esc(fmtDateTimeLocal(r.due_at))}">${r.overdue?maintenanceBadge('overdue'):''}`:`${esc(fmtDate(r.due_at))}`},
+      {label:'Checklist',html:true,value:r=>workOrderChecklistProgress(r)},
+      {label:'Süre',value:r=>r.duration_minutes?`${r.duration_minutes} dk`:'-'},
+      {label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="save-maintenance-work-order" data-id="${esc(r.id)}">Kaydet</button> ${r.status!=='completed'?`<button class="primary-btn mini-btn" data-action="complete-maintenance-work-order" data-id="${esc(r.id)}">Tamamla</button>`:''} <button class="secondary-btn mini-btn" data-action="add-maintenance-work-order-note" data-id="${esc(r.id)}">Not</button> <button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">Geçmiş</button>`:`<button class="secondary-btn mini-btn" data-action="show-maintenance-work-order-history" data-id="${esc(r.id)}">Geçmiş</button>`}
+    ],data.work_orders||[]);
+  }
+
+  function renderMaintenanceWorkOrderHistory(data) {
+    const target=document.getElementById('maintenanceWorkOrderHistory');if(!target)return;const o=data.work_order||{};
+    target.innerHTML=`<h3>${esc(o.work_order_no||'İş Emri')} — ${esc(o.title||'-')}</h3><p class="mini-status">${maintenanceBadge(o.status)} ${maintenanceBadge(o.priority)} · Makine: <strong>${esc(o.machine_name||o.machine_code||'-')}</strong> · Plan: <strong>${esc(o.plan_no||'-')}</strong> · Tamamlandı: <strong>${esc(fmtDate(o.completed_at))}</strong></p>
+      <h4>İşlem Geçmişi</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Olay',value:r=>r.event_type},{label:'Durum',value:r=>`${r.old_status||'-'} → ${r.new_status||'-'}`},{label:'Actor',value:r=>r.actor_email},{label:'Not',value:r=>r.note||'-'},{label:'Detay',value:r=>compactJson(r.metadata)}],data.events||[])}
+      <h4>Bildirim Teslimatları</h4>${table([{label:'Tarih',value:r=>fmtDate(r.created_at)},{label:'Kanal',value:r=>r.channel},{label:'Durum',value:r=>r.status},{label:'Provider ID',value:r=>r.provider_message_id||'-'},{label:'Hata',value:r=>r.error_message||'-'}],data.deliveries||[])}`;
   }
 
   function renderAlarmCenter(data) {
@@ -2636,7 +2817,11 @@
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
       ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus'],
-      ...(can('VIEW_MAINTENANCE') ? [['maintenance-tickets', `/api/admin/maintenance-tickets?${maintenanceTicketQueryString()}`, renderMaintenanceTickets, 'maintenanceTicketsTable']] : []),
+      ...(can('VIEW_MAINTENANCE') ? [
+        ['maintenance-tickets', `/api/admin/maintenance-tickets?${maintenanceTicketQueryString()}`, renderMaintenanceTickets, 'maintenanceTicketsTable'],
+        ['maintenance-plans', '/api/admin/maintenance-plans', renderMaintenancePlans, 'maintenancePlansTable'],
+        ['maintenance-work-orders', `/api/admin/maintenance-work-orders?${maintenanceWorkOrderQueryString()}`, renderMaintenanceWorkOrders, 'maintenanceWorkOrdersTable']
+      ] : []),
       ['overview', '/api/admin/overview', data => {
         applyBackendVersion(data.version);
         renderCounts(data.counts || {});
@@ -2974,6 +3159,42 @@
     });
   }
 
+  async function createMaintenancePlan() {
+    const type=document.getElementById('maintenancePlanScheduleType').value;
+    const due=document.getElementById('maintenancePlanNextDue').value;
+    const body={
+      title:document.getElementById('maintenancePlanTitle').value.trim(),machine_id:document.getElementById('maintenancePlanMachine').value,
+      category:document.getElementById('maintenancePlanCategory').value,priority:document.getElementById('maintenancePlanPriority').value,
+      schedule_type:type,interval_value:Number(document.getElementById('maintenancePlanInterval').value||1),runtime_interval_hours:Number(document.getElementById('maintenancePlanRuntimeHours').value||100),
+      next_due_at:due?new Date(due).toISOString():null,reminder_days:Number(document.getElementById('maintenancePlanReminderDays').value||0),estimated_minutes:Number(document.getElementById('maintenancePlanEstimatedMinutes').value||60),
+      assignee:document.getElementById('maintenancePlanAssignee').value.trim(),notification_channels:document.getElementById('maintenancePlanChannels').value,
+      checklist:document.getElementById('maintenancePlanChecklist').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),description:document.getElementById('maintenancePlanDescription').value.trim(),enabled:true
+    };
+    return apiJson('/api/admin/maintenance-plans',{method:'POST',body:JSON.stringify(body)});
+  }
+
+  async function saveMaintenancePlan(button) {
+    const tr=button.closest('tr');const due=tr.querySelector('.maintenance-plan-next-due')?.value;
+    return apiJson(`/api/admin/maintenance-plans/${encodeURIComponent(button.dataset.id)}`,{method:'PATCH',body:JSON.stringify({enabled:tr.querySelector('.maintenance-plan-enabled')?.value==='true',assignee:tr.querySelector('.maintenance-plan-assignee')?.value.trim()||null,...(due!==undefined?{next_due_at:due?new Date(due).toISOString():null}:{})})});
+  }
+
+  async function generateMaintenanceWorkOrder(button) { return apiJson(`/api/admin/maintenance-plans/${encodeURIComponent(button.dataset.id)}/generate-work-order`,{method:'POST',body:'{}'}); }
+
+  async function saveMaintenanceScheduler() {
+    return apiJson('/api/admin/maintenance-scheduler',{method:'PATCH',body:JSON.stringify({enabled:document.getElementById('maintenanceSchedulerEnabled').value==='true',interval_sec:Number(document.getElementById('maintenanceSchedulerInterval').value||60)})});
+  }
+
+  async function runMaintenanceSchedulerNow() { return apiJson('/api/admin/maintenance-scheduler/run-now',{method:'POST',body:'{}'}); }
+
+  async function saveMaintenanceWorkOrder(button,complete=false) {
+    const tr=button.closest('tr');const due=tr.querySelector('.maintenance-wo-due')?.value;const body={status:complete?'completed':tr.querySelector('.maintenance-wo-status').value,priority:tr.querySelector('.maintenance-wo-priority').value,assignee:tr.querySelector('.maintenance-wo-assignee').value.trim()||null,due_at:due?new Date(due).toISOString():null};
+    if(complete){const order=maintenanceWorkOrderRows.get(String(button.dataset.id));if((order?.checklist||[]).length&&!confirm(`Kontrol listesindeki ${(order.checklist||[]).length} maddenin tamamlandığını onaylıyor musun?`))return null;const note=prompt('Tamamlanma notu:','Bakım tamamlandı.');if(note===null)return null;const parts=prompt('Kullanılan parçalar (her satır veya virgülle):','')||'';const duration=prompt('Gerçek bakım süresi (dakika):','60');body.completion_note=note;body.note=note;body.parts_used=parts.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);body.duration_minutes=Number(duration||0);body.checklist_results=(order?.checklist||[]).map((item,index)=>({index,item:typeof item==='object'?(item.item||item.label||JSON.stringify(item)):String(item),done:true,completed_at:new Date().toISOString()}));}
+    return apiJson(`/api/admin/maintenance-work-orders/${encodeURIComponent(button.dataset.id)}`,{method:'PATCH',body:JSON.stringify(body)});
+  }
+
+  async function addMaintenanceWorkOrderNote(button) {const note=prompt('İş emri notu:');if(!note)return null;return apiJson(`/api/admin/maintenance-work-orders/${encodeURIComponent(button.dataset.id)}/notes`,{method:'POST',body:JSON.stringify({note})});}
+  async function showMaintenanceWorkOrderHistory(button) {const data=await getJson(`/api/admin/maintenance-work-orders/${encodeURIComponent(button.dataset.id)}/history`);renderMaintenanceWorkOrderHistory(data);setAdminView('work-orders');document.getElementById('maintenanceWorkOrderHistory')?.scrollIntoView({behavior:'smooth',block:'start'});}
+
   async function createMaintenanceTicket() {
     const dueValue = document.getElementById('maintenanceTicketDueAt').value;
     const body = {
@@ -3243,6 +3464,25 @@
         await showMaintenanceTicketHistory(button);
         status.textContent = 'Ticket geçmişi yüklendi.';
       }
+
+      if (action === 'save-maintenance-plan') {
+        const result=await saveMaintenancePlan(button);await loadAdmin();status.textContent=`Bakım planı güncellendi: ${result.plan?.plan_no||'-'}`;
+      }
+      if (action === 'generate-maintenance-work-order') {
+        const result=await generateMaintenanceWorkOrder(button);await loadAdmin();setAdminView('work-orders');status.textContent=`İş emri oluşturuldu: ${result.work_order?.work_order_no||'-'}`;
+      }
+      if (action === 'save-maintenance-work-order') {
+        const result=await saveMaintenanceWorkOrder(button,false);await loadAdmin();status.textContent=`İş emri güncellendi: ${result.work_order?.work_order_no||'-'}`;
+      }
+      if (action === 'complete-maintenance-work-order') {
+        const result=await saveMaintenanceWorkOrder(button,true);if(result){await loadAdmin();status.textContent=`İş emri tamamlandı: ${result.work_order?.work_order_no||'-'} · Sonraki bakım hesaplandı.`;}else status.textContent='Tamamlama iptal edildi.';
+      }
+      if (action === 'add-maintenance-work-order-note') {
+        const result=await addMaintenanceWorkOrderNote(button);if(result){await showMaintenanceWorkOrderHistory(button);await loadAdmin();status.textContent='İş emri notu eklendi.';}else status.textContent='Not ekleme iptal edildi.';
+      }
+      if (action === 'show-maintenance-work-order-history') {
+        await showMaintenanceWorkOrderHistory(button);status.textContent='İş emri geçmişi yüklendi.';
+      }
     } catch(err) {
       status.textContent = err.message;
     } finally {
@@ -3287,6 +3527,12 @@
     const refreshMaintenanceTicketsBtn = document.getElementById('refreshMaintenanceTicketsBtn');
     const applyMaintenanceFiltersBtn = document.getElementById('applyMaintenanceFiltersBtn');
     const createMaintenanceTicketBtn = document.getElementById('createMaintenanceTicketBtn');
+    const refreshMaintenancePlansBtn = document.getElementById('refreshMaintenancePlansBtn');
+    const createMaintenancePlanBtn = document.getElementById('createMaintenancePlanBtn');
+    const saveMaintenanceSchedulerBtn = document.getElementById('saveMaintenanceSchedulerBtn');
+    const runMaintenanceSchedulerBtn = document.getElementById('runMaintenanceSchedulerBtn');
+    const refreshMaintenanceWorkOrdersBtn = document.getElementById('refreshMaintenanceWorkOrdersBtn');
+    const applyMaintenanceWorkOrderFiltersBtn = document.getElementById('applyMaintenanceWorkOrderFiltersBtn');
 
     if (refreshBtn) refreshBtn.addEventListener('click', loadAdmin);
     if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', loadAdmin);
@@ -3304,6 +3550,16 @@
     if (refreshAlarmReportsBtn) refreshAlarmReportsBtn.addEventListener('click', loadAdmin);
     if (refreshMaintenanceTicketsBtn) refreshMaintenanceTicketsBtn.addEventListener('click', loadAdmin);
     if (applyMaintenanceFiltersBtn) applyMaintenanceFiltersBtn.addEventListener('click', loadAdmin);
+    if (refreshMaintenancePlansBtn) refreshMaintenancePlansBtn.addEventListener('click', loadAdmin);
+    if (refreshMaintenanceWorkOrdersBtn) refreshMaintenanceWorkOrdersBtn.addEventListener('click', loadAdmin);
+    if (applyMaintenanceWorkOrderFiltersBtn) applyMaintenanceWorkOrderFiltersBtn.addEventListener('click', loadAdmin);
+    if (createMaintenancePlanBtn) createMaintenancePlanBtn.addEventListener('click', async () => {
+      createMaintenancePlanBtn.disabled=true;document.getElementById('maintenancePlanResult').textContent='Bakım planı oluşturuluyor...';
+      try{const result=await createMaintenancePlan();await loadAdmin();document.getElementById('maintenancePlanResult').textContent=`Plan oluşturuldu: ${result.plan?.plan_no||'-'}`;}
+      catch(e){document.getElementById('maintenancePlanResult').textContent=e.message;}finally{createMaintenancePlanBtn.disabled=false;}
+    });
+    if (saveMaintenanceSchedulerBtn) saveMaintenanceSchedulerBtn.addEventListener('click', async()=>{saveMaintenanceSchedulerBtn.disabled=true;try{await saveMaintenanceScheduler();await loadAdmin();document.getElementById('maintenanceSchedulerResult').textContent='Scheduler ayarları kaydedildi.';}catch(e){document.getElementById('maintenanceSchedulerResult').textContent=e.message;}finally{saveMaintenanceSchedulerBtn.disabled=false;}});
+    if (runMaintenanceSchedulerBtn) runMaintenanceSchedulerBtn.addEventListener('click', async()=>{runMaintenanceSchedulerBtn.disabled=true;try{const result=await runMaintenanceSchedulerNow();await loadAdmin();document.getElementById('maintenanceSchedulerResult').textContent=`Tarama tamamlandı: ${result.result?.created_count||0} iş emri oluşturuldu, ${result.result?.error_count||0} hata.`;}catch(e){document.getElementById('maintenanceSchedulerResult').textContent=e.message;}finally{runMaintenanceSchedulerBtn.disabled=false;}});
     if (createMaintenanceTicketBtn) createMaintenanceTicketBtn.addEventListener('click', async () => {
       createMaintenanceTicketBtn.disabled = true;
       document.getElementById('maintenanceTicketResult').textContent = 'Bakım ticketı oluşturuluyor...';

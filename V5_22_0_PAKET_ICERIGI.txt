@@ -1,0 +1,27 @@
+FactoryBox One v5.22.0 — Paket İçeriği
+======================================
+
+Bu paket yalnızca değişen dosyaları içerir ve mevcut proje klasörünün üzerine kopyalanmalıdır.
+
+Değişen dosyalar:
+
+platform/backend/server.js
+- Preventive maintenance plan veritabanı ve API altyapısı
+- Günlük, haftalık, aylık ve çalışma saati planları
+- Otomatik maintenance scheduler
+- Tekrarlanan açık iş emri koruması
+- Work order durum, checklist, parça ve tamamlanma geçmişi
+- Telegram/Email bakım bildirimi
+- Sürüm: v5.22.0
+
+platform/backend/public/admin.html
+- Maintenance açılır ana menüsü
+- Service Tickets alt menüsü
+- Maintenance Plans alt menüsü
+- Work Orders alt menüsü
+- Scheduler ayarları ve Şimdi Tara işlemi
+- Plan oluşturma ve iş emri yönetimi ekranları
+
+Dokümantasyon:
+- docs/V5_22_PREVENTIVE_MAINTENANCE_SCHEDULER.md
+- KURULUM_V5_22_0.txt

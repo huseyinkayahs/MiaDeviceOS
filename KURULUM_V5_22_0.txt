@@ -1,0 +1,59 @@
+FactoryBox One v5.22.0 Kurulum
+================================
+
+1. Çalışan backend'i durdurun.
+
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine çıkarın.
+
+3. Dosya değiştirme sorusunda "Değiştir / Üzerine Yaz" seçeneğini kabul edin.
+
+4. Backend klasörüne geçin:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+
+5. Backend'i başlatın:
+
+   npm.cmd start
+
+6. Admin panelini açın ve Ctrl + F5 yapın.
+
+7. Sol üstte v5.22.0 yazdığını kontrol edin.
+
+8. Maintenance > Maintenance Plans ekranını açın.
+
+İlk Test
+========
+
+Bakım Scheduler:
+- Scheduler: ON
+- Tarama aralığı: 60 saniye
+
+Yeni plan örneği:
+- Başlık: Lazer haftalık filtre kontrolü
+- Makine: Lazer-01
+- Kategori: inspection
+- Öncelik: high
+- Plan tipi: weekly
+- Periyot: 1
+- İlk/Sonraki tarih: Şu andan birkaç dakika sonrası
+- Hatırlatma: 1 gün
+- Atanan: Bakım Ekibi
+- Bildirim: dashboard + telegram
+- Kontrol listesi:
+  Filtre yüzeyini kontrol et
+  Fan bağlantılarını kontrol et
+  Hava debisini kontrol et
+
+Planı kaydedin ve "Şimdi Tara" düğmesine basın.
+
+Beklenen:
+- Oluşan iş emri: 1
+- Work Orders ekranında scheduled iş emri
+- Telegram seçildiyse bakım iş emri mesajı
+
+İş emrini in_progress yapın, ardından Tamamla düğmesine basın.
+
+Beklenen:
+- İş emri completed
+- Kontrol listesi tamamlanmış
+- Sonraki bakım tarihi otomatik hesaplanmış
