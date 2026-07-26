@@ -54,7 +54,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '5.24.1';
+const APP_VERSION = '5.25.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -2627,6 +2627,356 @@ async function machineAssetRows(limit=300) {
   `, [safeLimit]);
   return result.rows;
 }
+
+
+// -----------------------------------------------------------------------------
+// v5.25.0 Mobile Operator Panel
+// -----------------------------------------------------------------------------
+function mobileOperatorRequired(req, res, next) {
+  if (!authConfig().enabled) return next();
+  if (!req.user) return res.status(401).json({status:'unauthorized', version:APP_VERSION, message:'Login required'});
+  const allowed = hasPermission(req.user, 'VIEW_DASHBOARD') || hasPermission(req.user, 'VIEW_MAINTENANCE');
+  if (!allowed) return res.status(403).json({status:'forbidden', version:APP_VERSION, message:'Operator panel access required'});
+  return next();
+}
+
+function operatorScope(req) {
+  if (!authConfig().enabled || req.user?.role === 'system_admin') return {all:true, customers:[], sites:[]};
+  const customers = [...new Set((req.tenant?.customers || []).map(row => String(row.code || '').trim()).filter(Boolean))];
+  const sites = [...new Set((req.tenant?.sites || []).map(row => String(row.code || '').trim()).filter(Boolean))];
+  if (!customers.length) customers.push(String(req.user?.default_customer_code || CFG.customerCode));
+  return {all:false, customers, sites};
+}
+
+function operatorScopeClause(req, customerAlias='c', siteAlias='s', startIndex=1) {
+  const scope = operatorScope(req);
+  if (scope.all) return {sql:'', params:[], scope};
+  const params = [scope.customers];
+  const clauses = [`${customerAlias}.code = ANY($${startIndex}::text[])`];
+  if (scope.sites.length) {
+    params.push(scope.sites);
+    clauses.push(`${siteAlias}.code = ANY($${startIndex + 1}::text[])`);
+  }
+  return {sql:` AND ${clauses.join(' AND ')}`, params, scope};
+}
+
+async function operatorMachineAccess(req, machineId) {
+  const scope = operatorScopeClause(req, 'c', 's', 2);
+  const row = await one(`
+    SELECT m.id::text, m.code AS machine_code, m.name AS machine_name,
+           s.code AS site_code, c.code AS customer_code
+    FROM machines m
+    JOIN sites s ON s.id=m.site_id
+    JOIN customers c ON c.id=s.customer_id
+    WHERE m.id=$1 ${scope.sql}
+    LIMIT 1
+  `, [String(machineId || ''), ...scope.params]);
+  if (!row) {
+    const error = new Error('Machine not found or access denied');
+    error.statusCode = 404;
+    throw error;
+  }
+  return row;
+}
+
+async function operatorAlarmAccess(req, alarmId) {
+  const scope = operatorScopeClause(req, 'c', 's', 2);
+  const row = await one(`
+    SELECT a.*, a.id::text, a.machine_id::text,
+           m.code AS machine_code, m.name AS machine_name,
+           s.code AS site_code, c.code AS customer_code
+    FROM alarms a
+    JOIN machines m ON m.id=a.machine_id
+    JOIN sites s ON s.id=m.site_id
+    JOIN customers c ON c.id=s.customer_id
+    WHERE a.id=$1 ${scope.sql}
+    LIMIT 1
+  `, [String(alarmId || ''), ...scope.params]);
+  if (!row) {
+    const error = new Error('Alarm not found or access denied');
+    error.statusCode = 404;
+    throw error;
+  }
+  return row;
+}
+
+async function operatorTicketAccess(req, ticketId) {
+  const scope = operatorScopeClause(req, 'c', 's', 2);
+  const row = await one(`
+    SELECT t.id::text
+    FROM maintenance_tickets t
+    JOIN machines m ON m.id=t.machine_id
+    JOIN sites s ON s.id=m.site_id
+    JOIN customers c ON c.id=s.customer_id
+    WHERE t.id=$1 ${scope.sql}
+    LIMIT 1
+  `, [String(ticketId || ''), ...scope.params]);
+  if (!row) {
+    const error = new Error('Ticket not found or access denied');
+    error.statusCode = 404;
+    throw error;
+  }
+  return maintenanceTicketRow(row.id);
+}
+
+async function operatorWorkOrderAccess(req, workOrderId) {
+  const scope = operatorScopeClause(req, 'c', 's', 2);
+  const row = await one(`
+    SELECT w.id::text
+    FROM maintenance_work_orders w
+    JOIN machines m ON m.id=w.machine_id
+    JOIN sites s ON s.id=m.site_id
+    JOIN customers c ON c.id=s.customer_id
+    WHERE w.id=$1 ${scope.sql}
+    LIMIT 1
+  `, [String(workOrderId || ''), ...scope.params]);
+  if (!row) {
+    const error = new Error('Work order not found or access denied');
+    error.statusCode = 404;
+    throw error;
+  }
+  return maintenanceWorkOrderRow(row.id);
+}
+
+app.get('/api/operator/dashboard', authRequired, mobileOperatorRequired, async (req,res)=>{
+  try {
+    await ensureLiveMonitoringFoundation();
+    await ensureDeviceInfoSyncSchema();
+    await ensureAlarmCenterFoundation();
+    await ensureMaintenanceFoundation();
+    await ensurePreventiveMaintenanceFoundation();
+
+    const scope = operatorScopeClause(req, 'c', 's', 1);
+    const machineResult = await pool.query(`
+      WITH latest_telemetry AS (
+        SELECT DISTINCT ON (machine_id) machine_id,event_ts,current_amp,temperature_c,wifi_rssi,alarm_active
+        FROM telemetry_events ORDER BY machine_id,event_ts DESC
+      ), latest_state AS (
+        SELECT DISTINCT ON (machine_id) machine_id,state,started_at,duration_sec
+        FROM machine_state_events ORDER BY machine_id,started_at DESC
+      ), device_rollup AS (
+        SELECT machine_id,count(*)::int AS device_count,
+          (count(*) FILTER(WHERE status='online'))::int AS online_device_count,
+          max(last_seen_at) AS last_seen_at,max(updated_at) AS last_device_update_at
+        FROM devices GROUP BY machine_id
+      ), alarm_rollup AS (
+        SELECT machine_id,(count(*) FILTER(WHERE status='active'))::int AS active_alarm_count,
+          max(started_at) FILTER(WHERE status='active') AS latest_alarm_at
+        FROM alarms GROUP BY machine_id
+      ), ticket_rollup AS (
+        SELECT machine_id,(count(*) FILTER(WHERE status IN ('open','in_progress','waiting')))::int AS active_ticket_count
+        FROM maintenance_tickets GROUP BY machine_id
+      ), work_rollup AS (
+        SELECT machine_id,(count(*) FILTER(WHERE status NOT IN ('completed','cancelled')))::int AS active_work_order_count
+        FROM maintenance_work_orders GROUP BY machine_id
+      )
+      SELECT m.id::text AS machine_id,m.code AS machine_code,m.name AS machine_name,m.machine_type,m.status AS machine_status,
+        s.code AS site_code,s.name AS site_name,c.code AS customer_code,c.name AS customer_name,
+        COALESCE(dr.device_count,0)::int AS device_count,COALESCE(dr.online_device_count,0)::int AS online_device_count,
+        dr.last_seen_at,lt.event_ts AS latest_telemetry_at,lt.current_amp,lt.temperature_c,lt.wifi_rssi,lt.alarm_active,
+        ls.state AS latest_state,ls.started_at AS state_started_at,ls.duration_sec AS state_duration_sec,
+        COALESCE(ar.active_alarm_count,0)::int AS active_alarm_count,ar.latest_alarm_at,
+        COALESCE(tr.active_ticket_count,0)::int AS active_ticket_count,
+        COALESCE(wr.active_work_order_count,0)::int AS active_work_order_count,
+        GREATEST(0,EXTRACT(EPOCH FROM(now()-COALESCE(lt.event_ts,dr.last_seen_at,dr.last_device_update_at,m.updated_at,m.created_at)))::int) AS signal_age_sec
+      FROM machines m
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      LEFT JOIN latest_telemetry lt ON lt.machine_id=m.id
+      LEFT JOIN latest_state ls ON ls.machine_id=m.id
+      LEFT JOIN device_rollup dr ON dr.machine_id=m.id
+      LEFT JOIN alarm_rollup ar ON ar.machine_id=m.id
+      LEFT JOIN ticket_rollup tr ON tr.machine_id=m.id
+      LEFT JOIN work_rollup wr ON wr.machine_id=m.id
+      WHERE COALESCE(m.status,'active') <> 'archived' ${scope.sql}
+      ORDER BY c.code,s.code,m.name
+      LIMIT 200
+    `, scope.params);
+
+    const machines = machineResult.rows.map(row => {
+      const health = classifyLiveMachine(row);
+      const connectionIssue = ['stale','offline','no_device'].includes(health);
+      return {...row,health,visible_active_alarm_count:connectionIssue?0:Number(row.active_alarm_count||0)};
+    });
+
+    const alarmScope = operatorScopeClause(req, 'c', 's', 1);
+    const alarms = await pool.query(`
+      SELECT a.id::text,a.alarm_type,a.severity,a.status,a.started_at,a.acknowledged_at,a.acknowledged_by,a.message,
+        m.id::text AS machine_id,m.code AS machine_code,m.name AS machine_name,s.code AS site_code,c.code AS customer_code
+      FROM alarms a
+      JOIN machines m ON m.id=a.machine_id
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      WHERE a.status='active' ${alarmScope.sql}
+      ORDER BY CASE a.severity WHEN 'critical' THEN 3 WHEN 'warning' THEN 2 ELSE 1 END DESC,a.started_at DESC
+      LIMIT 100
+    `, alarmScope.params);
+
+    const ticketScope = operatorScopeClause(req, 'c', 's', 1);
+    const tickets = await pool.query(`
+      SELECT t.id::text,t.ticket_no,t.title,t.priority,t.status,t.assignee,t.due_at,t.created_at,t.alarm_id::text,
+        m.id::text AS machine_id,m.code AS machine_code,m.name AS machine_name,
+        (t.due_at IS NOT NULL AND t.due_at<now()) AS overdue
+      FROM maintenance_tickets t
+      JOIN machines m ON m.id=t.machine_id
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      WHERE t.status IN ('open','in_progress','waiting') ${ticketScope.sql}
+      ORDER BY CASE t.priority WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC,t.due_at ASC NULLS LAST
+      LIMIT 100
+    `, ticketScope.params);
+
+    const workScope = operatorScopeClause(req, 'c', 's', 1);
+    const workOrders = await pool.query(`
+      SELECT w.id::text,w.work_order_no,w.title,w.priority,w.status,w.assignee,w.due_at,w.started_at,w.checklist,w.checklist_results,
+        m.id::text AS machine_id,m.code AS machine_code,m.name AS machine_name,
+        (w.due_at IS NOT NULL AND w.due_at<now()) AS overdue
+      FROM maintenance_work_orders w
+      JOIN machines m ON m.id=w.machine_id
+      JOIN sites s ON s.id=m.site_id
+      JOIN customers c ON c.id=s.customer_id
+      WHERE w.status NOT IN ('completed','cancelled') ${workScope.sql}
+      ORDER BY CASE w.priority WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC,w.due_at ASC NULLS LAST
+      LIMIT 100
+    `, workScope.params);
+
+    const summary = {
+      machines:machines.length,
+      online:machines.filter(row=>row.health==='online').length,
+      running:machines.filter(row=>String(row.latest_state||'').toUpperCase()==='RUNNING').length,
+      stopped:machines.filter(row=>String(row.latest_state||'').toUpperCase()==='STOPPED').length,
+      active_alarms:alarms.rows.length,
+      unacknowledged_alarms:alarms.rows.filter(row=>!row.acknowledged_at).length,
+      active_tickets:tickets.rows.length,
+      active_work_orders:workOrders.rows.length,
+      overdue_tasks:tickets.rows.filter(row=>row.overdue).length+workOrders.rows.filter(row=>row.overdue).length
+    };
+
+    res.json({
+      status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),
+      user:publicUser(req.user),tenant:req.tenant||null,permissions:publicPermissions(req.user),summary,machines,
+      alarms:alarms.rows,tickets:tickets.rows,work_orders:workOrders.rows
+    });
+  } catch(e) {
+    res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});
+  }
+});
+
+app.post('/api/operator/alarms/:id/acknowledge', authRequired, mobileOperatorRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  try {
+    await ensureAlarmCenterFoundation();
+    const alarm = await operatorAlarmAccess(req, req.params.id);
+    const actor = req.user || getSession(req)?.user || {};
+    const note = maintenanceText(req.body?.note, 'note', {max:1000}) || 'Mobil operatör panelinden onaylandı';
+    const updated = await one(`
+      UPDATE alarms SET acknowledged_at=COALESCE(acknowledged_at,now()),acknowledged_by=$2,acknowledge_note=$3,updated_at=now()
+      WHERE id=$1 RETURNING *
+    `,[alarm.id,actor.email||'operator',note]);
+    await writeAuditLog(req,{action:'operator_acknowledge_alarm',entity_type:'alarm',entity_id:alarm.id,old_values:alarm,new_values:updated,metadata:{source:'mobile-operator',machine_code:alarm.machine_code}});
+    res.json({status:'ok',version:APP_VERSION,alarm:updated});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/operator/alarms/:id/ticket', authRequired, mobileOperatorRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const alarm = await operatorAlarmAccess(req, req.params.id);
+    const existing = await one(`SELECT id::text,ticket_no,status FROM maintenance_tickets WHERE alarm_id=$1 AND status NOT IN ('closed','cancelled') ORDER BY created_at DESC LIMIT 1`,[alarm.id]);
+    if (existing) return res.status(409).json({status:'duplicate',version:APP_VERSION,message:`Bu alarm için aktif ticket zaten var: ${existing.ticket_no}`,ticket:existing});
+    const dueHours=alarm.severity==='critical'?4:(alarm.severity==='warning'?24:72);
+    const ticket=await createMaintenanceTicketRecord(req,{
+      source:'alarm',alarm_id:alarm.id,machine_id:alarm.machine_id,
+      title:req.body?.title||`${alarm.alarm_type||'Alarm'} — ${alarm.machine_name||alarm.machine_code}`,
+      description:req.body?.description||alarm.message||'Mobil operatör panelinden alarm ticketı',
+      category:req.body?.category||'corrective',
+      priority:req.body?.priority||(alarm.severity==='critical'?'critical':(alarm.severity==='warning'?'high':'medium')),
+      assignee:req.body?.assignee||null,due_at:req.body?.due_at||new Date(Date.now()+dueHours*3600000).toISOString()
+    });
+    await writeAuditLog(req,{action:'operator_create_ticket_from_alarm',entity_type:'maintenance_ticket',entity_id:ticket.id,new_values:ticket,metadata:{source:'mobile-operator',alarm_id:alarm.id}});
+    res.status(201).json({status:'ok',version:APP_VERSION,ticket});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/operator/tickets', authRequired, mobileOperatorRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const machine=await operatorMachineAccess(req,req.body?.machine_id);
+    const ticket=await createMaintenanceTicketRecord(req,{
+      ...req.body,machine_id:machine.id,source:'manual',status:'open',
+      title:req.body?.title||`Operatör bildirimi — ${machine.machine_name||machine.machine_code}`,
+      description:req.body?.description||'Mobil operatör panelinden oluşturuldu',
+      reported_by:req.user?.email||'operator'
+    });
+    await writeAuditLog(req,{action:'operator_create_quick_ticket',entity_type:'maintenance_ticket',entity_id:ticket.id,new_values:ticket,metadata:{source:'mobile-operator',machine_code:machine.machine_code}});
+    res.status(201).json({status:'ok',version:APP_VERSION,ticket});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.patch('/api/operator/tickets/:id/status', authRequired, mobileOperatorRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  let client;
+  try {
+    await ensureMaintenanceFoundation();
+    const old=await operatorTicketAccess(req,req.params.id);
+    const status=maintenanceChoice(req.body?.status||old.status,['open','in_progress','waiting','resolved'],'status');
+    const note=maintenanceText(req.body?.note,'note',{max:2000});
+    const actor=req.user||{};
+    client=await pool.connect();await client.query('BEGIN');
+    await client.query(`UPDATE maintenance_tickets SET status=$2,started_at=CASE WHEN $2='in_progress' THEN COALESCE(started_at,now()) ELSE started_at END,resolved_at=CASE WHEN $2='resolved' THEN COALESCE(resolved_at,now()) WHEN $2 IN ('open','in_progress','waiting') THEN NULL ELSE resolved_at END,resolution_note=CASE WHEN $2='resolved' THEN COALESCE(NULLIF($3,''),resolution_note) ELSE resolution_note END,updated_at=now() WHERE id=$1`,[old.id,status,note||'']);
+    await addMaintenanceTicketEvent(client,{ticketId:old.id,eventType:status!==old.status?'status_changed':'note',oldStatus:old.status,newStatus:status,note,actorEmail:actor.email||'operator',metadata:{source:'mobile-operator'}});
+    await client.query('COMMIT');client.release();client=null;
+    const ticket=await maintenanceTicketRow(old.id);
+    await writeAuditLog(req,{action:'operator_update_ticket_status',entity_type:'maintenance_ticket',entity_id:old.id,old_values:old,new_values:ticket,metadata:{source:'mobile-operator'}});
+    res.json({status:'ok',version:APP_VERSION,ticket});
+  } catch(e) { if(client){try{await client.query('ROLLBACK')}catch{}client.release()} res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/operator/tickets/:id/notes', authRequired, mobileOperatorRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensureMaintenanceFoundation();
+    const ticket=await operatorTicketAccess(req,req.params.id);
+    const note=maintenanceText(req.body?.note,'note',{required:true,max:3000});
+    await addMaintenanceTicketEvent(pool,{ticketId:ticket.id,eventType:'note',oldStatus:ticket.status,newStatus:ticket.status,note,actorEmail:req.user?.email||'operator',metadata:{source:'mobile-operator'}});
+    await pool.query(`UPDATE maintenance_tickets SET updated_at=now() WHERE id=$1`,[ticket.id]);
+    await writeAuditLog(req,{action:'operator_add_ticket_note',entity_type:'maintenance_ticket',entity_id:ticket.id,new_values:{note},metadata:{source:'mobile-operator'}});
+    res.status(201).json({status:'ok',version:APP_VERSION});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.patch('/api/operator/work-orders/:id/status', authRequired, mobileOperatorRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  let client;
+  try {
+    await ensurePreventiveMaintenanceFoundation();
+    const old=await operatorWorkOrderAccess(req,req.params.id);
+    const status=maintenanceChoice(req.body?.status||old.status,['scheduled','open','in_progress','waiting','completed'],'status');
+    const note=maintenanceText(req.body?.note,'note',{max:3000});
+    const actor=req.user||{};
+    client=await pool.connect();await client.query('BEGIN');
+    await client.query(`UPDATE maintenance_work_orders SET status=$2,started_at=CASE WHEN $2='in_progress' THEN COALESCE(started_at,now()) ELSE started_at END,completed_at=CASE WHEN $2='completed' THEN COALESCE(completed_at,now()) WHEN $2<>'completed' THEN NULL ELSE completed_at END,completion_note=CASE WHEN $2='completed' THEN COALESCE(NULLIF($3,''),completion_note) ELSE completion_note END,updated_by=$4,updated_at=now() WHERE id=$1`,[old.id,status,note||'',actor.email||'operator']);
+    await addMaintenanceWorkOrderEvent(client,{workOrderId:old.id,eventType:status!==old.status?'status_changed':'note',oldStatus:old.status,newStatus:status,note,actorEmail:actor.email||'operator',metadata:{source:'mobile-operator'}});
+    if(status==='completed'&&old.status!=='completed'&&old.plan_id){
+      const plan=await maintenancePlanRow(old.plan_id);const runtime=await machineRuntimeHours(old.machine_id);
+      const nextDue=plan.schedule_type==='runtime'?null:calculateMaintenanceNextDue(plan.schedule_type,plan.interval_value,new Date());
+      const nextRuntime=plan.schedule_type==='runtime'?runtime+Number(plan.runtime_interval_hours||0):null;
+      await client.query(`UPDATE maintenance_plans SET last_completed_at=now(),last_completed_runtime_hours=$2,last_work_order_id=$3,next_due_at=$4,next_due_runtime_hours=$5,updated_at=now(),updated_by=$6 WHERE id=$1`,[old.plan_id,runtime,old.id,nextDue,nextRuntime,actor.email||'operator']);
+    }
+    await client.query('COMMIT');client.release();client=null;
+    const workOrder=await maintenanceWorkOrderRow(old.id);
+    await writeAuditLog(req,{action:'operator_update_work_order_status',entity_type:'maintenance_work_order',entity_id:old.id,old_values:old,new_values:workOrder,metadata:{source:'mobile-operator'}});
+    res.json({status:'ok',version:APP_VERSION,work_order:workOrder});
+  } catch(e) { if(client){try{await client.query('ROLLBACK')}catch{}client.release()} res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/operator/work-orders/:id/notes', authRequired, mobileOperatorRequired, permissionRequired('MANAGE_MAINTENANCE'), async (req,res)=>{
+  try {
+    await ensurePreventiveMaintenanceFoundation();
+    const order=await operatorWorkOrderAccess(req,req.params.id);
+    const note=maintenanceText(req.body?.note,'note',{required:true,max:3000});
+    await addMaintenanceWorkOrderEvent(pool,{workOrderId:order.id,eventType:'note',oldStatus:order.status,newStatus:order.status,note,actorEmail:req.user?.email||'operator',metadata:{source:'mobile-operator'}});
+    await pool.query(`UPDATE maintenance_work_orders SET updated_at=now(),updated_by=$2 WHERE id=$1`,[order.id,req.user?.email||'operator']);
+    await writeAuditLog(req,{action:'operator_add_work_order_note',entity_type:'maintenance_work_order',entity_id:order.id,new_values:{note},metadata:{source:'mobile-operator'}});
+    res.status(201).json({status:'ok',version:APP_VERSION});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
 
 app.get('/api/admin/overview', adminRequired, async (req,res)=>{
   try {

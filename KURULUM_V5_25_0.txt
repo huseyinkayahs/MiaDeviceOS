@@ -1,0 +1,18 @@
+FACTORYBOX ONE v5.25.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine kopyalayın.
+3. Dosyaları değiştir / üzerine yaz seçeneğini kabul edin.
+4. PowerShell'de çalıştırın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin panelinde Ctrl+F5 yapın.
+6. Sürümün v5.25.0 olduğunu doğrulayın.
+7. Operator butonuna basın veya şu adresi açın:
+
+   http://localhost:3100/operator.html
+
+8. Admin, owner veya operator hesabıyla giriş yapın.
+9. Mobil görünümü telefon veya tarayıcı geliştirici araçlarıyla test edin.

@@ -1,0 +1,10 @@
+FactoryBox One v5.25.0 Mobile Operator Panel
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/public/operator.html
+- docs/V5_25_MOBILE_OPERATOR_PANEL.md
+- KURULUM_V5_25_0.txt
+
+Bu paket mevcut projenin üzerine kopyalanmalıdır.
