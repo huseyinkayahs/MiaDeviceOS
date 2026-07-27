@@ -1,0 +1,12 @@
+FACTORYBOX ONE v6.1.0 KURULUM
+
+1. Backend uygulamasını durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine kopyalayın.
+3. Dosyaların üzerine yazılmasını onaylayın.
+4. platform\backend klasöründe npm.cmd start komutunu çalıştırın.
+5. Admin panelinde Ctrl + F5 yapın.
+6. Sürümün v6.1.0 olduğunu doğrulayın.
+7. Sistem Ayarları > Sistem Sağlığı ve Yedekler ekranını açın.
+8. Tam Sağlık Kontrolü düğmesine basın.
+9. pg_dump READY ise Şimdi Veritabanı Yedeği Al düğmesiyle manuel yedek testi yapın.
+10. pg_dump bulunamazsa .env.system-health.example dosyasındaki PG_DUMP_PATH ve PG_RESTORE_PATH örneklerini mevcut .env dosyanıza ekleyin ve backend'i yeniden başlatın.

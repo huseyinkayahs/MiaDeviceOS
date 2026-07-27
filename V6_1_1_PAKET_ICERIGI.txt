@@ -1,0 +1,11 @@
+FactoryBox One v6.1.1 System Health Readability & MQTT Accuracy Hotfix
+
+Değişen dosyalar:
+- platform/backend/public/admin.html
+- platform/backend/server.js
+- platform/backend/.env.system-health.example
+- docs/V6_1_1_SYSTEM_HEALTH_MQTT_UI_HOTFIX.md
+- KURULUM_V6_1_1.txt
+- V6_1_1_PAKET_ICERIGI.txt
+
+Bu paket proje ana klasörünün üzerine kopyalanmalıdır.

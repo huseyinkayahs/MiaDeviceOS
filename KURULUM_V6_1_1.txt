@@ -1,0 +1,19 @@
+FactoryBox One v6.1.1 Kurulum
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine çıkarın.
+3. Dosyaların değiştirilmesini/onaylanmasını kabul edin.
+4. platform\backend\.env dosyasında gerçek MQTT adresini kontrol edin:
+
+   MQTT_URL=mqtt://localhost:1883
+   MQTT_BASE_TOPIC=mia/site01/laser01
+   MQTT_HEALTH_STALE_SEC=180
+
+5. Backend'i yeniden başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+6. Admin panelinde Ctrl+F5 yapın.
+7. Sürümün v6.1.1 olduğunu kontrol edin.
+8. Sistem Ayarları > Sistem Sağlığı ve Yedekler ekranında Tam Sağlık Kontrolü düğmesine basın.

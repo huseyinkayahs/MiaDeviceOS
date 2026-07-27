@@ -6,6 +6,12 @@ const mqtt = require('mqtt');
 const { Pool } = require('pg');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+
+const execFileAsync = promisify(execFile);
 
 const PORT = Number(process.env.PORT || 3100);
 const CFG = {
@@ -54,7 +60,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.0.1';
+const APP_VERSION = '6.1.2';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -5457,7 +5463,7 @@ const GENERAL_SETTING_TIME_FORMATS = ['24h','12h'];
 const GENERAL_SETTING_WEEK_STARTS = ['monday','sunday'];
 const GENERAL_SETTING_DEFAULT_VIEWS = [
   'dashboard','live','oee','alarms','analytics','sla','escalations','maintenance',
-  'maintenance-plans','work-orders','inventory','general','notifications','scheduler',
+  'maintenance-plans','work-orders','inventory','general','health','notifications','scheduler',
   'reports','tenants','users','permissions','subscriptions','assets','devices','security'
 ];
 const GENERAL_SETTING_TIMEZONES = [
@@ -5583,6 +5589,512 @@ app.patch('/api/admin/general-settings', adminRequired, permissionRequired('MANA
   } catch(error) {
     res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message});
   }
+});
+
+
+// v6.1.2 Docker PostgreSQL Backup & System Health Accuracy Hotfix
+let systemHealthFoundationReady = false;
+let systemHealthBackupTimer = null;
+let systemHealthMonitorTimer = null;
+let systemHealthToolCache = { checked_at:0, pg_dump:null, pg_restore:null };
+const systemHealthRuntime = {
+  started_at:new Date().toISOString(),
+  last_check_at:null,
+  last_overall_status:'unknown',
+  last_critical_signature:null,
+  last_critical_alert_at:null,
+  backup_running:false,
+  monitor_running:false,
+  last_backup_attempt_at:null
+};
+
+function systemBackupRootDir() {
+  return path.resolve(String(process.env.FACTORYBOX_BACKUP_DIR || path.resolve(__dirname, '../../Backups')));
+}
+
+function systemHealthSafeNumber(value, fallback, min, max) {
+  const number=Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(Math.max(Math.floor(number),min),max);
+}
+
+async function ensureSystemHealthFoundation() {
+  if (systemHealthFoundationReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_health_settings (
+      id smallint PRIMARY KEY DEFAULT 1 CHECK (id=1),
+      backup_enabled boolean NOT NULL DEFAULT false,
+      backup_hour smallint NOT NULL DEFAULT 2,
+      retention_days integer NOT NULL DEFAULT 14,
+      max_backups integer NOT NULL DEFAULT 30,
+      critical_telegram_enabled boolean NOT NULL DEFAULT true,
+      last_scheduled_backup_date text,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`INSERT INTO system_health_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS backup_enabled boolean NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS backup_hour smallint NOT NULL DEFAULT 2`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS retention_days integer NOT NULL DEFAULT 14`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS max_backups integer NOT NULL DEFAULT 30`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS critical_telegram_enabled boolean NOT NULL DEFAULT true`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS last_scheduled_backup_date text`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS updated_by text`);
+  await pool.query(`ALTER TABLE system_health_settings ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_backup_history (
+      id bigserial PRIMARY KEY,
+      filename text NOT NULL,
+      file_path text NOT NULL,
+      backup_type text NOT NULL DEFAULT 'manual',
+      status text NOT NULL DEFAULT 'running',
+      size_bytes bigint NOT NULL DEFAULT 0,
+      sha256 text,
+      verification_status text NOT NULL DEFAULT 'not_checked',
+      verification_message text,
+      error_message text,
+      created_by text,
+      started_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz,
+      verified_at timestamptz,
+      deleted_at timestamptz
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_system_backup_history_started ON system_backup_history(started_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_system_backup_history_status ON system_backup_history(status,started_at DESC)`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_health_logs (
+      id bigserial PRIMARY KEY,
+      level text NOT NULL DEFAULT 'info',
+      component text NOT NULL DEFAULT 'system',
+      message text NOT NULL,
+      metadata jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_system_health_logs_created ON system_health_logs(created_at DESC)`);
+  systemHealthFoundationReady=true;
+}
+
+async function systemHealthLog(level, component, message, metadata=null) {
+  try {
+    await ensureSystemHealthFoundation();
+    await pool.query(`INSERT INTO system_health_logs(level,component,message,metadata) VALUES($1,$2,$3,$4::jsonb)`,[
+      String(level||'info').slice(0,20),String(component||'system').slice(0,80),String(message||'').slice(0,1500),JSON.stringify(metadata||null)
+    ]);
+  } catch(error) {
+    console.error('System health log error:', error.message);
+  }
+}
+
+async function systemHealthSettings() {
+  await ensureSystemHealthFoundation();
+  return one(`SELECT id,backup_enabled,backup_hour,retention_days,max_backups,critical_telegram_enabled,last_scheduled_backup_date,updated_by,updated_at FROM system_health_settings WHERE id=1`);
+}
+
+function systemHealthToolCandidates(tool) {
+  const envName=tool==='pg_dump'?'PG_DUMP_PATH':'PG_RESTORE_PATH';
+  const values=[];
+  if (process.env[envName]) values.push(String(process.env[envName]));
+  values.push(tool);
+  if (process.platform==='win32') {
+    for (const version of ['18','17','16','15','14','13']) {
+      values.push(`C:\\Program Files\\PostgreSQL\\${version}\\bin\\${tool}.exe`);
+    }
+  }
+  return [...new Set(values.filter(Boolean))];
+}
+
+function systemHealthDockerConfig() {
+  return {
+    cli:String(process.env.DOCKER_CLI_PATH||'docker').trim()||'docker',
+    container:String(process.env.FACTORYBOX_POSTGRES_CONTAINER||'factorybox-postgres').trim()||'factorybox-postgres',
+    host:String(process.env.FACTORYBOX_POSTGRES_INTERNAL_HOST||'127.0.0.1').trim()||'127.0.0.1',
+    port:systemHealthSafeNumber(process.env.FACTORYBOX_POSTGRES_INTERNAL_PORT,5432,1,65535)
+  };
+}
+
+async function resolveDockerPostgresTool(tool) {
+  const cfg=systemHealthDockerConfig();
+  try {
+    const inspect=await execFileAsync(cfg.cli,['inspect','-f','{{.State.Running}}',cfg.container],{timeout:8000,windowsHide:true,maxBuffer:1024*1024});
+    if (String(inspect.stdout||'').trim().toLowerCase()!=='true') return null;
+    const result=await execFileAsync(cfg.cli,['exec',cfg.container,tool,'--version'],{timeout:8000,windowsHide:true,maxBuffer:1024*1024});
+    const raw=String(result.stdout||result.stderr||'').trim();
+    return {ready:true,mode:'docker',path:cfg.cli,container:cfg.container,internal_host:cfg.host,internal_port:cfg.port,version:`${raw} · Docker: ${cfg.container}`};
+  } catch { return null; }
+}
+
+async function resolveSystemHealthTool(tool, force=false) {
+  const now=Date.now();
+  if (!force && now-systemHealthToolCache.checked_at < 300000 && systemHealthToolCache[tool]) return systemHealthToolCache[tool];
+  for (const candidate of systemHealthToolCandidates(tool)) {
+    if (path.isAbsolute(candidate) && !fs.existsSync(candidate)) continue;
+    try {
+      const result=await execFileAsync(candidate,['--version'],{timeout:5000,windowsHide:true,maxBuffer:1024*1024});
+      const resolved={ready:true,mode:'local',path:candidate,version:String(result.stdout||result.stderr||'').trim()};
+      systemHealthToolCache={...systemHealthToolCache,checked_at:now,[tool]:resolved};
+      return resolved;
+    } catch {}
+  }
+  const dockerResolved=await resolveDockerPostgresTool(tool);
+  if (dockerResolved) {
+    systemHealthToolCache={...systemHealthToolCache,checked_at:now,[tool]:dockerResolved};
+    return dockerResolved;
+  }
+  const resolved={ready:false,mode:'missing',path:null,version:null,container:systemHealthDockerConfig().container};
+  systemHealthToolCache={...systemHealthToolCache,checked_at:now,[tool]:resolved};
+  return resolved;
+}
+
+function systemHealthDockerTempPath(filename,prefix='factorybox') {
+  const safe=String(filename||'backup.dump').replace(/[^a-zA-Z0-9._-]/g,'_');
+  return `/tmp/${prefix}_${process.pid}_${Date.now()}_${safe}`;
+}
+
+async function runDockerPostgresDump(tool,filePath) {
+  const cfg={...systemHealthDockerConfig(),...tool};
+  const containerPath=systemHealthDockerTempPath(path.basename(filePath),'factorybox_backup');
+  const user=String(process.env.PGUSER||'factorybox');
+  const database=String(process.env.PGDATABASE||'factorybox');
+  const password=String(process.env.PGPASSWORD||'factorybox_dev_pass');
+  try {
+    await execFileAsync(cfg.path,[
+      'exec','-e',`PGPASSWORD=${password}`,cfg.container,'pg_dump',
+      '--format=custom','--compress=6','--no-owner','--no-acl','--file',containerPath,
+      '--host',cfg.internal_host||'127.0.0.1','--port',String(cfg.internal_port||5432),'--username',user,database
+    ],{timeout:30*60*1000,windowsHide:true,maxBuffer:8*1024*1024});
+    await execFileAsync(cfg.path,['cp',`${cfg.container}:${containerPath}`,filePath],{timeout:10*60*1000,windowsHide:true,maxBuffer:4*1024*1024});
+  } finally {
+    try { await execFileAsync(cfg.path,['exec',cfg.container,'rm','-f',containerPath],{timeout:10000,windowsHide:true,maxBuffer:1024*1024}); } catch {}
+  }
+}
+
+async function verifyDockerPostgresArchive(tool,filePath) {
+  const cfg={...systemHealthDockerConfig(),...tool};
+  const containerPath=systemHealthDockerTempPath(path.basename(filePath),'factorybox_verify');
+  try {
+    await execFileAsync(cfg.path,['cp',filePath,`${cfg.container}:${containerPath}`],{timeout:10*60*1000,windowsHide:true,maxBuffer:4*1024*1024});
+    await execFileAsync(cfg.path,['exec',cfg.container,'pg_restore','--list',containerPath],{timeout:120000,windowsHide:true,maxBuffer:8*1024*1024});
+  } finally {
+    try { await execFileAsync(cfg.path,['exec',cfg.container,'rm','-f',containerPath],{timeout:10000,windowsHide:true,maxBuffer:1024*1024}); } catch {}
+  }
+}
+
+function systemBackupTimestamp(date=new Date()) {
+  const pad=value=>String(value).padStart(2,'0');
+  return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+function systemBackupSafePath(filePath) {
+  const root=systemBackupRootDir();
+  const resolved=path.resolve(String(filePath||''));
+  if (resolved!==root && !resolved.startsWith(root+path.sep)) {
+    const error=new Error('Backup file path is outside the configured backup directory');
+    error.statusCode=400;
+    throw error;
+  }
+  return resolved;
+}
+
+async function systemFileSha256(filePath) {
+  return new Promise((resolve,reject)=>{
+    const hash=crypto.createHash('sha256');
+    const stream=fs.createReadStream(filePath);
+    stream.on('error',reject);
+    stream.on('data',chunk=>hash.update(chunk));
+    stream.on('end',()=>resolve(hash.digest('hex')));
+  });
+}
+
+async function verifySystemBackupRecord(recordOrId) {
+  await ensureSystemHealthFoundation();
+  const record=typeof recordOrId==='object'?recordOrId:await one(`SELECT * FROM system_backup_history WHERE id=$1`,[String(recordOrId)]);
+  if (!record) { const error=new Error('Backup record not found'); error.statusCode=404; throw error; }
+  const filePath=systemBackupSafePath(record.file_path);
+  if (!fs.existsSync(filePath)) {
+    const updated=await one(`UPDATE system_backup_history SET verification_status='failed',verification_message='Backup file not found',verified_at=now() WHERE id=$1 RETURNING *`,[record.id]);
+    return {record:updated,valid:false,mode:'file'};
+  }
+  const stat=fs.statSync(filePath);
+  if (!stat.isFile() || stat.size<128) {
+    const updated=await one(`UPDATE system_backup_history SET verification_status='failed',verification_message='Backup file is empty or invalid',verified_at=now() WHERE id=$1 RETURNING *`,[record.id]);
+    return {record:updated,valid:false,mode:'file'};
+  }
+  const sha256=await systemFileSha256(filePath);
+  if (record.sha256 && record.sha256!==sha256) {
+    const updated=await one(`UPDATE system_backup_history SET verification_status='failed',verification_message='SHA256 checksum mismatch',verified_at=now() WHERE id=$1 RETURNING *`,[record.id]);
+    return {record:updated,valid:false,mode:'checksum'};
+  }
+  const restore=await resolveSystemHealthTool('pg_restore');
+  let mode='checksum';
+  let message=`File and SHA256 verified (${stat.size} bytes)`;
+  if (restore.ready) {
+    try {
+      if (restore.mode==='docker') await verifyDockerPostgresArchive(restore,filePath);
+      else await execFileAsync(restore.path,['--list',filePath],{timeout:120000,windowsHide:true,maxBuffer:4*1024*1024});
+      mode=restore.mode==='docker'?'docker_pg_restore':'pg_restore';
+      message=restore.mode==='docker'?`Backup archive verified with pg_restore in Docker container ${restore.container}`:'Backup archive catalog verified with pg_restore';
+    } catch(error) {
+      const updated=await one(`UPDATE system_backup_history SET verification_status='failed',verification_message=$2,verified_at=now() WHERE id=$1 RETURNING *`,[record.id,String(error.stderr||error.message||error).slice(0,1000)]);
+      return {record:updated,valid:false,mode:restore.mode==='docker'?'docker_pg_restore':'pg_restore'};
+    }
+  }
+  const updated=await one(`UPDATE system_backup_history SET size_bytes=$2,sha256=$3,verification_status='verified',verification_message=$4,verified_at=now() WHERE id=$1 RETURNING *`,[record.id,stat.size,sha256,message]);
+  return {record:updated,valid:true,mode};
+}
+
+async function sendSystemHealthTelegramAlert(text) {
+  const cfg=telegramEscalationConfig();
+  if (!cfg.enabled || !cfg.token || !cfg.defaultChatId) return {sent:false,reason:'Telegram is not configured'};
+  const response=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({chat_id:cfg.defaultChatId,text:String(text),disable_web_page_preview:true})
+  });
+  const payload=await response.json().catch(()=>({}));
+  if (!response.ok || payload.ok===false) throw new Error(payload.description||`Telegram HTTP ${response.status}`);
+  return {sent:true,message_id:payload.result?.message_id||null};
+}
+
+async function cleanupSystemBackups({actor='system',writeLog=true}={}) {
+  const settings=await systemHealthSettings();
+  const rows=(await pool.query(`SELECT * FROM system_backup_history WHERE status='completed' AND deleted_at IS NULL ORDER BY completed_at DESC NULLS LAST,started_at DESC`)).rows;
+  const now=Date.now();
+  const retentionMs=Number(settings.retention_days||14)*86400000;
+  const maxBackups=Number(settings.max_backups||30);
+  const candidates=rows.filter((row,index)=>index>=maxBackups || now-new Date(row.completed_at||row.started_at).getTime()>retentionMs);
+  let deleted=0;
+  const errors=[];
+  for (const row of candidates) {
+    try {
+      const filePath=systemBackupSafePath(row.file_path);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await pool.query(`UPDATE system_backup_history SET status='deleted',deleted_at=now() WHERE id=$1`,[row.id]);
+      deleted++;
+    } catch(error) { errors.push({id:row.id,error:String(error.message||error)}); }
+  }
+  const result={deleted_count:deleted,error_count:errors.length,errors};
+  if (writeLog) await systemHealthLog(errors.length?'warning':'info','backup',`Backup cleanup completed: ${deleted} deleted`,{actor,...result});
+  return result;
+}
+
+async function createSystemDatabaseBackup({trigger='manual',actor='admin'}={}) {
+  await ensureSystemHealthFoundation();
+  if (systemHealthRuntime.backup_running) { const error=new Error('A database backup is already running'); error.statusCode=409; throw error; }
+  systemHealthRuntime.backup_running=true;
+  const backupDir=systemBackupRootDir();
+  fs.mkdirSync(backupDir,{recursive:true});
+  const filename=`FactoryBox_DB_${systemBackupTimestamp()}.dump`;
+  const filePath=path.join(backupDir,filename);
+  const record=await one(`INSERT INTO system_backup_history(filename,file_path,backup_type,status,created_by) VALUES($1,$2,$3,'running',$4) RETURNING *`,[filename,filePath,trigger,actor]);
+  try {
+    const tool=await resolveSystemHealthTool('pg_dump',true);
+    if (!tool.ready) throw new Error(`pg_dump was not found locally or in Docker container ${systemHealthDockerConfig().container}. Set PG_DUMP_PATH or FACTORYBOX_POSTGRES_CONTAINER.`);
+    if (tool.mode==='docker') {
+      await runDockerPostgresDump(tool,filePath);
+    } else {
+      const args=['--format=custom','--compress=6','--no-owner','--no-acl','--file',filePath,'--host',String(process.env.PGHOST||'localhost'),'--port',String(process.env.PGPORT||5433),'--username',String(process.env.PGUSER||'factorybox'),String(process.env.PGDATABASE||'factorybox')];
+      await execFileAsync(tool.path,args,{timeout:30*60*1000,windowsHide:true,maxBuffer:8*1024*1024,env:{...process.env,PGPASSWORD:String(process.env.PGPASSWORD||'factorybox_dev_pass')}});
+    }
+    const stat=fs.statSync(filePath);
+    const sha256=await systemFileSha256(filePath);
+    let completed=await one(`UPDATE system_backup_history SET status='completed',size_bytes=$2,sha256=$3,completed_at=now() WHERE id=$1 RETURNING *`,[record.id,stat.size,sha256]);
+    const verification=await verifySystemBackupRecord(completed);
+    completed=verification.record;
+    await systemHealthLog('info','backup',`Database backup completed: ${filename}`,{trigger,actor,size_bytes:stat.size,verification:verification.mode});
+    await cleanupSystemBackups({actor,writeLog:false});
+    return {backup:completed,verification};
+  } catch(error) {
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
+    const failed=await one(`UPDATE system_backup_history SET status='failed',error_message=$2,completed_at=now() WHERE id=$1 RETURNING *`,[record.id,String(error.stderr||error.message||error).slice(0,2000)]);
+    await systemHealthLog('error','backup',`Database backup failed: ${String(error.message||error)}`,{trigger,actor});
+    throw Object.assign(new Error(failed.error_message||'Backup failed'),{backup_record:failed});
+  } finally { systemHealthRuntime.backup_running=false; }
+}
+
+function systemDiskSnapshot(targetPath) {
+  try {
+    fs.mkdirSync(targetPath,{recursive:true});
+    if (typeof fs.statfsSync!=='function') return {status:'unsupported',path:targetPath};
+    const stat=fs.statfsSync(targetPath);
+    const total=Number(stat.blocks)*Number(stat.bsize);
+    const free=Number(stat.bavail)*Number(stat.bsize);
+    const used=Math.max(total-free,0);
+    return {status:'ok',path:targetPath,total_bytes:total,free_bytes:free,used_bytes:used,used_percent:total?Number((used/total*100).toFixed(1)):0};
+  } catch(error) { return {status:'error',path:targetPath,error:error.message}; }
+}
+
+function systemEnvironmentChecks(notification, tools) {
+  const auth=authConfig();
+  const checks=[];
+  const add=(key,labelTr,labelEn,status,messageTr,messageEn)=>checks.push({key,label:labelEn,label_tr:labelTr,label_en:labelEn,status,message:messageEn,message_tr:messageTr,message_en:messageEn});
+  add('auth','Kimlik Doğrulama','Authentication',auth.enabled?'ok':'warning',auth.enabled?'AUTH_ENABLED=true':'Üretim kullanımı öncesinde AUTH_ENABLED=true yapılmalıdır',auth.enabled?'AUTH_ENABLED=true':'AUTH_ENABLED is false; enable it before production use');
+  add('admin_credentials','Admin Bilgileri','Admin Credentials',!auth.enabled?'disabled':(auth.adminEmail&&auth.adminPassword?'ok':'critical'),!auth.enabled?'Kimlik doğrulama kapalı':(auth.adminEmail&&auth.adminPassword?'Yapılandırıldı':'FACTORYBOX_ADMIN_EMAIL / FACTORYBOX_ADMIN_PASSWORD eksik'),!auth.enabled?'Authentication disabled':(auth.adminEmail&&auth.adminPassword?'Configured':'FACTORYBOX_ADMIN_EMAIL / FACTORYBOX_ADMIN_PASSWORD missing'));
+  add('database_password','Veritabanı Şifresi','Database Password',process.env.PGPASSWORD&&process.env.PGPASSWORD!=='factorybox_dev_pass'?'ok':'warning','Üretimde güçlü ve varsayılan olmayan bir PGPASSWORD kullanın','Use a strong non-default PGPASSWORD in production');
+  add('mqtt_url','MQTT Adresi','MQTT URL',process.env.MQTT_URL?'ok':'warning',process.env.MQTT_URL?'Yapılandırıldı':'Varsayılan genel MQTT adresi kullanılıyor',process.env.MQTT_URL?'Configured':'Using default public MQTT URL');
+  add('telegram','Telegram','Telegram',notification.telegram.enabled?(notification.telegram.configured?'ok':'warning'):'disabled',notification.telegram.enabled?(notification.telegram.configured?'Yapılandırıldı':'Aktif fakat ayarlar eksik'):'Kapalı',notification.telegram.enabled?(notification.telegram.configured?'Configured':'Enabled but incomplete'):'Disabled');
+  add('email','E-posta / SMTP','Email / SMTP',notification.email.enabled?(notification.email.configured?'ok':'warning'):'disabled',notification.email.enabled?(notification.email.configured?'Yapılandırıldı':'Aktif fakat ayarlar eksik'):'Kapalı',notification.email.enabled?(notification.email.configured?'Configured':'Enabled but incomplete'):'Disabled');
+  add('pg_dump','pg_dump','pg_dump',tools.pg_dump.ready?'ok':'warning',tools.pg_dump.ready?tools.pg_dump.version:`Yerelde veya Docker container ${systemHealthDockerConfig().container} içinde bulunamadı; otomatik veritabanı yedeği çalışamaz`,tools.pg_dump.ready?tools.pg_dump.version:`Not found locally or in Docker container ${systemHealthDockerConfig().container}; automatic database backup cannot run`);
+  add('pg_restore','pg_restore','pg_restore',tools.pg_restore.ready?'ok':'warning',tools.pg_restore.ready?tools.pg_restore.version:`Yerelde veya Docker container ${systemHealthDockerConfig().container} içinde bulunamadı; arşiv doğrulaması yalnızca checksum ile yapılır`,tools.pg_restore.ready?tools.pg_restore.version:`Not found locally or in Docker container ${systemHealthDockerConfig().container}; archive catalog verification will use checksum only`);
+  return checks;
+}
+
+async function systemHealthSnapshot({forceTools=false,includeLogs=true}={}) {
+  await ensureSystemHealthFoundation();
+  const started=Date.now();
+  let database={status:'critical',connected:false,error:null};
+  try {
+    const result=await pool.query(`SELECT current_database() database,current_user db_user,version() version,pg_database_size(current_database())::bigint size_bytes,(SELECT count(*)::int FROM pg_stat_activity WHERE datname=current_database()) active_connections,now() checked_at`);
+    database={status:'ok',connected:true,...result.rows[0],latency_ms:Date.now()-started};
+  } catch(error) { database.error=error.message; }
+
+  const tools={pg_dump:await resolveSystemHealthTool('pg_dump',forceTools),pg_restore:await resolveSystemHealthTool('pg_restore',forceTools)};
+  let notification={telegram:{enabled:false,configured:false},email:{enabled:false,configured:false}};
+  try { notification=await notificationSettingsSnapshot(null); } catch(error) { notification.error=error.message; }
+  let maintenanceSettings={enabled:false,interval_sec:null};
+  try { maintenanceSettings=await maintenanceSchedulerSettings(); } catch(error) { maintenanceSettings.error=error.message; }
+  const settings=await systemHealthSettings();
+  const environment=systemEnvironmentChecks(notification,tools);
+  const backups=(await pool.query(`SELECT id::text,filename,file_path,backup_type,status,size_bytes::bigint,sha256,verification_status,verification_message,error_message,created_by,started_at,completed_at,verified_at,deleted_at FROM system_backup_history ORDER BY started_at DESC LIMIT 40`)).rows;
+  const logs=includeLogs?(await pool.query(`SELECT id::text,level,component,message,metadata,created_at FROM system_health_logs ORDER BY created_at DESC LIMIT 80`)).rows:[];
+  const disk=systemDiskSnapshot(systemBackupRootDir());
+  const memory=process.memoryUsage();
+  const mqttConfigured=Boolean(String(process.env.MQTT_URL||'').trim());
+  const mqttStaleSec=Math.min(Math.max(Number(process.env.MQTT_HEALTH_STALE_SEC||180),30),86400);
+  const mqttMessageAgeSec=lastMqttMessageAt?Math.max(0,Math.floor((Date.now()-new Date(lastMqttMessageAt).getTime())/1000)):null;
+  const mqttDeviceActive=Boolean(mqttConfigured&&mqttConnected&&mqttMessageAgeSec!==null&&mqttMessageAgeSec<=mqttStaleSec);
+  const mqttStatus=!mqttConfigured?'unconfigured':!mqttConnected?'offline':mqttDeviceActive?'ok':'stale';
+  const mqtt={status:mqttStatus,configured:mqttConfigured,connected:Boolean(mqttConfigured&&mqttConnected),broker_connected:Boolean(mqttConnected),using_default_public_broker:!mqttConfigured,device_active:mqttDeviceActive,stale_after_sec:mqttStaleSec,message_age_sec:mqttMessageAgeSec,url:CFG.mqttUrl,base_topic:CFG.baseTopic,last_message_at:lastMqttMessageAt,last_topic:lastMqttTopic};
+  const services={
+    alarm_delivery:{enabled:alarmEscalationDeliveryEnabled(),automatic:alarmEscalationAutoDeliveryEnabled(),running:alarmEscalationDeliveryRunning},
+    automation_scheduler:{enabled:alarmAutomationSchedulerEnabled(),running:alarmAutomationSchedulerState.running,last_status:alarmAutomationSchedulerState.last_run_status,last_run_at:alarmAutomationSchedulerState.last_run_finished_at,next_run_at:alarmAutomationSchedulerState.next_run_at,last_error:alarmAutomationSchedulerState.last_error},
+    alarm_reports:{enabled:alarmReportSchedulerEnabled(),running:alarmReportSchedulerState.running,last_run_at:alarmReportSchedulerState.last_check_at,next_run_at:alarmReportSchedulerState.next_check_at,last_result:alarmReportSchedulerState.last_result},
+    maintenance:{enabled:Boolean(maintenanceSettings.enabled),running:maintenanceSchedulerState.running,last_run_at:maintenanceSchedulerState.last_run_at,next_run_at:maintenanceSchedulerState.next_run_at,last_error:maintenanceSchedulerState.last_error},
+    backup:{enabled:Boolean(settings.backup_enabled),running:systemHealthRuntime.backup_running,backup_hour:Number(settings.backup_hour),last_scheduled_backup_date:settings.last_scheduled_backup_date}
+  };
+  const critical=[];const warnings=[];const critical_tr=[];const warnings_tr=[];
+  if (!database.connected) { critical.push('PostgreSQL connection failed');critical_tr.push('PostgreSQL bağlantısı başarısız'); }
+  for (const item of environment) {
+    if (item.status==='critical') { critical.push(item.message_en||item.message);critical_tr.push(item.message_tr||item.message); }
+    else if (item.status==='warning') { warnings.push(item.message_en||item.message);warnings_tr.push(item.message_tr||item.message); }
+  }
+  if (!mqttConfigured) {
+    warnings.push('MQTT_URL is not configured; the default public demo broker is not accepted as a production connection');
+    warnings_tr.push('MQTT_URL yapılandırılmadı; varsayılan genel demo broker üretim bağlantısı olarak kabul edilmiyor');
+  } else if (!mqttConnected) {
+    warnings.push('MQTT broker is disconnected');
+    warnings_tr.push('MQTT broker bağlantısı kesik');
+  } else if (!mqttDeviceActive) {
+    if (lastMqttMessageAt) {
+      warnings.push(`MQTT broker is connected, but device traffic is stale (${mqttMessageAgeSec} sec)`);
+      warnings_tr.push(`MQTT broker bağlı ancak cihaz trafiği eski (${mqttMessageAgeSec} sn)`);
+    } else {
+      warnings.push('MQTT broker is connected, but no device message has been received');
+      warnings_tr.push('MQTT broker bağlı ancak henüz cihaz mesajı alınmadı');
+    }
+  }
+  if (disk.status==='ok' && disk.used_percent>=95) { critical.push(`Disk usage is ${disk.used_percent}%`);critical_tr.push(`Disk kullanımı %${disk.used_percent}`); }
+  else if (disk.status==='ok' && disk.used_percent>=85) { warnings.push(`Disk usage is ${disk.used_percent}%`);warnings_tr.push(`Disk kullanımı %${disk.used_percent}`); }
+  const overall_status=critical.length?'critical':warnings.length?'warning':'healthy';
+  systemHealthRuntime.last_check_at=new Date().toISOString();
+  systemHealthRuntime.last_overall_status=overall_status;
+  return {
+    generated_at:new Date().toISOString(),overall_status,critical,warnings,critical_tr,warnings_tr,
+    backend:{status:'ok',version:APP_VERSION,pid:process.pid,platform:process.platform,node_version:process.version,hostname:os.hostname(),started_at:systemHealthRuntime.started_at,uptime_sec:Math.floor(process.uptime()),memory:{rss_bytes:memory.rss,heap_used_bytes:memory.heapUsed,heap_total_bytes:memory.heapTotal},load_average:os.loadavg()},
+    database,mqtt,notification:{telegram:notification.telegram,email:notification.email,latest_delivery:notification.latest_delivery||null},services,disk,tools,environment,settings,backups,logs
+  };
+}
+
+async function maybeSendSystemCriticalAlert(snapshot) {
+  const settings=await systemHealthSettings();
+  if (!settings.critical_telegram_enabled || snapshot.overall_status!=='critical') return {sent:false,reason:'not_required'};
+  const signature=crypto.createHash('sha256').update(JSON.stringify(snapshot.critical)).digest('hex');
+  const lastAt=systemHealthRuntime.last_critical_alert_at?new Date(systemHealthRuntime.last_critical_alert_at).getTime():0;
+  if (signature===systemHealthRuntime.last_critical_signature && Date.now()-lastAt<1800000) return {sent:false,reason:'throttled'};
+  const text=['🚨 FactoryBox System Health Critical',`Version: v${APP_VERSION}`,`Host: ${os.hostname()}`,...snapshot.critical.map(item=>`- ${item}`),`Time: ${new Date().toISOString()}`].join('\n');
+  try {
+    const result=await sendSystemHealthTelegramAlert(text);
+    if (result.sent) { systemHealthRuntime.last_critical_signature=signature;systemHealthRuntime.last_critical_alert_at=new Date().toISOString(); }
+    await systemHealthLog(result.sent?'warning':'info','health-alert',result.sent?'Critical health alert sent to Telegram':`Critical alert not sent: ${result.reason}`,{critical:snapshot.critical});
+    return result;
+  } catch(error) { await systemHealthLog('error','health-alert',`Telegram critical alert failed: ${error.message}`);return {sent:false,error:error.message}; }
+}
+
+async function runSystemHealthMonitor() {
+  if (systemHealthRuntime.monitor_running) return;
+  systemHealthRuntime.monitor_running=true;
+  try { const snapshot=await systemHealthSnapshot({includeLogs:false});await maybeSendSystemCriticalAlert(snapshot); }
+  catch(error) { console.error('System health monitor error:',error.message); }
+  finally { systemHealthRuntime.monitor_running=false; }
+}
+
+async function runSystemBackupSchedule() {
+  try {
+    const settings=await systemHealthSettings();
+    if (!settings.backup_enabled || systemHealthRuntime.backup_running) return;
+    const lastAttempt=systemHealthRuntime.last_backup_attempt_at?new Date(systemHealthRuntime.last_backup_attempt_at).getTime():0;
+    if (Date.now()-lastAttempt<15*60*1000) return;
+    const general=await one(`SELECT timezone FROM general_settings WHERE id=1`);
+    const clock=zonedClockParts(new Date(),general?.timezone||'Europe/Istanbul');
+    if (clock.hour!==Number(settings.backup_hour) || settings.last_scheduled_backup_date===clock.date_key) return;
+    systemHealthRuntime.last_backup_attempt_at=new Date().toISOString();
+    await createSystemDatabaseBackup({trigger:'scheduled',actor:'system-scheduler'});
+    await pool.query(`UPDATE system_health_settings SET last_scheduled_backup_date=$1,updated_at=now() WHERE id=1`,[clock.date_key]);
+  } catch(error) { console.error('Automatic database backup error:',error.message); }
+}
+
+function restartSystemHealthSchedulers() {
+  if (systemHealthBackupTimer) clearInterval(systemHealthBackupTimer);
+  if (systemHealthMonitorTimer) clearInterval(systemHealthMonitorTimer);
+  systemHealthBackupTimer=setInterval(runSystemBackupSchedule,60000);systemHealthBackupTimer.unref?.();
+  systemHealthMonitorTimer=setInterval(runSystemHealthMonitor,300000);systemHealthMonitorTimer.unref?.();
+  setTimeout(runSystemHealthMonitor,5000).unref?.();
+  setTimeout(runSystemBackupSchedule,8000).unref?.();
+}
+
+app.get('/api/admin/system-health', adminRequired, permissionRequired('VIEW_DASHBOARD'), async(req,res)=>{
+  try { const snapshot=await systemHealthSnapshot({forceTools:req.query.force==='1'});res.json({status:'ok',version:APP_VERSION,can_manage:!authConfig().enabled||hasPermission(req.user,'MANAGE_SITES'),...snapshot}); }
+  catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.post('/api/admin/system-health/check', adminRequired, permissionRequired('VIEW_DASHBOARD'), async(req,res)=>{
+  try { const snapshot=await systemHealthSnapshot({forceTools:true});const alert=await maybeSendSystemCriticalAlert(snapshot);await systemHealthLog(snapshot.overall_status==='critical'?'error':snapshot.overall_status==='warning'?'warning':'info','health-check',`Manual system health check: ${snapshot.overall_status}`,{actor:req.user?.email||'admin',critical:snapshot.critical,warnings:snapshot.warnings,critical_tr:snapshot.critical_tr,warnings_tr:snapshot.warnings_tr,message_tr:`Manuel sistem sağlık kontrolü: ${snapshot.overall_status==='critical'?'kritik':snapshot.overall_status==='warning'?'uyarı':'sağlıklı'}`});res.json({status:'ok',version:APP_VERSION,alert,...snapshot}); }
+  catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.patch('/api/admin/system-health/settings', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try {
+    const old=await systemHealthSettings();const body=req.body||{};const actor=req.user||getSession(req)?.user||{};
+    const settings=await one(`UPDATE system_health_settings SET backup_enabled=$1,backup_hour=$2,retention_days=$3,max_backups=$4,critical_telegram_enabled=$5,updated_by=$6,updated_at=now() WHERE id=1 RETURNING *`,[
+      body.backup_enabled===undefined?old.backup_enabled:Boolean(body.backup_enabled),systemHealthSafeNumber(body.backup_hour,old.backup_hour,0,23),systemHealthSafeNumber(body.retention_days,old.retention_days,1,3650),systemHealthSafeNumber(body.max_backups,old.max_backups,1,500),body.critical_telegram_enabled===undefined?old.critical_telegram_enabled:Boolean(body.critical_telegram_enabled),actor.email||'admin'
+    ]);
+    await writeAuditLog(req,{action:'update_system_health_settings',entity_type:'system_health_settings',entity_id:'global',old_values:old,new_values:settings});
+    await systemHealthLog('info','settings','System health and backup settings updated',{actor:actor.email||'admin'});restartSystemHealthSchedulers();
+    res.json({status:'ok',version:APP_VERSION,settings});
+  } catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.post('/api/admin/system-health/backups', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try { const actor=req.user||getSession(req)?.user||{};const result=await createSystemDatabaseBackup({trigger:'manual',actor:actor.email||'admin'});await writeAuditLog(req,{action:'create_database_backup',entity_type:'system_backup',entity_id:String(result.backup.id),new_values:{filename:result.backup.filename,size_bytes:result.backup.size_bytes,verification_status:result.backup.verification_status}});res.status(201).json({status:'ok',version:APP_VERSION,...result}); }
+  catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message,backup:error.backup_record||null}); }
+});
+
+app.post('/api/admin/system-health/backups/:id/verify', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try { const result=await verifySystemBackupRecord(req.params.id);await writeAuditLog(req,{action:'verify_database_backup',entity_type:'system_backup',entity_id:String(req.params.id),new_values:{valid:result.valid,mode:result.mode,verification_status:result.record.verification_status}});res.json({status:'ok',version:APP_VERSION,...result}); }
+  catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.post('/api/admin/system-health/backups/cleanup', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try { const actor=req.user||getSession(req)?.user||{};const result=await cleanupSystemBackups({actor:actor.email||'admin'});await writeAuditLog(req,{action:'cleanup_database_backups',entity_type:'system_backup',entity_id:'global',new_values:result});res.json({status:'ok',version:APP_VERSION,result}); }
+  catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.get('/api/admin/system-health/backups/:id/download', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try { const record=await one(`SELECT * FROM system_backup_history WHERE id=$1 AND status='completed' AND deleted_at IS NULL`,[String(req.params.id)]);if(!record)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Backup not found'});const filePath=systemBackupSafePath(record.file_path);if(!fs.existsSync(filePath))return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Backup file not found'});res.download(filePath,record.filename); }
+  catch(error) { if(!res.headersSent)res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
 });
 
 async function ensureNotificationSettingsFoundation() {
@@ -9548,7 +10060,8 @@ app.get('/api/health', async (req,res)=>{
   try {
     const db = await pool.query('SELECT now() AS now');
     const counts = await one(`SELECT (SELECT count(*)::int FROM customers) customers, (SELECT count(*)::int FROM machines) machines, (SELECT count(*)::int FROM devices) devices, (SELECT count(*)::int FROM telemetry_events) telemetry_events, (SELECT count(*)::int FROM machine_state_events) machine_state_events, (SELECT count(*)::int FROM alarms) alarms`);
-    res.json({ status:'ok', service:'factorybox-platform-backend', version:APP_VERSION, database_time: db.rows[0].now, mqtt_connected:mqttConnected, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
+    const mqttConfigured=Boolean(String(process.env.MQTT_URL||'').trim());
+    res.json({ status:'ok', service:'factorybox-platform-backend', version:APP_VERSION, database_time: db.rows[0].now, mqtt_connected:Boolean(mqttConfigured&&mqttConnected), mqtt_broker_connected:Boolean(mqttConnected), mqtt_configured:mqttConfigured, mqtt_base_topic:CFG.baseTopic, last_mqtt_message_at:lastMqttMessageAt, last_mqtt_topic:lastMqttTopic, counts });
   } catch(e) { res.status(500).json({status:'error', message:e.message}); }
 });
 
@@ -11522,6 +12035,7 @@ async function start() {
   await ensureAlarmEscalationFoundation();
   await ensureNotificationSettingsFoundation();
   await ensureGeneralSettingsFoundation();
+  await ensureSystemHealthFoundation();
   await ensureMaintenanceFoundation();
   await ensurePreventiveMaintenanceFoundation();
   await ensureInventoryFoundation();
@@ -11536,7 +12050,9 @@ async function start() {
   startAlarmAutomationScheduler();
   startAlarmReportScheduler();
   startMaintenanceScheduler();
+  restartSystemHealthSchedulers();
 }
+
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
 
 

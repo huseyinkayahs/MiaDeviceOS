@@ -1,0 +1,29 @@
+FactoryBox One v6.1.2 Kurulum
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine çıkarın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. platform\backend\.env dosyasına aşağıdaki satırları ekleyin veya mevcut değerleri güncelleyin:
+
+   FACTORYBOX_BACKUP_DIR=C:\New DeviceOs Project\Backups
+   FACTORYBOX_POSTGRES_CONTAINER=factorybox-postgres
+   FACTORYBOX_POSTGRES_INTERNAL_HOST=127.0.0.1
+   FACTORYBOX_POSTGRES_INTERNAL_PORT=5432
+
+5. PostgreSQL host bağlantı değerlerinin mevcut yapıyla uyumlu olduğunu kontrol edin:
+
+   PGHOST=localhost
+   PGPORT=5433
+   PGDATABASE=factorybox
+   PGUSER=factorybox
+
+6. Backend'i yeniden başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+7. Admin panelinde Ctrl+F5 yapın.
+8. Sürümün v6.1.2 olduğunu kontrol edin.
+9. Sistem Ayarları > Sistem Sağlığı ve Yedekler ekranında Tam Sağlık Kontrolü düğmesine basın.
+10. pg_dump ve pg_restore kartlarında Docker container bilgisinin ve HAZIR durumunun göründüğünü kontrol edin.
+11. Şimdi Veritabanı Yedeği Al düğmesiyle manuel yedek testi yapın.

@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.0.1 Admin Panel</title>
+  <title>FactoryBox v6.1.2 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -442,7 +442,7 @@
     @media(max-width:680px){.general-settings-grid-v600{grid-template-columns:1fr}.general-settings-grid-v600 .wide-setting-v600{grid-column:span 1}}
 
 
-    /* v6.0.1 Industrial content workspace and premium form controls */
+    /* v6.1.2 Industrial content workspace and premium form controls */
     :root {
       --fb-bg:#edf1f4;
       --fb-panel:#ffffff;
@@ -692,14 +692,46 @@
       .admin-form-grid{padding:14px}
     }
 
-  </style>
+  
+
+    /* v6.1 System Health & Backup Center */
+    .health-summary-grid-v610 { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin:16px 0; }
+    .health-summary-card-v610 { min-height:112px; padding:16px; border:1px solid #d2dbe1; border-radius:14px; background:linear-gradient(150deg,#fff,#f5f7f8); box-shadow:var(--fb-shadow-soft); }
+    .health-summary-card-v610 span { display:block; color:#687681; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .health-summary-card-v610 strong { display:block; margin-top:10px; color:#1e2930; font-size:22px; line-height:1.15; }
+    .health-summary-card-v610 small { display:block; margin-top:8px; color:#6b7882; line-height:1.35; }
+    .health-status-v610 { display:inline-flex; align-items:center; padding:5px 9px; border-radius:999px; font-size:11px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+    .health-status-v610.healthy,.health-status-v610.ok,.health-status-v610.info,.health-status-v610.verified,.health-status-v610.completed { color:#12604b; background:#dff5ec; border:1px solid #b8e3d4; }
+    .health-status-v610.critical,.health-status-v610.error,.health-status-v610.failed,.health-status-v610.offline { color:#9c2432; background:#ffe5e9; border:1px solid #f0bdc5; }
+    .health-status-v610.warning,.health-status-v610.not_checked,.health-status-v610.running,.health-status-v610.unconfigured,.health-status-v610.stale { color:#855009; background:#fff2d5; border:1px solid #efd49d; }
+    .health-status-v610.disabled,.health-status-v610.unknown,.health-status-v610.deleted,.health-status-v610.unsupported { color:#53616b; background:#e9eef1; border:1px solid #cfd9df; }
+    .health-service-grid-v610 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:14px 0 18px; }
+    .health-service-card-v610 { padding:16px; border:1px solid #ccd7de; border-radius:14px; background:linear-gradient(160deg,#ffffff,#f5f8f9); box-shadow:0 8px 22px rgba(31,45,55,.06); }
+    .health-service-card-v610 > header { display:flex!important; align-items:center!important; justify-content:space-between!important; gap:10px!important; margin:0 0 10px!important; padding:0!important; min-height:0!important; background:transparent!important; border:0!important; border-radius:0!important; box-shadow:none!important; color:#202b32!important; }
+    .health-service-card-v610 h4 { margin:0!important; color:#202b32!important; font-size:14px!important; font-weight:850!important; line-height:1.3!important; text-shadow:none!important; }
+    .health-service-card-v610 p { margin:0!important; color:#596873!important; font-size:12.5px!important; line-height:1.5!important; }
+    .health-panel-v610 { margin-top:18px; padding:18px; border:1px solid #d4dde3; border-radius:14px; background:linear-gradient(180deg,#fff,#f8fafb); box-shadow:var(--fb-shadow-soft); }
+    .health-panel-v610 > header { display:flex!important; justify-content:space-between!important; align-items:flex-start!important; gap:12px!important; flex-wrap:wrap!important; margin:0 0 14px!important; padding:0!important; min-height:0!important; background:transparent!important; border:0!important; border-radius:0!important; box-shadow:none!important; color:#202b32!important; }
+    .health-panel-v610 > header h3,.health-panel-v610 h3 { margin:0!important; color:#202b32!important; font-size:18px!important; text-shadow:none!important; }
+    .health-panel-v610 > header p,.health-panel-v610 header p { margin:5px 0 0!important; color:#65747f!important; text-shadow:none!important; }
+    .health-settings-grid-v610 { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:13px; }
+    .health-settings-grid-v610 label { display:flex; flex-direction:column; gap:7px; color:#4d5b65; font-size:12px; font-weight:750; }
+    .health-alert-v610 { margin:12px 0; padding:12px 14px; border-radius:11px; border:1px solid #d6dee4; background:#f8fafb; color:#596873; line-height:1.5; }
+    .health-alert-v610.critical { border-color:#edb7c0; background:#fff0f2; color:#902331; }
+    .health-alert-v610.warning { border-color:#e8ce94; background:#fff7e5; color:#82500e; }
+    .health-toolbar-v610 { display:flex; flex-wrap:wrap; gap:9px; align-items:center; }
+    .health-log-filter-v610 { min-width:150px; max-width:220px; }
+    @media(max-width:1280px){.health-summary-grid-v610{grid-template-columns:repeat(3,minmax(0,1fr))}.health-settings-grid-v610{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:850px){.health-summary-grid-v610,.health-service-grid-v610,.health-settings-grid-v610{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.health-summary-grid-v610,.health-service-grid-v610,.health-settings-grid-v610{grid-template-columns:1fr}}
+</style>
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.0.1 — Tam çeviri ve endüstriyel içerik arayüzü aktif.</p>
+      <p id="adminVersionLabel">v6.1.2 — Docker PostgreSQL yedekleme ve sistem sağlığı doğruluk düzeltmesi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -737,10 +769,11 @@
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
           <span>Sistem Ayarları</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">5</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="general"><span>Genel Ayarlar</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="health"><span>Sistem Sağlığı ve Yedekler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Bildirimler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Otomasyon Zamanlayıcı</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporları</span></button>
@@ -756,7 +789,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.0.1: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.
+      v6.1.2: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.
     </div>
   </aside>
 
@@ -786,7 +819,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.0.1: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.1.2: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.</p>
       </div>
     </div>
 
@@ -1091,6 +1124,73 @@
       <label>Compact Menu<select id="generalCompactMode"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
     </div>
     <div class="general-settings-note-v600">Dil değişikliği menüleri, ekran başlıklarını, düğmeleri, tablo başlıklarını, durum metinlerini ve sistem mesajlarını birlikte değiştirir.</div>
+  </section>
+
+
+  <section id="systemHealthSection" class="card wide admin-card" data-admin-view="health">
+    <div class="section-title-row">
+      <div>
+        <h2>Sistem Sağlığı ve Yedekler</h2>
+        <p class="muted">Backend, PostgreSQL, MQTT, bildirim kanalları, zamanlayıcılar, disk, sistem günlükleri ve veritabanı yedeklerini tek merkezden izle.</p>
+      </div>
+      <div class="button-row">
+        <button id="refreshSystemHealthBtn" class="secondary-btn">Durumu Yenile</button>
+        <button id="runSystemHealthCheckBtn">Tam Sağlık Kontrolü</button>
+      </div>
+    </div>
+    <div id="systemHealthStatus" class="mini-status">Sistem sağlığı yükleniyor...</div>
+    <div id="systemHealthAlerts"></div>
+
+    <div class="health-summary-grid-v610">
+      <div class="health-summary-card-v610"><span>Genel Durum</span><strong id="healthOverallValue">-</strong><small id="healthOverallDetail">Kontrol bekleniyor</small></div>
+      <div class="health-summary-card-v610"><span>Backend</span><strong id="healthBackendValue">-</strong><small id="healthBackendDetail">-</small></div>
+      <div class="health-summary-card-v610"><span>PostgreSQL</span><strong id="healthDatabaseValue">-</strong><small id="healthDatabaseDetail">-</small></div>
+      <div class="health-summary-card-v610"><span>MQTT Broker / Cihaz</span><strong id="healthMqttValue">-</strong><small id="healthMqttDetail">-</small></div>
+      <div class="health-summary-card-v610"><span>Disk Kullanımı</span><strong id="healthDiskValue">-</strong><small id="healthDiskDetail">-</small></div>
+      <div class="health-summary-card-v610"><span>Son Yedek</span><strong id="healthBackupValue">-</strong><small id="healthBackupDetail">-</small></div>
+    </div>
+
+    <div class="health-panel-v610">
+      <header><div><h3>Servis Durumları</h3><p>Arka plan servisleri ve teslimat kanallarının canlı çalışma durumu.</p></div></header>
+      <div id="systemHealthServices" class="health-service-grid-v610">Servisler yükleniyor...</div>
+    </div>
+
+    <div class="health-panel-v610">
+      <header>
+        <div><h3>Otomatik Yedek Ayarları</h3><p>PostgreSQL yedeklerini proje Backups klasöründe saklar ve süre/adet politikasına göre temizler.</p></div>
+        <div class="health-toolbar-v610">
+          <button id="saveSystemHealthSettingsBtn">Ayarları Kaydet</button>
+          <button id="createDatabaseBackupBtn" class="secondary-btn">Şimdi Veritabanı Yedeği Al</button>
+          <button id="cleanupDatabaseBackupsBtn" class="secondary-btn">Eski Yedekleri Temizle</button>
+        </div>
+      </header>
+      <div class="health-settings-grid-v610">
+        <label>Otomatik Günlük Yedek<select id="healthBackupEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
+        <label>Yedek Saati<select id="healthBackupHour"></select></label>
+        <label>Saklama Süresi (gün)<input id="healthRetentionDays" type="number" min="1" max="3650" value="14"></label>
+        <label>Maksimum Yedek<input id="healthMaxBackups" type="number" min="1" max="500" value="30"></label>
+        <label>Kritik Hata Telegram<select id="healthCriticalTelegram"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+      </div>
+      <div id="systemBackupActionStatus" class="mini-status">Yedek işlemi bekleniyor.</div>
+    </div>
+
+    <div class="health-panel-v610">
+      <header><div><h3>Ortam ve Production Kontrolleri</h3><p>Eksik, varsayılan veya üretim ortamında risk oluşturabilecek yapılandırmaları gösterir.</p></div></header>
+      <div id="systemEnvironmentChecks">Kontroller yükleniyor...</div>
+    </div>
+
+    <div class="health-panel-v610">
+      <header><div><h3>Veritabanı Yedek Geçmişi</h3><p>Dosya boyutu, SHA256 doğrulaması, pg_restore ön kontrolü ve indirme işlemleri.</p></div></header>
+      <div id="systemBackupHistory">Yedek geçmişi yükleniyor...</div>
+    </div>
+
+    <div class="health-panel-v610">
+      <header>
+        <div><h3>Sistem Günlükleri</h3><p>Sağlık kontrolleri, yedekleme ve kritik bildirim olayları.</p></div>
+        <select id="systemHealthLogLevel" class="health-log-filter-v610"><option value="all">Tüm seviyeler</option><option value="info">Info</option><option value="warning">Warning</option><option value="error">Error</option></select>
+      </header>
+      <div id="systemHealthLogs">Sistem günlükleri yükleniyor...</div>
+    </div>
   </section>
 
   <section id="notificationSettingsSection" class="card wide admin-card" data-admin-view="notifications">
@@ -1731,6 +1831,21 @@
   let translationObserver = null;
 
   const I18N_PAIRS = [
+    ['Sistem Sağlığı ve Yedekler','System Health & Backups'],['Durumu Yenile','Refresh Status'],['Tam Sağlık Kontrolü','Full Health Check'],
+    ['Genel Durum','Overall Status'],['PostgreSQL','PostgreSQL'],['Disk Kullanımı','Disk Usage'],['Son Yedek','Latest Backup'],
+    ['Servis Durumları','Service Status'],['Otomatik Yedek Ayarları','Automatic Backup Settings'],['Otomatik Günlük Yedek','Automatic Daily Backup'],
+    ['Yedek Saati','Backup Hour'],['Saklama Süresi (gün)','Retention Period (days)'],['Maksimum Yedek','Maximum Backups'],
+    ['Kritik Hata Telegram','Critical Error Telegram'],['Şimdi Veritabanı Yedeği Al','Create Database Backup Now'],['Eski Yedekleri Temizle','Clean Old Backups'],
+    ['Ortam ve Production Kontrolleri','Environment & Production Checks'],['Veritabanı Yedek Geçmişi','Database Backup History'],
+    ['Sistem Günlükleri','System Logs'],['Tüm seviyeler','All levels'],['Yedek işlemi bekleniyor.','Waiting for a backup action.'],
+    ['Sistem sağlığı yükleniyor...','Loading system health...'],['Servisler yükleniyor...','Loading services...'],['Kontroller yükleniyor...','Loading checks...'],
+    ['Yedek geçmişi yükleniyor...','Loading backup history...'],['Sistem günlükleri yükleniyor...','Loading system logs...'],
+    ['Backend, PostgreSQL, MQTT, bildirim kanalları, zamanlayıcılar, disk, sistem günlükleri ve veritabanı yedeklerini tek merkezden izle.','Monitor backend, PostgreSQL, MQTT, notification channels, schedulers, disk, system logs and database backups from one center.'],
+    ['Arka plan servisleri ve teslimat kanallarının canlı çalışma durumu.','Live operating status of background services and delivery channels.'],
+    ['PostgreSQL yedeklerini proje Backups klasöründe saklar ve süre/adet politikasına göre temizler.','Stores PostgreSQL backups in the project Backups folder and cleans them according to retention and count policies.'],
+    ['Eksik, varsayılan veya üretim ortamında risk oluşturabilecek yapılandırmaları gösterir.','Shows missing, default or production-risk configuration items.'],
+    ['Dosya boyutu, SHA256 doğrulaması, pg_restore ön kontrolü ve indirme işlemleri.','File size, SHA256 verification, pg_restore pre-check and download actions.'],
+    ['Sağlık kontrolleri, yedekleme ve kritik bildirim olayları.','Health checks, backup and critical notification events.'],
     ['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],
     ['Canlı İzleme','Live Monitoring'],['OEE ve Duruş','OEE & Downtime'],['Alarm Merkezi','Alarm Center'],
     ['Alarm Analitiği','Alarm Analytics'],['Alarm SLA','Alarm SLA'],['Bildirim Teslimatı','Escalation Delivery'],
@@ -1797,8 +1912,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.0.1 — Tam çeviri ve endüstriyel içerik arayüzü aktif.','v6.0.1 — Full localization and industrial content UI are active.'],
-    ['v6.0.1: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.','v6.0.1: Full Turkish / English localization and content UI refresh are active.'],
+    ['v6.1.2 — Docker PostgreSQL yedekleme ve sistem sağlığı doğruluk düzeltmesi aktif.','v6.1.2 — Docker PostgreSQL backup and System Health accuracy hotfix is active.'],
+    ['v6.1.2: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.','v6.1.2: Docker PostgreSQL backup and bilingual System Health Center are active.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -1922,7 +2037,7 @@
 
     ["Admin panel menüsü", "Admin panel menu"],
     ["Tam çeviri ve endüstriyel içerik arayüzü aktif.", "Full localization and industrial content UI are active."],
-    ["Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.", "Full Turkish / English localization and content UI refresh are active."],
+    ["Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.", "Docker PostgreSQL backup and bilingual System Health Center are active."],
     ["Tüm sistem yetkileri", "All system permissions"],
     ["Tüm tenant yönetimi", "Full tenant management"],
     ["Customer/site/invite/billing görüntüleme/audit yönetimi", "Customer/site/invite/billing viewing and audit management"],
@@ -2246,8 +2361,8 @@
     const safeVersion = String(version || '6.0.1').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Full localization and industrial content UI are active.` : `v${safeVersion} — Tam çeviri ve endüstriyel içerik arayüzü aktif.`;
-    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Full Turkish / English localization and content UI refresh are active.` : `v${safeVersion}: Tam Türkçe / English çeviri ve içerik arayüzü yenilemesi aktif.`;
+    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Docker PostgreSQL backup and System Health accuracy hotfix is active.` : `v${safeVersion} — Docker PostgreSQL yedekleme ve sistem sağlığı doğruluk düzeltmesi aktif.`;
+    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Docker PostgreSQL backup and bilingual System Health Center are active.` : `v${safeVersion}: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -2383,6 +2498,7 @@
     sla:{title_tr:'Alarm SLA',title_en:'Alarm SLA',desc_tr:'Müdahale ve çözüm süreleri, bildirim kuralları ve SLA dışı aktif alarmlar.',desc_en:'Response and resolution times, escalation rules and active alarms outside SLA.'},
     escalations:{title_tr:'Bildirim Teslimatı',title_en:'Escalation Delivery',desc_tr:'SLA dışı alarm kuyruğu, E-posta/Telegram teslimatı ve gönderim geçmişi.',desc_en:'Out-of-SLA alarm queue, Email/Telegram delivery and delivery history.'},
     general:{title_tr:'Genel Ayarlar',title_en:'General Settings',desc_tr:'Panel dili, saat dilimi, tarih/saat biçimi ve genel çalışma tercihleri.',desc_en:'Panel language, time zone, date/time format and general operating preferences.'},
+    health:{title_tr:'Sistem Sağlığı ve Yedekler',title_en:'System Health & Backups',desc_tr:'Backend, veritabanı, MQTT, servisler, disk, loglar ve otomatik yedekleme merkezi.',desc_en:'Central health center for backend, database, MQTT, services, disk, logs and automatic backups.'},
     notifications:{title_tr:'Bildirim Ayarları',title_en:'Notification Settings',desc_tr:'Telegram, E-posta, test mesajları ve teslimat çalışanı ayarları.',desc_en:'Telegram, Email, test messages and delivery worker settings.'},
     scheduler:{title_tr:'Otomasyon Zamanlayıcı',title_en:'Automation Scheduler',desc_tr:'Otomatik SLA taraması, yeniden deneme, teslimat ve Dead Letter yönetimi.',desc_en:'Automatic SLA scanning, retry, delivery and Dead Letter management.'},
     reports:{title_tr:'Alarm Raporları',title_en:'Alarm Reports',desc_tr:'Günlük ve haftalık alarm özetleri, Telegram/E-posta teslimatı ve rapor geçmişi.',desc_en:'Daily and weekly alarm summaries, Telegram/Email delivery and report history.'},
@@ -2411,6 +2527,7 @@
     sla:'alarm',
     escalations:'alarm',
     general:'system',
+    health:'system',
     notifications:'system',
     scheduler:'system',
     reports:'system',
@@ -3858,7 +3975,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.0.1`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.1.2`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -3909,6 +4026,142 @@
     return data;
   }
 
+
+  let lastSystemHealthData = null;
+
+  function fmtBytesV610(value) {
+    const bytes=Number(value||0);if(!Number.isFinite(bytes)||bytes<=0)return '0 B';
+    const units=['B','KB','MB','GB','TB'];let index=0;let size=bytes;
+    while(size>=1024&&index<units.length-1){size/=1024;index++;}
+    return `${size>=100||index===0?size.toFixed(0):size.toFixed(1)} ${units[index]}`;
+  }
+
+  function fmtDurationV610(seconds) {
+    let value=Math.max(0,Number(seconds||0));const days=Math.floor(value/86400);value%=86400;const hours=Math.floor(value/3600);value%=3600;const minutes=Math.floor(value/60);
+    if(days)return `${days} ${currentLanguage==='en'?'days':'gün'} ${hours} ${currentLanguage==='en'?'hours':'saat'}`;
+    if(hours)return `${hours} ${currentLanguage==='en'?'hours':'saat'} ${minutes} ${currentLanguage==='en'?'min':'dk'}`;
+    return `${minutes} ${currentLanguage==='en'?'min':'dk'}`;
+  }
+
+  function healthChipV610(status,label=null) {
+    const clean=String(status||'unknown').toLowerCase();
+    const names={healthy:['Sağlıklı','Healthy'],ok:['Hazır','Ready'],warning:['Uyarı','Warning'],critical:['Kritik','Critical'],offline:['Çevrimdışı','Offline'],unconfigured:['Yapılandırılmadı','Not Configured'],stale:['Veri Eski','Stale'],disabled:['Kapalı','Disabled'],unknown:['Bilinmiyor','Unknown'],verified:['Doğrulandı','Verified'],not_checked:['Kontrol Edilmedi','Not Checked'],completed:['Tamamlandı','Completed'],running:['Çalışıyor','Running'],failed:['Başarısız','Failed'],deleted:['Silindi','Deleted'],error:['Hata','Error'],unsupported:['Desteklenmiyor','Unsupported']};
+    const pair=names[clean]||[clean,clean];return `<span class="health-status-v610 ${esc(clean)}">${esc(label||(currentLanguage==='en'?pair[1]:pair[0]))}</span>`;
+  }
+
+  function healthSetTextV610(id,value){const el=document.getElementById(id);if(el)el.textContent=value??'-';}
+
+  function renderSystemHealth(data) {
+    lastSystemHealthData=data;
+    const en=currentLanguage==='en';
+    healthSetTextV610('healthOverallValue',en?String(data.overall_status||'-').toUpperCase():({healthy:'SAĞLIKLI',warning:'UYARI',critical:'KRİTİK'}[data.overall_status]||String(data.overall_status||'-').toUpperCase()));
+    healthSetTextV610('healthOverallDetail',`${(data.critical||[]).length} ${en?'critical':'kritik'} · ${(data.warnings||[]).length} ${en?'warning':'uyarı'}`);
+    healthSetTextV610('healthBackendValue',`v${data.backend?.version||'-'}`);healthSetTextV610('healthBackendDetail',`${en?'Uptime':'Çalışma süresi'}: ${fmtDurationV610(data.backend?.uptime_sec)}`);
+    healthSetTextV610('healthDatabaseValue',data.database?.connected?(en?'CONNECTED':'BAĞLI'):(en?'FAILED':'HATA'));healthSetTextV610('healthDatabaseDetail',data.database?.connected?`${fmtBytesV610(data.database?.size_bytes)} · ${data.database?.latency_ms||0} ms`:data.database?.error||'-');
+    const mqttState=data.mqtt||{};
+    let mqttValue='-';let mqttDetail='-';
+    if(!mqttState.configured){mqttValue=en?'NOT CONFIGURED':'YAPILANDIRILMADI';mqttDetail=en?'MQTT_URL is missing; public demo broker is not counted as production connectivity.':'MQTT_URL eksik; genel demo broker üretim bağlantısı olarak sayılmıyor.';}
+    else if(!mqttState.broker_connected){mqttValue=en?'OFFLINE':'ÇEVRİMDIŞI';mqttDetail=`${en?'Broker':'Broker'}: ${mqttState.url||'-'}`;}
+    else if(!mqttState.device_active){mqttValue=en?'BROKER CONNECTED':'BROKER BAĞLI';mqttDetail=mqttState.last_message_at?`${en?'Device traffic stale. Last message':'Cihaz trafiği eski. Son mesaj'}: ${fmtDate(mqttState.last_message_at)}`:(en?'Broker is connected, but no device message has been received.':'Broker bağlı ancak henüz cihaz mesajı alınmadı.');}
+    else {mqttValue=en?'CONNECTED':'BAĞLI';mqttDetail=`${en?'Last device message':'Son cihaz mesajı'}: ${fmtDate(mqttState.last_message_at)}`;}
+    healthSetTextV610('healthMqttValue',mqttValue);healthSetTextV610('healthMqttDetail',mqttDetail);
+    healthSetTextV610('healthDiskValue',data.disk?.status==='ok'?`%${Number(data.disk.used_percent||0).toFixed(1)}`:'-');healthSetTextV610('healthDiskDetail',data.disk?.status==='ok'?`${fmtBytesV610(data.disk.free_bytes)} ${en?'free':'boş'} · ${fmtBytesV610(data.disk.total_bytes)}`:data.disk?.error||data.disk?.status||'-');
+    const completed=(data.backups||[]).find(row=>row.status==='completed');healthSetTextV610('healthBackupValue',completed?fmtBytesV610(completed.size_bytes):(en?'NONE':'YOK'));healthSetTextV610('healthBackupDetail',completed?fmtDate(completed.completed_at||completed.started_at):(en?'No completed backup':'Tamamlanmış yedek yok'));
+    const status=document.getElementById('systemHealthStatus');if(status)status.innerHTML=`${healthChipV610(data.overall_status)} · ${en?'Updated':'Güncelleme'}: ${fmtDate(data.generated_at)} · ${en?'Backup directory':'Yedek klasörü'}: ${esc(data.disk?.path||'-')}`;
+    const alert=document.getElementById('systemHealthAlerts');if(alert){const messages=en?[...(data.critical||[]),...(data.warnings||[])]:[...(data.critical_tr||data.critical||[]),...(data.warnings_tr||data.warnings||[])];alert.innerHTML=messages.length?`<div class="health-alert-v610 ${data.critical?.length?'critical':'warning'}">${messages.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:`<div class="health-alert-v610">${en?'No critical system issue detected.':'Kritik sistem sorunu tespit edilmedi.'}</div>`;}
+
+    const services=[
+      ['Alarm Delivery',data.services?.alarm_delivery?.enabled?(data.services.alarm_delivery.running?'running':'ok'):'disabled',`${en?'Automatic':'Otomatik'}: ${data.services?.alarm_delivery?.automatic?'ON':'OFF'}`],
+      ['Automation Scheduler',data.services?.automation_scheduler?.enabled?(data.services.automation_scheduler.last_error?'warning':'ok'):'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.automation_scheduler?.next_run_at)}`],
+      ['Alarm Reports',data.services?.alarm_reports?.enabled?'ok':'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.alarm_reports?.next_run_at)}`],
+      ['Maintenance Scheduler',data.services?.maintenance?.enabled?(data.services.maintenance.last_error?'warning':'ok'):'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.maintenance?.next_run_at)}`],
+      [en?'MQTT Broker':'MQTT Broker',!data.mqtt?.configured?'unconfigured':(data.mqtt?.broker_connected?'ok':'offline'),!data.mqtt?.configured?(en?'MQTT_URL is not configured':'MQTT_URL yapılandırılmadı'):(data.mqtt?.broker_connected?(en?'Socket connection established':'Soket bağlantısı kuruldu'):(en?'Broker connection is closed':'Broker bağlantısı kapalı'))],
+      [en?'Device Traffic':'Cihaz Trafiği',data.mqtt?.device_active?'ok':(data.mqtt?.broker_connected?'stale':'offline'),data.mqtt?.device_active?`${en?'Last message':'Son mesaj'}: ${fmtDate(data.mqtt?.last_message_at)}`:(data.mqtt?.last_message_at?`${en?'Last message':'Son mesaj'}: ${fmtDate(data.mqtt.last_message_at)}`:(en?'No device message received':'Cihaz mesajı alınmadı'))],
+      ['Telegram',data.notification?.telegram?.enabled?(data.notification.telegram.configured?'ok':'warning'):'disabled',data.notification?.telegram?.configured?(en?'Configured':'Yapılandırıldı'):(en?'Not configured':'Yapılandırılmadı')],
+      ['Email / SMTP',data.notification?.email?.enabled?(data.notification.email.configured?'ok':'warning'):'disabled',data.notification?.email?.configured?(en?'Configured':'Yapılandırıldı'):(en?'Not configured':'Yapılandırılmadı')],
+      ['Automatic Backup',data.services?.backup?.enabled?(data.services.backup.running?'running':'ok'):'disabled',`${String(data.services?.backup?.backup_hour??2).padStart(2,'0')}:00`],
+      ['pg_dump',data.tools?.pg_dump?.ready?'ok':'warning',data.tools?.pg_dump?.version|| (en?'Not found':'Bulunamadı')],
+      ['pg_restore',data.tools?.pg_restore?.ready?'ok':'warning',data.tools?.pg_restore?.version|| (en?'Checksum-only verification':'Yalnızca checksum doğrulaması')]
+    ];
+    const serviceTarget=document.getElementById('systemHealthServices');if(serviceTarget)serviceTarget.innerHTML=services.map(row=>`<div class="health-service-card-v610"><header><h4>${esc(row[0])}</h4>${healthChipV610(row[1])}</header><p>${esc(row[2]||'-')}</p></div>`).join('');
+
+    ['saveSystemHealthSettingsBtn','createDatabaseBackupBtn','cleanupDatabaseBackupsBtn'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=data.can_manage===false;});
+    const hours=document.getElementById('healthBackupHour');if(hours&&!hours.options.length)hours.innerHTML=Array.from({length:24},(_,i)=>`<option value="${i}">${String(i).padStart(2,'0')}:00</option>`).join('');
+    const set=(id,value)=>{const el=document.getElementById(id);if(el)el.value=String(value??'');};const settings=data.settings||{};
+    set('healthBackupEnabled',Boolean(settings.backup_enabled));set('healthBackupHour',settings.backup_hour);set('healthRetentionDays',settings.retention_days);set('healthMaxBackups',settings.max_backups);set('healthCriticalTelegram',Boolean(settings.critical_telegram_enabled));
+
+    const env=document.getElementById('systemEnvironmentChecks');if(env)env.innerHTML=table([
+      {label:en?'Check':'Kontrol',value:r=>en?(r.label_en||r.label):(r.label_tr||r.label)},{label:en?'Status':'Durum',html:true,value:r=>healthChipV610(r.status)},{label:en?'Description':'Açıklama',value:r=>en?(r.message_en||r.message):(r.message_tr||r.message)}
+    ],data.environment||[]);
+    const backup=document.getElementById('systemBackupHistory');if(backup)backup.innerHTML=table([
+      {label:en?'Date':'Tarih',value:r=>fmtDate(r.completed_at||r.started_at)},{label:en?'File':'Dosya',value:r=>r.filename},{label:en?'Type':'Tip',value:r=>r.backup_type},{label:en?'Status':'Durum',html:true,value:r=>healthChipV610(r.status)},{label:en?'Size':'Boyut',value:r=>fmtBytesV610(r.size_bytes)},{label:en?'Verification':'Doğrulama',html:true,value:r=>healthChipV610(r.verification_status)},{label:'SHA256',value:r=>r.sha256?`${r.sha256.slice(0,12)}…`:'-'},{label:en?'Action':'Aksiyon',html:true,value:r=>r.status==='completed'&&data.can_manage!==false?`<div class="button-row"><button class="secondary-btn mini-btn" data-health-action="verify" data-id="${esc(r.id)}">${en?'Verify':'Doğrula'}</button><button class="secondary-btn mini-btn" data-health-action="download" data-id="${esc(r.id)}">${en?'Download':'İndir'}</button></div>`:'-'}
+    ],(data.backups||[]).filter(r=>r.status!=='deleted').slice(0,25));
+    renderSystemHealthLogs();
+  }
+
+  function localizeHealthLogMessageV612(row,en) {
+    const raw=String(row?.message||'');
+    if(en)return raw;
+    if(row?.metadata?.message_tr)return String(row.metadata.message_tr);
+    const exact={
+      'System health and backup settings updated':'Sistem sağlığı ve yedek ayarları güncellendi',
+      'Critical health alert sent to Telegram':'Kritik sağlık uyarısı Telegram üzerinden gönderildi'
+    };
+    if(exact[raw])return exact[raw];
+    let match=raw.match(/^Manual system health check: (.+)$/i);if(match){const state={critical:'kritik',warning:'uyarı',healthy:'sağlıklı'}[String(match[1]).toLowerCase()]||match[1];return `Manuel sistem sağlık kontrolü: ${state}`;}
+    match=raw.match(/^Database backup completed: (.+)$/i);if(match)return `Veritabanı yedeği tamamlandı: ${match[1]}`;
+    match=raw.match(/^Database backup failed: (.+)$/i);if(match)return `Veritabanı yedeği başarısız: ${match[1]}`;
+    match=raw.match(/^Backup cleanup completed: (\d+) deleted$/i);if(match)return `Yedek temizliği tamamlandı: ${match[1]} kayıt silindi`;
+    match=raw.match(/^Critical alert not sent: (.+)$/i);if(match)return `Kritik uyarı gönderilmedi: ${match[1]}`;
+    match=raw.match(/^Telegram critical alert failed: (.+)$/i);if(match)return `Telegram kritik uyarısı başarısız: ${match[1]}`;
+    return raw;
+  }
+
+  function localizeHealthMetadataV612(metadata,en) {
+    if(!metadata||typeof metadata!=='object')return metadata;
+    if(en){const copy={...metadata};delete copy.critical_tr;delete copy.warnings_tr;delete copy.message_tr;return copy;}
+    const translations={
+      'Use a strong non-default PGPASSWORD in production':'Üretimde güçlü ve varsayılan olmayan bir PGPASSWORD kullanın',
+      'Not found; automatic database backup cannot run':'Bulunamadı; otomatik veritabanı yedeği çalışamaz',
+      'Not found; archive catalog verification will use checksum only':'Bulunamadı; arşiv doğrulaması yalnızca checksum ile yapılır',
+      'MQTT broker is connected, but no device message has been received':'MQTT broker bağlı ancak henüz cihaz mesajı alınmadı',
+      'MQTT broker is disconnected':'MQTT broker bağlantısı kesik',
+      'PostgreSQL connection failed':'PostgreSQL bağlantısı başarısız'
+    };
+    const translate=value=>{
+      if(Array.isArray(value))return value.map(translate);
+      if(value&&typeof value==='object'){const result={};for(const [key,item] of Object.entries(value)){if(['critical_tr','warnings_tr','message_tr'].includes(key))continue;result[key]=translate(item);}return result;}
+      if(typeof value==='string')return translations[value]||value.replace(/^MQTT broker is connected, but device traffic is stale \((\d+) sec\)$/i,'MQTT broker bağlı ancak cihaz trafiği eski ($1 sn)');
+      return value;
+    };
+    const copy=translate(metadata);
+    if(metadata.critical_tr)copy.critical=metadata.critical_tr;
+    if(metadata.warnings_tr)copy.warnings=metadata.warnings_tr;
+    return copy;
+  }
+
+  function renderSystemHealthLogs() {
+    const target=document.getElementById('systemHealthLogs');if(!target||!lastSystemHealthData)return;const en=currentLanguage==='en';const level=document.getElementById('systemHealthLogLevel')?.value||'all';
+    const rows=(lastSystemHealthData.logs||[]).filter(r=>level==='all'||r.level===level);
+    target.innerHTML=table([{label:en?'Date':'Tarih',value:r=>fmtDate(r.created_at)},{label:en?'Level':'Seviye',html:true,value:r=>healthChipV610(r.level,r.level)},{label:en?'Component':'Bileşen',value:r=>r.component},{label:en?'Message':'Mesaj',value:r=>localizeHealthLogMessageV612(r,en)},{label:'Metadata',value:r=>compactJson(localizeHealthMetadataV612(r.metadata,en))}],rows);
+  }
+
+
+  async function downloadSystemBackupV610(id) {
+    const token=authToken();
+    const res=await fetch(`/api/admin/system-health/backups/${encodeURIComponent(id)}/download`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
+    if(!res.ok){let message=`Backup download failed: ${res.status}`;try{const body=await res.json();message=body.message||message;}catch{}throw new Error(message);}
+    const blob=await res.blob();const disposition=res.headers.get('content-disposition')||'';const match=disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);const filename=match?decodeURIComponent(match[1].replace(/\"/g,'')):`FactoryBox_DB_${new Date().toISOString().replace(/[:.]/g,'-')}.dump`;
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  }
+
+  async function loadSystemHealth(force=false) { const data=await getJson(`/api/admin/system-health${force?'?force=1':''}`);renderSystemHealth(data);return data; }
+
+  async function saveSystemHealthSettings() {
+    const value=id=>document.getElementById(id)?.value;
+    return apiJson('/api/admin/system-health/settings',{method:'PATCH',body:JSON.stringify({backup_enabled:value('healthBackupEnabled')==='true',backup_hour:Number(value('healthBackupHour')),retention_days:Number(value('healthRetentionDays')),max_backups:Number(value('healthMaxBackups')),critical_telegram_enabled:value('healthCriticalTelegram')==='true'})});
+  }
+
   async function loadAdmin() {
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
@@ -3937,6 +4190,7 @@
       ['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary'],
       ['alarm-escalation-delivery-status', '/api/admin/alarm-escalation/delivery-status', renderAlarmEscalationDeliveryStatus, 'alarmEscalationDeliveryStatus'],
       ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
+      ['system-health', '/api/admin/system-health', renderSystemHealth, 'systemHealthStatus'],
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
       ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus'],
@@ -5050,6 +5304,21 @@
     });
     const languagePreview=document.getElementById('generalLanguage');
     if(languagePreview)languagePreview.addEventListener('change',()=>{currentLanguage=languagePreview.value;localStorage.setItem('factorybox_ui_language',currentLanguage);applyTranslations(document);const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||'dashboard';setAdminView(activeView);renderGeneralSettings({...generalSettingsOptions,settings:{...generalSettings,language:currentLanguage},options:generalSettingsOptions});});
+
+
+    const refreshSystemHealthBtn=document.getElementById('refreshSystemHealthBtn');
+    if(refreshSystemHealthBtn)refreshSystemHealthBtn.addEventListener('click',async()=>{refreshSystemHealthBtn.disabled=true;try{await loadSystemHealth(false);}catch(e){setError('systemHealthStatus',e.message);}finally{refreshSystemHealthBtn.disabled=false;}});
+    const runSystemHealthCheckBtn=document.getElementById('runSystemHealthCheckBtn');
+    if(runSystemHealthCheckBtn)runSystemHealthCheckBtn.addEventListener('click',async()=>{runSystemHealthCheckBtn.disabled=true;const status=document.getElementById('systemHealthStatus');if(status)status.textContent=currentLanguage==='en'?'Running full health check...':'Tam sağlık kontrolü yapılıyor...';try{const data=await apiJson('/api/admin/system-health/check',{method:'POST',body:'{}'});renderSystemHealth(data);}catch(e){setError('systemHealthStatus',e.message);}finally{runSystemHealthCheckBtn.disabled=false;}});
+    const saveSystemHealthSettingsBtn=document.getElementById('saveSystemHealthSettingsBtn');
+    if(saveSystemHealthSettingsBtn)saveSystemHealthSettingsBtn.addEventListener('click',async()=>{saveSystemHealthSettingsBtn.disabled=true;const status=document.getElementById('systemBackupActionStatus');if(status)status.textContent=currentLanguage==='en'?'Saving settings...':'Ayarlar kaydediliyor...';try{await saveSystemHealthSettings();if(status)status.textContent=currentLanguage==='en'?'Backup settings saved.':'Yedek ayarları kaydedildi.';await loadSystemHealth();}catch(e){if(status)status.textContent=e.message;}finally{saveSystemHealthSettingsBtn.disabled=false;}});
+    const createDatabaseBackupBtn=document.getElementById('createDatabaseBackupBtn');
+    if(createDatabaseBackupBtn)createDatabaseBackupBtn.addEventListener('click',async()=>{createDatabaseBackupBtn.disabled=true;const status=document.getElementById('systemBackupActionStatus');if(status)status.textContent=currentLanguage==='en'?'Creating and verifying database backup...':'Veritabanı yedeği oluşturuluyor ve doğrulanıyor...';try{const data=await apiJson('/api/admin/system-health/backups',{method:'POST',body:'{}'});if(status)status.textContent=`${currentLanguage==='en'?'Backup completed':'Yedek tamamlandı'}: ${data.backup?.filename||'-'} · ${fmtBytesV610(data.backup?.size_bytes)}`;await loadSystemHealth();}catch(e){if(status)status.textContent=e.message;}finally{createDatabaseBackupBtn.disabled=false;}});
+    const cleanupDatabaseBackupsBtn=document.getElementById('cleanupDatabaseBackupsBtn');
+    if(cleanupDatabaseBackupsBtn)cleanupDatabaseBackupsBtn.addEventListener('click',async()=>{cleanupDatabaseBackupsBtn.disabled=true;const status=document.getElementById('systemBackupActionStatus');try{const data=await apiJson('/api/admin/system-health/backups/cleanup',{method:'POST',body:'{}'});if(status)status.textContent=`${currentLanguage==='en'?'Deleted backups':'Silinen yedek'}: ${data.result?.deleted_count||0}`;await loadSystemHealth();}catch(e){if(status)status.textContent=e.message;}finally{cleanupDatabaseBackupsBtn.disabled=false;}});
+    const systemHealthSection=document.getElementById('systemHealthSection');
+    if(systemHealthSection)systemHealthSection.addEventListener('click',async(e)=>{const btn=e.target.closest('[data-health-action]');if(!btn)return;const action=btn.dataset.healthAction;const id=btn.dataset.id;if(action==='download'){btn.disabled=true;const status=document.getElementById('systemBackupActionStatus');try{await downloadSystemBackupV610(id);if(status)status.textContent=currentLanguage==='en'?'Backup download started.':'Yedek indirme başlatıldı.';}catch(error){if(status)status.textContent=error.message;}finally{btn.disabled=false;}return;}if(action==='verify'){btn.disabled=true;const status=document.getElementById('systemBackupActionStatus');try{const data=await apiJson(`/api/admin/system-health/backups/${encodeURIComponent(id)}/verify`,{method:'POST',body:'{}'});if(status)status.textContent=data.valid?(currentLanguage==='en'?'Backup verified.':'Yedek doğrulandı.'):(currentLanguage==='en'?'Backup verification failed.':'Yedek doğrulaması başarısız.');await loadSystemHealth();}catch(error){if(status)status.textContent=error.message;}finally{btn.disabled=false;}}});
+    const systemHealthLogLevel=document.getElementById('systemHealthLogLevel');if(systemHealthLogLevel)systemHealthLogLevel.addEventListener('change',renderSystemHealthLogs);
 
     document.body.addEventListener('click', handleAction);
     document.body.addEventListener('change', (e) => {

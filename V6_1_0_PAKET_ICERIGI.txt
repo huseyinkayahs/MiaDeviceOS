@@ -1,0 +1,11 @@
+FactoryBox One v6.1.0 - System Health & Backup Center
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- docs/V6_1_SYSTEM_HEALTH_BACKUP_CENTER.md
+- platform/backend/.env.system-health.example
+- KURULUM_V6_1_0.txt
+- V6_1_0_PAKET_ICERIGI.txt
+
+Bu paket yalnızca değişen dosyaları içerir ve proje ana klasörünün üzerine kopyalanmalıdır.

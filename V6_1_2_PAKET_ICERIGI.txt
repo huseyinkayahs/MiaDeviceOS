@@ -1,0 +1,11 @@
+FactoryBox One v6.1.2 Docker PostgreSQL Backup & System Health Accuracy Hotfix
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/.env.system-health.example
+- docs/V6_1_2_DOCKER_POSTGRES_BACKUP_HOTFIX.md
+- KURULUM_V6_1_2.txt
+- V6_1_2_PAKET_ICERIGI.txt
+
+Bu paket proje ana klasörünün üzerine kopyalanmalıdır.
