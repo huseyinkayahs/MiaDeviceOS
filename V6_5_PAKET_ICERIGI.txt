@@ -1,0 +1,16 @@
+FactoryBox One v6.5.0 SmartAI Reports & Natural Language Insights
+
+DEĞİŞEN / EKLENEN DOSYALAR
+
+platform/backend/server.js
+platform/backend/public/admin.html
+platform/backend/.env.smartai.example
+platform/database/migrations/041_smartai_reports_natural_language_insights.sql
+docs/V6_5_SMARTAI_REPORTS_NATURAL_LANGUAGE_INSIGHTS.md
+V6_5_PAKET_ICERIGI.txt
+KURULUM_V6_5.txt
+
+ÖNEMLİ
+
+Bu paket yalnızca değişen dosyaları içerir.
+ZIP içeriğini FactoryBox proje ana klasörünün üzerine kopyalayın.

@@ -1,0 +1,9 @@
+FACTORYBOX ONE v6.5.2 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörüne çıkarın.
+3. Var olan dosyaların değiştirilmesini kabul edin.
+4. platform/backend klasöründe npm.cmd start komutunu çalıştırın.
+5. Admin Panel'de Ctrl + F5 yapın.
+6. Sürümün v6.5.2 olduğunu kontrol edin.
+7. SmartAI > AI Raporları ekranından raporu yeniden oluşturun.

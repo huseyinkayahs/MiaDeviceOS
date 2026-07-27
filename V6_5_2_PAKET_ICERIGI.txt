@@ -1,0 +1,10 @@
+FactoryBox One v6.5.2 SmartAI PostgreSQL Parameter Type Hotfix
+
+Bu paket yalnızca değişen dosyaları içerir.
+
+İçerik:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- docs/V6_5_2_SMARTAI_PARAMETER_TYPE_HOTFIX.md
+- KURULUM_V6_5_2.txt
+- V6_5_2_PAKET_ICERIGI.txt

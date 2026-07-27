@@ -1,0 +1,35 @@
+FactoryBox One v6.5.0 Kurulum
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine çıkarın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. Backend klasörüne geçin:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+
+5. Backend'i başlatın:
+
+   npm.cmd start
+
+6. Admin panelinde Ctrl + F5 yapın.
+7. v6.5.0 sürümünü kontrol edin.
+8. SmartAI → AI Raporları ekranını açın.
+
+İLK TEST
+
+- Analiz Motoru: FactoryBox Kural Motoru
+- Dönem: Haftalık
+- Hedef Kitle: Yönetici
+- Rapor Dili: Türkçe
+- Rapor Oluştur ve Kaydet
+
+Ardından SmartAI → Analiz Sor ekranında:
+
+  Bu hafta hangi alarmlar tekrarlandı?
+
+sorusunu test edin.
+
+OPENAI OPSİYONELDİR
+
+OpenAI kullanılmayacaksa hiçbir ek ayar gerekmez.
+Kural motoru bağımsız çalışır.

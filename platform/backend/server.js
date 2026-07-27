@@ -148,7 +148,7 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.4.0';
+const APP_VERSION = '6.5.3';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -13400,6 +13400,352 @@ app.get('/api/sites/:siteCode/ai/openai-report/email', async (req,res)=>{
 });
 
 
+
+// -----------------------------------------------------------------------------
+// v6.5.0 SmartAI Reports & Natural Language Insights
+// Read-only analytics: no device command or database mutation outside report/settings/history records.
+// -----------------------------------------------------------------------------
+let smartAiCenterFoundationReady = false;
+let smartAiSchedulerTimer = null;
+let smartAiSchedulerKickoffTimer = null;
+
+const SMARTAI_ENGINES = ['rules','openai'];
+const SMARTAI_LANGUAGES = ['tr','en'];
+const SMARTAI_AUDIENCES = ['executive','technical','operator'];
+const SMARTAI_PERIODS = ['daily','weekly','monthly','custom'];
+const SMARTAI_CHANNELS = ['telegram','email'];
+
+function smartAiChoice(value, allowed, label, fallback) {
+  const clean=String(value ?? fallback ?? '').trim().toLowerCase();
+  if (!allowed.includes(clean)) { const e=new Error(`${label} is invalid`); e.statusCode=400; throw e; }
+  return clean;
+}
+function smartAiBool(value, fallback=false) {
+  if (value===undefined || value===null || value==='') return Boolean(fallback);
+  if (typeof value==='boolean') return value;
+  return ['1','true','yes','on','enabled'].includes(String(value).toLowerCase());
+}
+function smartAiInt(value, fallback, min, max, label='value') {
+  const n=Number(value ?? fallback);
+  if (!Number.isFinite(n) || n<min || n>max) { const e=new Error(`${label} must be between ${min} and ${max}`); e.statusCode=400; throw e; }
+  return Math.round(n);
+}
+function smartAiText(value, max=1000) { const s=String(value ?? '').trim(); return s ? s.slice(0,max) : null; }
+function smartAiChannels(value) {
+  const rows=Array.isArray(value)?value:String(value||'').split(/[,+]/);
+  return [...new Set(rows.map(x=>String(x).trim().toLowerCase()).filter(x=>SMARTAI_CHANNELS.includes(x)))];
+}
+function smartAiIsoDate(value,label='date') {
+  const text=String(value||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(text)){const e=new Error(`${label} must be YYYY-MM-DD`);e.statusCode=400;throw e;}
+  const d=new Date(`${text}T00:00:00.000Z`);if(Number.isNaN(d.getTime())){const e=new Error(`${label} is invalid`);e.statusCode=400;throw e;}return text;
+}
+function smartAiDateText(date){return new Date(date).toISOString().slice(0,10);}
+function smartAiResolveRange(periodRaw,fromRaw,toRaw){
+  const period=smartAiChoice(periodRaw,SMARTAI_PERIODS,'period','daily');
+  const today=new Date();const to=toRaw?smartAiIsoDate(toRaw,'to'):smartAiDateText(today);
+  let from;
+  if(fromRaw)from=smartAiIsoDate(fromRaw,'from');
+  else {const d=new Date(`${to}T00:00:00.000Z`);d.setUTCDate(d.getUTCDate()-(period==='weekly'?6:period==='monthly'?29:0));from=smartAiDateText(d);}
+  const start=new Date(`${from}T00:00:00.000Z`),endDay=new Date(`${to}T00:00:00.000Z`);const days=Math.floor((endDay-start)/86400000)+1;
+  if(days<1||days>366){const e=new Error('SmartAI date range must be between 1 and 366 days');e.statusCode=400;throw e;}
+  return {period,from,to,days,fromDate:start,toDate:endDay,endExclusive:new Date(endDay.getTime()+86400000)};
+}
+function smartAiLocalParts(timezone='Europe/Istanbul',date=new Date()){
+  try {const parts=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',hour12:false}).formatToParts(date);const map={};for(const p of parts)map[p.type]=p.value;return {date:`${map.year}-${map.month}-${map.day}`,hour:Number(map.hour||0)%24,weekday:String(map.weekday||'').toLowerCase(),day:Number(map.day||1)};} catch {return {date:date.toISOString().slice(0,10),hour:date.getUTCHours(),weekday:['sun','mon','tue','wed','thu','fri','sat'][date.getUTCDay()],day:date.getUTCDate()};}
+}
+
+async function ensureSmartAiCenterFoundation(){
+  if(smartAiCenterFoundationReady)return;
+  await ensureAiReportsHistorySchema();await ensureOrganizationFoundation();await ensureMaintenanceFoundation();await ensurePreventiveMaintenanceFoundation();await ensureInventoryFoundation();await ensureOeeFoundation();
+  await pool.query(`
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES customers(id) ON DELETE SET NULL;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS site_id uuid REFERENCES sites(id) ON DELETE SET NULL;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS report_kind text NOT NULL DEFAULT 'operations';
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS audience text NOT NULL DEFAULT 'executive';
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS language text NOT NULL DEFAULT 'tr';
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS period_start date;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS period_end date;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS ai_engine text NOT NULL DEFAULT 'rules';
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'completed';
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS created_by text;
+    ALTER TABLE ai_reports ADD COLUMN IF NOT EXISTS delivery_status jsonb NOT NULL DEFAULT '{}'::jsonb;
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_customer_created ON ai_reports(customer_id,created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_period ON ai_reports(period_start,period_end,report_type);
+
+    CREATE TABLE IF NOT EXISTS smartai_settings(
+      customer_id uuid PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+      enabled boolean NOT NULL DEFAULT true,
+      engine text NOT NULL DEFAULT 'rules',
+      language text NOT NULL DEFAULT 'tr',
+      default_audience text NOT NULL DEFAULT 'executive',
+      timezone text NOT NULL DEFAULT 'Europe/Istanbul',
+      daily_enabled boolean NOT NULL DEFAULT false,
+      daily_hour integer NOT NULL DEFAULT 8,
+      weekly_enabled boolean NOT NULL DEFAULT false,
+      weekly_day integer NOT NULL DEFAULT 1,
+      weekly_hour integer NOT NULL DEFAULT 8,
+      monthly_enabled boolean NOT NULL DEFAULT false,
+      monthly_day integer NOT NULL DEFAULT 1,
+      monthly_hour integer NOT NULL DEFAULT 8,
+      delivery_channels text[] NOT NULL DEFAULT ARRAY[]::text[],
+      telegram_chat_ids text,
+      email_recipients text,
+      history_limit integer NOT NULL DEFAULT 100,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS smartai_questions(
+      id bigserial PRIMARY KEY,
+      customer_id uuid REFERENCES customers(id) ON DELETE SET NULL,
+      site_id uuid REFERENCES sites(id) ON DELETE SET NULL,
+      user_id text,
+      user_email text,
+      question text NOT NULL,
+      answer text NOT NULL,
+      language text NOT NULL DEFAULT 'tr',
+      ai_engine text NOT NULL DEFAULT 'rules',
+      intent text,
+      period_start date,
+      period_end date,
+      evidence_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_smartai_questions_customer_created ON smartai_questions(customer_id,created_at DESC);
+    CREATE TABLE IF NOT EXISTS smartai_scheduler_runs(
+      id bigserial PRIMARY KEY,
+      customer_id uuid REFERENCES customers(id) ON DELETE CASCADE,
+      schedule_key text NOT NULL,
+      period_type text NOT NULL,
+      status text NOT NULL,
+      report_id uuid,
+      delivery_result jsonb NOT NULL DEFAULT '{}'::jsonb,
+      error_message text,
+      started_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz,
+      UNIQUE(customer_id,schedule_key,period_type)
+    );
+    INSERT INTO smartai_settings(customer_id)
+    SELECT id FROM customers ON CONFLICT(customer_id) DO NOTHING;
+  `);
+  smartAiCenterFoundationReady=true;
+}
+
+async function smartAiSettingsRow(customerId){await ensureSmartAiCenterFoundation();return one(`SELECT customer_id::text,enabled,engine,language,default_audience,timezone,daily_enabled,daily_hour,weekly_enabled,weekly_day,weekly_hour,monthly_enabled,monthly_day,monthly_hour,delivery_channels,telegram_chat_ids,email_recipients,history_limit,updated_by,updated_at FROM smartai_settings WHERE customer_id=$1`,[customerId]);}
+async function smartAiScope(req,opts={}){
+  const snapshot=await organizationHierarchySnapshot(req,opts.customer_code);
+  let machines=snapshot.machines,sites=snapshot.sites,factories=snapshot.factories;
+  if(opts.factory_id){sites=sites.filter(x=>String(x.factory_id)===String(opts.factory_id));const ids=new Set(sites.map(x=>String(x.id)));machines=machines.filter(x=>ids.has(String(x.site_id)));factories=factories.filter(x=>String(x.id)===String(opts.factory_id));}
+  if(opts.site_id){sites=sites.filter(x=>String(x.id)===String(opts.site_id));const ids=new Set(sites.map(x=>String(x.id)));machines=machines.filter(x=>ids.has(String(x.site_id)));const factoryIds=new Set(sites.map(x=>String(x.factory_id)));factories=factories.filter(x=>factoryIds.has(String(x.id)));}
+  return {...snapshot,machines,sites,factories,machineIds:machines.map(x=>String(x.id)),siteIds:sites.map(x=>String(x.id))};
+}
+function smartAiSafePct(v){const n=Number(v||0);return Number.isFinite(n)?Math.round(n*10)/10:0;}
+function smartAiMinutes(sec){return Math.round(Number(sec||0)/60);}
+function smartAiTop(rows,key='count',limit=5){return [...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0)).slice(0,limit);}
+
+async function smartAiCollectContext(req,options={}){
+  await ensureSmartAiCenterFoundation();
+  const range=smartAiResolveRange(options.period,options.from,options.to);const scope=await smartAiScope(req,options);const ids=scope.machineIds;
+  let alarmSummary={total:0,critical:0,warning:0,active:0,cleared:0,avg_ack_min:0,avg_resolve_min:0},alarmTypes=[],alarmMachines=[];
+  if(ids.length){
+    // Keep these queries deliberately explicit. Older PostgreSQL/parser combinations can
+    // report a misleading `syntax error at or near AS` for dense FILTER/cast expressions.
+    alarmSummary=await one(`
+      SELECT
+        COUNT(*)::int AS total,
+        SUM(CASE WHEN severity='critical' THEN 1 ELSE 0 END)::int AS critical,
+        SUM(CASE WHEN severity='warning' THEN 1 ELSE 0 END)::int AS warning,
+        SUM(CASE WHEN status='active' THEN 1 ELSE 0 END)::int AS active,
+        SUM(CASE WHEN status<>'active' THEN 1 ELSE 0 END)::int AS cleared,
+        COALESCE(
+          ROUND(AVG(CASE WHEN acknowledged_at IS NOT NULL THEN EXTRACT(EPOCH FROM (acknowledged_at-started_at))/60.0 END)::numeric,1),
+          0
+        )::double precision AS avg_ack_min,
+        COALESCE(
+          ROUND(AVG(CASE WHEN cleared_at IS NOT NULL THEN EXTRACT(EPOCH FROM (cleared_at-started_at))/60.0 END)::numeric,1),
+          0
+        )::double precision AS avg_resolve_min
+      FROM alarms
+      WHERE machine_id=ANY($1::uuid[])
+        AND started_at >= $2
+        AND started_at < $3
+    `,[ids,range.fromDate,range.endExclusive])||alarmSummary;
+    alarmTypes=(await pool.query(`
+      SELECT
+        COALESCE(NULLIF(alarm_type,''),'unknown') AS alarm_type,
+        COUNT(*)::int AS count,
+        SUM(CASE WHEN severity='critical' THEN 1 ELSE 0 END)::int AS critical_count
+      FROM alarms
+      WHERE machine_id=ANY($1::uuid[])
+        AND started_at >= $2
+        AND started_at < $3
+      GROUP BY COALESCE(NULLIF(alarm_type,''),'unknown')
+      ORDER BY COUNT(*) DESC
+      LIMIT 10
+    `,[ids,range.fromDate,range.endExclusive])).rows;
+    alarmMachines=(await pool.query(`
+      SELECT
+        m.id::text AS machine_id,
+        m.code,
+        m.name,
+        COUNT(a.id)::int AS count,
+        SUM(CASE WHEN a.severity='critical' THEN 1 ELSE 0 END)::int AS critical_count
+      FROM alarms a
+      JOIN machines m ON m.id=a.machine_id
+      WHERE a.machine_id=ANY($1::uuid[])
+        AND a.started_at >= $2
+        AND a.started_at < $3
+      GROUP BY m.id,m.code,m.name
+      ORDER BY COUNT(a.id) DESC
+      LIMIT 10
+    `,[ids,range.fromDate,range.endExclusive])).rows;
+  }
+  const oeeRange={from:range.from,to:range.to,days:range.days,fromDate:range.fromDate,toDate:range.toDate,endExclusive:range.endExclusive};const oeeData=await loadOeeData(oeeRange);const allowed=new Set(ids);const oeeRows=[];
+  for(const base of oeeData.machines||[]){if(!allowed.has(String(base.id)))continue;oeeRows.push(calculateOeeMachineRow(base,base,oeeData.productions||[],oeeData.downtimes||[],oeeData.states||[],oeeRange));}
+  const oeeSummary=calculateOeeSummary(oeeRows);const topDowntime=smartAiTop(oeeRows.map(x=>({machine_id:x.machine_id,code:x.machine_code,name:x.machine_name,downtime_sec:Number(x.unplanned_downtime_sec||0),oee_pct:Number(x.oee_pct||0),availability_pct:Number(x.availability_pct||0),performance_pct:Number(x.performance_pct||0),quality_pct:Number(x.quality_pct||0),total_count:Number(x.total_count||0)})),'downtime_sec',8);const lowestOee=[...oeeRows].filter(x=>Number(x.total_count||0)>0).sort((a,b)=>Number(a.oee_pct||0)-Number(b.oee_pct||0)).slice(0,8);
+  let overdueTickets=[],overduePlans=[];
+  if(ids.length){
+    overdueTickets=(await pool.query(`SELECT t.id::text,t.ticket_no,t.title,t.priority,t.status,t.due_at,m.code AS machine_code,m.name AS machine_name FROM maintenance_tickets t JOIN machines m ON m.id=t.machine_id WHERE t.machine_id=ANY($1::uuid[]) AND t.status IN ('open','in_progress','waiting') AND t.due_at IS NOT NULL AND t.due_at<now() ORDER BY t.due_at LIMIT 20`,[ids])).rows;
+    overduePlans=(await pool.query(`SELECT p.id::text,p.plan_no,p.title,p.priority,p.next_due_at,m.code AS machine_code,m.name AS machine_name FROM maintenance_plans p JOIN machines m ON m.id=p.machine_id WHERE p.machine_id=ANY($1::uuid[]) AND p.enabled=true AND p.next_due_at IS NOT NULL AND p.next_due_at<now() ORDER BY p.next_due_at LIMIT 20`,[ids])).rows;
+  }
+  const lowStock=(await pool.query(`SELECT id::text,part_no,sku,name,current_stock::float8,min_stock::float8,reorder_qty::float8,unit FROM spare_parts WHERE enabled=true AND current_stock<=min_stock ORDER BY (min_stock-current_stock) DESC,name LIMIT 20`)).rows;
+  const factoryRows=scope.factories.map(f=>{const siteIds=new Set(scope.sites.filter(s=>String(s.factory_id)===String(f.id)).map(s=>String(s.id)));const mids=new Set(scope.machines.filter(m=>siteIds.has(String(m.site_id))).map(m=>String(m.id)));const rows=oeeRows.filter(r=>mids.has(String(r.machine_id)));const sum=calculateOeeSummary(rows);return {id:f.id,code:f.code,name:f.name,machine_count:mids.size,oee_pct:smartAiSafePct(sum.oee_pct),availability_pct:smartAiSafePct(sum.availability_pct),performance_pct:smartAiSafePct(sum.performance_pct),quality_pct:smartAiSafePct(sum.quality_pct),total_count:Number(sum.total_count||0),downtime_sec:Number(sum.unplanned_downtime_sec||0),active_alarm_count:alarmMachines.filter(x=>mids.has(String(x.machine_id))).reduce((n,x)=>n+Number(x.count||0),0)};});
+  const missingOee=scope.machines.length-oeeRows.filter(x=>Number(x.total_count||0)>0).length;
+  return {generated_at:new Date().toISOString(),range:{period:range.period,from:range.from,to:range.to,days:range.days},scope:{customer:scope.customer,factories:scope.factories,sites:scope.sites,machines:scope.machines,scope_restricted:scope.scope_restricted},metrics:{alarms:alarmSummary,oee:oeeSummary,overdue_tickets:overdueTickets.length,overdue_plans:overduePlans.length,low_stock:lowStock.length,missing_oee_machines:missingOee},alarm_types:alarmTypes,alarm_machines:alarmMachines,oee_rows:oeeRows,top_downtime:topDowntime,lowest_oee:lowestOee,overdue_tickets:overdueTickets,overdue_plans:overduePlans,low_stock:lowStock,factories:factoryRows};
+}
+
+function smartAiTr(language,tr,en){return language==='en'?en:tr;}
+function smartAiBuildRuleNarrative(context,{language='tr',audience='executive'}={}){
+  const tr=language!=='en';const m=context.metrics;const topStop=context.top_downtime[0];const low=context.lowest_oee[0];const repeated=context.alarm_types.filter(x=>Number(x.count)>=2).slice(0,5);const risks=[];const actions=[];const findings=[];
+  if(Number(m.alarms.critical||0)>0)risks.push(smartAiTr(language,`${m.alarms.critical} kritik alarm incelenmeli.`,`${m.alarms.critical} critical alarms require review.`));
+  if(topStop&&topStop.downtime_sec>0)findings.push(smartAiTr(language,`${topStop.name||topStop.code} ${smartAiMinutes(topStop.downtime_sec)} dakika ile en fazla plansız duruş yaşayan makine.`,`${topStop.name||topStop.code} has the highest unplanned downtime at ${smartAiMinutes(topStop.downtime_sec)} minutes.`));
+  if(low)findings.push(smartAiTr(language,`${low.machine_name||low.machine_code} en düşük OEE değerine sahip: %${smartAiSafePct(low.oee_pct)}.`,`${low.machine_name||low.machine_code} has the lowest OEE at ${smartAiSafePct(low.oee_pct)}%.`));
+  if(repeated.length)findings.push(smartAiTr(language,`Tekrarlayan alarm tipleri: ${repeated.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`,`Repeated alarm types: ${repeated.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`));
+  if(m.overdue_tickets)risks.push(smartAiTr(language,`${m.overdue_tickets} bakım talebi gecikmiş durumda.`,`${m.overdue_tickets} maintenance tickets are overdue.`));
+  if(m.overdue_plans)risks.push(smartAiTr(language,`${m.overdue_plans} önleyici bakım planının tarihi geçmiş.`,`${m.overdue_plans} preventive-maintenance plans are overdue.`));
+  if(m.low_stock)risks.push(smartAiTr(language,`${m.low_stock} yedek parça minimum stok seviyesinde veya altında.`,`${m.low_stock} spare parts are at or below minimum stock.`));
+  if(topStop&&topStop.downtime_sec>0)actions.push(smartAiTr(language,`${topStop.name||topStop.code} duruş nedenlerini ve bağlı bakım kayıtlarını kontrol et.`,`Review downtime reasons and linked maintenance records for ${topStop.name||topStop.code}.`));
+  if(low)actions.push(smartAiTr(language,`${low.machine_name||low.machine_code} için Availability, Performance ve Quality bileşenlerini ayrı ayrı doğrula.`,`Validate Availability, Performance and Quality separately for ${low.machine_name||low.machine_code}.`));
+  if(repeated.length)actions.push(smartAiTr(language,`En sık tekrarlayan ${repeated[0].alarm_type} alarmı için kök neden analizi başlat.`,`Start a root-cause analysis for the most frequent ${repeated[0].alarm_type} alarm.`));
+  if(m.low_stock)actions.push(smartAiTr(language,`Kritik stoklar için satın alma veya yeniden sipariş sürecini başlat.`,`Start purchasing or replenishment for critical stock items.`));
+  if(!findings.length)findings.push(smartAiTr(language,'Seçilen dönemde belirgin bir operasyonel anomali tespit edilmedi.','No significant operational anomaly was detected in the selected period.'));
+  if(!actions.length)actions.push(smartAiTr(language,'Mevcut performansı korumak için günlük kontrol rutini sürdürülmeli.','Continue the daily review routine to preserve current performance.'));
+  const score=Math.max(0,Math.min(100,Math.round(100-Number(m.alarms.critical||0)*5-Number(m.alarms.active||0)*2-smartAiMinutes(context.top_downtime.reduce((n,x)=>n+x.downtime_sec,0))/60-Number(m.overdue_tickets||0)*3-Number(m.low_stock||0)*2)));
+  let summary;
+  if(audience==='technical')summary=smartAiTr(language,`Dönemde ${m.alarms.total||0} alarm ve ${smartAiMinutes(context.top_downtime.reduce((n,x)=>n+x.downtime_sec,0))} dakika öne çıkan plansız duruş kaydedildi. Teknik öncelik alarm tekrarları, düşük OEE bileşenleri ve gecikmiş bakımlardır.`,`The period contains ${m.alarms.total||0} alarms and ${smartAiMinutes(context.top_downtime.reduce((n,x)=>n+x.downtime_sec,0))} minutes of notable unplanned downtime. Technical priorities are repeated alarms, weak OEE components and overdue maintenance.`);
+  else if(audience==='operator')summary=smartAiTr(language,`Operatör odağı: aktif alarmları kontrol et, duruş nedenlerini doğru seç ve geciken iş emirlerini güncelle. Sistem skoru ${score}/100.`,`Operator focus: review active alarms, select downtime reasons accurately and update overdue work orders. System score is ${score}/100.`);
+  else summary=smartAiTr(language,`Seçilen dönemin genel operasyon skoru ${score}/100. Toplam ${m.alarms.total||0} alarm, ${m.overdue_tickets||0} gecikmiş bakım talebi ve ${m.low_stock||0} kritik stok kaydı bulunuyor.`,`The overall operational score for the selected period is ${score}/100. There are ${m.alarms.total||0} alarms, ${m.overdue_tickets||0} overdue maintenance tickets and ${m.low_stock||0} critical stock items.`);
+  return {score,summary,executive_comment:findings[0],findings:findings.slice(0,8),risks:risks.slice(0,8),recommendations:actions.slice(0,8),action_items:actions.slice(0,8)};
+}
+
+async function smartAiGenericOpenAi(prompt){
+  const cfg=openAiConfig();if(!cfg.configured||!cfg.enabled)return {ok:false,reason:cfg.configured?'OpenAI disabled':'OPENAI_API_KEY not configured',model:cfg.model};
+  const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:cfg.model,input:prompt})});const data=await response.json().catch(()=>({}));if(!response.ok)return {ok:false,reason:data?.error?.message||`OpenAI HTTP ${response.status}`,model:cfg.model};const text=extractOpenAiText(data);const parsed=parseJsonFromText(text);return {ok:Boolean(parsed),reason:parsed?null:'Response is not valid JSON',model:cfg.model,parsed,response_id:data?.id||null,raw_text:text};
+}
+function smartAiReportPrompt(context,rule,{language,audience}){const compact={range:context.range,metrics:context.metrics,top_downtime:context.top_downtime.slice(0,5),lowest_oee:context.lowest_oee.slice(0,5),repeated_alarms:context.alarm_types.slice(0,5),overdue_tickets:context.overdue_tickets.slice(0,5),overdue_plans:context.overdue_plans.slice(0,5),low_stock:context.low_stock.slice(0,8),factories:context.factories};return [`You are a read-only industrial operations analyst for FactoryBox.`,`Write in ${language==='en'?'English':'Turkish'} for a ${audience} audience. Use only supplied data; never invent values.`,`Return valid JSON only with keys: summary, executive_comment, findings, risks, recommendations, action_items. Each list max 8 items.`,`Rule-engine draft: ${JSON.stringify(rule)}`,`Data: ${JSON.stringify(compact)}`].join('\n');}
+async function smartAiBuildReport(req,options={}){
+  const language=smartAiChoice(options.language,SMARTAI_LANGUAGES,'language','tr');const audience=smartAiChoice(options.audience,SMARTAI_AUDIENCES,'audience','executive');const engine=smartAiChoice(options.engine,SMARTAI_ENGINES,'engine','rules');const context=await smartAiCollectContext(req,options);const rule=smartAiBuildRuleNarrative(context,{language,audience});let narrative=rule,engineUsed='rules',openai={configured:openAiConfig().configured,enabled:openAiConfig().enabled,model:openAiConfig().model,status:'not_used'};
+  if(engine==='openai'){const ai=await smartAiGenericOpenAi(smartAiReportPrompt(context,rule,{language,audience}));openai={...openai,status:ai.ok?'ok':'fallback',reason:ai.reason||null,response_id:ai.response_id||null};if(ai.ok){narrative={...rule,...ai.parsed,findings:normalizeAiArray(ai.parsed.findings,rule.findings),risks:normalizeAiArray(ai.parsed.risks,rule.risks),recommendations:normalizeAiArray(ai.parsed.recommendations,rule.recommendations),action_items:normalizeAiArray(ai.parsed.action_items,rule.action_items)};engineUsed='openai';}}
+  return {schema:'factorybox-smartai-report-v1',report_type:`smartai_${context.range.period}`,report_kind:'operations',language,audience,ai_engine:engineUsed,openai,generated_at:new Date().toISOString(),period:context.range,scope:{customer:context.scope.customer,factories:context.scope.factories.map(x=>({id:x.id,code:x.code,name:x.name})),sites:context.scope.sites.map(x=>({id:x.id,code:x.code,name:x.name})),machine_count:context.scope.machines.length,scope_restricted:context.scope.scope_restricted},health_score:Number(narrative.score??rule.score),summary:String(narrative.summary||rule.summary),executive_comment:String(narrative.executive_comment||rule.executive_comment||''),findings:normalizeAiArray(narrative.findings,rule.findings),risks:normalizeAiArray(narrative.risks,rule.risks),recommendations:normalizeAiArray(narrative.recommendations,rule.recommendations),action_items:normalizeAiArray(narrative.action_items,rule.action_items),metrics:context.metrics,evidence:{top_downtime:context.top_downtime,lowest_oee:context.lowest_oee,repeated_alarms:context.alarm_types,alarm_machines:context.alarm_machines,overdue_tickets:context.overdue_tickets,overdue_plans:context.overdue_plans,low_stock:context.low_stock,factories:context.factories}};
+}
+async function smartAiSaveReport(req, report) {
+  const customerId = report.scope.customer.id;
+  const siteId = report.scope.sites.length === 1 ? report.scope.sites[0].id : null;
+  const reportText = smartAiReportText(report);
+  const reportJson = JSON.stringify(report);
+
+  // Every PostgreSQL placeholder is intentionally unique and explicitly cast.
+  // This avoids parameter-type conflicts when an existing installation has
+  // report_date / period_start columns created by an older migration variant.
+  const saved = await one(`
+    INSERT INTO ai_reports(
+      machine_id, customer_id, site_id, report_type, report_kind,
+      report_date, period_start, period_end, health_score,
+      summary, summary_text, report_text, telegram_text,
+      report_json, raw_payload, audience, language, ai_engine,
+      status, created_by, created_at
+    ) VALUES(
+      NULL,
+      $1::uuid,
+      $2::uuid,
+      $3::text,
+      $4::text,
+      $5::date,
+      $6::date,
+      $7::date,
+      $8::integer,
+      $9::text,
+      $10::text,
+      $11::text,
+      $12::text,
+      $13::jsonb,
+      $14::jsonb,
+      $15::text,
+      $16::text,
+      $17::text,
+      'completed',
+      $18::text,
+      now()
+    )
+    RETURNING id::text, created_at
+  `, [
+    customerId,
+    siteId,
+    report.report_type,
+    report.report_kind,
+    report.period.from,
+    report.period.from,
+    report.period.to,
+    report.health_score,
+    report.summary,
+    report.summary,
+    reportText,
+    reportText,
+    reportJson,
+    reportJson,
+    report.audience,
+    report.language,
+    report.ai_engine,
+    req?.user?.email || 'system'
+  ]);
+
+  return saved;
+}
+function smartAiReportText(report){const en=report.language==='en';const lines=[`FactoryBox SmartAI ${en?'Operations Report':'Operasyon Raporu'}`,`${en?'Period':'Dönem'}: ${report.period.from} — ${report.period.to}`,`${en?'Scope':'Kapsam'}: ${report.scope.customer.name}`,`${en?'Audience':'Hedef Kitle'}: ${report.audience}`,`${en?'Engine':'Motor'}: ${report.ai_engine}`,`${en?'Score':'Skor'}: ${report.health_score}/100`,'',en?'SUMMARY':'ÖZET',report.summary,'',en?'FINDINGS':'BULGULAR',...report.findings.map(x=>`• ${x}`),'',en?'RISKS':'RİSKLER',...report.risks.map(x=>`• ${x}`),'',en?'RECOMMENDATIONS':'ÖNERİLER',...report.recommendations.map(x=>`• ${x}`),'',`${en?'Generated':'Oluşturulma'}: ${new Date(report.generated_at).toLocaleString(en?'en-US':'tr-TR')}`];return lines.join('\n');}
+function smartAiReportHtml(report){const en=report.language==='en';const list=x=>(x||[]).map(v=>`<li>${h(v)}</li>`).join('')||`<li>${en?'No item':'Kayıt yok'}</li>`;return `<!doctype html><html lang="${en?'en':'tr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>FactoryBox SmartAI</title><style>body{font-family:Arial,sans-serif;background:#eef1f3;color:#202832;margin:0}.page{max-width:980px;margin:24px auto;background:#fff;padding:32px;border-radius:18px}.top{display:flex;justify-content:space-between;border-bottom:3px solid #c67723;padding-bottom:16px}.score{font-size:38px;font-weight:900;color:#c67723}.meta{color:#65717c}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #dbe1e6;border-radius:13px;padding:13px;background:#f8fafb}.summary{font-size:18px;line-height:1.55;border-left:5px solid #c67723;padding:14px;background:#fff8ef}li{margin:8px 0}h2{margin-top:28px}@media print{body{background:#fff}.page{margin:0;max-width:none;border-radius:0}}</style></head><body><main class="page"><div class="top"><div><h1>FactoryBox SmartAI</h1><div class="meta">${h(report.period.from)} — ${h(report.period.to)} · ${h(report.scope.customer.name)} · ${h(report.audience)}</div></div><div class="score">${h(report.health_score)}/100</div></div><h2>${en?'Executive Summary':'Yönetici Özeti'}</h2><div class="summary">${h(report.summary)}</div><div class="grid"><div class="card"><b>${en?'Alarms':'Alarmlar'}</b><br>${h(report.metrics.alarms.total||0)}</div><div class="card"><b>OEE</b><br>${h(smartAiSafePct(report.metrics.oee.oee_pct))}%</div><div class="card"><b>${en?'Overdue Maintenance':'Gecikmiş Bakım'}</b><br>${h((report.metrics.overdue_tickets||0)+(report.metrics.overdue_plans||0))}</div><div class="card"><b>${en?'Critical Stock':'Kritik Stok'}</b><br>${h(report.metrics.low_stock||0)}</div></div><h2>${en?'Findings':'Bulgular'}</h2><ul>${list(report.findings)}</ul><h2>${en?'Risks':'Riskler'}</h2><ul>${list(report.risks)}</ul><h2>${en?'Recommendations':'Öneriler'}</h2><ul>${list(report.recommendations)}</ul></main></body></html>`;}
+async function smartAiDeliver(report,options={}){const channels=smartAiChannels(options.channels);const results=[],errors=[];for(const channel of channels){try{if(channel==='telegram'){const cfg=telegramEscalationConfig();if(!cfg.enabled||!cfg.token)throw new Error('Telegram not configured');const chats=splitRecipientValues(options.telegram_chat_ids||cfg.defaultChatId);if(!chats.length)throw new Error('Telegram chat ID missing');for(const chat of chats){const response=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:chat,text:smartAiReportText(report).slice(0,4000),disable_web_page_preview:true})});const p=await response.json().catch(()=>({}));if(!response.ok||p.ok===false)throw new Error(p.description||`Telegram HTTP ${response.status}`);results.push({channel,chat_id:chat,message_id:p.result?.message_id||null});}}else if(channel==='email'){const sent=await sendReportEmail({to:options.email_recipients,subject:`FactoryBox SmartAI - ${report.scope.customer.name} - ${report.period.from}/${report.period.to}`,html:smartAiReportHtml(report),text:smartAiReportText(report)});if(!sent.sent)throw new Error(sent.reason||'Email not sent');results.push({channel,message_id:sent.message_id,to:sent.to});}}catch(e){errors.push({channel,message:String(e.message||e)});}}return {status:errors.length?(results.length?'partial':'failed'):'delivered',results,errors};}
+
+function smartAiNormalizeQuestion(q){return String(q||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function smartAiQuestionIntent(q){const s=smartAiNormalizeQuestion(q);if(/en fazla.*dur|most.*downtime|duruş.*fazla/.test(s))return 'top_downtime';if(/neden.*oee|oee.*neden|low.*oee|dusuk.*oee/.test(s))return 'low_oee_reason';if(/tekrar.*alarm|repeated.*alarm|hangi alarm/.test(s))return 'repeated_alarms';if(/bakım.*gecik|maintenance.*overdue|gecikmiş.*bakım/.test(s))return 'overdue_maintenance';if(/stok.*kritik|critical.*stock|parça.*stok/.test(s))return 'critical_stock';if(/fabrika.*karsilastir|compare.*factor|tesis.*karsilastir/.test(s))return 'factory_comparison';return 'operations_summary';}
+function smartAiFindMachine(question,context){const q=smartAiNormalizeQuestion(question);return context.scope.machines.find(m=>q.includes(smartAiNormalizeQuestion(m.code))||q.includes(smartAiNormalizeQuestion(m.name)));}
+function smartAiAnswerRule(question,context,language){const intent=smartAiQuestionIntent(question),en=language==='en';let answer,findings=[],recommendations=[];if(intent==='top_downtime'){const x=context.top_downtime[0];answer=x?(en?`${x.name||x.code} has the highest unplanned downtime with ${smartAiMinutes(x.downtime_sec)} minutes.`:`${x.name||x.code}, ${smartAiMinutes(x.downtime_sec)} dakika ile en fazla plansız duruş yaşayan makinedir.`):(en?'No downtime record was found.':'Duruş kaydı bulunamadı.');if(x){findings=[`OEE: ${smartAiSafePct(x.oee_pct)}%`,`Availability: ${smartAiSafePct(x.availability_pct)}%`];recommendations=[en?'Review downtime reason records and related alarms.':'Duruş nedenleri ve ilişkili alarmlar incelenmeli.'];}}
+  else if(intent==='low_oee_reason'){const machine=smartAiFindMachine(question,context);const row=machine?context.oee_rows.find(x=>String(x.machine_id)===String(machine.id)):context.lowest_oee[0];if(row){const comps=[['Availability',Number(row.availability_pct||0)],['Performance',Number(row.performance_pct||0)],['Quality',Number(row.quality_pct||0)]].sort((a,b)=>a[1]-b[1]);answer=en?`${row.machine_name||row.machine_code} has OEE ${smartAiSafePct(row.oee_pct)}%. The weakest component is ${comps[0][0]} at ${smartAiSafePct(comps[0][1])}%.`:`${row.machine_name||row.machine_code} OEE değeri %${smartAiSafePct(row.oee_pct)}. En zayıf bileşen %${smartAiSafePct(comps[0][1])} ile ${comps[0][0]}.`;findings=[`Availability ${smartAiSafePct(row.availability_pct)}%`,`Performance ${smartAiSafePct(row.performance_pct)}%`,`Quality ${smartAiSafePct(row.quality_pct)}%`,`${en?'Unplanned downtime':'Plansız duruş'} ${smartAiMinutes(row.unplanned_downtime_sec)} ${en?'min':'dk'}`];recommendations=[comps[0][0]==='Availability'?(en?'Investigate downtime and availability losses.':'Duruş ve kullanılabilirlik kayıpları incelenmeli.'):comps[0][0]==='Performance'?(en?'Validate ideal cycle time and speed losses.':'İdeal çevrim süresi ve hız kayıpları doğrulanmalı.'):(en?'Review reject reasons and quality records.':'Hata nedenleri ve kalite kayıtları incelenmeli.')];}else answer=en?'No production/OEE data was found.':'Üretim/OEE verisi bulunamadı.';}
+  else if(intent==='repeated_alarms'){const rows=context.alarm_types.filter(x=>Number(x.count)>=2).slice(0,8);answer=rows.length?(en?`Repeated alarms: ${rows.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`:`Tekrarlayan alarmlar: ${rows.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`):(en?'No repeated alarm was found.':'Tekrarlayan alarm bulunamadı.');findings=rows.map(x=>`${x.alarm_type}: ${x.count}`);recommendations=rows.length?[en?'Start root-cause analysis with the most frequent alarm.':'En sık alarmdan başlayarak kök neden analizi yapılmalı.']:[];}
+  else if(intent==='overdue_maintenance'){const rows=[...context.overdue_tickets,...context.overdue_plans];answer=en?`${rows.length} overdue maintenance item(s) were found.`:`${rows.length} gecikmiş bakım kaydı bulundu.`;findings=rows.slice(0,8).map(x=>`${x.machine_name||x.machine_code}: ${x.title}`);recommendations=rows.length?[en?'Assign owners and update due dates or completion status.':'Sorumlular atanmalı; termin veya tamamlanma durumu güncellenmeli.']:[];}
+  else if(intent==='critical_stock'){answer=en?`${context.low_stock.length} critical stock item(s) were found.`:`${context.low_stock.length} kritik stok kaydı bulundu.`;findings=context.low_stock.slice(0,8).map(x=>`${x.name} (${x.part_no}): ${x.current_stock}/${x.min_stock} ${x.unit}`);recommendations=context.low_stock.length?[en?'Create replenishment orders using reorder quantities.':'Önerilen sipariş miktarlarıyla tedarik süreci başlatılmalı.']:[];}
+  else if(intent==='factory_comparison'){const rows=[...context.factories].sort((a,b)=>Number(b.oee_pct)-Number(a.oee_pct));answer=rows.length?(en?`${rows[0].name} has the highest OEE at ${rows[0].oee_pct}%.`:`${rows[0].name}, %${rows[0].oee_pct} ile en yüksek OEE değerine sahip.`):(en?'No factory comparison data was found.':'Fabrika karşılaştırma verisi bulunamadı.');findings=rows.map(x=>`${x.name}: OEE ${x.oee_pct}% · ${en?'downtime':'duruş'} ${smartAiMinutes(x.downtime_sec)} ${en?'min':'dk'}`);recommendations=rows.length>1?[en?'Compare the weakest OEE component between the best and lowest factory.':'En iyi ve en düşük fabrikanın zayıf OEE bileşenleri karşılaştırılmalı.']:[];}
+  else {const draft=smartAiBuildRuleNarrative(context,{language,audience:'executive'});answer=draft.summary;findings=draft.findings;recommendations=draft.recommendations;}
+  return {intent,answer,findings:findings.slice(0,8),recommendations:recommendations.slice(0,8)};}
+async function smartAiAnswerQuestion(req,options={}){const question=smartAiText(options.question,2000);if(!question){const e=new Error('question is required');e.statusCode=400;throw e;}const language=smartAiChoice(options.language,SMARTAI_LANGUAGES,'language','tr');const engine=smartAiChoice(options.engine,SMARTAI_ENGINES,'engine','rules');const context=await smartAiCollectContext(req,options);const rule=smartAiAnswerRule(question,context,language);let result=rule,used='rules',openaiStatus='not_used';if(engine==='openai'){const compact={question,language,range:context.range,rule_answer:rule,metrics:context.metrics,top_downtime:context.top_downtime.slice(0,5),lowest_oee:context.lowest_oee.slice(0,5),repeated_alarms:context.alarm_types.slice(0,5),overdue_tickets:context.overdue_tickets.slice(0,5),overdue_plans:context.overdue_plans.slice(0,5),low_stock:context.low_stock.slice(0,8),factories:context.factories};const ai=await smartAiGenericOpenAi(`You are a read-only FactoryBox industrial analyst. Answer in ${language==='en'?'English':'Turkish'}. Use only supplied data. Return JSON only: {"answer":"...","findings":["..."],"recommendations":["..."]}. Data: ${JSON.stringify(compact)}`);openaiStatus=ai.ok?'ok':`fallback: ${ai.reason}`;if(ai.ok){result={...rule,answer:String(ai.parsed.answer||rule.answer),findings:normalizeAiArray(ai.parsed.findings,rule.findings),recommendations:normalizeAiArray(ai.parsed.recommendations,rule.recommendations)};used='openai';}}
+  const saved=await one(`INSERT INTO smartai_questions(customer_id,site_id,user_id,user_email,question,answer,language,ai_engine,intent,period_start,period_end,evidence_json) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) RETURNING id::text,created_at`,[context.scope.customer.id,context.scope.sites.length===1?context.scope.sites[0].id:null,req.user?.id||null,req.user?.email||null,question,result.answer,language,used,result.intent,context.range.from,context.range.to,JSON.stringify({findings:result.findings,recommendations:result.recommendations,metrics:context.metrics,engine_status:openaiStatus})]);return {question_id:saved.id,created_at:saved.created_at,question,language,ai_engine:used,engine_status:openaiStatus,intent:result.intent,answer:result.answer,findings:result.findings,recommendations:result.recommendations,period:context.range,scope:{customer:context.scope.customer,site_count:context.scope.sites.length,machine_count:context.scope.machines.length},read_only:true};}
+
+app.get('/api/admin/smartai/status',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const scope=await smartAiScope(req,{customer_code:req.query.customer_code});const settings=await smartAiSettingsRow(scope.customer.id);res.json({status:'ok',version:APP_VERSION,read_only:true,openai:openAiConfig(),notifications:{telegram:(()=>{const t=telegramEscalationConfig();return {enabled:t.enabled,configured:t.configured,token_present:Boolean(t.token),chat_id_present:Boolean(t.defaultChatId)};})(),email:(()=>{const e=emailConfig();return {enabled:e.enabled,configured:e.configured,host_present:Boolean(e.host),from_present:Boolean(e.from),default_to_present:Boolean(e.defaultTo)};})()},settings,scope:{customer:scope.customer,factory_count:scope.factories.length,site_count:scope.sites.length,machine_count:scope.machines.length,scope_restricted:scope.scope_restricted}});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.get('/api/admin/smartai/settings',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const scope=await smartAiScope(req,{customer_code:req.query.customer_code});res.json({status:'ok',version:APP_VERSION,customer:scope.customer,settings:await smartAiSettingsRow(scope.customer.id),openai:openAiConfig()});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.patch('/api/admin/smartai/settings',adminRequired,permissionRequired('SEND_REPORTS'),async(req,res)=>{try{const scope=await smartAiScope(req,{customer_code:req.body?.customer_code});const b=req.body||{};const old=await smartAiSettingsRow(scope.customer.id);const row=await one(`UPDATE smartai_settings SET enabled=$2,engine=$3,language=$4,default_audience=$5,timezone=$6,daily_enabled=$7,daily_hour=$8,weekly_enabled=$9,weekly_day=$10,weekly_hour=$11,monthly_enabled=$12,monthly_day=$13,monthly_hour=$14,delivery_channels=$15::text[],telegram_chat_ids=$16,email_recipients=$17,history_limit=$18,updated_by=$19,updated_at=now() WHERE customer_id=$1 RETURNING customer_id::text,enabled,engine,language,default_audience,timezone,daily_enabled,daily_hour,weekly_enabled,weekly_day,weekly_hour,monthly_enabled,monthly_day,monthly_hour,delivery_channels,telegram_chat_ids,email_recipients,history_limit,updated_by,updated_at`,[scope.customer.id,smartAiBool(b.enabled,old.enabled),smartAiChoice(b.engine,SMARTAI_ENGINES,'engine',old.engine),smartAiChoice(b.language,SMARTAI_LANGUAGES,'language',old.language),smartAiChoice(b.default_audience,SMARTAI_AUDIENCES,'default audience',old.default_audience),smartAiText(b.timezone,100)||old.timezone,smartAiBool(b.daily_enabled,old.daily_enabled),smartAiInt(b.daily_hour,old.daily_hour,0,23,'daily hour'),smartAiBool(b.weekly_enabled,old.weekly_enabled),smartAiInt(b.weekly_day,old.weekly_day,0,6,'weekly day'),smartAiInt(b.weekly_hour,old.weekly_hour,0,23,'weekly hour'),smartAiBool(b.monthly_enabled,old.monthly_enabled),smartAiInt(b.monthly_day,old.monthly_day,1,28,'monthly day'),smartAiInt(b.monthly_hour,old.monthly_hour,0,23,'monthly hour'),smartAiChannels(b.delivery_channels),smartAiText(b.telegram_chat_ids,1000),smartAiText(b.email_recipients,2000),smartAiInt(b.history_limit,old.history_limit,10,1000,'history limit'),req.user?.email||'admin']);await writeAuditLog(req,{action:'update_smartai_settings',entity_type:'smartai_settings',entity_id:scope.customer.id,old_values:old,new_values:row,metadata:{customer_code:scope.customer.code}});res.json({status:'ok',version:APP_VERSION,settings:row});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.post('/api/admin/smartai/reports/generate',adminRequired,permissionRequired('SEND_REPORTS'),async(req,res)=>{try{const report=await smartAiBuildReport(req,req.body||{});const saved=await smartAiSaveReport(req,report);await writeAuditLog(req,{action:'generate_smartai_report',entity_type:'ai_report',entity_id:saved.id,new_values:{report_type:report.report_type,period:report.period,audience:report.audience,language:report.language,ai_engine:report.ai_engine},metadata:{customer_code:report.scope.customer.code,read_only:true}});res.status(201).json({status:'ok',version:APP_VERSION,report_id:saved.id,created_at:saved.created_at,report});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.post('/api/admin/smartai/reports/:id/deliver',adminRequired,permissionRequired('SEND_REPORTS'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const row=await one(`SELECT id::text,customer_id::text,report_json FROM ai_reports WHERE id::text=$1 LIMIT 1`,[req.params.id]);if(!row)return res.status(404).json({status:'not_found',message:'Report not found'});await organizationAssertCustomer(req,(await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]))?.code);const result=await smartAiDeliver(row.report_json,{channels:req.body?.channels,telegram_chat_ids:req.body?.telegram_chat_ids,email_recipients:req.body?.email_recipients});await pool.query(`UPDATE ai_reports SET delivery_status=$2::jsonb WHERE id=$1`,[row.id,JSON.stringify(result)]);await writeAuditLog(req,{action:'deliver_smartai_report',entity_type:'ai_report',entity_id:row.id,new_values:result});res.json({status:result.status==='failed'?'not_sent':'ok',version:APP_VERSION,delivery:result});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.get('/api/admin/smartai/reports',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const scope=await smartAiScope(req,{customer_code:req.query.customer_code});const limit=Math.min(Math.max(Number(req.query.limit||100),1),500);const params=[scope.customer.id,limit];let where=`customer_id=$1 AND report_type LIKE 'smartai_%'`;if(req.query.period){params.push(`smartai_${smartAiChoice(req.query.period,SMARTAI_PERIODS,'period','daily')}`);where+=` AND report_type=$${params.length}`;}const rows=(await pool.query(`SELECT id::text,report_type,report_kind,report_date,period_start,period_end,health_score,summary,audience,language,ai_engine,status,delivery_status,created_by,created_at FROM ai_reports WHERE ${where} ORDER BY created_at DESC LIMIT $2`,params)).rows;res.json({status:'ok',version:APP_VERSION,customer:scope.customer,count:rows.length,reports:rows});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.get('/api/admin/smartai/reports/:id',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const row=await one(`SELECT id::text,customer_id::text,report_type,report_date,period_start,period_end,health_score,summary,audience,language,ai_engine,status,delivery_status,report_json,created_by,created_at FROM ai_reports WHERE id::text=$1 AND report_type LIKE 'smartai_%'`,[req.params.id]);if(!row)return res.status(404).json({status:'not_found'});const customer=await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]);await organizationAssertCustomer(req,customer?.code);res.json({status:'ok',version:APP_VERSION,report:row});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.get('/api/admin/smartai/reports/:id/text',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const row=await one(`SELECT customer_id::text,report_json FROM ai_reports WHERE id::text=$1 AND report_type LIKE 'smartai_%'`,[req.params.id]);if(!row)return res.status(404).send('Report not found');const customer=await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]);await organizationAssertCustomer(req,customer?.code);res.setHeader('Content-Type','text/plain; charset=utf-8');res.setHeader('Content-Disposition',`attachment; filename="FactoryBox_SmartAI_${req.params.id}.txt"`);res.send(smartAiReportText(row.report_json));}catch(e){res.status(e.statusCode||500).send(e.message);}});
+app.get('/api/admin/smartai/reports/:id/print',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const row=await one(`SELECT customer_id::text,report_json FROM ai_reports WHERE id::text=$1 AND report_type LIKE 'smartai_%'`,[req.params.id]);if(!row)return res.status(404).send('Report not found');const customer=await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]);await organizationAssertCustomer(req,customer?.code);res.setHeader('Content-Type','text/html; charset=utf-8');res.send(smartAiReportHtml(row.report_json));}catch(e){res.status(e.statusCode||500).send(h(e.message));}});
+app.post('/api/admin/smartai/ask',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const answer=await smartAiAnswerQuestion(req,req.body||{});await writeAuditLog(req,{action:'ask_smartai',entity_type:'smartai_question',entity_id:answer.question_id,new_values:{intent:answer.intent,ai_engine:answer.ai_engine,period:answer.period},metadata:{read_only:true}});res.status(201).json({status:'ok',version:APP_VERSION,answer});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.get('/api/admin/smartai/questions',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const scope=await smartAiScope(req,{customer_code:req.query.customer_code});const limit=Math.min(Math.max(Number(req.query.limit||50),1),200);const rows=(await pool.query(`SELECT id::text,question,answer,language,ai_engine,intent,period_start,period_end,user_email,evidence_json,created_at FROM smartai_questions WHERE customer_id=$1 ORDER BY created_at DESC LIMIT $2`,[scope.customer.id,limit])).rows;res.json({status:'ok',version:APP_VERSION,customer:scope.customer,count:rows.length,questions:rows});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+
+async function smartAiRunScheduledReports(){await ensureSmartAiCenterFoundation();const settings=(await pool.query(`SELECT s.*,c.code AS customer_code FROM smartai_settings s JOIN customers c ON c.id=s.customer_id WHERE s.enabled=true AND (s.daily_enabled OR s.weekly_enabled OR s.monthly_enabled)`)).rows;const results=[];for(const s of settings){const local=smartAiLocalParts(s.timezone);const jobs=[];if(s.daily_enabled&&local.hour===Number(s.daily_hour))jobs.push({type:'daily',key:local.date});if(s.weekly_enabled&&local.hour===Number(s.weekly_hour)&&new Date(`${local.date}T00:00:00Z`).getUTCDay()===Number(s.weekly_day))jobs.push({type:'weekly',key:local.date});if(s.monthly_enabled&&local.hour===Number(s.monthly_hour)&&local.day===Number(s.monthly_day))jobs.push({type:'monthly',key:local.date});for(const job of jobs){let run;try{run=await one(`INSERT INTO smartai_scheduler_runs(customer_id,schedule_key,period_type,status) VALUES($1,$2,$3,'running') ON CONFLICT DO NOTHING RETURNING id::text`,[s.customer_id,job.key,job.type]);if(!run)continue;const fakeReq={user:{id:'system',email:'smartai-scheduler',role:'system_admin'},tenant:null};const report=await smartAiBuildReport(fakeReq,{customer_code:s.customer_code,period:job.type,language:s.language,audience:s.default_audience,engine:s.engine});const saved=await smartAiSaveReport(fakeReq,report);const delivery=await smartAiDeliver(report,{channels:s.delivery_channels,telegram_chat_ids:s.telegram_chat_ids,email_recipients:s.email_recipients});await pool.query(`UPDATE ai_reports SET delivery_status=$2::jsonb WHERE id=$1`,[saved.id,JSON.stringify(delivery)]);await pool.query(`UPDATE smartai_scheduler_runs SET status='completed',report_id=$2,delivery_result=$3::jsonb,completed_at=now() WHERE id=$1`,[run.id,saved.id,JSON.stringify(delivery)]);results.push({customer_code:s.customer_code,period:job.type,report_id:saved.id,delivery});}catch(e){if(run)await pool.query(`UPDATE smartai_scheduler_runs SET status='failed',error_message=$2,completed_at=now() WHERE id=$1`,[run.id,String(e.message||e).slice(0,1000)]);results.push({customer_code:s.customer_code,period:job.type,error:e.message});}}}return results;}
+function stopSmartAiScheduler(){if(smartAiSchedulerTimer)clearInterval(smartAiSchedulerTimer);if(smartAiSchedulerKickoffTimer)clearTimeout(smartAiSchedulerKickoffTimer);smartAiSchedulerTimer=null;smartAiSchedulerKickoffTimer=null;}
+function startSmartAiScheduler(){stopSmartAiScheduler();const run=()=>smartAiRunScheduledReports().then(rows=>{if(rows.length)console.log(`SmartAI scheduler: ${rows.length} job(s) processed`);}).catch(e=>console.error('SmartAI scheduler error:',e.message));smartAiSchedulerTimer=setInterval(run,60*60*1000);smartAiSchedulerTimer.unref?.();smartAiSchedulerKickoffTimer=setTimeout(run,10000);smartAiSchedulerKickoffTimer.unref?.();console.log('SmartAI report scheduler: hourly checks enabled');}
+
 let alarmEscalationDeliveryTimer = null;
 let alarmEscalationDeliveryKickoffTimer = null;
 let alarmEscalationDeliveryRunning = false;
@@ -13591,6 +13937,7 @@ async function start() {
   await ensurePreventiveMaintenanceFoundation();
   await ensureInventoryFoundation();
   await ensureOeeFoundation();
+  await ensureSmartAiCenterFoundation();
   mqttClient = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
   mqttClient.on('connect',()=>{ mqttConnected=true; mqttClient.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   mqttClient.on('close',()=>{ mqttConnected=false; });
@@ -13602,6 +13949,7 @@ async function start() {
   startAlarmReportScheduler();
   startMaintenanceScheduler();
   restartSystemHealthSchedulers();
+  startSmartAiScheduler();
 }
 
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });

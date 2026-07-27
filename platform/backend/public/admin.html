@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.4.0 Admin Panel</title>
+  <title>FactoryBox v6.5.3 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -899,6 +899,26 @@
     .org-access-scope-v640{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     @media(max-width:1150px){.org-layout-v640{grid-template-columns:1fr}.org-summary-v640{grid-template-columns:repeat(3,minmax(0,1fr))}.org-comparison-grid-v640{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:720px){.org-toolbar-v640,.org-summary-v640,.org-form-v640,.org-access-scope-v640,.org-comparison-grid-v640{grid-template-columns:1fr}.org-form-v640 .wide{grid-column:auto}}
+
+    /* v6.5.3 SmartAI Reports & Natural Language Insights */
+    .smartai-grid-v650{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin:14px 0}
+    .smartai-kpi-v650{border:1px solid var(--fb-border);border-radius:17px;padding:15px;background:linear-gradient(145deg,#fff,#f7f9fa);box-shadow:0 9px 22px rgba(28,36,45,.05)}
+    .smartai-kpi-v650 span{display:block;color:var(--fb-muted);font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.smartai-kpi-v650 strong{display:block;margin-top:7px;font-size:23px;color:#222b34}
+    .smartai-layout-v650{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:15px;align-items:start}
+    .smartai-panel-v650{border:1px solid var(--fb-border);border-radius:18px;padding:17px;background:#fff;box-shadow:0 10px 25px rgba(27,35,44,.05);margin-bottom:15px;min-width:0}
+    .smartai-panel-v650 h3{margin:0 0 6px}.smartai-panel-v650>p{margin:0 0 13px;color:var(--fb-muted);line-height:1.45}
+    .smartai-form-v650{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.smartai-form-v650 .wide{grid-column:1/-1}.smartai-form-v650 .span-2{grid-column:span 2}
+    .smartai-score-v650{display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid #ead4b8;border-left:6px solid #c67723;border-radius:17px;padding:17px;background:linear-gradient(135deg,#fffaf3,#fff)}
+    .smartai-score-v650 strong{font-size:36px;color:#a95f12}.smartai-score-v650 h3{margin:0 0 6px}.smartai-score-v650 p{margin:0;color:#4f5e6b;line-height:1.5}
+    .smartai-list-v650{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}.smartai-list-v650 li{border:1px solid #e1e6ea;border-radius:12px;padding:10px 12px;background:#fafbfc;line-height:1.45}
+    .smartai-question-v650{min-height:120px;resize:vertical;font-size:15px;line-height:1.55}
+    .smartai-quick-v650{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.smartai-quick-v650 button{border:1px solid #d6dde3;border-radius:999px;padding:7px 11px;background:#fff;color:#394752;font-weight:750;cursor:pointer}.smartai-quick-v650 button:hover{border-color:#c67723;color:#8b4d0d;background:#fff8ef}
+    .smartai-answer-v650{border:1px solid #d8e1e7;border-radius:18px;padding:18px;background:linear-gradient(145deg,#fff,#f7fafb);min-height:150px}.smartai-answer-v650 .answer{font-size:18px;line-height:1.6;color:#1f2b35}.smartai-answer-v650 .meta{font-size:11px;color:var(--fb-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:850}
+    .smartai-badge-v650{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:10px;font-weight:850;text-transform:uppercase;background:#eef2f5;color:#46535f}.smartai-badge-v650.ok{background:#e9f7ef;color:#17613a}.smartai-badge-v650.warn{background:#fff2df;color:#8c530d}
+    .smartai-history-actions-v650{display:flex;gap:6px;flex-wrap:wrap}.smartai-history-actions-v650 button,.smartai-history-actions-v650 a{font-size:11px;padding:6px 9px}
+    .smartai-detail-v650{white-space:pre-wrap;line-height:1.5;background:#111820;color:#e9f0f5;border-radius:14px;padding:15px;max-height:440px;overflow:auto}
+    @media(max-width:1150px){.smartai-layout-v650{grid-template-columns:1fr}.smartai-grid-v650{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:720px){.smartai-grid-v650,.smartai-form-v650{grid-template-columns:1fr}.smartai-form-v650 .wide,.smartai-form-v650 .span-2{grid-column:auto}.smartai-score-v650{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body class="admin-ui-v58">
@@ -906,7 +926,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.4.0 — Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.</p>
+      <p id="adminVersionLabel">v6.5.3 — SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -969,6 +989,20 @@
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="factory-comparison"><span>Fabrika Karşılaştırması</span></button>
         </div>
       </div>
+
+      <div class="admin-nav-group-v517" data-nav-group="smartai">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="smartai" aria-expanded="false" aria-controls="smartAiSubmenuV650">
+          <span>SmartAI</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
+        </button>
+        <div id="smartAiSubmenuV650" class="admin-subnav-v517" data-admin-subnav="smartai">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-reports"><span>AI Raporları</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-ask"><span>Analiz Sor</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-history"><span>Rapor Geçmişi</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-settings"><span>AI Ayarları</span></button>
+        </div>
+      </div>
+
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>Kullanıcılar ve Davetler</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>Roller ve Yetkiler</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>Abonelikler</span><span class="admin-nav-pill-v58">2</span></button>
@@ -987,7 +1021,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.4.0: Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.
+      v6.5.3: SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.
     </div>
   </aside>
 
@@ -1017,7 +1051,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.4.0: Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.5.3: SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.</p>
       </div>
     </div>
 
@@ -1803,6 +1837,82 @@
     <div id="factoryComparisonSummary" class="org-summary-v640">Karşılaştırma özeti yükleniyor...</div><div id="factoryComparisonCards" class="org-comparison-grid-v640">Fabrikalar yükleniyor...</div><div class="org-panel-v640"><h3>Karşılaştırma Tablosu</h3><div id="factoryComparisonTable">Karşılaştırma yükleniyor...</div></div>
   </section>
 
+
+  <section id="smartAiReportsSection" class="card wide admin-card" data-admin-view="smartai-reports">
+    <div class="section-title-row"><div><h2>SmartAI Raporları</h2><p class="muted">Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.</p></div><button id="refreshSmartAiBtn" class="secondary-btn">SmartAI Yenile</button></div>
+    <div id="smartAiStatusCards" class="smartai-grid-v650">SmartAI durumu yükleniyor...</div>
+    <div class="smartai-panel-v650">
+      <h3>Yeni Rapor Oluştur</h3><p>Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.</p>
+      <div class="smartai-form-v650">
+        <label>Şirket<select id="smartAiCustomerSelect"><option value="">Şirket seç...</option></select></label>
+        <label>Fabrika<select id="smartAiFactorySelect"><option value="">Tüm fabrikalar</option></select></label>
+        <label>Tesis<select id="smartAiSiteSelect"><option value="">Tüm tesisler</option></select></label>
+        <label>Dönem<select id="smartAiPeriod"><option value="daily">Günlük</option><option value="weekly">Haftalık</option><option value="monthly">Aylık</option><option value="custom">Özel Tarih</option></select></label>
+        <label>Başlangıç<input id="smartAiFrom" type="date"></label><label>Bitiş<input id="smartAiTo" type="date"></label>
+        <label>Hedef Kitle<select id="smartAiAudience"><option value="executive">Yönetici</option><option value="technical">Teknik Ekip</option><option value="operator">Operatör</option></select></label>
+        <label>Rapor Dili<select id="smartAiLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
+        <label>Analiz Motoru<select id="smartAiEngine"><option value="rules">FactoryBox Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
+        <div class="admin-form-actions wide"><button id="generateSmartAiReportBtn" class="primary-btn">Rapor Oluştur ve Kaydet</button></div>
+      </div>
+      <div id="smartAiReportStatus" class="mini-status">Rapor işlemi bekleniyor.</div>
+    </div>
+    <div id="smartAiReportPreview" class="smartai-panel-v650"><span class="muted">Henüz rapor oluşturulmadı.</span></div>
+  </section>
+
+  <section id="smartAiAskSection" class="card wide admin-card" data-admin-view="smartai-ask">
+    <div class="section-title-row"><div><h2>SmartAI Analiz Sor</h2><p class="muted">Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.</p></div><span class="smartai-badge-v650 ok">SALT OKUNUR</span></div>
+    <div class="smartai-layout-v650">
+      <div class="smartai-panel-v650">
+        <h3>Sorunu Yaz</h3>
+        <div class="smartai-quick-v650">
+          <button type="button" data-smartai-question="Bugün en fazla duran makine hangisi?">En fazla duran makine</button>
+          <button type="button" data-smartai-question="Bu hafta hangi alarmlar tekrarlandı?">Tekrarlayan alarmlar</button>
+          <button type="button" data-smartai-question="Hangi makinelerin bakımı gecikmiş?">Gecikmiş bakımlar</button>
+          <button type="button" data-smartai-question="Hangi parçaların stoğu kritik?">Kritik stok</button>
+          <button type="button" data-smartai-question="Fabrikaları OEE ve duruş açısından karşılaştır.">Fabrikaları karşılaştır</button>
+        </div>
+        <textarea id="smartAiQuestion" class="smartai-question-v650" placeholder="Örnek: Lazer-01 neden düşük OEE aldı?"></textarea>
+        <div class="smartai-form-v650" style="margin-top:10px">
+          <label>Dönem<select id="smartAiAskPeriod"><option value="daily">Günlük</option><option value="weekly" selected>Haftalık</option><option value="monthly">Aylık</option><option value="custom">Özel Tarih</option></select></label>
+          <label>Başlangıç<input id="smartAiAskFrom" type="date"></label><label>Bitiş<input id="smartAiAskTo" type="date"></label>
+          <label>Dil<select id="smartAiAskLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
+          <label>Motor<select id="smartAiAskEngine"><option value="rules">FactoryBox Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
+          <div class="admin-form-actions"><button id="askSmartAiBtn" class="primary-btn">Analiz Et</button></div>
+        </div>
+        <div id="smartAiAskStatus" class="mini-status">Soru bekleniyor.</div>
+      </div>
+      <div id="smartAiAnswer" class="smartai-answer-v650"><span class="muted">SmartAI cevabı burada görünecek.</span></div>
+    </div>
+    <div class="smartai-panel-v650"><h3>Son Sorular</h3><div id="smartAiQuestionsTable">Soru geçmişi yükleniyor...</div></div>
+  </section>
+
+  <section id="smartAiHistorySection" class="card wide admin-card" data-admin-view="smartai-history">
+    <div class="section-title-row"><div><h2>SmartAI Rapor Geçmişi</h2><p class="muted">Kaydedilen günlük, haftalık, aylık ve özel raporları görüntüle, metin olarak indir veya PDF için yazdır.</p></div><button id="refreshSmartAiHistoryBtn" class="secondary-btn">Geçmişi Yenile</button></div>
+    <div class="smartai-form-v650" style="margin-bottom:12px"><label>Dönem<select id="smartAiHistoryPeriod"><option value="">Tümü</option><option value="daily">Günlük</option><option value="weekly">Haftalık</option><option value="monthly">Aylık</option><option value="custom">Özel Tarih</option></select></label><label>Limit<select id="smartAiHistoryLimit"><option>25</option><option selected>100</option><option>250</option></select></label><div class="admin-form-actions"><button id="applySmartAiHistoryBtn" class="primary-btn">Filtrele</button></div></div>
+    <div id="smartAiHistoryTable">Rapor geçmişi yükleniyor...</div>
+    <div id="smartAiHistoryDetail" class="smartai-panel-v650" style="margin-top:15px"><span class="muted">Detayını görmek için bir rapor seç.</span></div>
+  </section>
+
+  <section id="smartAiSettingsSection" class="card wide admin-card" data-admin-view="smartai-settings">
+    <div class="section-title-row"><div><h2>SmartAI Ayarları</h2><p class="muted">Varsayılan analiz motoru, dil, hedef kitle, otomatik rapor zamanları ve teslimat kanalları.</p></div><button id="refreshSmartAiSettingsBtn" class="secondary-btn">Ayarları Yenile</button></div>
+    <div id="smartAiSettingsStatusCards" class="smartai-grid-v650">AI ayarları yükleniyor...</div>
+    <div class="smartai-layout-v650">
+      <div class="smartai-panel-v650"><h3>Genel AI Ayarları</h3><div class="smartai-form-v650">
+        <label>SmartAI<select id="smartAiEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+        <label>Varsayılan Motor<select id="smartAiSettingsEngine"><option value="rules">FactoryBox Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
+        <label>Varsayılan Dil<select id="smartAiSettingsLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
+        <label>Varsayılan Hedef Kitle<select id="smartAiDefaultAudience"><option value="executive">Yönetici</option><option value="technical">Teknik Ekip</option><option value="operator">Operatör</option></select></label>
+        <label>Saat Dilimi<input id="smartAiTimezone" value="Europe/Istanbul"></label><label>Geçmiş Limiti<input id="smartAiHistoryLimitSetting" type="number" min="10" max="1000" value="100"></label>
+      </div></div>
+      <div class="smartai-panel-v650"><h3>Otomatik Raporlar</h3><div class="smartai-form-v650">
+        <label>Günlük Rapor<select id="smartAiDailyEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label><label>Günlük Saat<input id="smartAiDailyHour" type="number" min="0" max="23" value="8"></label>
+        <label>Haftalık Rapor<select id="smartAiWeeklyEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label><label>Haftalık Gün<select id="smartAiWeeklyDay"><option value="1">Pazartesi</option><option value="2">Salı</option><option value="3">Çarşamba</option><option value="4">Perşembe</option><option value="5">Cuma</option><option value="6">Cumartesi</option><option value="0">Pazar</option></select></label><label>Haftalık Saat<input id="smartAiWeeklyHour" type="number" min="0" max="23" value="8"></label>
+        <label>Aylık Rapor<select id="smartAiMonthlyEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label><label>Ayın Günü<input id="smartAiMonthlyDay" type="number" min="1" max="28" value="1"></label><label>Aylık Saat<input id="smartAiMonthlyHour" type="number" min="0" max="23" value="8"></label>
+      </div></div>
+    </div>
+    <div class="smartai-panel-v650"><h3>Rapor Teslimatı</h3><div class="smartai-form-v650"><label>Telegram <input id="smartAiChannelTelegram" type="checkbox"></label><label>E-posta <input id="smartAiChannelEmail" type="checkbox"></label><label class="span-2">Telegram Chat ID'leri<input id="smartAiTelegramChatIds" placeholder="-100..., 123..."></label><label class="span-2">E-posta Alıcıları<input id="smartAiEmailRecipients" placeholder="yonetici@firma.com, teknik@firma.com"></label><div class="admin-form-actions wide"><button id="saveSmartAiSettingsBtn" class="primary-btn">AI Ayarlarını Kaydet</button></div></div><div id="smartAiSettingsActionStatus" class="mini-status">Ayar işlemi bekleniyor.</div></div>
+  </section>
+
   <section class="card wide admin-card" data-admin-view="permissions">
     <h2>Permission Overview</h2>
     <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
@@ -2262,8 +2372,15 @@
   let latestDeviceOnboardingProvision = null;
   let deviceCapabilityAdminState = {devices:[],catalog:[],profiles:[],selectedUid:'',profileKey:'custom',capabilities:[],configuration:null,permanentQr:null};
   let organizationAdminState={customers:[],hierarchy:null,access:null,comparison:null};
+  let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
   const I18N_PAIRS = [
+    ['SmartAI Raporları','SmartAI Reports'],['AI Raporları','AI Reports'],['Analiz Sor','Ask Analysis'],['Rapor Geçmişi','Report History'],['AI Ayarları','AI Settings'],
+    ['Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.','Combine alarm, OEE, downtime, maintenance, inventory and factory data into one management report.'],['SmartAI Yenile','Refresh SmartAI'],['Yeni Rapor Oluştur','Create New Report'],['Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.','The report only reads data; it sends no device commands and changes no operational records.'],['Dönem','Period'],['Günlük','Daily'],['Haftalık','Weekly'],['Aylık','Monthly'],['Özel Tarih','Custom Date'],['Hedef Kitle','Audience'],['Yönetici','Executive'],['Teknik Ekip','Technical Team'],['Rapor Dili','Report Language'],['Analiz Motoru','Analysis Engine'],['FactoryBox Kural Motoru','FactoryBox Rule Engine'],['OpenAI + Kural Motoru','OpenAI + Rule Engine'],['Rapor Oluştur ve Kaydet','Generate and Save Report'],['Rapor işlemi bekleniyor.','Waiting for report action.'],['Henüz rapor oluşturulmadı.','No report has been generated yet.'],
+    ['SmartAI Analiz Sor','Ask SmartAI'],['Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.','Ask operational-data questions in natural language. Answers are based on the selected dates and access scope.'],['SALT OKUNUR','READ ONLY'],['Sorunu Yaz','Write Your Question'],['En fazla duran makine','Machine with most downtime'],['Tekrarlayan alarmlar','Repeated alarms'],['Gecikmiş bakımlar','Overdue maintenance'],['Kritik stok','Critical stock'],['Fabrikaları karşılaştır','Compare factories'],['Analiz Et','Analyze'],['Soru bekleniyor.','Waiting for a question.'],['SmartAI cevabı burada görünecek.','The SmartAI answer will appear here.'],['Son Sorular','Recent Questions'],
+    ['SmartAI Rapor Geçmişi','SmartAI Report History'],['Kaydedilen günlük, haftalık, aylık ve özel raporları görüntüle, metin olarak indir veya PDF için yazdır.','View saved daily, weekly, monthly and custom reports, download as text or print to PDF.'],['Geçmişi Yenile','Refresh History'],['Tümü','All'],['Filtrele','Filter'],['Rapor geçmişi yükleniyor...','Loading report history...'],['Detayını görmek için bir rapor seç.','Select a report to view details.'],
+    ['SmartAI Ayarları','SmartAI Settings'],['Varsayılan analiz motoru, dil, hedef kitle, otomatik rapor zamanları ve teslimat kanalları.','Default analysis engine, language, audience, automated report schedules and delivery channels.'],['Ayarları Yenile','Refresh Settings'],['AI ayarları yükleniyor...','Loading AI settings...'],['Genel AI Ayarları','General AI Settings'],['Varsayılan Motor','Default Engine'],['Varsayılan Dil','Default Language'],['Varsayılan Hedef Kitle','Default Audience'],['Geçmiş Limiti','History Limit'],['Otomatik Raporlar','Automated Reports'],['Günlük Rapor','Daily Report'],['Haftalık Rapor','Weekly Report'],['Aylık Rapor','Monthly Report'],['Ayın Günü','Day of Month'],['Rapor Teslimatı','Report Delivery'],["Telegram Chat ID'leri",'Telegram Chat IDs'],['E-posta Alıcıları','Email Recipients'],['AI Ayarlarını Kaydet','Save AI Settings'],['Ayar işlemi bekleniyor.','Waiting for settings action.'],
+
     ['Organizasyon','Organization'],['Şirketler','Companies'],['Fabrikalar ve Tesisler','Factories & Sites'],['Üretim Hatları','Production Lines'],['Makineler','Machines'],['Lokasyon Erişimi','Location Access'],['Fabrika Karşılaştırması','Factory Comparison'],
     ['Şirket, fabrika, tesis, üretim hattı ve makine hiyerarşisini tek ekrandan yönet.','Manage the company, factory, site, production-line and machine hierarchy from one screen.'],['Organizasyonu Yenile','Refresh Organization'],['Şirket seç...','Select company...'],['Tüm lokasyonlar','All locations'],['Organizasyon özeti yükleniyor...','Loading organization summary...'],['Organizasyon Ağacı','Organization Tree'],['Fabrikadan makineye kadar mevcut yapıyı ve bağlı cihazları gösterir.','Shows the current structure and connected devices from factory down to machine.'],['Hiyerarşi yükleniyor...','Loading hierarchy...'],['Fabrika ve Tesis Kayıtları','Factory and Site Records'],['Fabrikalar yükleniyor...','Loading factories...'],['Tesisler yükleniyor...','Loading sites...'],
     ['Yeni Fabrika','New Factory'],['Seçili şirket altında fabrika oluşturur.','Creates a factory under the selected company.'],['Fabrika Oluştur','Create Factory'],['Fabrika işlemi bekleniyor.','Waiting for a factory action.'],['Yeni Tesis / Bölüm','New Site / Department'],['Fabrika altında tesis veya üretim bölümünü oluşturur.','Creates a site or production department under a factory.'],['Fabrika seç...','Select factory...'],['Hafta Başlangıcı','Week Start'],['Pazartesi','Monday'],['Pazar','Sunday'],['Tesis Oluştur','Create Site'],['Tesis işlemi bekleniyor.','Waiting for a site action.'],
@@ -2364,8 +2481,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.4.0 — Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.','v6.4.0 — Multi-factory, site, production-line and location access are active.'],
-    ['v6.4.0: Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.','v6.4.0: Multi-factory, site, production-line and location access are active.'],
+    ['v6.5.3 — SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.','v6.5.3 — SmartAI report history and action buttons are fixed.'],
+    ['v6.5.3: SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.','v6.5.3: SmartAI report history and action buttons are fixed.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -2955,6 +3072,10 @@
     notifications:{title_tr:'Bildirim Ayarları',title_en:'Notification Settings',desc_tr:'Telegram, E-posta, test mesajları ve teslimat çalışanı ayarları.',desc_en:'Telegram, Email, test messages and delivery worker settings.'},
     scheduler:{title_tr:'Otomasyon Zamanlayıcı',title_en:'Automation Scheduler',desc_tr:'Otomatik SLA taraması, yeniden deneme, teslimat ve Dead Letter yönetimi.',desc_en:'Automatic SLA scanning, retry, delivery and Dead Letter management.'},
     reports:{title_tr:'Alarm Raporları',title_en:'Alarm Reports',desc_tr:'Günlük ve haftalık alarm özetleri, Telegram/E-posta teslimatı ve rapor geçmişi.',desc_en:'Daily and weekly alarm summaries, Telegram/Email delivery and report history.'},
+    'smartai-reports':{title_tr:'SmartAI Raporları',title_en:'SmartAI Reports',desc_tr:'Alarm, OEE, duruş, bakım, stok ve fabrika verilerinden yönetici raporları.',desc_en:'Management reports from alarm, OEE, downtime, maintenance, inventory and factory data.'},
+    'smartai-ask':{title_tr:'SmartAI Analiz Sor',title_en:'Ask SmartAI',desc_tr:'Operasyon verilerine doğal dille soru sor ve kanıta dayalı yanıt al.',desc_en:'Ask natural-language questions about operational data and receive evidence-based answers.'},
+    'smartai-history':{title_tr:'SmartAI Rapor Geçmişi',title_en:'SmartAI Report History',desc_tr:'Kaydedilen raporlar, metin indirme ve PDF/yazdırma görünümü.',desc_en:'Saved reports, text download and PDF/print view.'},
+    'smartai-settings':{title_tr:'SmartAI Ayarları',title_en:'SmartAI Settings',desc_tr:'AI motoru, dil, hedef kitle, zamanlama ve teslimat ayarları.',desc_en:'AI engine, language, audience, scheduling and delivery settings.'},
     maintenance:{title_tr:'Bakım ve Servis Talepleri',title_en:'Maintenance & Service Tickets',desc_tr:'Bakım talepleri, alarm bağlantıları, atamalar, terminler ve işlem geçmişi.',desc_en:'Maintenance requests, alarm links, assignments, due dates and activity history.'},
     'maintenance-plans':{title_tr:'Önleyici Bakım Planları',title_en:'Preventive Maintenance Plans',desc_tr:'Takvim veya çalışma saati bazlı periyodik bakım planları ve otomatik iş emri zamanlayıcısı.',desc_en:'Calendar- or runtime-based preventive maintenance plans and automatic work-order scheduling.'},
     'work-orders':{title_tr:'Bakım İş Emirleri',title_en:'Maintenance Work Orders',desc_tr:'Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.',desc_en:'Planned maintenance work orders, checklists, part usage and completion history.'},
@@ -2991,6 +3112,10 @@
     notifications:'system',
     scheduler:'system',
     reports:'system',
+    'smartai-reports':'smartai',
+    'smartai-ask':'smartai',
+    'smartai-history':'smartai',
+    'smartai-settings':'smartai',
     maintenance:'maintenance',
     'maintenance-plans':'maintenance',
     'work-orders':'maintenance',
@@ -4789,7 +4914,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.4.0`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.5.3`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -5051,6 +5176,67 @@
 
   async function handleOrganizationActionV640(button){const action=button.dataset.orgAction,id=button.dataset.id;const row=button.closest('tr');button.disabled=true;try{if(action==='save-factory')await apiJson(`/api/admin/organization/factories/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-factory-name')?.value,location:row.querySelector('.org-factory-location')?.value,timezone:row.querySelector('.org-factory-timezone')?.value,status:row.querySelector('.org-factory-status')?.value})});if(action==='save-site')await apiJson(`/api/admin/organization/sites/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({factory_id:row.querySelector('.org-site-factory')?.value,name:row.querySelector('.org-site-name')?.value,location:row.querySelector('.org-site-location')?.value,timezone:row.querySelector('.org-site-timezone')?.value,status:row.querySelector('.org-site-status')?.value})});if(action==='save-line')await apiJson(`/api/admin/organization/production-lines/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-line-name')?.value,status:row.querySelector('.org-line-status')?.value,shift_pattern:{shift_count:Number(row.querySelector('.org-line-shifts')?.value||1),workdays:[1,2,3,4,5]}})});if(action==='assign-machine')await apiJson(`/api/admin/organization/machines/${encodeURIComponent(id)}/assignment`,{method:'PATCH',body:JSON.stringify({production_line_id:row.querySelector('.org-machine-line')?.value})});if(action==='revoke-access')await apiJson(`/api/admin/organization/access/${encodeURIComponent(id)}`,{method:'DELETE'});await reloadOrganizationAll();}finally{button.disabled=false;}}
 
+
+  // v6.5.3 SmartAI Admin Center
+  function smartAiUi(tr,en){return currentLanguage==='en'?en:tr;}
+  function smartAiBoolValue(id){return document.getElementById(id)?.value==='true';}
+  function smartAiSelectedCustomer(){return document.getElementById('smartAiCustomerSelect')?.value||smartAiState.hierarchy?.customer?.code||'';}
+  function smartAiScopePayload(prefix='smartAi'){
+    return {customer_code:smartAiSelectedCustomer(),factory_id:document.getElementById(`${prefix}FactorySelect`)?.value||document.getElementById('smartAiFactorySelect')?.value||null,site_id:document.getElementById(`${prefix}SiteSelect`)?.value||document.getElementById('smartAiSiteSelect')?.value||null};
+  }
+  function smartAiDateDefault(daysAgo=0){const d=new Date();d.setDate(d.getDate()-daysAgo);return d.toISOString().slice(0,10);}
+  function smartAiDateOnly(value){
+    if(!value)return '-';
+    const d=new Date(value);
+    if(Number.isNaN(d.getTime()))return String(value).slice(0,10)||'-';
+    const tz=generalSettings.timezone||'Europe/Istanbul';
+    try{
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+      return generalSettings.date_format==='MM/DD/YYYY'?`${parts.month}/${parts.day}/${parts.year}`:generalSettings.date_format==='YYYY-MM-DD'?`${parts.year}-${parts.month}-${parts.day}`:`${parts.day}.${parts.month}.${parts.year}`;
+    }catch{return d.toISOString().slice(0,10);}
+  }
+  function initializeSmartAiDates(){[['smartAiFrom',0],['smartAiTo',0],['smartAiAskFrom',6],['smartAiAskTo',0]].forEach(([id,n])=>{const el=document.getElementById(id);if(el&&!el.value)el.value=smartAiDateDefault(n);});}
+  function smartAiPeriodLabel(v){return ({daily:smartAiUi('Günlük','Daily'),weekly:smartAiUi('Haftalık','Weekly'),monthly:smartAiUi('Aylık','Monthly'),custom:smartAiUi('Özel Tarih','Custom')})[v]||v;}
+  function smartAiAudienceLabel(v){return ({executive:smartAiUi('Yönetici','Executive'),technical:smartAiUi('Teknik Ekip','Technical'),operator:smartAiUi('Operatör','Operator')})[v]||v;}
+  function smartAiSetSelect(id,value){const el=document.getElementById(id);if(el&&value!==undefined&&value!==null)el.value=String(value);}
+  function renderSmartAiStatus(data){smartAiState.status=data;const open=data.openai||{},n=data.notifications||{},scope=data.scope||{},settings=data.settings||{};const html=[
+    [smartAiUi('Çalışma Modu','Operating Mode'),data.read_only?smartAiUi('SALT OKUNUR','READ ONLY'):smartAiUi('YAZMA AÇIK','WRITE ENABLED'),data.read_only?'ok':'warn'],
+    [smartAiUi('FactoryBox Motoru','FactoryBox Engine'),smartAiUi('HAZIR','READY'),'ok'],
+    ['OpenAI',open.configured&&open.enabled?smartAiUi('HAZIR','READY'):smartAiUi('OPSİYONEL / KAPALI','OPTIONAL / OFF'),open.configured&&open.enabled?'ok':'warn'],
+    [smartAiUi('Kapsamdaki Makine','Machines in Scope'),scope.machine_count||0,'']
+  ].map(x=>`<article class="smartai-kpi-v650"><span>${esc(x[0])}</span><strong class="${x[2]||''}">${esc(x[1])}</strong><small>${x[0]==='OpenAI'?esc(open.model||'-'):''}</small></article>`).join('');
+    ['smartAiStatusCards','smartAiSettingsStatusCards'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+    if(settings)renderSmartAiSettings({settings,openai:open});
+  }
+  function renderSmartAiSettings(data){const s=data.settings||data||{};smartAiState.settings=s;smartAiSetSelect('smartAiEnabled',String(Boolean(s.enabled)));smartAiSetSelect('smartAiSettingsEngine',s.engine||'rules');smartAiSetSelect('smartAiSettingsLanguage',s.language||'tr');smartAiSetSelect('smartAiDefaultAudience',s.default_audience||'executive');const tz=document.getElementById('smartAiTimezone');if(tz)tz.value=s.timezone||'Europe/Istanbul';const hl=document.getElementById('smartAiHistoryLimitSetting');if(hl)hl.value=s.history_limit||100;smartAiSetSelect('smartAiDailyEnabled',String(Boolean(s.daily_enabled)));smartAiSetSelect('smartAiDailyHour',s.daily_hour??8);smartAiSetSelect('smartAiWeeklyEnabled',String(Boolean(s.weekly_enabled)));smartAiSetSelect('smartAiWeeklyDay',s.weekly_day??1);smartAiSetSelect('smartAiWeeklyHour',s.weekly_hour??8);smartAiSetSelect('smartAiMonthlyEnabled',String(Boolean(s.monthly_enabled)));smartAiSetSelect('smartAiMonthlyDay',s.monthly_day??1);smartAiSetSelect('smartAiMonthlyHour',s.monthly_hour??8);const channels=s.delivery_channels||[];const tg=document.getElementById('smartAiChannelTelegram'),em=document.getElementById('smartAiChannelEmail');if(tg)tg.checked=channels.includes('telegram');if(em)em.checked=channels.includes('email');const chats=document.getElementById('smartAiTelegramChatIds');if(chats)chats.value=s.telegram_chat_ids||'';const emails=document.getElementById('smartAiEmailRecipients');if(emails)emails.value=s.email_recipients||'';smartAiSetSelect('smartAiEngine',s.engine||'rules');smartAiSetSelect('smartAiLanguage',s.language||generalSettings.language||'tr');smartAiSetSelect('smartAiAudience',s.default_audience||'executive');smartAiSetSelect('smartAiAskEngine',s.engine||'rules');smartAiSetSelect('smartAiAskLanguage',s.language||generalSettings.language||'tr');}
+  async function loadSmartAiHierarchy(customerCode=''){const url=`/api/admin/organization/hierarchy${customerCode?`?customer_code=${encodeURIComponent(customerCode)}`:''}`;const data=await getJson(url);smartAiState.hierarchy=data;const customers=data.companies||[];const c=document.getElementById('smartAiCustomerSelect');if(c){const previous=c.value||data.customer?.code||'';c.innerHTML='<option value="">'+smartAiUi('Şirket seç...','Select company...')+'</option>'+customers.map(x=>`<option value="${esc(x.code)}">${esc(x.name)} (${esc(x.code)})</option>`).join('');if(customers.some(x=>x.code===previous))c.value=previous;else if(data.customer?.code)c.value=data.customer.code;}renderSmartAiLocationOptions(data);return data;}
+  function renderSmartAiLocationOptions(data){const factories=data.flat?.factories||[];const sites=data.flat?.sites||[];const f=document.getElementById('smartAiFactorySelect'),s=document.getElementById('smartAiSiteSelect');const oldF=f?.value||'',oldS=s?.value||'';if(f){f.innerHTML=`<option value="">${smartAiUi('Tüm fabrikalar','All factories')}</option>`+factories.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(factories.some(x=>x.id===oldF))f.value=oldF;}const selected=f?.value||'';const filtered=sites.filter(x=>!selected||String(x.factory_id)===String(selected));if(s){s.innerHTML=`<option value="">${smartAiUi('Tüm tesisler','All sites')}</option>`+filtered.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(filtered.some(x=>x.id===oldS))s.value=oldS;}}
+  function smartAiReportPayload(){const period=document.getElementById('smartAiPeriod')?.value||'daily';return {...smartAiScopePayload(),period,from:document.getElementById('smartAiFrom')?.value,to:document.getElementById('smartAiTo')?.value,audience:document.getElementById('smartAiAudience')?.value||'executive',language:document.getElementById('smartAiLanguage')?.value||'tr',engine:document.getElementById('smartAiEngine')?.value||'rules'};}
+  function renderSmartAiReport(data){const report=data.report||data;smartAiState.latestReport={...report,id:data.report_id||report.id};const m=report.metrics||{},a=m.alarms||{},o=m.oee||{};const findings=(report.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';const risks=(report.risks||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';const recs=(report.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';const id=data.report_id||report.id||'';const target=document.getElementById('smartAiReportPreview');if(!target)return;target.innerHTML=`<div class="smartai-score-v650"><div><h3>${smartAiUi('Yönetici Özeti','Executive Summary')}</h3><p>${esc(report.summary||'-')}</p></div><strong>${esc(report.health_score||0)}/100</strong></div><div class="smartai-grid-v650"><article class="smartai-kpi-v650"><span>${smartAiUi('Toplam Alarm','Total Alarms')}</span><strong>${esc(a.total||0)}</strong></article><article class="smartai-kpi-v650"><span>OEE</span><strong>${esc(Number(o.oee_pct||0).toFixed(1))}%</strong></article><article class="smartai-kpi-v650"><span>${smartAiUi('Gecikmiş Bakım','Overdue Maintenance')}</span><strong>${esc(Number(m.overdue_tickets||0)+Number(m.overdue_plans||0))}</strong></article><article class="smartai-kpi-v650"><span>${smartAiUi('Kritik Stok','Critical Stock')}</span><strong>${esc(m.low_stock||0)}</strong></article></div><div class="smartai-layout-v650"><div><div class="smartai-panel-v650"><h3>${smartAiUi('Bulgular','Findings')}</h3><ul class="smartai-list-v650">${findings}</ul></div><div class="smartai-panel-v650"><h3>${smartAiUi('Öneriler','Recommendations')}</h3><ul class="smartai-list-v650">${recs}</ul></div></div><div><div class="smartai-panel-v650"><h3>${smartAiUi('Riskler','Risks')}</h3><ul class="smartai-list-v650">${risks}</ul></div><div class="smartai-panel-v650"><h3>${smartAiUi('Rapor Bilgisi','Report Info')}</h3><p>${smartAiUi('Dönem','Period')}: ${esc(report.period?.from)} — ${esc(report.period?.to)}</p><p>${smartAiUi('Hedef Kitle','Audience')}: ${esc(smartAiAudienceLabel(report.audience))}</p><p>${smartAiUi('Motor','Engine')}: ${esc(report.ai_engine)}</p>${id?`<div class="admin-form-actions"><button class="secondary-btn" data-smartai-action="deliver-telegram" data-id="${esc(id)}">Telegram</button><button class="secondary-btn" data-smartai-action="deliver-email" data-id="${esc(id)}">E-posta</button><button class="secondary-btn" data-smartai-action="download-text" data-id="${esc(id)}">TXT</button><button class="secondary-btn" data-smartai-action="print" data-id="${esc(id)}">PDF / Yazdır</button></div>`:''}</div></div></div>`;}
+  function renderSmartAiHistory(data){
+    smartAiState.reports=data.reports||[];
+    const target=document.getElementById('smartAiHistoryTable');
+    if(!target)return;
+    target.innerHTML=table([
+      {label:smartAiUi('Dönem','Period'),html:true,value:r=>`<strong>${esc(smartAiPeriodLabel(String(r.report_type||'').replace('smartai_','')))}</strong><br><small class="muted">${esc(smartAiDateOnly(r.period_start))} — ${esc(smartAiDateOnly(r.period_end))}</small>`},
+      {label:smartAiUi('Skor','Score'),value:r=>`${r.health_score??'-'}/100`},
+      {label:smartAiUi('Özet','Summary'),value:r=>r.summary||'-'},
+      {label:smartAiUi('Hedef','Audience'),value:r=>smartAiAudienceLabel(r.audience)},
+      {label:smartAiUi('Motor','Engine'),value:r=>r.ai_engine||'-'},
+      {label:smartAiUi('Oluşturulma','Created'),value:r=>fmtDate(r.created_at)},
+      {label:smartAiUi('İşlem','Action'),html:true,value:r=>`<div class="smartai-history-actions-v650"><button type="button" class="secondary-btn" data-smartai-action="view" data-id="${esc(r.id)}">${esc(smartAiUi('Detay','Detail'))}</button><button type="button" class="secondary-btn" data-smartai-action="download-text" data-id="${esc(r.id)}">TXT</button><button type="button" class="secondary-btn" data-smartai-action="print" data-id="${esc(r.id)}">PDF</button></div>`}
+    ],smartAiState.reports);
+  }
+  function renderSmartAiQuestions(data){smartAiState.questions=data.questions||[];const target=document.getElementById('smartAiQuestionsTable');if(!target)return;target.innerHTML=table([{label:smartAiUi('Soru','Question'),value:r=>esc(r.question)},{label:smartAiUi('Cevap','Answer'),value:r=>esc(r.answer)},{label:smartAiUi('Niyet','Intent'),value:r=>r.intent||'-'},{label:smartAiUi('Motor','Engine'),value:r=>r.ai_engine||'-'},{label:smartAiUi('Tarih','Date'),value:r=>fmtDate(r.created_at)}],smartAiState.questions.slice(0,25));}
+  function renderSmartAiAnswer(data){const a=data.answer||data;const target=document.getElementById('smartAiAnswer');if(!target)return;target.innerHTML=`<div class="meta">${esc(a.intent||'-')} · ${esc(a.ai_engine||'-')} · ${esc(a.period?.from||'-')} — ${esc(a.period?.to||'-')}</div><div class="answer">${esc(a.answer||'-')}</div><h4>${smartAiUi('Bulgular','Findings')}</h4><ul class="smartai-list-v650">${(a.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul><h4>${smartAiUi('Öneriler','Recommendations')}</h4><ul class="smartai-list-v650">${(a.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul>`;}
+  async function smartAiDownload(id,type='text'){const token=authToken();const res=await fetch(`/api/admin/smartai/reports/${encodeURIComponent(id)}/${type}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!res.ok)throw new Error(`${smartAiUi('Rapor açılamadı','Report could not be opened')}: ${res.status}`);if(type==='print'){const html=await res.text();const w=window.open('','_blank','noopener');if(!w)throw new Error(smartAiUi('Açılır pencereye izin ver.','Allow pop-up windows.'));w.document.open();w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);return;}const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`FactoryBox_SmartAI_${id}.txt`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+  async function loadSmartAiHistory(){const period=document.getElementById('smartAiHistoryPeriod')?.value||'',limit=document.getElementById('smartAiHistoryLimit')?.value||100;const q=new URLSearchParams({customer_code:smartAiSelectedCustomer(),limit});if(period)q.set('period',period);renderSmartAiHistory(await getJson(`/api/admin/smartai/reports?${q}`));}
+  async function loadSmartAiQuestions(){renderSmartAiQuestions(await getJson(`/api/admin/smartai/questions?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}&limit=50`));}
+  async function loadSmartAiCenter(){initializeSmartAiDates();await loadSmartAiHierarchy(smartAiSelectedCustomer());const code=smartAiSelectedCustomer();const [status,settings]=await Promise.all([getJson(`/api/admin/smartai/status?customer_code=${encodeURIComponent(code)}`),getJson(`/api/admin/smartai/settings?customer_code=${encodeURIComponent(code)}`)]);renderSmartAiStatus(status);renderSmartAiSettings(settings);await Promise.all([loadSmartAiHistory(),loadSmartAiQuestions()]);}
+  async function saveSmartAiSettings(){const channels=[];if(document.getElementById('smartAiChannelTelegram')?.checked)channels.push('telegram');if(document.getElementById('smartAiChannelEmail')?.checked)channels.push('email');const body={customer_code:smartAiSelectedCustomer(),enabled:smartAiBoolValue('smartAiEnabled'),engine:document.getElementById('smartAiSettingsEngine')?.value,language:document.getElementById('smartAiSettingsLanguage')?.value,default_audience:document.getElementById('smartAiDefaultAudience')?.value,timezone:document.getElementById('smartAiTimezone')?.value,daily_enabled:smartAiBoolValue('smartAiDailyEnabled'),daily_hour:Number(document.getElementById('smartAiDailyHour')?.value),weekly_enabled:smartAiBoolValue('smartAiWeeklyEnabled'),weekly_day:Number(document.getElementById('smartAiWeeklyDay')?.value),weekly_hour:Number(document.getElementById('smartAiWeeklyHour')?.value),monthly_enabled:smartAiBoolValue('smartAiMonthlyEnabled'),monthly_day:Number(document.getElementById('smartAiMonthlyDay')?.value),monthly_hour:Number(document.getElementById('smartAiMonthlyHour')?.value),delivery_channels:channels,telegram_chat_ids:document.getElementById('smartAiTelegramChatIds')?.value,email_recipients:document.getElementById('smartAiEmailRecipients')?.value,history_limit:Number(document.getElementById('smartAiHistoryLimitSetting')?.value||100)};const data=await apiJson('/api/admin/smartai/settings',{method:'PATCH',body:JSON.stringify(body)});renderSmartAiSettings(data);return data;}
+  async function handleSmartAiAction(btn){const action=btn.dataset.smartaiAction,id=btn.dataset.id;if(action==='view'){const data=await getJson(`/api/admin/smartai/reports/${encodeURIComponent(id)}`);const r=data.report?.report_json||data.report;const target=document.getElementById('smartAiHistoryDetail');if(target)target.innerHTML=`<h3>${smartAiUi('Rapor Detayı','Report Detail')}</h3><div class="smartai-detail-v650">${esc(JSON.stringify(r,null,2))}</div>`;return;}if(action==='download-text')return smartAiDownload(id,'text');if(action==='print')return smartAiDownload(id,'print');if(action==='deliver-telegram'||action==='deliver-email'){const channel=action.endsWith('telegram')?'telegram':'email';const data=await apiJson(`/api/admin/smartai/reports/${encodeURIComponent(id)}/deliver`,{method:'POST',body:JSON.stringify({channels:[channel],telegram_chat_ids:document.getElementById('smartAiTelegramChatIds')?.value,email_recipients:document.getElementById('smartAiEmailRecipients')?.value})});const st=document.getElementById('smartAiReportStatus');if(st)st.textContent=`${channel}: ${data.delivery?.status||data.status}`;}}
+
+
   async function loadAdmin() {
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
@@ -5061,6 +5247,7 @@
     const errors = [];
 
     try { await loadGeneralSettings(); } catch(e) { errors.push(`general-settings: ${e.message}`); setError('generalSettingsStatus',e.message); }
+    try { await loadSmartAiHierarchy(); } catch(e) { errors.push(`smartai-scope: ${e.message}`); setError('smartAiStatusCards',e.message); }
 
     try {
       const permissionData = await getJson('/api/admin/permissions');
@@ -5084,6 +5271,11 @@
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
       ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus'],
+      ['smartai-status', `/api/admin/smartai/status?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}`, renderSmartAiStatus, 'smartAiStatusCards'],
+      ['smartai-settings', `/api/admin/smartai/settings?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}`, renderSmartAiSettings, 'smartAiSettingsStatusCards'],
+      ['smartai-history', `/api/admin/smartai/reports?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}&limit=100`, renderSmartAiHistory, 'smartAiHistoryTable'],
+      ['smartai-questions', `/api/admin/smartai/questions?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}&limit=50`, renderSmartAiQuestions, 'smartAiQuestionsTable'],
+
       ...(can('VIEW_MAINTENANCE') ? [
         ['maintenance-tickets', `/api/admin/maintenance-tickets?${maintenanceTicketQueryString()}`, renderMaintenanceTickets, 'maintenanceTicketsTable'],
         ['maintenance-plans', '/api/admin/maintenance-plans', renderMaintenancePlans, 'maintenancePlansTable'],
@@ -6381,6 +6573,20 @@
       try{await handleDeviceOnboardingAction(btn);}catch(error){const st=document.getElementById('deviceOnboardingFormResult');if(st)st.textContent=error.message;}finally{btn.disabled=false;}
     });
 
+
+
+    initializeSmartAiDates();
+    const refreshSmartAiBtn=document.getElementById('refreshSmartAiBtn');if(refreshSmartAiBtn)refreshSmartAiBtn.addEventListener('click',async()=>{refreshSmartAiBtn.disabled=true;try{await loadSmartAiCenter();}catch(e){setError('smartAiStatusCards',e.message);}finally{refreshSmartAiBtn.disabled=false;}});
+    const refreshSmartAiSettingsBtn=document.getElementById('refreshSmartAiSettingsBtn');if(refreshSmartAiSettingsBtn)refreshSmartAiSettingsBtn.addEventListener('click',loadSmartAiCenter);
+    const refreshSmartAiHistoryBtn=document.getElementById('refreshSmartAiHistoryBtn');if(refreshSmartAiHistoryBtn)refreshSmartAiHistoryBtn.addEventListener('click',loadSmartAiHistory);
+    const applySmartAiHistoryBtn=document.getElementById('applySmartAiHistoryBtn');if(applySmartAiHistoryBtn)applySmartAiHistoryBtn.addEventListener('click',loadSmartAiHistory);
+    const smartAiCustomer=document.getElementById('smartAiCustomerSelect');if(smartAiCustomer)smartAiCustomer.addEventListener('change',async()=>{await loadSmartAiHierarchy(smartAiCustomer.value);await loadSmartAiCenter();});
+    const smartAiFactory=document.getElementById('smartAiFactorySelect');if(smartAiFactory)smartAiFactory.addEventListener('change',()=>renderSmartAiLocationOptions(smartAiState.hierarchy||{}));
+    const generateSmartAiReportBtn=document.getElementById('generateSmartAiReportBtn');if(generateSmartAiReportBtn)generateSmartAiReportBtn.addEventListener('click',async()=>{generateSmartAiReportBtn.disabled=true;const st=document.getElementById('smartAiReportStatus');try{if(st)st.textContent=smartAiUi('SmartAI raporu oluşturuluyor...','Generating SmartAI report...');const data=await apiJson('/api/admin/smartai/reports/generate',{method:'POST',body:JSON.stringify(smartAiReportPayload())});renderSmartAiReport(data);if(st)st.textContent=smartAiUi(`Rapor kaydedildi: ${data.report_id}`,`Report saved: ${data.report_id}`);await loadSmartAiHistory();}catch(e){if(st)st.textContent=e.message;}finally{generateSmartAiReportBtn.disabled=false;}});
+    const askSmartAiBtn=document.getElementById('askSmartAiBtn');if(askSmartAiBtn)askSmartAiBtn.addEventListener('click',async()=>{askSmartAiBtn.disabled=true;const st=document.getElementById('smartAiAskStatus');try{if(st)st.textContent=smartAiUi('Veriler analiz ediliyor...','Analyzing data...');const body={...smartAiScopePayload(),question:document.getElementById('smartAiQuestion')?.value,period:document.getElementById('smartAiAskPeriod')?.value,from:document.getElementById('smartAiAskFrom')?.value,to:document.getElementById('smartAiAskTo')?.value,language:document.getElementById('smartAiAskLanguage')?.value,engine:document.getElementById('smartAiAskEngine')?.value};const data=await apiJson('/api/admin/smartai/ask',{method:'POST',body:JSON.stringify(body)});renderSmartAiAnswer(data);if(st)st.textContent=smartAiUi('Analiz tamamlandı.','Analysis completed.');await loadSmartAiQuestions();}catch(e){if(st)st.textContent=e.message;}finally{askSmartAiBtn.disabled=false;}});
+    document.querySelectorAll('[data-smartai-question]').forEach(btn=>btn.addEventListener('click',()=>{const q=document.getElementById('smartAiQuestion');if(q)q.value=btn.dataset.smartaiQuestion||'';}));
+    const saveSmartAiSettingsBtn=document.getElementById('saveSmartAiSettingsBtn');if(saveSmartAiSettingsBtn)saveSmartAiSettingsBtn.addEventListener('click',async()=>{saveSmartAiSettingsBtn.disabled=true;const st=document.getElementById('smartAiSettingsActionStatus');try{await saveSmartAiSettings();if(st)st.textContent=smartAiUi('SmartAI ayarları kaydedildi.','SmartAI settings saved.');await loadSmartAiCenter();}catch(e){if(st)st.textContent=e.message;}finally{saveSmartAiSettingsBtn.disabled=false;}});
+    ['smartAiReportsSection','smartAiHistorySection'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',async e=>{const btn=e.target.closest('[data-smartai-action]');if(!btn)return;btn.disabled=true;try{await handleSmartAiAction(btn);}catch(error){const st=document.getElementById('smartAiReportStatus');if(st)st.textContent=error.message;}finally{btn.disabled=false;}});});
 
     initializeOrganizationDates();
     const refreshOrganizationBtn=document.getElementById('refreshOrganizationBtn');if(refreshOrganizationBtn)refreshOrganizationBtn.addEventListener('click',async()=>{refreshOrganizationBtn.disabled=true;try{await reloadOrganizationAll();}catch(e){setError('organizationHierarchyTree',e.message);}finally{refreshOrganizationBtn.disabled=false;}});

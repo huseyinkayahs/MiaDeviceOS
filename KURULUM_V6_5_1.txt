@@ -1,0 +1,7 @@
+1. Backend'i durdurun.
+2. ZIP icerigini C:\New DeviceOs Project klasorunun uzerine kopyalayin.
+3. Dosyalarin degistirilmesini kabul edin.
+4. C:\New DeviceOs Project\platform\backend klasorunde npm.cmd start calistirin.
+5. Admin Panel'de Ctrl+F5 yapin.
+6. Surumun v6.5.1 oldugunu kontrol edin.
+7. SmartAI > AI Raporlari ekraninda raporu yeniden olusturun.

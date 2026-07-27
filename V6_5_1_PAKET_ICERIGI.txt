@@ -1,0 +1,9 @@
+FactoryBox One v6.5.1 SmartAI SQL Hotfix
+
+Degisen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- docs/V6_5_1_SMARTAI_SQL_HOTFIX.md
+- KURULUM_V6_5_1.txt
+
+Bu paket mevcut projenin uzerine kopyalanmalidir.

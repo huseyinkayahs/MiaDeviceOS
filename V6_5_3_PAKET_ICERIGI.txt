@@ -1,0 +1,9 @@
+FactoryBox One v6.5.3 SmartAI Report History Rendering Hotfix
+
+Bu paket yalnızca değişen dosyaları içerir:
+
+platform/backend/server.js
+platform/backend/public/admin.html
+docs/V6_5_3_SMARTAI_REPORT_HISTORY_RENDERING_HOTFIX.md
+KURULUM_V6_5_3.txt
+V6_5_3_PAKET_ICERIGI.txt

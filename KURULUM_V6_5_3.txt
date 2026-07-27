@@ -1,0 +1,14 @@
+FACTORYBOX ONE v6.5.3 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini proje ana klasörü C:\New DeviceOs Project üzerine çıkarın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. Backend'i başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin Panel'de Ctrl + F5 yapın.
+6. Sürümün v6.5.3 olduğunu kontrol edin.
+7. SmartAI > Rapor Geçmişi ekranını açın.
+8. Dönem alanının normal tarih biçiminde ve işlem alanının Detay/TXT/PDF butonları olarak göründüğünü kontrol edin.
