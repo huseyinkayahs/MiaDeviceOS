@@ -1,0 +1,11 @@
+FactoryBox One v6.3.0 Device Installation & Onboarding Wizard Pack
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+
+Yeni dosyalar:
+- platform/backend/.env.device-onboarding.example
+- docs/V6_3_DEVICE_INSTALLATION_ONBOARDING_WIZARD.md
+- KURULUM_V6_3_0.txt
+- V6_3_0_PAKET_ICERIGI.txt

@@ -1,0 +1,11 @@
+FactoryBox One v6.3.1 - Device Capabilities, Permanent QR & Mobile Installer
+
+Değişen / eklenen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/public/installer.html
+- platform/backend/public/installer.webmanifest
+- platform/backend/public/installer-sw.js
+- docs/V6_3_1_DEVICE_CAPABILITIES_PERMANENT_QR_MOBILE_INSTALLER.md
+- V6_3_1_PAKET_ICERIGI.txt
+- KURULUM_V6_3_1.txt

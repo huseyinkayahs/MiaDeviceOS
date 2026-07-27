@@ -1,0 +1,9 @@
+{
+  "name": "FactoryBox Mobile Installer",
+  "short_name": "FactoryBox Setup",
+  "start_url": "/installer.html",
+  "display": "standalone",
+  "background_color": "#eef1f3",
+  "theme_color": "#202832",
+  "description": "FactoryBox device capability and sensor configuration panel"
+}

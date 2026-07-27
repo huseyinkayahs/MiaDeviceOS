@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#202832">
+  <title>FactoryBox Mobile Installer</title>
+  <link rel="manifest" href="/installer.webmanifest">
+  <style>
+    :root{--bg:#eef1f3;--panel:#fff;--text:#202832;--muted:#697586;--line:#d8e0e7;--accent:#d97706;--accent2:#b85f05;--ok:#0f766e;--danger:#b42318;--shadow:0 14px 34px rgba(20,28,38,.1)}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#e9edf0,#f8fafb);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+    button,input,select{font:inherit}button{cursor:pointer}.app{max-width:880px;margin:auto;padding:18px 14px 90px}.top{position:sticky;top:0;z-index:5;margin:-18px -14px 16px;padding:15px 14px;background:rgba(32,40,50,.96);backdrop-filter:blur(10px);color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+    .top-row{max-width:880px;margin:auto;display:flex;justify-content:space-between;gap:12px;align-items:center}.brand strong{display:block;font-size:17px;letter-spacing:.02em}.brand small{display:block;color:#bac4ce;margin-top:3px}.top select{background:#35414d;color:#fff;border:1px solid #526171;border-radius:10px;padding:8px 28px 8px 10px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:17px;margin-bottom:14px;box-shadow:var(--shadow)}.card h2,.card h3{margin:0 0 7px}.card p{margin:0;color:var(--muted);line-height:1.5}.status{padding:12px 14px;border-radius:13px;border:1px solid var(--line);background:#f7f9fb;margin:12px 0;white-space:pre-wrap}.status.ok{background:#eaf8f4;border-color:#b8e1d6;color:#075d4d}.status.error{background:#fff0f0;border-color:#efb9b5;color:#922b21}
+    .device-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}.device-grid div{background:#f7f9fb;border:1px solid var(--line);border-radius:14px;padding:11px;min-width:0}.device-grid span{display:block;font-size:10px;text-transform:uppercase;font-weight:800;color:var(--muted)}.device-grid strong{display:block;margin-top:5px;overflow-wrap:anywhere}
+    label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#465463}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:14px}input,select{width:100%;border:1px solid #cbd5dd;border-radius:12px;padding:11px 12px;background:#fff;color:var(--text);outline:none}input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,6,.13)}
+    .btn{border:0;border-radius:12px;padding:11px 14px;font-weight:800}.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}.secondary{background:#eef2f5;color:#26313c;border:1px solid #d3dce4}.danger{background:#fff0ef;color:var(--danger);border:1px solid #efc0bc}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.actions .btn{flex:1;min-width:140px}
+    .cap-list{display:grid;gap:12px;margin-top:14px}.cap{border:1px solid var(--line);border-radius:18px;padding:14px;background:linear-gradient(145deg,#fff,#f8fafb)}.cap-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:11px}.cap-head strong{font-size:15px}.cap-head small{display:block;color:var(--muted);margin-top:3px}.cap-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cap-grid .wide{grid-column:1/-1}.switch{display:flex;align-items:center;gap:8px;padding:10px 0}.switch input{width:auto}.empty{text-align:center;color:var(--muted);padding:28px 10px;border:1px dashed var(--line);border-radius:16px;margin-top:12px}
+    .login{text-align:center;padding:30px 18px}.login .btn{display:inline-block;text-decoration:none;margin-top:15px}.scanner video{width:100%;border-radius:14px;background:#111;min-height:220px;object-fit:cover}.scanner{display:none;margin-top:12px}.scanner.open{display:block}.foot{text-align:center;color:var(--muted);font-size:12px;padding:15px}
+    @media(max-width:620px){.app{padding-left:10px;padding-right:10px}.top{margin-left:-10px;margin-right:-10px}.device-grid,.cap-grid,.toolbar{grid-template-columns:1fr}.actions .btn{width:100%;flex-basis:100%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="top"><div class="top-row"><div class="brand"><strong>FactoryBox Mobile Installer</strong><small id="versionText">v6.3.1</small></div><select id="language"><option value="tr">Türkçe</option><option value="en">English</option></select></div></header>
+
+  <main id="main">
+    <section class="card" id="introCard">
+      <h2 data-tr="Cihaz QR Kurulumu" data-en="Device QR Setup">Cihaz QR Kurulumu</h2>
+      <p data-tr="Cihaz üzerindeki kalıcı QR etiketi ile sensör ve yetkinlikleri sahada tanımlayın." data-en="Use the permanent QR label on the device to configure sensors and capabilities in the field.">Cihaz üzerindeki kalıcı QR etiketi ile sensör ve yetkinlikleri sahada tanımlayın.</p>
+      <div id="authStatus" class="status">Kontrol ediliyor...</div>
+      <div class="actions">
+        <button class="btn secondary" id="scanQrBtn" data-tr="Uygulama İçinden QR Tara" data-en="Scan QR in App">Uygulama İçinden QR Tara</button>
+        <button class="btn secondary" id="reloadBtn" data-tr="QR Bilgisini Yeniden Yükle" data-en="Reload QR Data">QR Bilgisini Yeniden Yükle</button>
+      </div>
+      <div class="scanner" id="scanner"><video id="camera" playsinline></video><div id="scannerStatus" class="status"></div><button class="btn danger" id="stopScannerBtn" data-tr="Kamerayı Kapat" data-en="Stop Camera">Kamerayı Kapat</button></div>
+    </section>
+
+    <section class="card" id="deviceCard" hidden>
+      <h2 id="deviceTitle">FactoryBox</h2><p id="deviceSubtitle"></p>
+      <div class="device-grid" id="deviceGrid"></div>
+    </section>
+
+    <section class="card" id="profileCard" hidden>
+      <h3 data-tr="Cihaz Profili" data-en="Device Profile">Cihaz Profili</h3>
+      <p data-tr="Hazır profil seçin veya özel yetkinlikleri tek tek ekleyin." data-en="Choose a predefined profile or add custom capabilities one by one.">Hazır profil seçin veya özel yetkinlikleri tek tek ekleyin.</p>
+      <div class="toolbar"><label><span data-tr="Profil" data-en="Profile">Profil</span><select id="profileSelect"></select></label><button class="btn secondary" id="applyProfileBtn" data-tr="Profili Uygula" data-en="Apply Profile">Profili Uygula</button></div>
+      <div class="toolbar"><label><span data-tr="Yeni Yetkinlik" data-en="New Capability">Yeni Yetkinlik</span><select id="newTypeSelect"></select></label><button class="btn secondary" id="addCapabilityBtn" data-tr="Ekle" data-en="Add">Ekle</button></div>
+    </section>
+
+    <section class="card" id="capabilityCard" hidden>
+      <h3 data-tr="Yetkinlikler ve Sensörler" data-en="Capabilities & Sensors">Yetkinlikler ve Sensörler</h3>
+      <p data-tr="Her ölçüm veya çıkış için sensör, fiziksel kanal, telemetri alanı ve alarm limitlerini tanımlayın." data-en="For each measurement or output, define the sensor, physical channel, telemetry key and alarm thresholds.">Her ölçüm veya çıkış için sensör, fiziksel kanal, telemetri alanı ve alarm limitlerini tanımlayın.</p>
+      <div class="cap-list" id="capabilityList"></div>
+      <div id="saveStatus" class="status">-</div>
+      <div class="actions"><button class="btn primary" id="saveBtn" data-tr="Yetkinlikleri Kaydet" data-en="Save Capabilities">Yetkinlikleri Kaydet</button><button class="btn secondary" id="publishBtn" data-tr="Cihaza Gönder" data-en="Send to Device">Cihaza Gönder</button><button class="btn secondary" id="downloadBtn" data-tr="JSON İndir" data-en="Download JSON">JSON İndir</button></div>
+    </section>
+  </main>
+  <div class="foot">FactoryBox One · Mobile Installer v6.3.1</div>
+</div>
+<script>
+const state={lang:localStorage.getItem('factorybox_language')||'tr',slug:'',token:'',device:null,catalog:[],profiles:[],capabilities:[],configuration:null,stream:null,scanTimer:null};
+const qs=new URLSearchParams(location.search);state.slug=qs.get('slug')||'';state.token=qs.get('token')||'';
+const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const tr=(a,b)=>state.lang==='en'?b:a;function token(){return localStorage.getItem('factorybox_auth_token')||''}
+function applyLanguage(){document.documentElement.lang=state.lang;$('language').value=state.lang;document.querySelectorAll('[data-tr]').forEach(el=>el.textContent=el.dataset[state.lang]||el.dataset.tr);if(state.device)renderAll()}
+$('language').addEventListener('change',()=>{state.lang=$('language').value;localStorage.setItem('factorybox_language',state.lang);applyLanguage()});
+async function api(url,options={}){const headers={...(options.headers||{}),...(token()?{Authorization:`Bearer ${token()}`}:{})};if(options.body)headers['Content-Type']='application/json';const res=await fetch(url,{...options,headers});let body={};try{body=await res.json()}catch{}if(!res.ok){const e=new Error(body.message||`HTTP ${res.status}`);e.status=res.status;throw e}return body}
+function textStatus(id,msg,type=''){const el=$(id);el.className=`status ${type}`;el.textContent=msg}
+function langValue(row,key){return state.lang==='en'?(row?.[`${key}_en`]||row?.[`${key}_tr`]||''):(row?.[`${key}_tr`]||row?.[`${key}_en`]||'')}
+function cat(type){return state.catalog.find(x=>x.type===type)||state.catalog.at(-1)||{}}
+function profile(key){return state.profiles.find(x=>x.key===key)}
+function clone(x){return JSON.parse(JSON.stringify(x||{}))}
+function defaultCap(type,index){const c=cat(type);const key=String(c.telemetry_key||`capability_${index+1}`).replace(/[^a-z0-9_]/gi,'_').toLowerCase();return{capability_key:`${key}_${index+1}`,capability_type:c.type||'custom',display_name:langValue(c,'label')||tr('Yeni Yetkinlik','New Capability'),telemetry_key:c.telemetry_key||key,unit:c.unit||'',sensor_model:c.sensor_suggestions?.[0]||'',physical_channel:c.channel_suggestions?.[0]||'',data_type:c.data_type||'number',min_value:c.min_value,max_value:c.max_value,calibration_factor:1,alarm_low:null,alarm_high:null,alarm_delay_sec:0,sample_interval_sec:1,send_interval_sec:10,enabled:true}}
+function val(v){return v===null||v===undefined?'':v}
+function renderAll(){if(!state.device)return;$('deviceCard').hidden=false;$('profileCard').hidden=false;$('capabilityCard').hidden=false;$('deviceTitle').textContent=state.device.device_uid;$('deviceSubtitle').textContent=`${state.device.model||'FactoryBox One'} · ${state.device.customer_name||state.device.customer_code||'-'} / ${state.device.site_name||state.device.site_code||'-'}`;$('deviceGrid').innerHTML=[
+  [tr('Seri No','Serial No'),state.device.serial_no||'-'],[tr('Makine','Machine'),state.device.machine_name||state.device.machine_code||'-'],[tr('MQTT Topic','MQTT Topic'),state.device.mqtt_base_topic||'-'],[tr('Konfigürasyon','Configuration'),`v${state.device.capability_config_version||0}`]
+].map(x=>`<div><span>${esc(x[0])}</span><strong>${esc(x[1])}</strong></div>`).join('');
+$('profileSelect').innerHTML=state.profiles.map(p=>`<option value="${esc(p.key)}">${esc(langValue(p,'label')||p.key)}</option>`).join('');$('profileSelect').value=state.device.capability_profile||'custom';$('newTypeSelect').innerHTML=state.catalog.map(c=>`<option value="${esc(c.type)}">${esc(langValue(c,'label')||c.type)}</option>`).join('');renderCaps()}
+function renderCaps(){const target=$('capabilityList');if(!state.capabilities.length){target.innerHTML=`<div class="empty">${tr('Henüz yetkinlik yok. Profil uygulayın veya yeni yetkinlik ekleyin.','No capabilities yet. Apply a profile or add a capability.')}</div>`;return}target.innerHTML=state.capabilities.map((c,i)=>{const catalog=cat(c.capability_type);const sensors=[...(catalog.sensor_suggestions||[])];if(c.sensor_model&&!sensors.includes(c.sensor_model))sensors.unshift(c.sensor_model);const channels=[...(catalog.channel_suggestions||[])];if(c.physical_channel&&!channels.includes(c.physical_channel))channels.unshift(c.physical_channel);return`<article class="cap" data-index="${i}"><div class="cap-head"><div><strong>${esc(c.display_name||c.capability_key)}</strong><small>${esc(c.capability_type)} · ${esc(c.physical_channel||'-')}</small></div><button class="btn danger" data-remove="${i}">${tr('Sil','Remove')}</button></div><div class="cap-grid">
+<label>${tr('Yetkinlik Türü','Capability Type')}<select data-f="capability_type">${state.catalog.map(x=>`<option value="${esc(x.type)}" ${x.type===c.capability_type?'selected':''}>${esc(langValue(x,'label')||x.type)}</option>`).join('')}</select></label>
+<label>${tr('Görünen Ad','Display Name')}<input data-f="display_name" value="${esc(c.display_name||'')}"></label>
+<label>${tr('Yetkinlik Anahtarı','Capability Key')}<input data-f="capability_key" value="${esc(c.capability_key||'')}"></label>
+<label>${tr('Telemetri Alanı','Telemetry Key')}<input data-f="telemetry_key" value="${esc(c.telemetry_key||'')}"></label>
+<label>${tr('Sensör / Modül','Sensor / Module')}<input data-f="sensor_model" list="s${i}" value="${esc(c.sensor_model||'')}"><datalist id="s${i}">${sensors.map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist></label>
+<label>${tr('Fiziksel Kanal','Physical Channel')}<input data-f="physical_channel" list="c${i}" value="${esc(c.physical_channel||'')}"><datalist id="c${i}">${channels.map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist></label>
+<label>${tr('Birim','Unit')}<input data-f="unit" value="${esc(c.unit||'')}"></label><label>${tr('Veri Tipi','Data Type')}<select data-f="data_type">${['number','boolean','text','event'].map(x=>`<option ${x===c.data_type?'selected':''}>${x}</option>`).join('')}</select></label>
+<label>${tr('Minimum','Minimum')}<input data-f="min_value" type="number" step="any" value="${esc(val(c.min_value))}"></label><label>${tr('Maksimum','Maximum')}<input data-f="max_value" type="number" step="any" value="${esc(val(c.max_value))}"></label>
+<label>${tr('Kalibrasyon','Calibration')}<input data-f="calibration_factor" type="number" step="any" value="${esc(val(c.calibration_factor??1))}"></label><label>${tr('Alt Alarm','Low Alarm')}<input data-f="alarm_low" type="number" step="any" value="${esc(val(c.alarm_low))}"></label>
+<label>${tr('Üst Alarm','High Alarm')}<input data-f="alarm_high" type="number" step="any" value="${esc(val(c.alarm_high))}"></label><label>${tr('Alarm Gecikmesi (sn)','Alarm Delay (sec)')}<input data-f="alarm_delay_sec" type="number" min="0" value="${esc(c.alarm_delay_sec??0)}"></label>
+<label>${tr('Örnekleme (sn)','Sampling (sec)')}<input data-f="sample_interval_sec" type="number" min="1" value="${esc(c.sample_interval_sec??1)}"></label><label>${tr('Gönderim (sn)','Sending (sec)')}<input data-f="send_interval_sec" type="number" min="1" value="${esc(c.send_interval_sec??10)}"></label>
+<label class="switch wide"><input data-f="enabled" type="checkbox" ${c.enabled!==false?'checked':''}>${tr('Aktif','Enabled')}</label></div></article>`}).join('')}
+function readCaps(){return[...document.querySelectorAll('.cap[data-index]')].map((card,index)=>{const f=n=>card.querySelector(`[data-f="${n}"]`);const num=n=>f(n).value===''?null:Number(f(n).value);return{capability_key:f('capability_key').value.trim(),capability_type:f('capability_type').value,display_name:f('display_name').value.trim(),telemetry_key:f('telemetry_key').value.trim(),sensor_model:f('sensor_model').value.trim(),physical_channel:f('physical_channel').value.trim(),unit:f('unit').value.trim(),data_type:f('data_type').value,min_value:num('min_value'),max_value:num('max_value'),calibration_factor:num('calibration_factor')??1,alarm_low:num('alarm_low'),alarm_high:num('alarm_high'),alarm_delay_sec:num('alarm_delay_sec')??0,sample_interval_sec:num('sample_interval_sec')??1,send_interval_sec:num('send_interval_sec')??10,enabled:f('enabled').checked,sort_order:index}})}
+$('capabilityList').addEventListener('click',e=>{const b=e.target.closest('[data-remove]');if(!b)return;state.capabilities=readCaps();state.capabilities.splice(Number(b.dataset.remove),1);renderCaps()});
+$('applyProfileBtn').addEventListener('click',()=>{const p=profile($('profileSelect').value);state.capabilities=(p?.capabilities||[]).map(clone);renderCaps();textStatus('saveStatus',tr('Profil yüklendi. Kaydet butonuna basın.','Profile loaded. Press Save.'),'')});
+$('addCapabilityBtn').addEventListener('click',()=>{state.capabilities=readCaps();state.capabilities.push(defaultCap($('newTypeSelect').value,state.capabilities.length));$('profileSelect').value='custom';renderCaps()});
+async function resolve(){if(!state.slug||!state.token){textStatus('authStatus',tr('QR bilgisi bulunamadı. Cihaz etiketini telefon kamerası ile yeniden okutun.','QR data is missing. Scan the device label again with the phone camera.'),'error');return}try{textStatus('authStatus',tr('Cihaz ve oturum kontrol ediliyor...','Checking device and session...'));const data=await api(`/api/device-installer/resolve?slug=${encodeURIComponent(state.slug)}&token=${encodeURIComponent(state.token)}`);state.device=data.device;state.catalog=data.catalog||[];state.profiles=data.profiles||[];state.capabilities=(data.capabilities||[]).map(clone);state.configuration=data.configuration;textStatus('authStatus',tr('Cihaz doğrulandı. Yetkinlikleri düzenleyebilirsiniz.','Device verified. You can edit capabilities.'),'ok');renderAll()}catch(e){if(e.status===401){$('authStatus').className='status error';$('authStatus').innerHTML=`${tr('Önce bu telefonda FactoryBox hesabıyla giriş yapın.','Sign in to FactoryBox on this phone first.')}<br><a class="btn primary" href="/login.html?next=${encodeURIComponent(location.pathname+location.search)}">${tr('Giriş Yap','Sign In')}</a>`}else textStatus('authStatus',e.message,'error')}}
+$('reloadBtn').addEventListener('click',resolve);
+$('saveBtn').addEventListener('click',async()=>{try{state.capabilities=readCaps();textStatus('saveStatus',tr('Kaydediliyor...','Saving...'));const data=await api(`/api/device-installer/devices/${encodeURIComponent(state.device.device_uid)}/capabilities`,{method:'PUT',body:JSON.stringify({profile_key:$('profileSelect').value,capabilities:state.capabilities})});state.device=data.device;state.capabilities=data.capabilities||[];state.configuration=data.configuration;renderAll();textStatus('saveStatus',`${tr('Kaydedildi','Saved')} · v${data.device.capability_config_version}`,'ok')}catch(e){textStatus('saveStatus',e.message,'error')}});
+$('publishBtn').addEventListener('click',async()=>{try{textStatus('saveStatus',tr('Cihaza gönderiliyor...','Sending to device...'));const data=await api(`/api/device-installer/devices/${encodeURIComponent(state.device.device_uid)}/publish`,{method:'POST',body:'{}'});textStatus('saveStatus',`MQTT: ${data.topic}`,'ok')}catch(e){textStatus('saveStatus',e.message,'error')}});
+$('downloadBtn').addEventListener('click',()=>{if(!state.device)return;const data={...(state.configuration||{}),schema:'factorybox-device-capabilities-v1',device_uid:state.device.device_uid,config_version:state.device.capability_config_version||0,capability_profile:$('profileSelect').value||'custom',capabilities:readCaps()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`FactoryBox_${state.device.device_uid}_capabilities.json`;a.click();URL.revokeObjectURL(url)});
+function parseScanned(raw){try{const u=new URL(raw);const parts=u.pathname.split('/').filter(Boolean);if(parts[0]==='i'&&parts.length>=3){return{slug:decodeURIComponent(parts[1]),token:decodeURIComponent(parts[2])}}const slug=u.searchParams.get('slug'),token=u.searchParams.get('token');if(slug&&token)return{slug,token}}catch{}return null}
+async function stopScanner(){if(state.scanTimer)cancelAnimationFrame(state.scanTimer);state.scanTimer=null;if(state.stream)state.stream.getTracks().forEach(t=>t.stop());state.stream=null;$('scanner').classList.remove('open')}
+$('stopScannerBtn').addEventListener('click',stopScanner);
+$('scanQrBtn').addEventListener('click',async()=>{if(!('BarcodeDetector'in window)||!navigator.mediaDevices?.getUserMedia){textStatus('scannerStatus',tr('Bu tarayıcıda uygulama içi kamera taraması kullanılamıyor. Telefonun normal kamerasıyla QR etiketi okutun.','In-app camera scanning is not available in this browser. Scan the QR label with the phone camera.'),'error');$('scanner').classList.add('open');return}try{$('scanner').classList.add('open');state.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});$('camera').srcObject=state.stream;await $('camera').play();const detector=new BarcodeDetector({formats:['qr_code']});const loop=async()=>{try{const codes=await detector.detect($('camera'));if(codes.length){const parsed=parseScanned(codes[0].rawValue);if(parsed){state.slug=parsed.slug;state.token=parsed.token;history.replaceState(null,'',`/installer.html?slug=${encodeURIComponent(state.slug)}&token=${encodeURIComponent(state.token)}`);await stopScanner();await resolve();return}}}catch{}state.scanTimer=requestAnimationFrame(loop)};loop()}catch(e){textStatus('scannerStatus',e.message,'error')}});
+applyLanguage();resolve();
+if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('/installer-sw.js').catch(()=>{});
+</script>
+</body></html>

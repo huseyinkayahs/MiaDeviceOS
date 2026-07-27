@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.2.0 Admin Panel</title>
+  <title>FactoryBox v6.3.1 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -746,14 +746,141 @@
     @media(max-width:1100px){.security-summary-grid-v620,.security-settings-grid-v620{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:720px){.security-summary-grid-v620,.security-settings-grid-v620,.security-password-grid-v620{grid-template-columns:1fr}.security-panel-v620>header{flex-direction:column}}
 
-</style>
+
+    #deviceOnboardingSection { min-width:0; overflow:hidden; }
+    .onboarding-flow-v630 {
+      display:grid;
+      grid-template-columns:repeat(6,minmax(120px,1fr));
+      gap:8px;
+      margin:14px 0 18px;
+    }
+    .onboarding-step-v630 {
+      position:relative;
+      min-height:68px;
+      padding:12px 12px 11px 42px;
+      border:1px solid var(--fb-border);
+      border-radius:15px;
+      background:linear-gradient(180deg,#fff,#f7f9fb);
+      box-sizing:border-box;
+    }
+    .onboarding-step-v630 b {
+      position:absolute;
+      left:12px;
+      top:12px;
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:#d8dee6;
+      color:#39424e;
+      font-size:11px;
+    }
+    .onboarding-step-v630 strong { display:block; font-size:12px; color:#202832; }
+    .onboarding-step-v630 small { display:block; margin-top:3px; color:#687383; line-height:1.25; }
+    .onboarding-step-v630.current { border-color:#d97706; box-shadow:0 0 0 3px rgba(217,119,6,.12); }
+    .onboarding-step-v630.current b,.onboarding-step-v630.done b { background:#d97706; color:#fff; }
+    .onboarding-step-v630.done { border-color:#b7c3cf; background:#f7faf8; }
+    .onboarding-layout-v630 { display:grid; grid-template-columns:minmax(320px,.9fr) minmax(0,1.6fr); gap:16px; align-items:start; }
+    .onboarding-panel-v630 {
+      border:1px solid var(--fb-border);
+      border-radius:18px;
+      background:#fff;
+      padding:16px;
+      min-width:0;
+      box-shadow:0 10px 24px rgba(27,35,44,.05);
+    }
+    .onboarding-panel-v630 h3 { margin:0 0 5px; font-size:16px; }
+    .onboarding-panel-v630 > p { margin:0 0 14px; color:var(--fb-muted); font-size:13px; line-height:1.45; }
+    .onboarding-form-v630 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
+    .onboarding-form-v630 label { display:grid; gap:6px; font-size:12px; font-weight:750; color:#34404d; }
+    .onboarding-form-v630 .wide { grid-column:1/-1; }
+    .onboarding-form-v630 input,.onboarding-form-v630 select,.onboarding-form-v630 textarea {
+      width:100%;
+      box-sizing:border-box;
+    }
+    .onboarding-actions-v630 { display:flex; flex-wrap:wrap; gap:8px; margin-top:13px; }
+    .onboarding-summary-v630 { display:grid; grid-template-columns:repeat(5,minmax(110px,1fr)); gap:10px; margin:12px 0 16px; }
+    .onboarding-summary-v630 article {
+      padding:13px;
+      border:1px solid var(--fb-border);
+      border-radius:15px;
+      background:#fff;
+    }
+    .onboarding-summary-v630 span { display:block; color:var(--fb-muted); font-size:11px; font-weight:800; text-transform:uppercase; }
+    .onboarding-summary-v630 strong { display:block; margin-top:6px; font-size:24px; color:#202832; }
+    .onboarding-detail-head-v630 { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+    .onboarding-detail-head-v630 h3 { margin:0; }
+    .onboarding-meta-v630 { display:grid; grid-template-columns:repeat(3,minmax(140px,1fr)); gap:9px; margin-top:12px; }
+    .onboarding-meta-v630 div { border:1px solid #e1e6ec; border-radius:13px; padding:10px; background:#f8fafc; min-width:0; }
+    .onboarding-meta-v630 span { display:block; color:#697586; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
+    .onboarding-meta-v630 strong { display:block; margin-top:4px; overflow-wrap:anywhere; font-size:12px; }
+    .onboarding-test-grid-v630 { display:grid; grid-template-columns:repeat(5,minmax(110px,1fr)); gap:9px; margin:13px 0; }
+    .onboarding-test-v630 { border:1px solid #dce3ea; border-radius:14px; padding:11px; background:#fff; }
+    .onboarding-test-v630 span { display:block; color:#6a7583; font-size:10px; font-weight:800; text-transform:uppercase; }
+    .onboarding-test-v630 strong { display:block; margin-top:6px; font-size:13px; }
+    .onboarding-badge-v630 { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; font-size:10px; font-weight:850; text-transform:uppercase; letter-spacing:.03em; }
+    .onboarding-badge-v630.active,.onboarding-badge-v630.passed { background:#dcfce7; color:#166534; }
+    .onboarding-badge-v630.connected,.onboarding-badge-v630.tested { background:#dbeafe; color:#1d4ed8; }
+    .onboarding-badge-v630.token_issued,.onboarding-badge-v630.waiting_device,.onboarding-badge-v630.pending { background:#fef3c7; color:#92400e; }
+    .onboarding-badge-v630.failed,.onboarding-badge-v630.deactivated { background:#fee2e2; color:#991b1b; }
+    .onboarding-badge-v630.draft,.onboarding-badge-v630.skipped { background:#e5e7eb; color:#374151; }
+    .onboarding-provision-v630 { display:grid; grid-template-columns:190px minmax(0,1fr); gap:14px; margin-top:14px; padding:14px; border:1px solid #f0c98f; border-radius:17px; background:#fffaf1; }
+    .onboarding-qr-v630 { width:180px; max-width:100%; aspect-ratio:1; padding:8px; background:#fff; border:1px solid #dde3ea; border-radius:12px; box-sizing:border-box; }
+    .onboarding-qr-v630 svg { width:100%; height:100%; display:block; }
+    .onboarding-token-v630 code { display:block; padding:10px; border-radius:10px; background:#202832; color:#f8fafc; overflow-wrap:anywhere; font-size:11px; }
+    .onboarding-table-wrap-v630 { margin-top:16px; }
+    .onboarding-empty-v630 { padding:26px; text-align:center; color:var(--fb-muted); border:1px dashed var(--fb-border); border-radius:16px; }
+    @media (max-width:1150px) {
+      .onboarding-flow-v630 { grid-template-columns:repeat(3,1fr); }
+      .onboarding-layout-v630 { grid-template-columns:1fr; }
+    }
+    @media (max-width:720px) {
+      .onboarding-flow-v630 { grid-template-columns:1fr 1fr; }
+      .onboarding-form-v630 { grid-template-columns:1fr; }
+      .onboarding-form-v630 .wide { grid-column:auto; }
+      .onboarding-summary-v630 { grid-template-columns:1fr 1fr; }
+      .onboarding-meta-v630,.onboarding-test-grid-v630 { grid-template-columns:1fr 1fr; }
+      .onboarding-provision-v630 { grid-template-columns:1fr; }
+    }
+
+
+    /* v6.3.1 Device Capabilities & Permanent QR */
+    #deviceCapabilitiesSection{min-width:0;overflow:hidden}
+    .capability-toolbar-v631{display:grid;grid-template-columns:minmax(240px,1.4fr) minmax(210px,1fr) minmax(220px,1fr);gap:12px;align-items:end;margin:16px 0}
+    .capability-toolbar-v631 label,.capability-qr-settings-v631 label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#34404d}
+    .capability-summary-v631{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:11px;margin:12px 0 16px}
+    .capability-summary-v631 article{border:1px solid var(--fb-border);border-radius:15px;padding:14px;background:linear-gradient(145deg,#fff,#f7fafc)}
+    .capability-summary-v631 span{display:block;font-size:10px;font-weight:850;text-transform:uppercase;color:var(--fb-muted);letter-spacing:.05em}
+    .capability-summary-v631 strong{display:block;margin-top:7px;font-size:20px;color:#202832;overflow-wrap:anywhere}
+    .capability-editor-v631{display:grid;gap:12px}
+    .capability-card-v631{border:1px solid #dce3ea;border-radius:17px;background:#fff;padding:15px;box-shadow:0 8px 22px rgba(27,35,44,.045)}
+    .capability-card-head-v631{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+    .capability-card-head-v631 strong{font-size:15px}.capability-card-head-v631 small{color:var(--fb-muted)}
+    .capability-grid-v631{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}
+    .capability-grid-v631 label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#526171}
+    .capability-grid-v631 .wide{grid-column:span 2}.capability-grid-v631 input,.capability-grid-v631 select{width:100%;box-sizing:border-box}
+    .capability-switch-v631{display:flex!important;align-items:center;gap:8px!important;align-self:end;padding:11px 0}.capability-switch-v631 input{width:auto!important}
+    .capability-layout-v631{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.75fr);gap:15px;align-items:start}
+    .capability-side-v631{display:grid;gap:14px}
+    .capability-panel-v631{border:1px solid var(--fb-border);border-radius:18px;padding:17px;background:#fff;box-shadow:0 10px 25px rgba(27,35,44,.05)}
+    .capability-panel-v631 h3{margin:0 0 6px}.capability-panel-v631 p{margin:0 0 12px;color:var(--fb-muted);line-height:1.45}
+    .capability-qr-settings-v631{display:grid;gap:10px}
+    .capability-qr-result-v631{margin-top:13px;border:1px solid #e0b875;border-radius:16px;background:#fffaf0;padding:13px}
+    .capability-qr-result-v631 svg{display:block;width:min(210px,100%);height:auto;background:#fff;padding:7px;border-radius:10px;border:1px solid #dde3ea;margin:0 auto 10px}
+    .capability-qr-result-v631 code{display:block;overflow-wrap:anywhere;font-size:10px;background:#202832;color:#fff;padding:8px;border-radius:9px}
+    .capability-empty-v631{padding:28px;border:1px dashed var(--fb-border);border-radius:16px;text-align:center;color:var(--fb-muted)}
+    @media(max-width:1150px){.capability-layout-v631{grid-template-columns:1fr}.capability-grid-v631{grid-template-columns:repeat(2,minmax(0,1fr))}.capability-toolbar-v631{grid-template-columns:1fr 1fr}}
+    @media(max-width:700px){.capability-toolbar-v631,.capability-summary-v631,.capability-grid-v631{grid-template-columns:1fr}.capability-grid-v631 .wide{grid-column:auto}}
+
+  </style>
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.2.0 — Güvenlik sertleştirme ve oturum yönetimi aktif.</p>
+      <p id="adminVersionLabel">v6.3.1 — Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -807,12 +934,22 @@
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>Roller ve Yetkiler</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>Abonelikler</span><span class="admin-nav-pill-v58">2</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="assets"><span>Varlıklar / Makineler</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="devices"><span>Cihaz Kayıtları</span><span class="admin-nav-pill-v58">1</span></button>
+      <div class="admin-nav-group-v517" data-nav-group="devices">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="devices" aria-expanded="false" aria-controls="devicesSubmenuV630">
+          <span>Cihazlar</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">3</span><span class="admin-nav-chevron-v517">⌄</span></span>
+        </button>
+        <div id="devicesSubmenuV630" class="admin-subnav-v517" data-admin-subnav="devices">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="devices"><span>Cihaz Kayıtları</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="onboarding"><span>Kurulum Sihirbazı</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="capabilities"><span>Cihaz Yetkinlikleri</span></button>
+        </div>
+      </div>
       <button class="admin-nav-link-v58" data-admin-nav="security"><span>Güvenlik Aktiviteleri</span><span class="admin-nav-pill-v58">1</span></button>
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.2.0: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.
+      v6.3.1: Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.
     </div>
   </aside>
 
@@ -842,7 +979,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.2.0: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.3.1: Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.</p>
       </div>
     </div>
 
@@ -1798,6 +1935,133 @@
     <div id="devicesTable">Yükleniyor...</div>
   </section>
 
+
+  <section id="deviceCapabilitiesSection" class="card wide admin-card" data-admin-view="capabilities">
+    <div class="section-title-row">
+      <div>
+        <h2>Cihaz Yetkinlikleri ve Sensör Yapılandırması</h2>
+        <p class="muted">Akım, sıcaklık, dijital giriş, röle ve özel ölçüm kanallarını bilgisayar panelinden tanımla. Aynı kayıtlar kalıcı QR üzerinden mobil kurulum panelinde de düzenlenebilir.</p>
+      </div>
+      <div class="admin-topbar-actions-v58">
+        <button id="refreshDeviceCapabilitiesBtn" class="secondary-btn">Yenile</button>
+      </div>
+    </div>
+
+    <div class="capability-toolbar-v631">
+      <label>Cihaz
+        <select id="capabilityDeviceSelect"><option value="">Cihaz seç...</option></select>
+      </label>
+      <label>Hazır Cihaz Profili
+        <select id="capabilityProfileSelect"><option value="custom">Özel Profil</option></select>
+      </label>
+      <div class="admin-topbar-actions-v58">
+        <button id="applyCapabilityProfileBtn" class="secondary-btn">Profili Uygula</button>
+        <button id="saveDeviceCapabilitiesBtn" class="primary-btn">Yetkinlikleri Kaydet</button>
+      </div>
+    </div>
+
+    <div id="deviceCapabilitySummary" class="capability-summary-v631"></div>
+    <div class="capability-layout-v631">
+      <div class="capability-panel-v631">
+        <div class="section-title-row">
+          <div><h3>Ölçüm ve Kontrol Kanalları</h3><p>Her sensör veya çıkış ayrı bir yetkinlik kaydıdır. Aynı türden birden fazla kanal eklenebilir.</p></div>
+          <div class="admin-topbar-actions-v58">
+            <select id="newCapabilityType"></select>
+            <button id="addDeviceCapabilityBtn" class="secondary-btn">Yetkinlik Ekle</button>
+          </div>
+        </div>
+        <div id="deviceCapabilityEditor" class="capability-empty-v631">Düzenlemek için bir cihaz seç.</div>
+        <div id="deviceCapabilityStatus" class="mini-status">Cihaz yetkinlikleri bekleniyor.</div>
+      </div>
+
+      <aside class="capability-side-v631">
+        <div class="capability-panel-v631">
+          <h3>Kalıcı Cihaz QR Etiketi</h3>
+          <p>QR cihaz üzerine yapıştırılır. Yetkili kullanıcı telefondan okuttuğunda bu cihazın yetkinlik ve sensör ekranı açılır.</p>
+          <div class="capability-qr-settings-v631">
+            <label>Mobil Panel Ana Adresi
+              <input id="capabilityQrBaseUrl" type="text" placeholder="http://192.168.1.45:3100">
+            </label>
+            <button id="issuePermanentQrBtn" class="primary-btn">Kalıcı QR Oluştur / Yenile</button>
+            <button id="openMobileInstallerBtn" class="secondary-btn" disabled>Mobil Paneli Aç</button>
+            <button id="downloadPermanentQrBtn" class="secondary-btn" disabled>QR Etiketini İndir</button>
+          </div>
+          <div id="permanentQrResult" class="mini-status">QR henüz bu tarayıcı oturumunda oluşturulmadı.</div>
+        </div>
+        <div class="capability-panel-v631">
+          <h3>Cihaza Aktarım</h3>
+          <p>Kaydedilen sürümlü yetkinlik konfigürasyonunu MQTT üzerinden cihaza gönderir. Firmware tarafında <code>set_capabilities</code> komutu desteklenmelidir.</p>
+          <button id="publishDeviceCapabilitiesBtn" class="secondary-btn">Konfigürasyonu Cihaza Gönder</button>
+          <button id="downloadDeviceCapabilitiesBtn" class="secondary-btn">Konfigürasyonu İndir</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+
+  <section id="deviceOnboardingSection" class="card wide admin-card" data-admin-view="onboarding">
+    <div class="section-title-row">
+      <div>
+        <h2>Cihaz Kurulum ve Onboarding Sihirbazı</h2>
+        <p class="muted">Yeni FactoryBox cihazını müşteri, tesis ve makineye bağla; provisioning token/QR üret, canlı bağlantı testlerini tamamla ve cihazı aktive et.</p>
+      </div>
+      <div class="admin-topbar-actions-v58">
+        <button id="newDeviceOnboardingBtn" class="secondary-btn">Yeni Kurulum</button>
+        <button id="refreshDeviceOnboardingBtn" class="secondary-btn">Durumu Yenile</button>
+      </div>
+    </div>
+
+    <div id="deviceOnboardingSummary" class="onboarding-summary-v630">Kurulum özeti yükleniyor...</div>
+
+    <div class="onboarding-flow-v630" id="deviceOnboardingFlow">
+      <div class="onboarding-step-v630 current" data-onboarding-step="1"><b>1</b><strong>Cihaz Bilgileri</strong><small>UID, seri ve model</small></div>
+      <div class="onboarding-step-v630" data-onboarding-step="2"><b>2</b><strong>Tesis Eşleştirme</strong><small>Müşteri, tesis, makine</small></div>
+      <div class="onboarding-step-v630" data-onboarding-step="3"><b>3</b><strong>Ağ ve MQTT</strong><small>Ethernet/Wi-Fi ve topic</small></div>
+      <div class="onboarding-step-v630" data-onboarding-step="4"><b>4</b><strong>Token ve QR</strong><small>Tek kullanımlık kurulum</small></div>
+      <div class="onboarding-step-v630" data-onboarding-step="5"><b>5</b><strong>Canlı Testler</strong><small>Heartbeat, telemetri, alarm</small></div>
+      <div class="onboarding-step-v630" data-onboarding-step="6"><b>6</b><strong>Aktivasyon</strong><small>Rapor ve saha teslimi</small></div>
+    </div>
+
+    <div class="onboarding-layout-v630">
+      <div class="onboarding-panel-v630">
+        <h3>Yeni Kurulum Kaydı</h3>
+        <p>Wi-Fi şifresi sunucuya kaydedilmez. Yalnızca tarayıcıda oluşturulan kurulum JSON dosyasına eklenebilir.</p>
+        <div class="onboarding-form-v630">
+          <label>Müşteri<select id="onboardingCustomer"><option value="">Müşteri seç...</option></select></label>
+          <label>Tesis<select id="onboardingSite"><option value="">Tesis seç...</option></select></label>
+          <label>Mevcut Makine<select id="onboardingMachineSelect"><option value="">Yeni / elle gir</option></select></label>
+          <label>Makine Kodu<input id="onboardingMachineCode" type="text" placeholder="örn: laser01"></label>
+          <label>Makine Adı<input id="onboardingMachineName" type="text" placeholder="Lazer-01"></label>
+          <label>Makine Tipi<select id="onboardingMachineType"><option value="laser_cutting">laser_cutting</option><option value="cnc">cnc</option><option value="plastic_injection">plastic_injection</option><option value="furniture">furniture</option><option value="unknown">unknown</option></select></label>
+          <label>Device UID<input id="onboardingDeviceUid" type="text" placeholder="factorybox-001"></label>
+          <label>Seri No<input id="onboardingSerialNo" type="text" placeholder="FB1-2026-0001"></label>
+          <label>Model<input id="onboardingModel" type="text" value="FactoryBox One"></label>
+          <label>Beklenen Firmware<input id="onboardingExpectedFirmware" type="text" placeholder="Boş = kontrolü atla"></label>
+          <label>Ağ Tipi<select id="onboardingNetworkMode"><option value="ethernet">Ethernet</option><option value="wifi">Wi-Fi</option></select></label>
+          <label id="onboardingWifiSsidLabel">Wi-Fi SSID<input id="onboardingWifiSsid" type="text" placeholder="Fabrika Wi-Fi"></label>
+          <label id="onboardingWifiPasswordLabel">Wi-Fi Şifresi<input id="onboardingWifiPassword" type="password" autocomplete="new-password" placeholder="Sunucuya kaydedilmez"></label>
+          <label class="wide">MQTT URL<input id="onboardingMqttUrl" type="text" placeholder="mqtt://192.168.1.10:1883"></label>
+          <label class="wide">MQTT Base Topic<input id="onboardingMqttTopic" type="text" placeholder="customer/site/machine"></label>
+          <label>Token Süresi<select id="onboardingTokenMinutes"><option value="30">30 dakika</option><option value="60" selected>60 dakika</option><option value="240">4 saat</option><option value="1440">24 saat</option></select></label>
+        </div>
+        <div class="onboarding-actions-v630">
+          <button id="createDeviceOnboardingBtn" class="primary-btn">Kurulum Kaydı Oluştur</button>
+        </div>
+        <div id="deviceOnboardingFormResult" class="mini-status">Yeni kurulum bilgileri bekleniyor.</div>
+      </div>
+
+      <div class="onboarding-panel-v630">
+        <div id="deviceOnboardingDetail" class="onboarding-empty-v630">Bir kurulum kaydı oluştur veya aşağıdaki listeden Aç düğmesine bas.</div>
+      </div>
+    </div>
+
+    <div class="onboarding-table-wrap-v630">
+      <h3>Kurulum Kayıtları</h3>
+      <div id="deviceOnboardingSessions">Kurulum kayıtları yükleniyor...</div>
+    </div>
+  </section>
+
+
   <section class="card wide admin-card" data-admin-view="tenants">
     <h2>Sites / Atölyeler</h2>
     <p class="muted">v5.10: Tesis oluşturma, düzenleme ve abonelik tesis limit kontrolü.</p>
@@ -1921,6 +2185,11 @@
   let generalSettingsOptions = {};
   let adminAutoRefreshTimer = null;
   let translationObserver = null;
+  let deviceOnboardingRowsMap = new Map();
+  let deviceOnboardingOptionsCache = {customers:[],sites:[],machines:[],defaults:{}};
+  let selectedDeviceOnboardingId = null;
+  let latestDeviceOnboardingProvision = null;
+  let deviceCapabilityAdminState = {devices:[],catalog:[],profiles:[],selectedUid:'',profileKey:'custom',capabilities:[],configuration:null,permanentQr:null};
 
   const I18N_PAIRS = [
     ['Sistem Sağlığı ve Yedekler','System Health & Backups'],['Durumu Yenile','Refresh Status'],
@@ -1957,7 +2226,7 @@
     ['İş Emirleri','Work Orders'],['Yedek Parça ve Stok','Spare Parts & Inventory'],['Bildirimler','Notifications'],
     ['Otomasyon Zamanlayıcı','Automation Scheduler'],['Alarm Raporları','Alarm Reports'],['Müşteriler / Tenantlar','Customers / Tenants'],
     ['Kullanıcılar ve Davetler','Users & Invites'],['Roller ve Yetkiler','Roles & Permissions'],['Abonelikler','Subscriptions'],
-    ['Varlıklar / Makineler','Assets / Machines'],['Cihaz Kayıtları','Device Registry'],['Güvenlik Aktiviteleri','Security Activity'],
+    ['Varlıklar / Makineler','Assets / Machines'],['Cihazlar','Devices'],['Cihaz Kayıtları','Device Registry'],['Kurulum Sihirbazı','Installation Wizard'],['Cihaz Yetkinlikleri','Device Capabilities'],['Cihaz Yetkinlikleri ve Sensör Yapılandırması','Device Capabilities & Sensor Configuration'],['Yetkinlikleri Kaydet','Save Capabilities'],['Yetkinlik Ekle','Add Capability'],['Hazır Cihaz Profili','Device Profile Template'],['Profili Uygula','Apply Profile'],['Kalıcı Cihaz QR Etiketi','Permanent Device QR Label'],['Kalıcı QR Oluştur / Yenile','Create / Rotate Permanent QR'],['Mobil Paneli Aç','Open Mobile Installer'],['QR Etiketini İndir','Download QR Label'],['Konfigürasyonu Cihaza Gönder','Send Configuration to Device'],['Konfigürasyonu İndir','Download Configuration'],['Yeni FactoryBox cihazını müşteri, tesis ve makineye bağla; provisioning token/QR üret, canlı bağlantı testlerini tamamla ve cihazı aktive et.','Assign a new FactoryBox device to a customer, site and machine; create a provisioning token/QR, complete live connectivity tests and activate the device.'],['Wi-Fi şifresi sunucuya kaydedilmez. Yalnızca tarayıcıda oluşturulan kurulum JSON dosyasına eklenebilir.','The Wi-Fi password is not stored on the server. It can only be added to the installation JSON file created in the browser.'],['Bir kurulum kaydı oluştur veya aşağıdaki listeden Aç düğmesine bas.','Create an installation record or click Open in the list below.'],['Yeni kurulum bilgileri bekleniyor.','Waiting for new installation information.'],['Kurulum özeti yükleniyor...','Loading installation summary...'],['Kurulum kayıtları yükleniyor...','Loading installation records...'],['Toplam','Total'],['Taslak','Draft'],['Cihaz Bekleniyor','Waiting for Device'],['Bağlı / Test','Connected / Tested'],['Bağlantı','Connection'],['Telemetri','Telemetry'],['Son Görülme','Last Seen'],['Alarm kaydı yok','No alarm record'],['Telemetri yok','No telemetry'],['Cihaz görülmedi','Device not seen'],['Sunucuya kaydedilmez','Not stored on the server'],['Aç','Open'],['draft','draft'],['token_issued','token issued'],['waiting_device','waiting for device'],['connected','connected'],['tested','tested'],['passed','passed'],['skipped','skipped'],['deactivated','deactivated'],['Cihaz Kurulum ve Onboarding Sihirbazı','Device Installation & Onboarding Wizard'],['Yeni Kurulum','New Installation'],['Kurulum Kaydı Oluştur','Create Installation Record'],['Cihaz Bilgileri','Device Information'],['Tesis Eşleştirme','Site Assignment'],['Ağ ve MQTT','Network & MQTT'],['Token ve QR','Token & QR'],['Canlı Testler','Live Tests'],['Aktivasyon','Activation'],['Kurulum Kayıtları','Installation Records'],['Yeni Kurulum Kaydı','New Installation Record'],['Müşteri seç...','Select customer...'],['Tesis seç...','Select site...'],['Yeni / elle gir','New / enter manually'],['Mevcut Makine','Existing Machine'],['Makine Kodu','Machine Code'],['Makine Adı','Machine Name'],['Makine Tipi','Machine Type'],['Seri No','Serial No'],['Beklenen Firmware','Expected Firmware'],['Boş = kontrolü atla','Blank = skip check'],['Ağ Tipi','Network Type'],['Wi-Fi Şifresi','Wi-Fi Password'],['Token Süresi','Token Lifetime'],['Provision Token ve QR Oluştur','Create Provision Token & QR'],['Cihaz Bilgisi İste','Request Device Info'],['Heartbeat İste','Request Heartbeat'],['Test Alarmı Gönder','Send Test Alarm'],['Testleri Çalıştır','Run Tests'],['Firmware Testini Atla','Skip Firmware Test'],['Alarm Testini Atla','Skip Alarm Test'],['Cihazı Aktive Et','Activate Device'],['Kurulumu Yeniden Aç','Reopen Installation'],['Cihazı Devre Dışı Bırak','Deactivate Device'],['Kurulum Raporunu İndir','Download Installation Report'],['Konfigürasyonu İndir','Download Configuration'],['Tokenı Kopyala','Copy Token'],['Güvenlik Aktiviteleri','Security Activity'],
     ['Ayarları Yenile','Refresh Settings'],['Ayarları Kaydet','Save Settings'],['Yenile','Refresh'],['Şimdi Çalıştır','Run Now'],
     ['Şimdi Tara','Scan Now'],['Filtrele','Apply Filter'],['Analizi Uygula','Apply Analysis'],['Analizi Getir','Load Analysis'],
     ['Oluştur','Create'],['Kaydet','Save'],['Sil','Delete'],['Kapat','Close'],['Başlat','Start'],['Tamamla','Complete'],
@@ -2016,8 +2285,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.2.0 — Güvenlik sertleştirme ve oturum yönetimi aktif.','v6.2.0 — Security hardening and session management are active.'],
-    ['v6.2.0: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.','v6.2.0: Security Center, session management and login protection are active.'],
+    ['v6.3.1 — Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.','v6.3.1 — Device capabilities, permanent QR and mobile installer are active.'],
+    ['v6.3.1: Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.','v6.3.1: Device capabilities, permanent QR and mobile installer are active.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -2462,7 +2731,7 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '6.2.0').replace(/^v/i, '');
+    const safeVersion = String(version || '6.3.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
     if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Security hardening and session management are active.` : `v${safeVersion} — Güvenlik sertleştirme ve oturum yönetimi aktif.`;
@@ -2617,6 +2886,8 @@
     subscriptions:{title_tr:'Abonelikler',title_en:'Subscriptions',desc_tr:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.',desc_en:'Plans, subscription status, trial period and quota usage.'},
     assets:{title_tr:'Varlıklar / Makineler',title_en:'Assets / Machines',desc_tr:'Tenant, tesis ve makine kayıtlarını yönetme ekranı.',desc_en:'Management screen for tenant, site and machine records.'},
     devices:{title_tr:'Cihaz Kayıtları',title_en:'Device Registry',desc_tr:'FactoryBox cihaz kayıtları ve provisioning token işlemleri.',desc_en:'FactoryBox device records and provisioning-token operations.'},
+    onboarding:{title_tr:'Cihaz Kurulum Sihirbazı',title_en:'Device Installation Wizard',desc_tr:'Cihaz bilgileri, tesis eşleştirme, ağ/MQTT ayarları, canlı testler ve aktivasyon.',desc_en:'Device identity, site assignment, network/MQTT settings, live tests and activation.'},
+    capabilities:{title_tr:'Cihaz Yetkinlikleri',title_en:'Device Capabilities',desc_tr:'Sensörler, ölçüm kanalları, alarm limitleri, kalıcı QR ve mobil saha yapılandırması.',desc_en:'Sensors, measurement channels, alarm thresholds, permanent QR and mobile field configuration.'},
     security:{title_tr:'Güvenlik Aktiviteleri',title_en:'Security Activity',desc_tr:'Denetim günlüğü, güvenlik aktiviteleri, filtreleme ve CSV dışa aktarımı.',desc_en:'Audit logs, security activity, filtering and CSV export.'}
   };
 
@@ -2640,7 +2911,10 @@
     maintenance:'maintenance',
     'maintenance-plans':'maintenance',
     'work-orders':'maintenance',
-    inventory:'maintenance'
+    inventory:'maintenance',
+    devices:'devices',
+    onboarding:'devices',
+    capabilities:'devices'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -4047,6 +4321,342 @@
     ], data.devices || []);
   }
 
+
+
+  function capabilityLanguageValue(row,key) {
+    return currentLanguage==='en'?(row?.[`${key}_en`]||row?.[`${key}_tr`]||''):(row?.[`${key}_tr`]||row?.[`${key}_en`]||'');
+  }
+
+  function capabilityTypeRow(type) {
+    return (deviceCapabilityAdminState.catalog||[]).find(row=>row.type===type)||(deviceCapabilityAdminState.catalog||[]).at(-1)||{};
+  }
+
+  function capabilityTemplateRow(profileKey) {
+    return (deviceCapabilityAdminState.profiles||[]).find(row=>row.key===profileKey);
+  }
+
+  function cloneCapability(value) {
+    return JSON.parse(JSON.stringify(value||{}));
+  }
+
+  function defaultCapabilityFromType(type,index=0) {
+    const catalog=capabilityTypeRow(type);
+    const base=(catalog.telemetry_key||`capability_${index+1}`).replace(/[^a-z0-9_]/gi,'_').toLowerCase();
+    return {
+      capability_key:`${base}_${index+1}`,
+      capability_type:catalog.type||'custom',
+      display_name:capabilityLanguageValue(catalog,'label')||'Yeni Yetkinlik',
+      telemetry_key:catalog.telemetry_key||base,
+      unit:catalog.unit||'',sensor_model:catalog.sensor_suggestions?.[0]||'',physical_channel:catalog.channel_suggestions?.[0]||'',
+      data_type:catalog.data_type||'number',min_value:catalog.min_value,max_value:catalog.max_value,calibration_factor:1,
+      alarm_low:null,alarm_high:null,alarm_delay_sec:0,sample_interval_sec:1,send_interval_sec:10,enabled:true
+    };
+  }
+
+  function renderCapabilitySelectors() {
+    const deviceSelect=document.getElementById('capabilityDeviceSelect');
+    if(deviceSelect){
+      const previous=deviceCapabilityAdminState.selectedUid||deviceSelect.value;
+      deviceSelect.innerHTML='<option value="">Cihaz seç...</option>'+(deviceCapabilityAdminState.devices||[]).map(row=>`<option value="${esc(row.device_uid)}">${esc(row.device_uid)} · ${esc(row.machine_name||row.machine_code||'-')} (${esc(row.capability_count||0)})</option>`).join('');
+      if((deviceCapabilityAdminState.devices||[]).some(row=>row.device_uid===previous)){deviceSelect.value=previous;deviceCapabilityAdminState.selectedUid=previous;}
+    }
+    const profile=document.getElementById('capabilityProfileSelect');
+    if(profile){
+      profile.innerHTML=(deviceCapabilityAdminState.profiles||[]).map(row=>`<option value="${esc(row.key)}">${esc(capabilityLanguageValue(row,'label')||row.key)}</option>`).join('');
+      profile.value=deviceCapabilityAdminState.profileKey||'custom';
+    }
+    const type=document.getElementById('newCapabilityType');
+    if(type)type.innerHTML=(deviceCapabilityAdminState.catalog||[]).map(row=>`<option value="${esc(row.type)}">${esc(capabilityLanguageValue(row,'label')||row.type)}</option>`).join('');
+  }
+
+  function renderCapabilitySummary() {
+    const target=document.getElementById('deviceCapabilitySummary');if(!target)return;
+    const device=(deviceCapabilityAdminState.devices||[]).find(row=>row.device_uid===deviceCapabilityAdminState.selectedUid)||{};
+    target.innerHTML=`
+      <article><span>${currentLanguage==='en'?'Device':'Cihaz'}</span><strong>${esc(device.device_uid||'-')}</strong></article>
+      <article><span>${currentLanguage==='en'?'Capability Count':'Yetkinlik Sayısı'}</span><strong>${esc(deviceCapabilityAdminState.capabilities.length)}</strong></article>
+      <article><span>${currentLanguage==='en'?'Config Version':'Konfigürasyon Sürümü'}</span><strong>v${esc(device.capability_config_version||0)}</strong></article>
+      <article><span>${currentLanguage==='en'?'Permanent QR':'Kalıcı QR'}</span><strong>${device.permanent_qr_issued_at?(currentLanguage==='en'?'READY':'HAZIR'):'-'}</strong></article>`;
+  }
+
+  function capabilityNumberInput(value) { return value===null||value===undefined?'':String(value); }
+
+  function renderDeviceCapabilityEditor() {
+    const target=document.getElementById('deviceCapabilityEditor');if(!target)return;
+    renderCapabilitySelectors();renderCapabilitySummary();
+    if(!deviceCapabilityAdminState.selectedUid){target.className='capability-empty-v631';target.textContent=currentLanguage==='en'?'Select a device to edit.':'Düzenlemek için bir cihaz seç.';return;}
+    target.className='capability-editor-v631';
+    if(!deviceCapabilityAdminState.capabilities.length){target.innerHTML=`<div class="capability-empty-v631">${currentLanguage==='en'?'No capability has been added. Choose a profile or add a capability.':'Henüz yetkinlik eklenmedi. Hazır profil seç veya yeni yetkinlik ekle.'}</div>`;return;}
+    target.innerHTML=deviceCapabilityAdminState.capabilities.map((cap,index)=>{
+      const catalog=capabilityTypeRow(cap.capability_type);
+      const sensorOptions=[...(catalog.sensor_suggestions||[])];if(cap.sensor_model&&!sensorOptions.includes(cap.sensor_model))sensorOptions.unshift(cap.sensor_model);
+      const channelOptions=[...(catalog.channel_suggestions||[])];if(cap.physical_channel&&!channelOptions.includes(cap.physical_channel))channelOptions.unshift(cap.physical_channel);
+      return `<article class="capability-card-v631" data-capability-index="${index}">
+        <div class="capability-card-head-v631"><div><strong>${esc(cap.display_name||cap.capability_key)}</strong><br><small>${esc(cap.capability_type)} · ${esc(cap.physical_channel||'-')}</small></div><button class="secondary-btn mini-btn" data-capability-remove="${index}">${currentLanguage==='en'?'Remove':'Kaldır'}</button></div>
+        <div class="capability-grid-v631">
+          <label>${currentLanguage==='en'?'Capability Type':'Yetkinlik Türü'}<select data-cap-field="capability_type">${(deviceCapabilityAdminState.catalog||[]).map(row=>`<option value="${esc(row.type)}" ${row.type===cap.capability_type?'selected':''}>${esc(capabilityLanguageValue(row,'label')||row.type)}</option>`).join('')}</select></label>
+          <label>${currentLanguage==='en'?'Display Name':'Görünen Ad'}<input data-cap-field="display_name" value="${esc(cap.display_name||'')}"></label>
+          <label>${currentLanguage==='en'?'Capability Key':'Yetkinlik Anahtarı'}<input data-cap-field="capability_key" value="${esc(cap.capability_key||'')}"></label>
+          <label>${currentLanguage==='en'?'Telemetry Key':'Telemetri Alanı'}<input data-cap-field="telemetry_key" value="${esc(cap.telemetry_key||'')}"></label>
+          <label>${currentLanguage==='en'?'Sensor / Module':'Sensör / Modül'}<input data-cap-field="sensor_model" list="capSensorList${index}" value="${esc(cap.sensor_model||'')}"><datalist id="capSensorList${index}">${sensorOptions.map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist></label>
+          <label>${currentLanguage==='en'?'Physical Channel':'Fiziksel Kanal'}<input data-cap-field="physical_channel" list="capChannelList${index}" value="${esc(cap.physical_channel||'')}"><datalist id="capChannelList${index}">${channelOptions.map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist></label>
+          <label>${currentLanguage==='en'?'Data Type':'Veri Tipi'}<select data-cap-field="data_type">${['number','boolean','text','event'].map(v=>`<option value="${v}" ${v===cap.data_type?'selected':''}>${v}</option>`).join('')}</select></label>
+          <label>${currentLanguage==='en'?'Unit':'Birim'}<input data-cap-field="unit" value="${esc(cap.unit||'')}"></label>
+          <label>${currentLanguage==='en'?'Minimum':'Minimum'}<input data-cap-field="min_value" type="number" step="any" value="${esc(capabilityNumberInput(cap.min_value))}"></label>
+          <label>${currentLanguage==='en'?'Maximum':'Maksimum'}<input data-cap-field="max_value" type="number" step="any" value="${esc(capabilityNumberInput(cap.max_value))}"></label>
+          <label>${currentLanguage==='en'?'Calibration':'Kalibrasyon'}<input data-cap-field="calibration_factor" type="number" step="any" value="${esc(capabilityNumberInput(cap.calibration_factor??1))}"></label>
+          <label>${currentLanguage==='en'?'Low Alarm':'Alt Alarm'}<input data-cap-field="alarm_low" type="number" step="any" value="${esc(capabilityNumberInput(cap.alarm_low))}"></label>
+          <label>${currentLanguage==='en'?'High Alarm':'Üst Alarm'}<input data-cap-field="alarm_high" type="number" step="any" value="${esc(capabilityNumberInput(cap.alarm_high))}"></label>
+          <label>${currentLanguage==='en'?'Alarm Delay (sec)':'Alarm Gecikmesi (sn)'}<input data-cap-field="alarm_delay_sec" type="number" min="0" value="${esc(cap.alarm_delay_sec??0)}"></label>
+          <label>${currentLanguage==='en'?'Sampling (sec)':'Örnekleme (sn)'}<input data-cap-field="sample_interval_sec" type="number" min="1" value="${esc(cap.sample_interval_sec??1)}"></label>
+          <label>${currentLanguage==='en'?'Sending (sec)':'Gönderim (sn)'}<input data-cap-field="send_interval_sec" type="number" min="1" value="${esc(cap.send_interval_sec??10)}"></label>
+          <label class="capability-switch-v631"><input data-cap-field="enabled" type="checkbox" ${cap.enabled!==false?'checked':''}> ${currentLanguage==='en'?'Enabled':'Aktif'}</label>
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+  function readCapabilityCards() {
+    return [...document.querySelectorAll('#deviceCapabilityEditor [data-capability-index]')].map((card,index)=>{
+      const value=name=>card.querySelector(`[data-cap-field="${name}"]`);
+      const number=name=>{const raw=value(name)?.value;return raw===''?null:Number(raw)};
+      return {capability_key:value('capability_key')?.value.trim(),capability_type:value('capability_type')?.value,display_name:value('display_name')?.value.trim(),telemetry_key:value('telemetry_key')?.value.trim(),sensor_model:value('sensor_model')?.value.trim(),physical_channel:value('physical_channel')?.value.trim(),data_type:value('data_type')?.value,unit:value('unit')?.value.trim(),min_value:number('min_value'),max_value:number('max_value'),calibration_factor:number('calibration_factor')??1,alarm_low:number('alarm_low'),alarm_high:number('alarm_high'),alarm_delay_sec:number('alarm_delay_sec')??0,sample_interval_sec:number('sample_interval_sec')??1,send_interval_sec:number('send_interval_sec')??10,enabled:Boolean(value('enabled')?.checked),sort_order:index};
+    });
+  }
+
+  async function loadSelectedDeviceCapabilities(uid=deviceCapabilityAdminState.selectedUid) {
+    if(!uid){deviceCapabilityAdminState.selectedUid='';deviceCapabilityAdminState.capabilities=[];renderDeviceCapabilityEditor();return;}
+    const data=await getJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}`);
+    deviceCapabilityAdminState.selectedUid=uid;deviceCapabilityAdminState.profileKey=data.device?.capability_profile||'custom';deviceCapabilityAdminState.capabilities=(data.capabilities||[]).map(cloneCapability);deviceCapabilityAdminState.configuration=data.configuration||null;
+    const deviceIndex=deviceCapabilityAdminState.devices.findIndex(row=>row.device_uid===uid);if(deviceIndex>=0)deviceCapabilityAdminState.devices[deviceIndex]={...deviceCapabilityAdminState.devices[deviceIndex],...data.device,capability_count:data.capabilities?.length||0};
+    renderDeviceCapabilityEditor();
+  }
+
+  function renderDeviceCapabilitiesOverview(data) {
+    deviceCapabilityAdminState.devices=data.devices||[];deviceCapabilityAdminState.catalog=data.catalog||[];deviceCapabilityAdminState.profiles=data.profiles||[];
+    if(!deviceCapabilityAdminState.selectedUid&&data.devices?.length)deviceCapabilityAdminState.selectedUid=data.devices[0].device_uid;
+    renderCapabilitySelectors();renderCapabilitySummary();
+    if(deviceCapabilityAdminState.selectedUid)loadSelectedDeviceCapabilities(deviceCapabilityAdminState.selectedUid).catch(error=>setError('deviceCapabilityStatus',error.message));else renderDeviceCapabilityEditor();
+  }
+
+  function applySelectedCapabilityProfile() {
+    const key=document.getElementById('capabilityProfileSelect')?.value||'custom';const profile=capabilityTemplateRow(key);
+    if(!profile)return;deviceCapabilityAdminState.profileKey=key;deviceCapabilityAdminState.capabilities=(profile.capabilities||[]).map(cloneCapability);renderDeviceCapabilityEditor();
+    const status=document.getElementById('deviceCapabilityStatus');if(status)status.textContent=currentLanguage==='en'?'Profile loaded. Save to persist changes.':'Profil yüklendi. Kalıcı olması için kaydet.';
+  }
+
+  async function saveSelectedDeviceCapabilities() {
+    const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error(currentLanguage==='en'?'Select a device.':'Cihaz seç.');
+    const capabilities=readCapabilityCards();const profileKey=document.getElementById('capabilityProfileSelect')?.value||'custom';
+    const data=await apiJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}`,{method:'PUT',body:JSON.stringify({profile_key:profileKey,capabilities})});
+    deviceCapabilityAdminState.profileKey=data.device.capability_profile;deviceCapabilityAdminState.capabilities=data.capabilities||[];deviceCapabilityAdminState.configuration=data.configuration||null;
+    const idx=deviceCapabilityAdminState.devices.findIndex(row=>row.device_uid===uid);if(idx>=0)deviceCapabilityAdminState.devices[idx]={...deviceCapabilityAdminState.devices[idx],...data.device,capability_count:data.capabilities.length};
+    renderDeviceCapabilityEditor();return data;
+  }
+
+  function downloadJsonFile(filename,value) { const blob=new Blob([JSON.stringify(value,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url); }
+
+  function renderPermanentQrResult(qr) {
+    const target=document.getElementById('permanentQrResult');const open=document.getElementById('openMobileInstallerBtn');const download=document.getElementById('downloadPermanentQrBtn');
+    if(!target)return;if(!qr){target.className='mini-status';target.textContent=currentLanguage==='en'?'QR has not been created in this browser session.':'QR henüz bu tarayıcı oturumunda oluşturulmadı.';if(open)open.disabled=true;if(download)download.disabled=true;return;}
+    target.className='capability-qr-result-v631';target.innerHTML=`${qr.qr_svg}<strong>${esc(deviceCapabilityAdminState.selectedUid)}</strong><code>${esc(qr.url)}</code><p>${currentLanguage==='en'?'The QR token is displayed only once. Print the label now.':'QR token yalnızca bir kez gösterilir. Etiketi şimdi yazdır.'}</p>`;if(open)open.disabled=false;if(download)download.disabled=false;
+  }
+
+  function downloadPermanentQrLabel() {
+    const qr=deviceCapabilityAdminState.permanentQr;if(!qr)return;const uid=deviceCapabilityAdminState.selectedUid;const qrInner=String(qr.qr_svg||'').replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="760" viewBox="0 0 600 760"><rect width="600" height="760" rx="26" fill="#fff" stroke="#202832" stroke-width="5"/><text x="300" y="65" text-anchor="middle" font-family="Arial" font-size="34" font-weight="700" fill="#202832">FACTORYBOX ONE</text><text x="300" y="105" text-anchor="middle" font-family="Arial" font-size="20" fill="#526171">${esc(uid)}</text><svg x="75" y="130" width="450" height="450" viewBox="0 0 45 45">${qrInner}</svg><text x="300" y="625" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#202832">SCAN FOR DEVICE SETUP</text><text x="300" y="660" text-anchor="middle" font-family="Arial" font-size="15" fill="#526171">Yetkinlik ve sensör yapılandırması</text><text x="300" y="705" text-anchor="middle" font-family="monospace" font-size="11" fill="#526171">${esc(qr.slug||'')}</text></svg>`;
+    const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`FactoryBox_${uid}_QR_Label.svg`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  }
+
+  function onboardingStatusBadge(value) {
+    const status=String(value||'pending');
+    const labels={
+      tr:{draft:'taslak',token_issued:'token oluşturuldu',waiting_device:'cihaz bekleniyor',connected:'bağlı',tested:'test edildi',active:'aktif',failed:'başarısız',deactivated:'devre dışı',pending:'bekliyor',passed:'başarılı',skipped:'atlandı'},
+      en:{draft:'draft',token_issued:'token issued',waiting_device:'waiting for device',connected:'connected',tested:'tested',active:'active',failed:'failed',deactivated:'deactivated',pending:'pending',passed:'passed',skipped:'skipped'}
+    };
+    const label=(labels[currentLanguage]||labels.tr)[status]||status.replaceAll('_',' ');
+    return `<span class="onboarding-badge-v630 ${esc(status)}">${esc(label)}</span>`;
+  }
+
+  function onboardingTestCard(label,value,detail='') {
+    return `<div class="onboarding-test-v630"><span>${esc(label)}</span><strong>${onboardingStatusBadge(value)}</strong>${detail?`<small>${esc(detail)}</small>`:''}</div>`;
+  }
+
+  function syncOnboardingWifiFields() {
+    const wifi=document.getElementById('onboardingNetworkMode')?.value==='wifi';
+    ['onboardingWifiSsidLabel','onboardingWifiPasswordLabel'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=wifi?'grid':'none';});
+  }
+
+  function populateOnboardingSites() {
+    const customer=document.getElementById('onboardingCustomer')?.value||'';
+    const site=document.getElementById('onboardingSite');
+    if(!site)return;
+    const previous=site.value;
+    const rows=(deviceOnboardingOptionsCache.sites||[]).filter(x=>!customer||x.customer_code===customer);
+    site.innerHTML='<option value="">Tesis seç...</option>'+rows.map(x=>`<option value="${esc(x.code)}">${esc(x.name||x.code)} (${esc(x.code)})</option>`).join('');
+    if(rows.some(x=>x.code===previous))site.value=previous;
+    populateOnboardingMachines();
+  }
+
+  function populateOnboardingMachines() {
+    const customer=document.getElementById('onboardingCustomer')?.value||'';
+    const site=document.getElementById('onboardingSite')?.value||'';
+    const select=document.getElementById('onboardingMachineSelect');
+    if(!select)return;
+    const previous=select.value;
+    const rows=(deviceOnboardingOptionsCache.machines||[]).filter(x=>(!customer||x.customer_code===customer)&&(!site||x.site_code===site));
+    select.innerHTML='<option value="">Yeni / elle gir</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name||x.code)} (${esc(x.code)})</option>`).join('');
+    if(rows.some(x=>x.id===previous))select.value=previous;
+  }
+
+  function populateOnboardingOptions(options) {
+    deviceOnboardingOptionsCache=options||deviceOnboardingOptionsCache;
+    const customer=document.getElementById('onboardingCustomer');
+    if(!customer)return;
+    const previous=customer.value;
+    customer.innerHTML='<option value="">Müşteri seç...</option>'+(deviceOnboardingOptionsCache.customers||[]).map(x=>`<option value="${esc(x.code)}">${esc(x.name||x.code)} (${esc(x.code)})</option>`).join('');
+    const defaults=deviceOnboardingOptionsCache.defaults||{};
+    if((deviceOnboardingOptionsCache.customers||[]).some(x=>x.code===previous))customer.value=previous;
+    else if((deviceOnboardingOptionsCache.customers||[]).some(x=>x.code===defaults.customer_code))customer.value=defaults.customer_code;
+    populateOnboardingSites();
+    const siteSelect=document.getElementById('onboardingSite');
+    if(siteSelect&&defaults.site_code&&[...siteSelect.options].some(x=>x.value===defaults.site_code)){siteSelect.value=defaults.site_code;populateOnboardingMachines();}
+    const defaultMachine=(deviceOnboardingOptionsCache.machines||[]).find(x=>x.customer_code===customer.value&&x.site_code===siteSelect?.value&&x.code===defaults.machine_code);
+    if(defaultMachine){const machineSelect=document.getElementById('onboardingMachineSelect');if(machineSelect)machineSelect.value=defaultMachine.id;document.getElementById('onboardingMachineCode').value=defaultMachine.code||'';document.getElementById('onboardingMachineName').value=defaultMachine.name||defaultMachine.code||'';document.getElementById('onboardingMachineType').value=defaultMachine.machine_type||'unknown';}
+    const setDefault=(id,value)=>{const el=document.getElementById(id);if(el&&!el.value&&value)el.value=value;};
+    setDefault('onboardingModel',defaults.model||'FactoryBox One');
+    setDefault('onboardingMqttUrl',defaults.mqtt_url||'');
+    setDefault('onboardingMqttTopic',defaults.mqtt_base_topic||'');
+    syncOnboardingWifiFields();
+  }
+
+  function applySelectedOnboardingMachine() {
+    const id=document.getElementById('onboardingMachineSelect')?.value;
+    const row=(deviceOnboardingOptionsCache.machines||[]).find(x=>x.id===id);
+    if(!row)return;
+    document.getElementById('onboardingMachineCode').value=row.code||'';
+    document.getElementById('onboardingMachineName').value=row.name||row.code||'';
+    document.getElementById('onboardingMachineType').value=row.machine_type||'unknown';
+    const customer=document.getElementById('onboardingCustomer');
+    const site=document.getElementById('onboardingSite');
+    if(customer&&row.customer_code)customer.value=row.customer_code;
+    populateOnboardingSites();
+    if(site&&row.site_code)site.value=row.site_code;
+    populateOnboardingMachines();
+    document.getElementById('onboardingMachineSelect').value=id;
+    updateOnboardingTopicSuggestion();
+  }
+
+  function updateOnboardingTopicSuggestion() {
+    const customer=document.getElementById('onboardingCustomer')?.value||'';
+    const site=document.getElementById('onboardingSite')?.value||'';
+    const machine=document.getElementById('onboardingMachineCode')?.value.trim()||'';
+    const topic=document.getElementById('onboardingMqttTopic');
+    if(topic&&customer&&site&&machine&&(topic.dataset.manual!=='true'))topic.value=`${customer}/${site}/${machine}`;
+  }
+
+  function updateOnboardingFlow(step=1) {
+    document.querySelectorAll('[data-onboarding-step]').forEach(el=>{
+      const number=Number(el.dataset.onboardingStep);
+      el.classList.toggle('current',number===Number(step));
+      el.classList.toggle('done',number<Number(step));
+    });
+  }
+
+  function renderDeviceOnboardingDetail(row) {
+    const target=document.getElementById('deviceOnboardingDetail');
+    if(!target)return;
+    if(!row){target.className='onboarding-empty-v630';target.textContent='Bir kurulum kaydı oluştur veya aşağıdaki listeden Aç düğmesine bas.';updateOnboardingFlow(1);return;}
+    target.className='';
+    updateOnboardingFlow(row.current_step||1);
+    const alarmDetail=row.latest_alarm_at?`${row.latest_alarm_type||'-'} · ${fmtDate(row.latest_alarm_at)}`:'Alarm kaydı yok';
+    const telemetryDetail=row.latest_telemetry_at?`${fmtDate(row.latest_telemetry_at)} · RSSI ${row.latest_wifi_rssi??'-'}`:'Telemetri yok';
+    const signalDetail=row.last_seen_at?`${fmtDate(row.last_seen_at)} · ${row.signal_age_sec??'-'} sn`:'Cihaz görülmedi';
+    const provision=latestDeviceOnboardingProvision&&latestDeviceOnboardingProvision.session_id===row.id?latestDeviceOnboardingProvision:null;
+    const canActivate=Boolean(row.ready_for_activation);
+    target.innerHTML=`
+      <div class="onboarding-detail-head-v630">
+        <div><h3>${esc(row.device_uid)}</h3><p class="muted">${esc(row.model||'-')} · ${esc(row.customer_code)}/${esc(row.site_code)}/${esc(row.machine_code)}</p></div>
+        ${onboardingStatusBadge(row.status)}
+      </div>
+      <div class="onboarding-meta-v630">
+        <div><span>Seri No</span><strong>${esc(row.serial_no||'-')}</strong></div>
+        <div><span>Ağ</span><strong>${esc(row.network_mode||'-')}${row.wifi_ssid?` · ${esc(row.wifi_ssid)}`:''}</strong></div>
+        <div><span>MQTT</span><strong>${esc(row.mqtt_base_topic||'-')}</strong></div>
+        <div><span>Provisioning</span><strong>${esc(row.provisioning_status||'-')}</strong></div>
+        <div><span>Firmware</span><strong>${esc(row.firmware_version||row.firmware_build||'-')}${row.expected_firmware?` / beklenen ${esc(row.expected_firmware)}`:''}</strong></div>
+        <div><span>Son Görülme</span><strong>${esc(signalDetail)}</strong></div>
+      </div>
+      <div class="onboarding-test-grid-v630">
+        ${onboardingTestCard('Bağlantı',row.connection_test,signalDetail)}
+        ${onboardingTestCard('Heartbeat',row.heartbeat_test,telemetryDetail)}
+        ${onboardingTestCard('Telemetri',row.telemetry_test,telemetryDetail)}
+        ${onboardingTestCard('Firmware',row.firmware_test,`${row.firmware_version||row.firmware_build||'-'} / ${row.expected_firmware||'kontrol yok'}`)}
+        ${onboardingTestCard('Alarm',row.alarm_test,alarmDetail)}
+      </div>
+      ${row.last_error?`<div class="mini-status">${esc(row.last_error)}</div>`:''}
+      <div class="onboarding-actions-v630">
+        <button class="primary-btn" data-onboarding-action="issue-token" data-id="${esc(row.id)}">Provision Token ve QR Oluştur</button>
+        <button class="secondary-btn" data-onboarding-action="command-info" data-id="${esc(row.id)}">Cihaz Bilgisi İste</button>
+        <button class="secondary-btn" data-onboarding-action="command-heartbeat" data-id="${esc(row.id)}">Heartbeat İste</button>
+        <button class="secondary-btn" data-onboarding-action="command-alarm" data-id="${esc(row.id)}">Test Alarmı Gönder</button>
+        <button class="secondary-btn" data-onboarding-action="run-tests" data-id="${esc(row.id)}">Testleri Çalıştır</button>
+        <button class="secondary-btn" data-onboarding-action="skip-firmware" data-id="${esc(row.id)}">Firmware Testini Atla</button>
+        <button class="secondary-btn" data-onboarding-action="skip-alarm" data-id="${esc(row.id)}">Alarm Testini Atla</button>
+        <button class="primary-btn" data-onboarding-action="activate" data-id="${esc(row.id)}" ${canActivate?'':'disabled'}>Cihazı Aktive Et</button>
+        <button class="secondary-btn" data-onboarding-action="report" data-id="${esc(row.id)}">Kurulum Raporunu İndir</button>
+        <button class="secondary-btn" data-onboarding-action="reopen" data-id="${esc(row.id)}">Kurulumu Yeniden Aç</button>
+        <button class="secondary-btn" data-onboarding-action="deactivate" data-id="${esc(row.id)}">Cihazı Devre Dışı Bırak</button>
+      </div>
+      ${provision?`
+        <div class="onboarding-provision-v630" data-i18n-ignore>
+          <div class="onboarding-qr-v630">${provision.qr_svg}</div>
+          <div class="onboarding-token-v630">
+            <h3>Provisioning Token</h3>
+            <p>Bu token yalnızca bir kez gösterilir. QR içeriği: <code>${esc(provision.qr_payload)}</code></p>
+            <code>${esc(provision.token)}</code>
+            <div class="onboarding-actions-v630">
+              <button class="secondary-btn" data-onboarding-action="copy-token" data-id="${esc(row.id)}">Tokenı Kopyala</button>
+              <button class="secondary-btn" data-onboarding-action="download-config" data-id="${esc(row.id)}">Konfigürasyonu İndir</button>
+            </div>
+          </div>
+        </div>`:''}
+    `;
+    applyTranslations(target);
+  }
+
+  function renderDeviceOnboarding(data) {
+    populateOnboardingOptions(data.options||{});
+    deviceOnboardingRowsMap=new Map((data.sessions||[]).map(row=>[String(row.id),row]));
+    const summary=data.summary||{};
+    const summaryTarget=document.getElementById('deviceOnboardingSummary');
+    if(summaryTarget)summaryTarget.innerHTML=[
+      ['Toplam',summary.total||0],['Taslak',summary.draft||0],['Cihaz Bekleniyor',summary.waiting||0],['Bağlı / Test',summary.connected||0],['Aktif',summary.active||0]
+    ].map(([label,value])=>`<article><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join('');
+    const target=document.getElementById('deviceOnboardingSessions');
+    if(target)target.innerHTML=table([
+      {label:'Device UID',value:r=>r.device_uid},
+      {label:'Müşteri / Tesis',value:r=>`${r.customer_code}/${r.site_code}`},
+      {label:'Makine',value:r=>r.machine_name||r.machine_code},
+      {label:'Ağ',value:r=>r.network_mode},
+      {label:'Firmware',value:r=>r.firmware_version||r.firmware_build||'-'},
+      {label:'Son Görülme',value:r=>fmtDate(r.last_seen_at)},
+      {label:'Durum',html:true,value:r=>onboardingStatusBadge(r.status)},
+      {label:'Testler',value:r=>`${r.connection_test} / ${r.heartbeat_test} / ${r.telemetry_test} / ${r.firmware_test} / ${r.alarm_test}`},
+      {label:'İşlem',html:true,value:r=>`<button class="secondary-btn mini-btn" data-onboarding-action="open" data-id="${esc(r.id)}">Aç</button>`}
+    ],data.sessions||[]);
+    if(selectedDeviceOnboardingId&&!deviceOnboardingRowsMap.has(String(selectedDeviceOnboardingId)))selectedDeviceOnboardingId=null;
+    if(!selectedDeviceOnboardingId&&data.sessions?.length)selectedDeviceOnboardingId=String(data.sessions[0].id);
+    renderDeviceOnboardingDetail(selectedDeviceOnboardingId?deviceOnboardingRowsMap.get(String(selectedDeviceOnboardingId)):null);
+    applyTranslations(document.getElementById('deviceOnboardingSection'));
+  }
+
+  async function loadDeviceOnboarding() {
+    const data=await getJson('/api/admin/device-onboarding?limit=200');
+    renderDeviceOnboarding(data);
+    return data;
+  }
+
   function renderAuditLogs(data) {
     const target = document.getElementById('auditLogTable');
     if (!target) return;
@@ -4089,7 +4699,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.2.0`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.3.1`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -4358,7 +4968,9 @@
         ['subscriptions', '/api/admin/subscriptions', renderSubscriptions, 'subscriptionsTable']
       ] : []),
       ...(can('MANAGE_DEVICES') ? [
-        ['devices', '/api/admin/devices?limit=200', renderDevices, 'devicesTable']
+        ['devices', '/api/admin/devices?limit=200', renderDevices, 'devicesTable'],
+        ['device-onboarding', '/api/admin/device-onboarding?limit=200', renderDeviceOnboarding, 'deviceOnboardingSessions'],
+        ['device-capabilities', '/api/admin/device-capabilities', renderDeviceCapabilitiesOverview, 'deviceCapabilityStatus']
       ] : []),
       ['sites', '/api/admin/sites', renderSites, 'sitesTable'],
       ...(can('MANAGE_SITES') ? [
@@ -4861,6 +5473,117 @@
     } catch {}
 
     document.getElementById('deviceUid').value = '';
+  }
+
+
+  async function createDeviceOnboardingSession() {
+    const result=document.getElementById('deviceOnboardingFormResult');
+    const payload={
+      customer_code:document.getElementById('onboardingCustomer').value,
+      site_code:document.getElementById('onboardingSite').value,
+      machine_code:document.getElementById('onboardingMachineCode').value.trim(),
+      machine_name:document.getElementById('onboardingMachineName').value.trim(),
+      machine_type:document.getElementById('onboardingMachineType').value,
+      device_uid:document.getElementById('onboardingDeviceUid').value.trim(),
+      serial_no:document.getElementById('onboardingSerialNo').value.trim(),
+      model:document.getElementById('onboardingModel').value.trim(),
+      expected_firmware:document.getElementById('onboardingExpectedFirmware').value.trim(),
+      network_mode:document.getElementById('onboardingNetworkMode').value,
+      wifi_ssid:document.getElementById('onboardingWifiSsid').value.trim(),
+      mqtt_url:document.getElementById('onboardingMqttUrl').value.trim(),
+      mqtt_base_topic:document.getElementById('onboardingMqttTopic').value.trim()
+    };
+    const data=await apiJson('/api/admin/device-onboarding',{method:'POST',body:JSON.stringify(payload)});
+    selectedDeviceOnboardingId=String(data.session.id);
+    latestDeviceOnboardingProvision=null;
+    if(result)result.textContent=`Kurulum kaydı oluşturuldu: ${data.session.device_uid}`;
+    await loadDeviceOnboarding();
+    return data;
+  }
+
+  function downloadOnboardingJson(filename,value) {
+    const blob=new Blob([JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+
+  function resetDeviceOnboardingForm() {
+    ['onboardingMachineCode','onboardingMachineName','onboardingDeviceUid','onboardingSerialNo','onboardingExpectedFirmware','onboardingWifiSsid','onboardingWifiPassword'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('onboardingMachineSelect').value='';
+    document.getElementById('onboardingNetworkMode').value='ethernet';
+    const topic=document.getElementById('onboardingMqttTopic');if(topic)delete topic.dataset.manual;
+    selectedDeviceOnboardingId=null;
+    latestDeviceOnboardingProvision=null;
+    syncOnboardingWifiFields();
+    updateOnboardingFlow(1);
+    renderDeviceOnboardingDetail(null);
+    document.getElementById('onboardingDeviceUid')?.focus();
+  }
+
+  async function handleDeviceOnboardingAction(button) {
+    const action=button.dataset.onboardingAction;
+    const id=String(button.dataset.id||selectedDeviceOnboardingId||'');
+    if(action==='open'){
+      selectedDeviceOnboardingId=id;
+      latestDeviceOnboardingProvision=null;
+      renderDeviceOnboardingDetail(deviceOnboardingRowsMap.get(id));
+      document.getElementById('deviceOnboardingDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }
+    const row=deviceOnboardingRowsMap.get(id);
+    if(!row)throw new Error('Kurulum kaydı bulunamadı.');
+    const result=document.getElementById('deviceOnboardingFormResult');
+    if(action==='issue-token'){
+      const data=await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/provision-token`,{method:'POST',body:JSON.stringify({token_minutes:Number(document.getElementById('onboardingTokenMinutes').value||60)})});
+      latestDeviceOnboardingProvision={...data.provisioning,session_id:id};
+      selectedDeviceOnboardingId=id;
+      if(result)result.textContent='Provision token ve QR oluşturuldu. Token yalnızca bu ekranda bir kez görünür.';
+      await loadDeviceOnboarding();
+      return;
+    }
+    if(action==='copy-token'){
+      if(!latestDeviceOnboardingProvision?.token)throw new Error('Token artık tarayıcı belleğinde değil. Yeni token oluştur.');
+      await navigator.clipboard.writeText(latestDeviceOnboardingProvision.token);
+      if(result)result.textContent='Token panoya kopyalandı.';
+      return;
+    }
+    if(action==='download-config'){
+      if(!latestDeviceOnboardingProvision?.configuration)throw new Error('Konfigürasyon için yeni token oluştur.');
+      const configuration=structuredClone(latestDeviceOnboardingProvision.configuration);
+      configuration.network.password=document.getElementById('onboardingWifiPassword')?.value||null;
+      downloadOnboardingJson(`FactoryBox_${row.device_uid}_onboarding.json`,configuration);
+      if(result)result.textContent='Kurulum konfigürasyonu indirildi. Wi-Fi şifresi yalnızca indirilen dosyaya eklendi.';
+      return;
+    }
+    if(action==='report'){
+      const report=Object.keys(row.activation_report||{}).length?row.activation_report:{
+        generated_at:new Date().toISOString(),status:row.status,device_uid:row.device_uid,serial_no:row.serial_no,model:row.model,
+        assignment:{customer_code:row.customer_code,site_code:row.site_code,machine_code:row.machine_code},
+        firmware:{version:row.firmware_version,hardware_revision:row.hardware_revision},
+        tests:{connection:row.connection_test,heartbeat:row.heartbeat_test,telemetry:row.telemetry_test,firmware:row.firmware_test,alarm:row.alarm_test}
+      };
+      downloadOnboardingJson(`FactoryBox_${row.device_uid}_installation_report.json`,report);
+      return;
+    }
+    if(action.startsWith('command-')){
+      const command=action==='command-info'?'get_device_info':action==='command-alarm'?'test_alarm':'get_status';
+      const data=await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/device-command`,{method:'POST',body:JSON.stringify({command})});
+      if(result)result.textContent=`Komut gönderildi: ${data.payload.command} → ${data.topic}`;
+      return;
+    }
+    if(action==='run-tests')await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/tests`,{method:'POST',body:'{}'});
+    if(action==='skip-firmware')await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/skip-firmware-test`,{method:'POST',body:'{}'});
+    if(action==='skip-alarm')await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/skip-alarm-test`,{method:'POST',body:'{}'});
+    if(action==='activate')await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/activate`,{method:'POST',body:'{}'});
+    if(action==='reopen')await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/reopen`,{method:'POST',body:'{}'});
+    if(action==='deactivate'){
+      if(!window.confirm('Cihaz devre dışı bırakılıp Device Registry içinde archived yapılsın mı?'))return;
+      await apiJson(`/api/admin/device-onboarding/${encodeURIComponent(id)}/deactivate`,{method:'POST',body:'{}'});
+    }
+    latestDeviceOnboardingProvision=null;
+    selectedDeviceOnboardingId=id;
+    await loadDeviceOnboarding();
+    if(result)result.textContent='Kurulum işlemi tamamlandı.';
   }
 
   async function createInvite() {
@@ -5472,6 +6195,51 @@
     if(changeOwnPasswordBtn)changeOwnPasswordBtn.addEventListener('click',async()=>{changeOwnPasswordBtn.disabled=true;const st=document.getElementById('securityPasswordStatus');try{const current=document.getElementById('securityCurrentPassword')?.value||'';const next=document.getElementById('securityNewPassword')?.value||'';const result=await apiJson('/api/auth/change-password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});document.getElementById('securityCurrentPassword').value='';document.getElementById('securityNewPassword').value='';if(st)st.textContent=`${currentLanguage==='en'?'Password changed. Other sessions closed':'Şifre değiştirildi. Diğer oturumlar kapatıldı'}: ${result.sessions_revoked||0}`;await loadSecurityCenter();}catch(e){if(st)st.textContent=e.message;}finally{changeOwnPasswordBtn.disabled=false;}});
     const securityCenterSection=document.getElementById('securityCenterSection');
     if(securityCenterSection)securityCenterSection.addEventListener('click',async(e)=>{const btn=e.target.closest('[data-security-action]');if(!btn)return;const action=btn.dataset.securityAction;const id=btn.dataset.id;btn.disabled=true;const st=document.getElementById('securityCenterStatus');try{if(action==='revoke-session')await apiJson(`/api/admin/security-center/sessions/${encodeURIComponent(id)}/revoke`,{method:'POST',body:'{}'});if(action==='unlock-user')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/unlock`,{method:'POST',body:'{}'});if(action==='revoke-user-sessions')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/revoke-sessions`,{method:'POST',body:'{}'});if(action==='force-password')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/force-password-change`,{method:'POST',body:JSON.stringify({force:true})});if(action==='reset-password'){const password=prompt(currentLanguage==='en'?'Enter a new temporary password:':'Yeni geçici şifreyi gir:');if(!password)return;await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/reset-password`,{method:'POST',body:JSON.stringify({new_password:password,force_change:true})});}if(st)st.textContent=currentLanguage==='en'?'Security action completed.':'Güvenlik işlemi tamamlandı.';await loadSecurityCenter();}catch(error){if(st)st.textContent=error.message;}finally{btn.disabled=false;}});
+
+
+
+    const capabilityDeviceSelect=document.getElementById('capabilityDeviceSelect');
+    if(capabilityDeviceSelect)capabilityDeviceSelect.addEventListener('change',async()=>{deviceCapabilityAdminState.selectedUid=capabilityDeviceSelect.value;deviceCapabilityAdminState.permanentQr=null;renderPermanentQrResult(null);try{await loadSelectedDeviceCapabilities(capabilityDeviceSelect.value);}catch(error){setError('deviceCapabilityStatus',error.message);}});
+    const refreshDeviceCapabilitiesBtn=document.getElementById('refreshDeviceCapabilitiesBtn');
+    if(refreshDeviceCapabilitiesBtn)refreshDeviceCapabilitiesBtn.addEventListener('click',async()=>{refreshDeviceCapabilitiesBtn.disabled=true;try{const data=await getJson('/api/admin/device-capabilities');renderDeviceCapabilitiesOverview(data);}catch(error){setError('deviceCapabilityStatus',error.message);}finally{refreshDeviceCapabilitiesBtn.disabled=false;}});
+    const applyCapabilityProfileBtn=document.getElementById('applyCapabilityProfileBtn');if(applyCapabilityProfileBtn)applyCapabilityProfileBtn.addEventListener('click',applySelectedCapabilityProfile);
+    const addDeviceCapabilityBtn=document.getElementById('addDeviceCapabilityBtn');if(addDeviceCapabilityBtn)addDeviceCapabilityBtn.addEventListener('click',()=>{const type=document.getElementById('newCapabilityType')?.value||'custom';deviceCapabilityAdminState.capabilities=readCapabilityCards();deviceCapabilityAdminState.capabilities.push(defaultCapabilityFromType(type,deviceCapabilityAdminState.capabilities.length));deviceCapabilityAdminState.profileKey='custom';renderDeviceCapabilityEditor();});
+    const deviceCapabilityEditor=document.getElementById('deviceCapabilityEditor');if(deviceCapabilityEditor)deviceCapabilityEditor.addEventListener('click',event=>{const button=event.target.closest('[data-capability-remove]');if(!button)return;deviceCapabilityAdminState.capabilities=readCapabilityCards();deviceCapabilityAdminState.capabilities.splice(Number(button.dataset.capabilityRemove),1);deviceCapabilityAdminState.profileKey='custom';renderDeviceCapabilityEditor();});
+    const saveDeviceCapabilitiesBtn=document.getElementById('saveDeviceCapabilitiesBtn');if(saveDeviceCapabilitiesBtn)saveDeviceCapabilitiesBtn.addEventListener('click',async()=>{saveDeviceCapabilitiesBtn.disabled=true;const status=document.getElementById('deviceCapabilityStatus');try{if(status)status.textContent=currentLanguage==='en'?'Saving capabilities...':'Yetkinlikler kaydediliyor...';const data=await saveSelectedDeviceCapabilities();if(status)status.textContent=`${currentLanguage==='en'?'Saved':'Kaydedildi'} · v${data.device.capability_config_version} · ${data.capabilities.length}`;}catch(error){if(status)status.textContent=error.message;}finally{saveDeviceCapabilitiesBtn.disabled=false;}});
+    const publishDeviceCapabilitiesBtn=document.getElementById('publishDeviceCapabilitiesBtn');if(publishDeviceCapabilitiesBtn)publishDeviceCapabilitiesBtn.addEventListener('click',async()=>{publishDeviceCapabilitiesBtn.disabled=true;const status=document.getElementById('deviceCapabilityStatus');try{const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error('Cihaz seç.');const data=await apiJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}/publish`,{method:'POST',body:'{}'});if(status)status.textContent=`MQTT: ${data.topic}`;}catch(error){if(status)status.textContent=error.message;}finally{publishDeviceCapabilitiesBtn.disabled=false;}});
+    const downloadDeviceCapabilitiesBtn=document.getElementById('downloadDeviceCapabilitiesBtn');if(downloadDeviceCapabilitiesBtn)downloadDeviceCapabilitiesBtn.addEventListener('click',()=>{if(!deviceCapabilityAdminState.selectedUid)return;const caps=readCapabilityCards();const device=(deviceCapabilityAdminState.devices||[]).find(row=>row.device_uid===deviceCapabilityAdminState.selectedUid)||{};downloadJsonFile(`FactoryBox_${deviceCapabilityAdminState.selectedUid}_capabilities.json`,deviceCapabilityAdminState.configuration||{schema:'factorybox-device-capabilities-v1',device_uid:deviceCapabilityAdminState.selectedUid,config_version:device.capability_config_version||0,capability_profile:document.getElementById('capabilityProfileSelect')?.value||'custom',capabilities:caps});});
+    const capabilityQrBaseUrl=document.getElementById('capabilityQrBaseUrl');if(capabilityQrBaseUrl&&!capabilityQrBaseUrl.value)capabilityQrBaseUrl.value=window.location.origin;
+    const issuePermanentQrBtn=document.getElementById('issuePermanentQrBtn');if(issuePermanentQrBtn)issuePermanentQrBtn.addEventListener('click',async()=>{issuePermanentQrBtn.disabled=true;try{const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error('Cihaz seç.');const base_url=document.getElementById('capabilityQrBaseUrl')?.value.trim()||window.location.origin;const data=await apiJson(`/api/admin/devices/${encodeURIComponent(uid)}/permanent-qr`,{method:'POST',body:JSON.stringify({base_url})});deviceCapabilityAdminState.permanentQr=data.permanent_qr;renderPermanentQrResult(data.permanent_qr);const idx=deviceCapabilityAdminState.devices.findIndex(row=>row.device_uid===uid);if(idx>=0)deviceCapabilityAdminState.devices[idx]={...deviceCapabilityAdminState.devices[idx],...data.device};renderCapabilitySummary();}catch(error){setError('permanentQrResult',error.message);}finally{issuePermanentQrBtn.disabled=false;}});
+    const openMobileInstallerBtn=document.getElementById('openMobileInstallerBtn');if(openMobileInstallerBtn)openMobileInstallerBtn.addEventListener('click',()=>{if(deviceCapabilityAdminState.permanentQr?.url)window.open(deviceCapabilityAdminState.permanentQr.url,'_blank','noopener');});
+    const downloadPermanentQrBtn=document.getElementById('downloadPermanentQrBtn');if(downloadPermanentQrBtn)downloadPermanentQrBtn.addEventListener('click',downloadPermanentQrLabel);
+
+    const createDeviceOnboardingBtn=document.getElementById('createDeviceOnboardingBtn');
+    if(createDeviceOnboardingBtn)createDeviceOnboardingBtn.addEventListener('click',async()=>{
+      createDeviceOnboardingBtn.disabled=true;const st=document.getElementById('deviceOnboardingFormResult');
+      try{if(st)st.textContent='Kurulum kaydı oluşturuluyor...';await createDeviceOnboardingSession();}
+      catch(e){if(st)st.textContent=e.message;}finally{createDeviceOnboardingBtn.disabled=false;}
+    });
+    const refreshDeviceOnboardingBtn=document.getElementById('refreshDeviceOnboardingBtn');
+    if(refreshDeviceOnboardingBtn)refreshDeviceOnboardingBtn.addEventListener('click',async()=>{refreshDeviceOnboardingBtn.disabled=true;try{await loadDeviceOnboarding();}catch(e){setError('deviceOnboardingSessions',e.message);}finally{refreshDeviceOnboardingBtn.disabled=false;}});
+    const newDeviceOnboardingBtn=document.getElementById('newDeviceOnboardingBtn');
+    if(newDeviceOnboardingBtn)newDeviceOnboardingBtn.addEventListener('click',resetDeviceOnboardingForm);
+    const onboardingCustomer=document.getElementById('onboardingCustomer');
+    if(onboardingCustomer)onboardingCustomer.addEventListener('change',()=>{populateOnboardingSites();updateOnboardingTopicSuggestion();});
+    const onboardingSite=document.getElementById('onboardingSite');
+    if(onboardingSite)onboardingSite.addEventListener('change',()=>{populateOnboardingMachines();updateOnboardingTopicSuggestion();});
+    const onboardingMachineSelect=document.getElementById('onboardingMachineSelect');
+    if(onboardingMachineSelect)onboardingMachineSelect.addEventListener('change',applySelectedOnboardingMachine);
+    const onboardingMachineCode=document.getElementById('onboardingMachineCode');
+    if(onboardingMachineCode)onboardingMachineCode.addEventListener('input',updateOnboardingTopicSuggestion);
+    const onboardingMqttTopic=document.getElementById('onboardingMqttTopic');
+    if(onboardingMqttTopic)onboardingMqttTopic.addEventListener('input',()=>{onboardingMqttTopic.dataset.manual='true';});
+    const onboardingNetworkMode=document.getElementById('onboardingNetworkMode');
+    if(onboardingNetworkMode)onboardingNetworkMode.addEventListener('change',syncOnboardingWifiFields);
+    const deviceOnboardingSection=document.getElementById('deviceOnboardingSection');
+    if(deviceOnboardingSection)deviceOnboardingSection.addEventListener('click',async(e)=>{
+      const btn=e.target.closest('[data-onboarding-action]');if(!btn)return;btn.disabled=true;
+      try{await handleDeviceOnboardingAction(btn);}catch(error){const st=document.getElementById('deviceOnboardingFormResult');if(st)st.textContent=error.message;}finally{btn.disabled=false;}
+    });
 
     document.body.addEventListener('click', handleAction);
     document.body.addEventListener('change', (e) => {

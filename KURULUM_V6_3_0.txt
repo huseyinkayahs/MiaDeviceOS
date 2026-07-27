@@ -1,0 +1,21 @@
+FACTORYBOX ONE v6.3.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine kopyalayın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. Backend'i başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin panelinde Ctrl+F5 yapın.
+6. Sol menüden Cihazlar > Kurulum Sihirbazı ekranını açın.
+7. Yeni bir kurulum kaydı oluşturun.
+8. Provision Token ve QR Oluştur düğmesine basın.
+9. Cihaz token'ı claim ettikten sonra canlı testleri çalıştırın.
+10. Testler başarılıysa Cihazı Aktive Et düğmesine basın.
+
+Notlar:
+- Wi-Fi şifresi sunucuya kaydedilmez.
+- test_alarm firmware tarafından desteklenmiyorsa Alarm Testini Atla kullanılabilir.
+- Beklenen firmware boş bırakılırsa firmware testi otomatik olarak atlanır.

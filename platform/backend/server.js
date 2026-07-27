@@ -136,15 +136,18 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 let mqttConnected = false;
+let mqttClient = null;
 let lastMqttMessageAt = null;
 let lastMqttTopic = null;
 let ids = null;
 let billingFoundationReady = false;
 let inviteSchemaReady = false;
+let deviceOnboardingFoundationReady = false;
+let deviceCapabilityFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.2.0';
+const APP_VERSION = '6.3.1';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -5702,7 +5705,7 @@ const GENERAL_SETTING_WEEK_STARTS = ['monday','sunday'];
 const GENERAL_SETTING_DEFAULT_VIEWS = [
   'dashboard','live','oee','alarms','analytics','sla','escalations','maintenance',
   'maintenance-plans','work-orders','inventory','general','health','notifications','scheduler',
-  'reports','tenants','users','permissions','subscriptions','assets','devices','security'
+  'reports','tenants','users','permissions','subscriptions','assets','devices','onboarding','security'
 ];
 const GENERAL_SETTING_TIMEZONES = [
   'Europe/Istanbul','UTC','Europe/London','Europe/Berlin','Europe/Paris',
@@ -8949,6 +8952,13 @@ app.post('/api/device/provision/claim', async (req,res)=>{
       cleanCode(req.body?.serial_no || req.body?.serialNo)
     ]);
 
+    await ensureDeviceOnboardingFoundation();
+    await pool.query(`
+      UPDATE device_onboarding_sessions
+      SET status='connected',current_step=5,connection_test='passed',connection_test_at=now(),last_error=NULL,updated_at=now()
+      WHERE device_uid=$1
+    `,[updated.device_uid]);
+
     await writeAuditLog(req, {
       action:'claim_device_provisioning_token',
       entity_type:'device',
@@ -8970,6 +8980,917 @@ app.post('/api/device/provision/claim', async (req,res)=>{
   }
 });
 
+
+
+const DEVICE_CAPABILITY_CATALOG = [
+  {type:'current_measurement',label_tr:'Akım Ölçümü',label_en:'Current Measurement',data_type:'number',unit:'A',telemetry_key:'current',sensor_suggestions:['SCT-013-30A','SCT-013-100A','ACS712','Modbus Energy Meter'],channel_suggestions:['analog_1','analog_2','modbus_1'],min_value:0,max_value:30},
+  {type:'temperature_measurement',label_tr:'Sıcaklık Ölçümü',label_en:'Temperature Measurement',data_type:'number',unit:'°C',telemetry_key:'temperature',sensor_suggestions:['DS18B20','PT100 + MAX31865','NTC 10K','Modbus Temperature'],channel_suggestions:['onewire_1','analog_1','modbus_1'],min_value:-20,max_value:100},
+  {type:'energy_measurement',label_tr:'Enerji Tüketimi',label_en:'Energy Consumption',data_type:'number',unit:'kWh',telemetry_key:'energy_kwh',sensor_suggestions:['Modbus Energy Meter','PZEM-004T'],channel_suggestions:['modbus_1','uart_1'],min_value:0,max_value:null},
+  {type:'running_status',label_tr:'Çalışıyor / Durdu Algılama',label_en:'Running / Stopped Detection',data_type:'boolean',unit:'',telemetry_key:'machine_running',sensor_suggestions:['Digital Input','Current Threshold','PLC Signal'],channel_suggestions:['digital_1','digital_2','virtual_current'],min_value:null,max_value:null},
+  {type:'vibration_measurement',label_tr:'Titreşim Ölçümü',label_en:'Vibration Measurement',data_type:'number',unit:'mm/s',telemetry_key:'vibration',sensor_suggestions:['ADXL345','MPU6050','Industrial Vibration Sensor'],channel_suggestions:['i2c_1','analog_1','modbus_1'],min_value:0,max_value:null},
+  {type:'pressure_measurement',label_tr:'Basınç Ölçümü',label_en:'Pressure Measurement',data_type:'number',unit:'bar',telemetry_key:'pressure',sensor_suggestions:['4-20mA Pressure Sensor','0-10V Pressure Sensor','Modbus Pressure'],channel_suggestions:['analog_1','analog_2','modbus_1'],min_value:0,max_value:null},
+  {type:'digital_input',label_tr:'Dijital Giriş',label_en:'Digital Input',data_type:'boolean',unit:'',telemetry_key:'digital_input',sensor_suggestions:['Dry Contact','24V PLC Signal','Limit Switch'],channel_suggestions:['digital_1','digital_2','digital_3','digital_4'],min_value:null,max_value:null},
+  {type:'analog_input',label_tr:'Analog Giriş',label_en:'Analog Input',data_type:'number',unit:'',telemetry_key:'analog_input',sensor_suggestions:['0-10V Sensor','4-20mA Sensor','Generic Analog'],channel_suggestions:['analog_1','analog_2'],min_value:null,max_value:null},
+  {type:'relay_output',label_tr:'Röle Çıkışı',label_en:'Relay Output',data_type:'boolean',unit:'',telemetry_key:'relay_state',sensor_suggestions:['Relay Output'],channel_suggestions:['relay_1','relay_2'],min_value:null,max_value:null},
+  {type:'modbus_read',label_tr:'Modbus Okuma',label_en:'Modbus Read',data_type:'number',unit:'',telemetry_key:'modbus_value',sensor_suggestions:['Modbus RTU Device','Modbus TCP Device'],channel_suggestions:['modbus_1','modbus_2'],min_value:null,max_value:null},
+  {type:'alarm_generation',label_tr:'Alarm Üretme',label_en:'Alarm Generation',data_type:'event',unit:'',telemetry_key:'alarm',sensor_suggestions:['Rule Engine'],channel_suggestions:['virtual_1'],min_value:null,max_value:null},
+  {type:'remote_control',label_tr:'Uzaktan Kontrol',label_en:'Remote Control',data_type:'boolean',unit:'',telemetry_key:'remote_control',sensor_suggestions:['Relay Output','PLC Command'],channel_suggestions:['relay_1','relay_2','modbus_1'],min_value:null,max_value:null},
+  {type:'custom',label_tr:'Özel Yetkinlik',label_en:'Custom Capability',data_type:'number',unit:'',telemetry_key:'custom_value',sensor_suggestions:[],channel_suggestions:[],min_value:null,max_value:null}
+];
+
+const DEVICE_CAPABILITY_PROFILES = [
+  {key:'laser_cutting',label_tr:'FactoryBox One – Lazer Kesim',label_en:'FactoryBox One – Laser Cutting',capabilities:[
+    {capability_key:'machine_current',capability_type:'current_measurement',display_name:'Makine Akımı',telemetry_key:'current',sensor_model:'SCT-013-30A',physical_channel:'analog_1',unit:'A',min_value:0,max_value:30,alarm_high:20},
+    {capability_key:'cabinet_temperature',capability_type:'temperature_measurement',display_name:'Kabin Sıcaklığı',telemetry_key:'temperature',sensor_model:'DS18B20',physical_channel:'onewire_1',unit:'°C',min_value:-20,max_value:100,alarm_high:70},
+    {capability_key:'machine_running',capability_type:'running_status',display_name:'Makine Çalışma Durumu',telemetry_key:'machine_running',sensor_model:'Current Threshold',physical_channel:'virtual_current',data_type:'boolean'},
+    {capability_key:'door_input',capability_type:'digital_input',display_name:'Kapak / Güvenlik Girişi',telemetry_key:'door_closed',sensor_model:'Dry Contact',physical_channel:'digital_1',data_type:'boolean'},
+    {capability_key:'exhaust_fan',capability_type:'relay_output',display_name:'Egzoz Fanı Rölesi',telemetry_key:'exhaust_fan',sensor_model:'Relay Output',physical_channel:'relay_1',data_type:'boolean'}
+  ]},
+  {key:'cnc',label_tr:'FactoryBox One – CNC',label_en:'FactoryBox One – CNC',capabilities:[
+    {capability_key:'spindle_current',capability_type:'current_measurement',display_name:'Spindle Akımı',telemetry_key:'spindle_current',sensor_model:'SCT-013-30A',physical_channel:'analog_1',unit:'A',min_value:0,max_value:30},
+    {capability_key:'spindle_temperature',capability_type:'temperature_measurement',display_name:'Spindle Sıcaklığı',telemetry_key:'spindle_temperature',sensor_model:'DS18B20',physical_channel:'onewire_1',unit:'°C',alarm_high:75},
+    {capability_key:'machine_running',capability_type:'running_status',display_name:'Makine Çalışma Durumu',telemetry_key:'machine_running',sensor_model:'PLC Signal',physical_channel:'digital_1',data_type:'boolean'},
+    {capability_key:'vibration',capability_type:'vibration_measurement',display_name:'Titreşim',telemetry_key:'vibration',sensor_model:'ADXL345',physical_channel:'i2c_1',unit:'mm/s'}
+  ]},
+  {key:'plastic_injection',label_tr:'FactoryBox One – Plastik Enjeksiyon',label_en:'FactoryBox One – Plastic Injection',capabilities:[
+    {capability_key:'heater_current',capability_type:'current_measurement',display_name:'Isıtıcı Akımı',telemetry_key:'heater_current',sensor_model:'SCT-013-100A',physical_channel:'analog_1',unit:'A'},
+    {capability_key:'barrel_temperature',capability_type:'temperature_measurement',display_name:'Kovan Sıcaklığı',telemetry_key:'barrel_temperature',sensor_model:'PT100 + MAX31865',physical_channel:'spi_1',unit:'°C',alarm_high:280},
+    {capability_key:'hydraulic_pressure',capability_type:'pressure_measurement',display_name:'Hidrolik Basınç',telemetry_key:'pressure',sensor_model:'4-20mA Pressure Sensor',physical_channel:'analog_2',unit:'bar'},
+    {capability_key:'cycle_input',capability_type:'digital_input',display_name:'Çevrim Sinyali',telemetry_key:'cycle_signal',sensor_model:'PLC Signal',physical_channel:'digital_1',data_type:'boolean'}
+  ]},
+  {key:'general_monitoring',label_tr:'FactoryBox One – Genel Makine İzleme',label_en:'FactoryBox One – General Machine Monitoring',capabilities:[
+    {capability_key:'machine_current',capability_type:'current_measurement',display_name:'Makine Akımı',telemetry_key:'current',sensor_model:'SCT-013-30A',physical_channel:'analog_1',unit:'A'},
+    {capability_key:'temperature',capability_type:'temperature_measurement',display_name:'Sıcaklık',telemetry_key:'temperature',sensor_model:'DS18B20',physical_channel:'onewire_1',unit:'°C'},
+    {capability_key:'machine_running',capability_type:'running_status',display_name:'Makine Çalışma Durumu',telemetry_key:'machine_running',sensor_model:'Current Threshold',physical_channel:'virtual_current',data_type:'boolean'}
+  ]},
+  {key:'custom',label_tr:'Özel Profil',label_en:'Custom Profile',capabilities:[]}
+];
+
+async function ensureDeviceCapabilityFoundation() {
+  if (deviceCapabilityFoundationReady) return;
+  await ensureDeviceRegistrySchema();
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS permanent_qr_slug text`);
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS permanent_qr_token_hash text`);
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS permanent_qr_issued_at timestamptz`);
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS capability_profile text NOT NULL DEFAULT 'custom'`);
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS capability_config_version integer NOT NULL DEFAULT 0`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_permanent_qr_slug ON devices(permanent_qr_slug) WHERE permanent_qr_slug IS NOT NULL`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS device_capabilities (
+      id text PRIMARY KEY,
+      device_id uuid NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+      capability_key text NOT NULL,
+      capability_type text NOT NULL,
+      display_name text NOT NULL,
+      telemetry_key text,
+      unit text,
+      sensor_model text,
+      physical_channel text,
+      data_type text NOT NULL DEFAULT 'number',
+      min_value double precision,
+      max_value double precision,
+      calibration_factor double precision NOT NULL DEFAULT 1,
+      alarm_low double precision,
+      alarm_high double precision,
+      alarm_delay_sec integer NOT NULL DEFAULT 0,
+      sample_interval_sec integer NOT NULL DEFAULT 1,
+      send_interval_sec integer NOT NULL DEFAULT 10,
+      enabled boolean NOT NULL DEFAULT true,
+      sort_order integer NOT NULL DEFAULT 0,
+      custom_definition jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_by_email text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE(device_id, capability_key)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_capabilities_device ON device_capabilities(device_id,sort_order,created_at)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS device_capability_config_versions (
+      id text PRIMARY KEY,
+      device_id uuid NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+      config_version integer NOT NULL,
+      profile_key text NOT NULL DEFAULT 'custom',
+      capabilities jsonb NOT NULL DEFAULT '[]'::jsonb,
+      status text NOT NULL DEFAULT 'saved',
+      source text NOT NULL DEFAULT 'admin',
+      created_by_email text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      published_at timestamptz,
+      UNIQUE(device_id,config_version)
+    )
+  `);
+  deviceCapabilityFoundationReady=true;
+}
+
+function capabilityNumber(value, fallback=null) {
+  if (value === '' || value === null || value === undefined) return fallback;
+  const number=Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function capabilityInteger(value, fallback, min, max) {
+  const number=Math.floor(Number(value));
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(Math.max(number,min),max);
+}
+
+function capabilityText(value,max=160) {
+  return String(value??'').trim().slice(0,max);
+}
+
+function capabilityKey(value,index=0) {
+  const normalized=String(value||`capability_${index+1}`).trim().toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_+|_+$/g,'').slice(0,64);
+  return normalized && /^[a-z][a-z0-9_]*$/.test(normalized) ? normalized : `capability_${index+1}`;
+}
+
+function normalizeDeviceCapability(raw,index=0) {
+  const catalog=DEVICE_CAPABILITY_CATALOG.find(row=>row.type===String(raw?.capability_type||raw?.type||''))||DEVICE_CAPABILITY_CATALOG.at(-1);
+  const type=catalog.type;
+  const dataType=['number','boolean','text','event'].includes(String(raw?.data_type||catalog.data_type))?String(raw?.data_type||catalog.data_type):catalog.data_type;
+  return {
+    id:capabilityText(raw?.id,80)||crypto.randomUUID(),
+    capability_key:capabilityKey(raw?.capability_key||raw?.key||raw?.telemetry_key,index),
+    capability_type:type,
+    display_name:capabilityText(raw?.display_name||raw?.name||catalog.label_tr,120)||catalog.label_tr,
+    telemetry_key:capabilityKey(raw?.telemetry_key||catalog.telemetry_key,index),
+    unit:capabilityText(raw?.unit??catalog.unit,24),
+    sensor_model:capabilityText(raw?.sensor_model||raw?.sensor,120),
+    physical_channel:capabilityText(raw?.physical_channel||raw?.channel,80),
+    data_type:dataType,
+    min_value:capabilityNumber(raw?.min_value,catalog.min_value),
+    max_value:capabilityNumber(raw?.max_value,catalog.max_value),
+    calibration_factor:capabilityNumber(raw?.calibration_factor,1)??1,
+    alarm_low:capabilityNumber(raw?.alarm_low,null),
+    alarm_high:capabilityNumber(raw?.alarm_high,null),
+    alarm_delay_sec:capabilityInteger(raw?.alarm_delay_sec,0,0,86400),
+    sample_interval_sec:capabilityInteger(raw?.sample_interval_sec,1,1,86400),
+    send_interval_sec:capabilityInteger(raw?.send_interval_sec,10,1,86400),
+    enabled:raw?.enabled!==false,
+    sort_order:capabilityInteger(raw?.sort_order,index,0,999),
+    custom_definition:raw?.custom_definition&&typeof raw.custom_definition==='object'?raw.custom_definition:{}
+  };
+}
+
+function publicCapabilityCatalog() {
+  return DEVICE_CAPABILITY_CATALOG.map(row=>({...row}));
+}
+
+function publicCapabilityProfiles() {
+  return DEVICE_CAPABILITY_PROFILES.map(row=>({...row,capabilities:row.capabilities.map((cap,index)=>normalizeDeviceCapability(cap,index))}));
+}
+
+async function capabilityDeviceByUid(uid) {
+  await ensureDeviceCapabilityFoundation();
+  return one(`
+    SELECT d.id::text,d.device_uid,d.model,d.serial_no,d.status,d.mqtt_base_topic,d.last_seen_at,
+      d.permanent_qr_slug,d.permanent_qr_issued_at,d.capability_profile,d.capability_config_version,
+      m.code AS machine_code,m.name AS machine_name,m.machine_type,
+      s.code AS site_code,s.name AS site_name,c.code AS customer_code,c.name AS customer_name
+    FROM devices d
+    LEFT JOIN machines m ON m.id=d.machine_id
+    LEFT JOIN sites s ON s.id=m.site_id
+    LEFT JOIN customers c ON c.id=s.customer_id
+    WHERE d.device_uid=$1 LIMIT 1
+  `,[String(uid||'').trim()]);
+}
+
+function deviceAllowedForRequest(req,device) {
+  if (!authConfig().enabled || !req.user || req.user.role==='system_admin') return true;
+  const allowedCustomers=(req.tenant?.customers||[]).map(row=>row.code);
+  if (!device?.customer_code || !allowedCustomers.length) return true;
+  return allowedCustomers.includes(device.customer_code);
+}
+
+async function deviceCapabilitiesByUid(uid) {
+  const device=await capabilityDeviceByUid(uid);
+  if (!device) return null;
+  const rows=await pool.query(`
+    SELECT id,capability_key,capability_type,display_name,telemetry_key,unit,sensor_model,physical_channel,data_type,
+      min_value,max_value,calibration_factor,alarm_low,alarm_high,alarm_delay_sec,sample_interval_sec,send_interval_sec,
+      enabled,sort_order,custom_definition,created_by_email,created_at,updated_at
+    FROM device_capabilities WHERE device_id=$1::uuid ORDER BY sort_order,created_at
+  `,[device.id]);
+  return {device,capabilities:rows.rows};
+}
+
+function capabilityConfiguration(device,capabilities,version=device?.capability_config_version||0) {
+  return {
+    schema:'factorybox-device-capabilities-v1',
+    generated_at:new Date().toISOString(),
+    config_version:Number(version||0),
+    device_uid:device.device_uid,
+    serial_no:device.serial_no||null,
+    model:device.model||'FactoryBox One',
+    customer_code:device.customer_code||null,
+    site_code:device.site_code||null,
+    machine_code:device.machine_code||null,
+    mqtt_base_topic:device.mqtt_base_topic||null,
+    capability_profile:device.capability_profile||'custom',
+    capabilities:capabilities.map(row=>({
+      key:row.capability_key,type:row.capability_type,name:row.display_name,telemetry_key:row.telemetry_key,
+      unit:row.unit||'',sensor:row.sensor_model||null,channel:row.physical_channel||null,data_type:row.data_type,
+      range:{min:row.min_value,max:row.max_value},calibration_factor:Number(row.calibration_factor??1),
+      alarms:{low:row.alarm_low,high:row.alarm_high,delay_sec:Number(row.alarm_delay_sec||0)},
+      intervals:{sample_sec:Number(row.sample_interval_sec||1),send_sec:Number(row.send_interval_sec||10)},
+      enabled:Boolean(row.enabled),custom:row.custom_definition||{}
+    }))
+  };
+}
+
+async function saveDeviceCapabilities({uid,profileKey='custom',capabilities=[],source='admin',actorEmail='local-admin'}) {
+  await ensureDeviceCapabilityFoundation();
+  const normalizedProfile=DEVICE_CAPABILITY_PROFILES.some(row=>row.key===profileKey)?profileKey:'custom';
+  if (!Array.isArray(capabilities)) throw Object.assign(new Error('capabilities must be an array'),{statusCode:400});
+  if (capabilities.length>40) throw Object.assign(new Error('Maximum 40 capabilities are supported per device'),{statusCode:400});
+  const normalized=capabilities.map(normalizeDeviceCapability);
+  const keys=new Set();
+  for (const row of normalized) {
+    if (keys.has(row.capability_key)) throw Object.assign(new Error(`Duplicate capability key: ${row.capability_key}`),{statusCode:400});
+    keys.add(row.capability_key);
+  }
+  const client=await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const deviceResult=await client.query(`SELECT id::text,device_uid,capability_config_version FROM devices WHERE device_uid=$1 FOR UPDATE`,[String(uid||'').trim()]);
+    if (!deviceResult.rows[0]) throw Object.assign(new Error('Device not found'),{statusCode:404});
+    const device=deviceResult.rows[0];
+    const nextVersion=Number(device.capability_config_version||0)+1;
+    await client.query(`DELETE FROM device_capabilities WHERE device_id=$1::uuid`,[device.id]);
+    for (let index=0;index<normalized.length;index++) {
+      const row=normalized[index];
+      await client.query(`
+        INSERT INTO device_capabilities(id,device_id,capability_key,capability_type,display_name,telemetry_key,unit,sensor_model,physical_channel,data_type,
+          min_value,max_value,calibration_factor,alarm_low,alarm_high,alarm_delay_sec,sample_interval_sec,send_interval_sec,enabled,sort_order,custom_definition,created_by_email)
+        VALUES($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::jsonb,$22)
+      `,[row.id,device.id,row.capability_key,row.capability_type,row.display_name,row.telemetry_key,row.unit||null,row.sensor_model||null,row.physical_channel||null,row.data_type,
+        row.min_value,row.max_value,row.calibration_factor,row.alarm_low,row.alarm_high,row.alarm_delay_sec,row.sample_interval_sec,row.send_interval_sec,row.enabled,index,JSON.stringify(row.custom_definition||{}),actorEmail]);
+    }
+    await client.query(`UPDATE devices SET capability_profile=$1,capability_config_version=$2,updated_at=now() WHERE id=$3::uuid`,[normalizedProfile,nextVersion,device.id]);
+    await client.query(`
+      INSERT INTO device_capability_config_versions(id,device_id,config_version,profile_key,capabilities,status,source,created_by_email)
+      VALUES($1,$2::uuid,$3,$4,$5::jsonb,'saved',$6,$7)
+    `,[crypto.randomUUID(),device.id,nextVersion,normalizedProfile,JSON.stringify(normalized),capabilityText(source,24)||'admin',actorEmail]);
+    await client.query('COMMIT');
+    return deviceCapabilitiesByUid(uid);
+  } catch(error) {
+    await client.query('ROLLBACK').catch(()=>{});
+    throw error;
+  } finally { client.release(); }
+}
+
+function makePermanentQrToken() { return `fbq_${crypto.randomBytes(12).toString('hex')}`; }
+function makePermanentQrSlug() { return crypto.randomBytes(8).toString('base64url'); }
+function permanentQrBaseUrl(req,raw) {
+  const value=String(raw||publicAppBaseUrl(req)).trim().replace(/\/+$/,'');
+  try { const parsed=new URL(value); if(!['http:','https:'].includes(parsed.protocol))throw new Error(); return parsed.origin; }
+  catch { throw Object.assign(new Error('Valid HTTP/HTTPS base_url is required'),{statusCode:400}); }
+}
+
+app.get('/i/:slug/:token',(req,res)=>{
+  const slug=encodeURIComponent(String(req.params.slug||''));
+  const token=encodeURIComponent(String(req.params.token||''));
+  res.redirect(302,`/installer.html?slug=${slug}&token=${token}`);
+});
+
+app.get('/api/admin/device-capabilities',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    await ensureDeviceCapabilityFoundation();
+    const devices=await pool.query(`
+      SELECT d.device_uid,d.model,d.serial_no,d.status,d.capability_profile,d.capability_config_version,d.permanent_qr_slug,d.permanent_qr_issued_at,
+        m.code AS machine_code,m.name AS machine_name,s.code AS site_code,c.code AS customer_code,
+        COUNT(dc.id)::int AS capability_count
+      FROM devices d
+      LEFT JOIN machines m ON m.id=d.machine_id LEFT JOIN sites s ON s.id=m.site_id LEFT JOIN customers c ON c.id=s.customer_id
+      LEFT JOIN device_capabilities dc ON dc.device_id=d.id
+      GROUP BY d.id,m.code,m.name,s.code,c.code ORDER BY d.updated_at DESC
+    `);
+    res.json({status:'ok',version:APP_VERSION,devices:devices.rows,catalog:publicCapabilityCatalog(),profiles:publicCapabilityProfiles()});
+  } catch(e) { res.status(500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.get('/api/admin/device-capabilities/:uid',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    const data=await deviceCapabilitiesByUid(req.params.uid);
+    if(!data)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Device not found'});
+    if(!deviceAllowedForRequest(req,data.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    res.json({status:'ok',version:APP_VERSION,...data,catalog:publicCapabilityCatalog(),profiles:publicCapabilityProfiles(),configuration:capabilityConfiguration(data.device,data.capabilities)});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.put('/api/admin/device-capabilities/:uid',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    const before=await deviceCapabilitiesByUid(req.params.uid);
+    if(!before)return res.status(404).json({status:'not_found',message:'Device not found'});
+    if(!deviceAllowedForRequest(req,before.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    const saved=await saveDeviceCapabilities({uid:req.params.uid,profileKey:String(req.body?.profile_key||'custom'),capabilities:req.body?.capabilities||[],source:'admin',actorEmail:req.user?.email||'local-admin'});
+    await writeAuditLog(req,{action:'save_device_capabilities',entity_type:'device',entity_id:req.params.uid,old_values:{profile:before.device.capability_profile,count:before.capabilities.length,version:before.device.capability_config_version},new_values:{profile:saved.device.capability_profile,count:saved.capabilities.length,version:saved.device.capability_config_version},metadata:{source:'admin'}});
+    res.json({status:'ok',version:APP_VERSION,...saved,configuration:capabilityConfiguration(saved.device,saved.capabilities)});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/admin/device-capabilities/:uid/publish',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    const data=await deviceCapabilitiesByUid(req.params.uid);
+    if(!data)return res.status(404).json({status:'not_found',message:'Device not found'});
+    if(!mqttConnected||!mqttClient)return res.status(409).json({status:'mqtt_offline',message:'MQTT broker is not connected'});
+    const configuration=capabilityConfiguration(data.device,data.capabilities);
+    const topic=`${String(data.device.mqtt_base_topic||'').replace(/\/+$/,'')}/command`;
+    if(!data.device.mqtt_base_topic)return res.status(409).json({status:'missing_topic',message:'Device MQTT base topic is missing'});
+    const payload={command:'set_capabilities',command_id:`cap-${Date.now()}`,source:'factorybox-capability-center',configuration,ts:new Date().toISOString()};
+    await new Promise((resolve,reject)=>mqttClient.publish(topic,JSON.stringify(payload),{qos:0,retain:false},error=>error?reject(error):resolve()));
+    await pool.query(`UPDATE device_capability_config_versions SET status='published',published_at=now() WHERE device_id=$1::uuid AND config_version=$2`,[data.device.id,data.device.capability_config_version]);
+    await writeAuditLog(req,{action:'publish_device_capabilities',entity_type:'device',entity_id:req.params.uid,old_values:null,new_values:{topic,config_version:data.device.capability_config_version,count:data.capabilities.length},metadata:{source:'admin'}});
+    res.json({status:'ok',version:APP_VERSION,topic,configuration});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/admin/devices/:uid/permanent-qr',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    await ensureDeviceCapabilityFoundation();
+    const device=await capabilityDeviceByUid(req.params.uid);
+    if(!device)return res.status(404).json({status:'not_found',message:'Device not found'});
+    if(!deviceAllowedForRequest(req,device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    const token=makePermanentQrToken();
+    const tokenHash=hashProvisioningToken(token);
+    const slug=device.permanent_qr_slug||makePermanentQrSlug();
+    await pool.query(`UPDATE devices SET permanent_qr_slug=$1,permanent_qr_token_hash=$2,permanent_qr_issued_at=now(),updated_at=now() WHERE device_uid=$3`,[slug,tokenHash,device.device_uid]);
+    const baseUrl=permanentQrBaseUrl(req,req.body?.base_url);
+    const qrUrl=`${baseUrl}/i/${encodeURIComponent(slug)}/${encodeURIComponent(token)}`;
+    const refreshed=await capabilityDeviceByUid(device.device_uid);
+    await writeAuditLog(req,{action:'issue_permanent_device_qr',entity_type:'device',entity_id:device.device_uid,old_values:{qr_issued_at:device.permanent_qr_issued_at},new_values:{qr_issued_at:refreshed.permanent_qr_issued_at,slug},metadata:{base_url:baseUrl,token:'stored_as_hash'}});
+    res.json({status:'ok',version:APP_VERSION,device:refreshed,permanent_qr:{url:qrUrl,slug,token,qr_svg:onboardingQrSvg(qrUrl),token_visible_once:true}});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.get('/api/device-installer/resolve',authRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    await ensureDeviceCapabilityFoundation();
+    const slug=String(req.query.slug||'').trim();
+    const token=String(req.query.token||'').trim();
+    const tokenHash=hashProvisioningToken(token);
+    const device=await one(`
+      SELECT d.device_uid FROM devices d WHERE d.permanent_qr_slug=$1 AND d.permanent_qr_token_hash=$2 LIMIT 1
+    `,[slug,tokenHash]);
+    if(!device)return res.status(404).json({status:'invalid_qr',version:APP_VERSION,message:'QR code is invalid or has been rotated'});
+    const data=await deviceCapabilitiesByUid(device.device_uid);
+    if(!deviceAllowedForRequest(req,data.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    res.json({status:'ok',version:APP_VERSION,...data,catalog:publicCapabilityCatalog(),profiles:publicCapabilityProfiles(),configuration:capabilityConfiguration(data.device,data.capabilities)});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.put('/api/device-installer/devices/:uid/capabilities',authRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    const before=await deviceCapabilitiesByUid(req.params.uid);
+    if(!before)return res.status(404).json({status:'not_found',message:'Device not found'});
+    if(!deviceAllowedForRequest(req,before.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    const saved=await saveDeviceCapabilities({uid:req.params.uid,profileKey:String(req.body?.profile_key||'custom'),capabilities:req.body?.capabilities||[],source:'mobile',actorEmail:req.user?.email||'mobile-installer'});
+    await writeAuditLog(req,{action:'save_device_capabilities',entity_type:'device',entity_id:req.params.uid,old_values:{profile:before.device.capability_profile,count:before.capabilities.length,version:before.device.capability_config_version},new_values:{profile:saved.device.capability_profile,count:saved.capabilities.length,version:saved.device.capability_config_version},metadata:{source:'mobile'}});
+    res.json({status:'ok',version:APP_VERSION,...saved,configuration:capabilityConfiguration(saved.device,saved.capabilities)});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.post('/api/device-installer/devices/:uid/publish',authRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    const data=await deviceCapabilitiesByUid(req.params.uid);
+    if(!data)return res.status(404).json({status:'not_found',message:'Device not found'});
+    if(!deviceAllowedForRequest(req,data.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    if(!mqttConnected||!mqttClient)return res.status(409).json({status:'mqtt_offline',message:'MQTT broker is not connected'});
+    if(!data.device.mqtt_base_topic)return res.status(409).json({status:'missing_topic',message:'Device MQTT base topic is missing'});
+    const configuration=capabilityConfiguration(data.device,data.capabilities);
+    const topic=`${String(data.device.mqtt_base_topic).replace(/\/+$/,'')}/command`;
+    const payload={command:'set_capabilities',command_id:`cap-mobile-${Date.now()}`,source:'factorybox-mobile-installer',configuration,ts:new Date().toISOString()};
+    await new Promise((resolve,reject)=>mqttClient.publish(topic,JSON.stringify(payload),{qos:0,retain:false},error=>error?reject(error):resolve()));
+    await pool.query(`UPDATE device_capability_config_versions SET status='published',published_at=now() WHERE device_id=$1::uuid AND config_version=$2`,[data.device.id,data.device.capability_config_version]);
+    await writeAuditLog(req,{action:'publish_device_capabilities',entity_type:'device',entity_id:req.params.uid,old_values:null,new_values:{topic,config_version:data.device.capability_config_version,count:data.capabilities.length},metadata:{source:'mobile'}});
+    res.json({status:'ok',version:APP_VERSION,topic,configuration});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+
+async function ensureDeviceOnboardingFoundation() {
+  if (deviceOnboardingFoundationReady) return;
+  await ensureDeviceRegistrySchema();
+  await ensureDeviceInfoSyncSchema();
+  await ensureAssetManagementFoundation();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS device_onboarding_sessions (
+      id text PRIMARY KEY,
+      device_uid text NOT NULL UNIQUE,
+      serial_no text,
+      model text NOT NULL DEFAULT 'FactoryBox One',
+      expected_firmware text,
+      customer_code text NOT NULL,
+      site_code text NOT NULL,
+      machine_code text NOT NULL,
+      machine_name text,
+      machine_type text,
+      network_mode text NOT NULL DEFAULT 'ethernet',
+      wifi_ssid text,
+      mqtt_url text,
+      mqtt_base_topic text NOT NULL,
+      status text NOT NULL DEFAULT 'draft',
+      current_step integer NOT NULL DEFAULT 1,
+      connection_test text NOT NULL DEFAULT 'pending',
+      heartbeat_test text NOT NULL DEFAULT 'pending',
+      telemetry_test text NOT NULL DEFAULT 'pending',
+      firmware_test text NOT NULL DEFAULT 'pending',
+      alarm_test text NOT NULL DEFAULT 'pending',
+      connection_test_at timestamptz,
+      heartbeat_test_at timestamptz,
+      telemetry_test_at timestamptz,
+      firmware_test_at timestamptz,
+      alarm_test_at timestamptz,
+      activation_report jsonb NOT NULL DEFAULT '{}'::jsonb,
+      last_error text,
+      created_by_email text,
+      activated_at timestamptz,
+      deactivated_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS expected_firmware text`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS firmware_test text NOT NULL DEFAULT 'pending'`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS firmware_test_at timestamptz`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS network_mode text NOT NULL DEFAULT 'ethernet'`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS wifi_ssid text`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS mqtt_url text`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS activation_report jsonb NOT NULL DEFAULT '{}'::jsonb`);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS last_error text`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_onboarding_status_updated ON device_onboarding_sessions(status,updated_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_onboarding_customer_site ON device_onboarding_sessions(customer_code,site_code,updated_at DESC)`);
+  deviceOnboardingFoundationReady = true;
+}
+
+function onboardingChoice(value, choices, fallback) {
+  const normalized=String(value || fallback || '').trim().toLowerCase();
+  return choices.includes(normalized) ? normalized : fallback;
+}
+
+function onboardingStaleSec() {
+  const value=Number(process.env.DEVICE_ONBOARDING_STALE_SEC || 180);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value),30),3600) : 180;
+}
+
+function onboardingTokenMinutes(raw) {
+  const value=Number(raw || 60);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.floor(value),5),1440) : 60;
+}
+
+async function deviceOnboardingOptions() {
+  const [customers,sites,machines]=await Promise.all([
+    pool.query(`SELECT code,name,status FROM customers ORDER BY name,code`),
+    pool.query(`SELECT s.code,s.name,s.status,c.code AS customer_code FROM sites s JOIN customers c ON c.id=s.customer_id ORDER BY c.name,s.name`),
+    pool.query(`SELECT m.id::text,m.code,m.name,m.machine_type,m.status,s.code AS site_code,c.code AS customer_code FROM machines m JOIN sites s ON s.id=m.site_id JOIN customers c ON c.id=s.customer_id ORDER BY c.name,s.name,m.name`)
+  ]);
+  return {
+    customers:customers.rows,
+    sites:sites.rows,
+    machines:machines.rows,
+    defaults:{
+      customer_code:CFG.customerCode,
+      site_code:CFG.siteCode,
+      machine_code:CFG.machineCode,
+      machine_type:CFG.machineType,
+      model:CFG.deviceModel,
+      mqtt_url:CFG.mqttUrl,
+      mqtt_base_topic:CFG.baseTopic
+    },
+    stale_sec:onboardingStaleSec()
+  };
+}
+
+async function deviceOnboardingRows({id=null,limit=200}={}) {
+  const args=[];
+  let where='';
+  if (id) { args.push(String(id)); where=`WHERE o.id=$${args.length}`; }
+  args.push(Math.min(Math.max(Number(limit||200),1),500));
+  const result=await pool.query(`
+    SELECT
+      o.*,
+      d.id::text AS device_id,
+      d.status AS device_status,
+      d.provisioning_status,
+      d.provisioning_token_expires_at,
+      d.provisioned_at,
+      d.last_seen_at,
+      d.firmware_version,
+      d.hardware_revision,
+      d.platform_name,
+      d.build_type,
+      d.firmware_build,
+      m.id::text AS machine_id,
+      m.name AS linked_machine_name,
+      s.name AS site_name,
+      c.name AS customer_name,
+      lt.event_ts AS latest_telemetry_at,
+      lt.current_amp AS latest_current_amp,
+      lt.temperature_c AS latest_temperature_c,
+      lt.wifi_rssi AS latest_wifi_rssi,
+      lt.uptime_ms AS latest_uptime_ms,
+      la.started_at AS latest_alarm_at,
+      la.alarm_type AS latest_alarm_type,
+      la.status AS latest_alarm_status
+    FROM device_onboarding_sessions o
+    LEFT JOIN devices d ON d.device_uid=o.device_uid
+    LEFT JOIN machines m ON m.id=d.machine_id
+    LEFT JOIN sites s ON s.id=m.site_id
+    LEFT JOIN customers c ON c.id=s.customer_id
+    LEFT JOIN LATERAL (
+      SELECT event_ts,current_amp,temperature_c,wifi_rssi,uptime_ms
+      FROM telemetry_events
+      WHERE device_id=d.id
+      ORDER BY event_ts DESC
+      LIMIT 1
+    ) lt ON true
+    LEFT JOIN LATERAL (
+      SELECT started_at,alarm_type,status
+      FROM alarms
+      WHERE device_id=d.id AND started_at>=o.created_at
+      ORDER BY started_at DESC
+      LIMIT 1
+    ) la ON true
+    ${where}
+    ORDER BY o.updated_at DESC,o.created_at DESC
+    LIMIT $${args.length}
+  `,args);
+  const now=Date.now();
+  return result.rows.map(row=>{
+    const lastSeenMs=row.last_seen_at?new Date(row.last_seen_at).getTime():0;
+    const telemetryMs=row.latest_telemetry_at?new Date(row.latest_telemetry_at).getTime():0;
+    const staleSec=onboardingStaleSec();
+    const signalAgeSec=lastSeenMs?Math.max(0,Math.floor((now-lastSeenMs)/1000)):null;
+    const telemetryAgeSec=telemetryMs?Math.max(0,Math.floor((now-telemetryMs)/1000)):null;
+    return {
+      ...row,
+      signal_age_sec:signalAgeSec,
+      telemetry_age_sec:telemetryAgeSec,
+      broker_connected:Boolean(mqttConnected),
+      connection_live:Boolean(row.provisioning_status==='paired' && signalAgeSec!==null && signalAgeSec<=staleSec),
+      heartbeat_live:Boolean(telemetryAgeSec!==null && telemetryAgeSec<=staleSec),
+      telemetry_available:Boolean(row.latest_telemetry_at),
+      alarm_available:Boolean(row.latest_alarm_at),
+      ready_for_activation:row.connection_test==='passed' &&
+        row.heartbeat_test==='passed' &&
+        row.telemetry_test==='passed' &&
+        ['passed','skipped'].includes(row.firmware_test) &&
+        ['passed','skipped'].includes(row.alarm_test)
+    };
+  });
+}
+
+async function deviceOnboardingRow(id) {
+  const rows=await deviceOnboardingRows({id,limit:1});
+  return rows[0]||null;
+}
+
+function qrGfMultiply(x,y) {
+  let z=0;
+  for(let i=7;i>=0;i--){
+    z=(z<<1)^((z>>>7)*0x11D);
+    if(((y>>>i)&1)!==0) z^=x;
+  }
+  return z&0xFF;
+}
+
+function qrRsDivisor(degree) {
+  const result=new Array(degree).fill(0);
+  result[degree-1]=1;
+  let root=1;
+  for(let i=0;i<degree;i++){
+    for(let j=0;j<degree;j++){
+      result[j]=qrGfMultiply(result[j],root);
+      if(j+1<degree) result[j]^=result[j+1];
+    }
+    root=qrGfMultiply(root,2);
+  }
+  return result;
+}
+
+function qrRsRemainder(data,divisor) {
+  const result=new Array(divisor.length).fill(0);
+  for(const byte of data){
+    const factor=byte^result[0];
+    result.shift();
+    result.push(0);
+    for(let i=0;i<divisor.length;i++) result[i]^=qrGfMultiply(divisor[i],factor);
+  }
+  return result;
+}
+
+function onboardingQrSvg(payload) {
+  const bytes=Buffer.from(String(payload||''),'utf8');
+  if(bytes.length>106) throw new Error('QR payload is too long');
+  const bits=[];
+  const append=(value,count)=>{for(let i=count-1;i>=0;i--)bits.push((value>>>i)&1);};
+  append(0b0100,4);
+  append(bytes.length,8);
+  for(const byte of bytes) append(byte,8);
+  const capacity=108*8;
+  for(let i=0;i<Math.min(4,capacity-bits.length);i++) bits.push(0);
+  while(bits.length%8)bits.push(0);
+  const data=[];
+  for(let i=0;i<bits.length;i+=8){
+    let value=0;
+    for(let j=0;j<8;j++) value=(value<<1)|(bits[i+j]||0);
+    data.push(value);
+  }
+  const pads=[0xEC,0x11];
+  let padIndex=0;
+  while(data.length<108)data.push(pads[(padIndex++)%2]);
+  const codewords=[...data,...qrRsRemainder(data,qrRsDivisor(26))];
+  const size=37;
+  const matrix=Array.from({length:size},()=>Array(size).fill(false));
+  const func=Array.from({length:size},()=>Array(size).fill(false));
+  const setFunction=(x,y,value)=>{
+    if(x>=0&&x<size&&y>=0&&y<size){matrix[y][x]=Boolean(value);func[y][x]=true;}
+  };
+  const finder=(cx,cy)=>{
+    for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){
+      const x=cx+dx,y=cy+dy;
+      if(x>=0&&x<size&&y>=0&&y<size){
+        const dist=Math.max(Math.abs(dx),Math.abs(dy));
+        setFunction(x,y,dist!==2&&dist!==4);
+      }
+    }
+  };
+  finder(3,3);finder(size-4,3);finder(3,size-4);
+  for(let i=8;i<size-8;i++){
+    if(!func[6][i])setFunction(i,6,i%2===0);
+    if(!func[i][6])setFunction(6,i,i%2===0);
+  }
+  for(const cy of [6,30])for(const cx of [6,30]){
+    if(func[cy][cx])continue;
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)setFunction(cx+dx,cy+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);
+  }
+  const formatData=(1<<3);
+  let remainder=formatData;
+  for(let i=0;i<10;i++)remainder=(remainder<<1)^((((remainder>>>9)&1)!==0)?0x537:0);
+  const formatBits=((formatData<<10)|remainder)^0x5412;
+  const formatBit=i=>((formatBits>>>i)&1)!==0;
+  for(let i=0;i<6;i++)setFunction(8,i,formatBit(i));
+  setFunction(8,7,formatBit(6));setFunction(8,8,formatBit(7));setFunction(7,8,formatBit(8));
+  for(let i=9;i<15;i++)setFunction(14-i,8,formatBit(i));
+  for(let i=0;i<8;i++)setFunction(size-1-i,8,formatBit(i));
+  for(let i=8;i<15;i++)setFunction(8,size-15+i,formatBit(i));
+  setFunction(8,size-8,true);
+  const allBits=[];
+  for(const codeword of codewords)for(let i=7;i>=0;i--)allBits.push((codeword>>>i)&1);
+  let index=0;
+  let upward=true;
+  for(let right=size-1;right>=1;right-=2){
+    if(right===6)right--;
+    for(let vertical=0;vertical<size;vertical++){
+      const y=upward?size-1-vertical:vertical;
+      for(let j=0;j<2;j++){
+        const x=right-j;
+        if(func[y][x])continue;
+        let value=allBits[index++]||0;
+        if((x+y)%2===0)value^=1;
+        matrix[y][x]=Boolean(value);
+      }
+    }
+    upward=!upward;
+  }
+  const border=4;
+  let paths='';
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(matrix[y][x])paths+=`M${x+border} ${y+border}h1v1h-1z`;
+  const total=size+border*2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" shape-rendering="crispEdges" role="img" aria-label="FactoryBox provisioning QR"><rect width="100%" height="100%" fill="#fff"/><path d="${paths}" fill="#111827"/></svg>`;
+}
+
+app.get('/api/admin/device-onboarding', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const sessions=await deviceOnboardingRows({limit:req.query.limit||200});
+    const options=await deviceOnboardingOptions();
+    const summary={
+      total:sessions.length,
+      draft:sessions.filter(x=>x.status==='draft').length,
+      waiting:sessions.filter(x=>['token_issued','waiting_device'].includes(x.status)).length,
+      connected:sessions.filter(x=>['connected','tested'].includes(x.status)).length,
+      active:sessions.filter(x=>x.status==='active').length,
+      failed:sessions.filter(x=>x.status==='failed').length
+    };
+    res.json({status:'ok',version:APP_VERSION,summary,options,sessions});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    if(!deviceProvisioningEnabled())return res.status(403).json({status:'disabled',version:APP_VERSION,message:'Device provisioning is disabled'});
+    const customerCode=cleanCode(req.body?.customer_code||CFG.customerCode);
+    const siteCode=cleanCode(req.body?.site_code||CFG.siteCode);
+    const machineCode=cleanCode(req.body?.machine_code||req.body?.device_uid||CFG.machineCode);
+    const machineName=cleanCode(req.body?.machine_name||machineCode);
+    const machineType=cleanCode(req.body?.machine_type||CFG.machineType);
+    const deviceUid=cleanCode(req.body?.device_uid);
+    const serialNo=cleanCode(req.body?.serial_no);
+    const model=cleanCode(req.body?.model||CFG.deviceModel);
+    const expectedFirmware=cleanCode(req.body?.expected_firmware);
+    const networkMode=onboardingChoice(req.body?.network_mode,['wifi','ethernet'],'ethernet');
+    const wifiSsid=networkMode==='wifi'?cleanCode(req.body?.wifi_ssid):'';
+    const mqttUrl=cleanCode(req.body?.mqtt_url||CFG.mqttUrl);
+    const mqttBaseTopic=cleanCode(req.body?.mqtt_base_topic||`${customerCode}/${siteCode}/${machineCode}`);
+    if(!deviceUid)return res.status(400).json({status:'error',version:APP_VERSION,message:'device_uid is required'});
+    if(!customerCode||!siteCode||!machineCode)return res.status(400).json({status:'error',version:APP_VERSION,message:'customer_code, site_code and machine_code are required'});
+    const activeExisting=await one(`SELECT id,status FROM device_onboarding_sessions WHERE device_uid=$1 LIMIT 1`,[deviceUid]);
+    if(activeExisting && activeExisting.status==='active' && !Boolean(req.body?.reset_active))return res.status(409).json({status:'active_session_exists',version:APP_VERSION,message:'This device already has an active onboarding session'});
+    const existingDevice=await deviceTenantRowByUid(deviceUid);
+    const additionalDevice=existingDevice&&existingDevice.status!=='archived'?0:1;
+    await assertSubscriptionCapacity(customerCode,'devices',additionalDevice,false);
+    const {machine}=await resolveDeviceTarget(customerCode,siteCode,machineCode,machineName,machineType);
+    await pool.query(`
+      INSERT INTO devices(machine_id,device_uid,model,serial_no,mqtt_base_topic,status,provisioning_status,device_notes)
+      VALUES($1,$2,$3,$4,$5,'offline','pending',$6)
+      ON CONFLICT(device_uid) DO UPDATE SET machine_id=EXCLUDED.machine_id,model=EXCLUDED.model,
+        serial_no=COALESCE(NULLIF(EXCLUDED.serial_no,''),devices.serial_no),mqtt_base_topic=EXCLUDED.mqtt_base_topic,
+        status=CASE WHEN devices.status='archived' THEN 'offline' ELSE devices.status END,
+        provisioning_status=CASE WHEN devices.provisioning_status='paired' THEN devices.provisioning_status ELSE 'pending' END,
+        deactivated_at=NULL,updated_at=now()
+    `,[machine.id,deviceUid,model,serialNo||null,mqttBaseTopic,`Onboarding network=${networkMode}`]);
+    const id=activeExisting?.id||crypto.randomUUID();
+    const session=await one(`
+      INSERT INTO device_onboarding_sessions(
+        id,device_uid,serial_no,model,expected_firmware,customer_code,site_code,machine_code,machine_name,machine_type,
+        network_mode,wifi_ssid,mqtt_url,mqtt_base_topic,status,current_step,created_by_email
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'draft',1,$15)
+      ON CONFLICT(device_uid) DO UPDATE SET
+        serial_no=EXCLUDED.serial_no,model=EXCLUDED.model,expected_firmware=EXCLUDED.expected_firmware,customer_code=EXCLUDED.customer_code,site_code=EXCLUDED.site_code,
+        machine_code=EXCLUDED.machine_code,machine_name=EXCLUDED.machine_name,machine_type=EXCLUDED.machine_type,
+        network_mode=EXCLUDED.network_mode,wifi_ssid=EXCLUDED.wifi_ssid,mqtt_url=EXCLUDED.mqtt_url,mqtt_base_topic=EXCLUDED.mqtt_base_topic,
+        status='draft',current_step=1,connection_test='pending',heartbeat_test='pending',telemetry_test='pending',firmware_test='pending',alarm_test='pending',
+        connection_test_at=NULL,heartbeat_test_at=NULL,telemetry_test_at=NULL,firmware_test_at=NULL,alarm_test_at=NULL,activation_report='{}'::jsonb,
+        last_error=NULL,activated_at=NULL,deactivated_at=NULL,updated_at=now()
+      RETURNING *
+    `,[id,deviceUid,serialNo||null,model,expectedFirmware||null,customerCode,siteCode,machineCode,machineName,machineType,networkMode,wifiSsid||null,mqttUrl,mqttBaseTopic,req.user?.email||'local-admin']);
+    await writeAuditLog(req,{action:'create_device_onboarding',entity_type:'device_onboarding',entity_id:session.id,old_values:activeExisting,new_values:session,metadata:{device_uid:deviceUid,customer_code:customerCode,site_code:siteCode,machine_code:machineCode}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id)});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message,resource:e.resource||null,usage:e.usage||null});}
+});
+
+app.post('/api/admin/device-onboarding/:id/provision-token', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Onboarding session not found'});
+    if(session.status==='deactivated')return res.status(409).json({status:'deactivated',version:APP_VERSION,message:'Reopen the onboarding session first'});
+    const token=makeProvisioningToken();
+    const minutes=onboardingTokenMinutes(req.body?.token_minutes);
+    const tokenHash=hashProvisioningToken(token);
+    await pool.query(`
+      UPDATE devices SET provisioning_status='pending',provisioning_token_hash=$1,
+        provisioning_token_expires_at=now()+make_interval(mins=>$2),status='offline',updated_at=now()
+      WHERE device_uid=$3
+    `,[tokenHash,minutes,session.device_uid]);
+    await pool.query(`UPDATE device_onboarding_sessions SET status='token_issued',current_step=4,last_error=NULL,updated_at=now() WHERE id=$1`,[session.id]);
+    const origin=`${req.protocol}://${req.get('host')}`;
+    const claimUrl=`${origin}/api/device/provision/claim`;
+    const qrPayload=`FB1|${token}`;
+    const configuration={
+      schema:'factorybox-device-onboarding-v1',
+      generated_at:new Date().toISOString(),
+      claim_url:claimUrl,
+      token,
+      device_uid:session.device_uid,
+      serial_no:session.serial_no||null,
+      model:session.model,
+      network:{mode:session.network_mode,ssid:session.wifi_ssid||null,password:null},
+      mqtt:{url:session.mqtt_url,base_topic:session.mqtt_base_topic},
+      capabilities:(await deviceCapabilitiesByUid(session.device_uid))?.capabilities||[]
+    };
+    await writeAuditLog(req,{action:'issue_onboarding_provision_token',entity_type:'device_onboarding',entity_id:session.id,old_values:{status:session.status},new_values:{status:'token_issued',token:'issued_once'},metadata:{device_uid:session.device_uid,expires_minutes:minutes}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id),provisioning:{token,expires_minutes:minutes,claim_url:claimUrl,qr_payload:qrPayload,qr_svg:onboardingQrSvg(qrPayload),configuration,token_visible_once:true}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/device-command', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    const command=onboardingChoice(req.body?.command,['get_status','get_device_info','test_alarm'],'get_status');
+    if(!mqttClient||!mqttConnected)return res.status(503).json({status:'mqtt_offline',version:APP_VERSION,message:'MQTT broker is not connected'});
+    const topic=`${String(session.mqtt_base_topic||'').replace(/\/+$/,'')}/command`;
+    const commandId=`onb-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+    const payload={command,command_id:commandId,source:'factorybox-onboarding',device_uid:session.device_uid,ts:new Date().toISOString()};
+    await new Promise((resolve,reject)=>mqttClient.publish(topic,JSON.stringify(payload),{qos:0,retain:false},error=>error?reject(error):resolve()));
+    await writeAuditLog(req,{action:'send_onboarding_device_command',entity_type:'device_onboarding',entity_id:session.id,old_values:null,new_values:{topic,command,command_id:commandId},metadata:{device_uid:session.device_uid}});
+    res.json({status:'ok',version:APP_VERSION,topic,payload});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/tests', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    const stale=onboardingStaleSec();
+    const connection=session.provisioning_status==='paired'&&session.signal_age_sec!==null&&session.signal_age_sec<=stale?'passed':'failed';
+    const heartbeat=session.telemetry_age_sec!==null&&session.telemetry_age_sec<=stale?'passed':'failed';
+    const telemetry=session.latest_telemetry_at?'passed':'failed';
+    const actualFirmware=String(session.firmware_version||session.firmware_build||'').trim();
+    const expectedFirmware=String(session.expected_firmware||'').trim();
+    const firmware=!expectedFirmware?'skipped':(actualFirmware===expectedFirmware?'passed':'failed');
+    const alarm=session.latest_alarm_at?'passed':(session.alarm_test==='skipped'?'skipped':'failed');
+    const tested=connection==='passed'&&heartbeat==='passed'&&telemetry==='passed'&&['passed','skipped'].includes(firmware)&&['passed','skipped'].includes(alarm);
+    const nextStatus=tested?'tested':connection==='passed'?'connected':session.provisioning_status==='paired'?'connected':'waiting_device';
+    const errorParts=[];
+    if(connection!=='passed')errorParts.push('device connection not detected');
+    if(heartbeat!=='passed')errorParts.push('fresh heartbeat/telemetry not detected');
+    if(telemetry!=='passed')errorParts.push('telemetry record not detected');
+    if(!['passed','skipped'].includes(firmware))errorParts.push(`firmware mismatch: expected ${expectedFirmware}, actual ${actualFirmware||'unknown'}`);
+    if(!['passed','skipped'].includes(alarm))errorParts.push('alarm test not detected');
+    await pool.query(`
+      UPDATE device_onboarding_sessions SET
+        connection_test=$1,heartbeat_test=$2,telemetry_test=$3,firmware_test=$4,alarm_test=$5,
+        connection_test_at=now(),heartbeat_test_at=now(),telemetry_test_at=now(),firmware_test_at=now(),alarm_test_at=now(),
+        status=$6,current_step=5,last_error=$7,updated_at=now()
+      WHERE id=$8
+    `,[connection,heartbeat,telemetry,firmware,alarm,nextStatus,errorParts.join('; ')||null,session.id]);
+    const updated=await deviceOnboardingRow(session.id);
+    await writeAuditLog(req,{action:'run_device_onboarding_tests',entity_type:'device_onboarding',entity_id:session.id,old_values:{connection_test:session.connection_test,heartbeat_test:session.heartbeat_test,telemetry_test:session.telemetry_test,firmware_test:session.firmware_test,alarm_test:session.alarm_test},new_values:{connection_test:connection,heartbeat_test:heartbeat,telemetry_test:telemetry,firmware_test:firmware,alarm_test:alarm,status:nextStatus},metadata:{device_uid:session.device_uid,stale_sec:stale}});
+    res.json({status:'ok',version:APP_VERSION,session:updated});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/skip-firmware-test', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    await pool.query(`UPDATE device_onboarding_sessions SET firmware_test='skipped',firmware_test_at=now(),updated_at=now() WHERE id=$1`,[session.id]);
+    await writeAuditLog(req,{action:'skip_onboarding_firmware_test',entity_type:'device_onboarding',entity_id:session.id,old_values:{firmware_test:session.firmware_test},new_values:{firmware_test:'skipped'},metadata:{device_uid:session.device_uid}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id)});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/skip-alarm-test', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    await pool.query(`UPDATE device_onboarding_sessions SET alarm_test='skipped',alarm_test_at=now(),updated_at=now() WHERE id=$1`,[session.id]);
+    await writeAuditLog(req,{action:'skip_onboarding_alarm_test',entity_type:'device_onboarding',entity_id:session.id,old_values:{alarm_test:session.alarm_test},new_values:{alarm_test:'skipped'},metadata:{device_uid:session.device_uid}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id)});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/activate', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    const requiredPassed=session.connection_test==='passed'&&session.heartbeat_test==='passed'&&session.telemetry_test==='passed'&&['passed','skipped'].includes(session.firmware_test)&&['passed','skipped'].includes(session.alarm_test);
+    if(!requiredPassed)return res.status(409).json({status:'tests_required',version:APP_VERSION,message:'Connection, heartbeat and telemetry tests must pass. Firmware and alarm tests must pass or be skipped.'});
+    const report={
+      completed_at:new Date().toISOString(),
+      device_uid:session.device_uid,
+      serial_no:session.serial_no||null,
+      model:session.model,
+      customer_code:session.customer_code,
+      site_code:session.site_code,
+      machine_code:session.machine_code,
+      network_mode:session.network_mode,
+      mqtt_base_topic:session.mqtt_base_topic,
+      firmware_version:session.firmware_version||null,
+      hardware_revision:session.hardware_revision||null,
+      wifi_rssi:session.latest_wifi_rssi??null,
+      tests:{connection:session.connection_test,heartbeat:session.heartbeat_test,telemetry:session.telemetry_test,firmware:session.firmware_test,alarm:session.alarm_test},
+      activated_by:req.user?.email||'local-admin'
+    };
+    await pool.query(`UPDATE device_onboarding_sessions SET status='active',current_step=6,activation_report=$1::jsonb,activated_at=now(),deactivated_at=NULL,last_error=NULL,updated_at=now() WHERE id=$2`,[JSON.stringify(report),session.id]);
+    await pool.query(`UPDATE devices SET status='online',provisioning_status='paired',deactivated_at=NULL,updated_at=now() WHERE device_uid=$1`,[session.device_uid]);
+    await writeAuditLog(req,{action:'activate_device_onboarding',entity_type:'device_onboarding',entity_id:session.id,old_values:{status:session.status},new_values:{status:'active',activation_report:report},metadata:{device_uid:session.device_uid}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id),report});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/reopen', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    await pool.query(`UPDATE device_onboarding_sessions SET status='draft',current_step=1,connection_test='pending',heartbeat_test='pending',telemetry_test='pending',firmware_test='pending',alarm_test='pending',connection_test_at=NULL,heartbeat_test_at=NULL,telemetry_test_at=NULL,firmware_test_at=NULL,alarm_test_at=NULL,activation_report='{}'::jsonb,last_error=NULL,activated_at=NULL,deactivated_at=NULL,updated_at=now() WHERE id=$1`,[session.id]);
+    await pool.query(`UPDATE devices SET status='offline',provisioning_status='pending',provisioning_token_hash=NULL,provisioning_token_expires_at=NULL,deactivated_at=NULL,updated_at=now() WHERE device_uid=$1`,[session.device_uid]);
+    await writeAuditLog(req,{action:'reopen_device_onboarding',entity_type:'device_onboarding',entity_id:session.id,old_values:{status:session.status},new_values:{status:'draft'},metadata:{device_uid:session.device_uid}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id)});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/device-onboarding/:id/deactivate', adminRequired, permissionRequired('MANAGE_DEVICES'), async (req,res)=>{
+  try{
+    await ensureDeviceOnboardingFoundation();
+    const session=await deviceOnboardingRow(req.params.id);
+    if(!session)return res.status(404).json({status:'not_found',message:'Onboarding session not found'});
+    await pool.query(`UPDATE device_onboarding_sessions SET status='deactivated',deactivated_at=now(),last_error=NULL,updated_at=now() WHERE id=$1`,[session.id]);
+    await pool.query(`UPDATE devices SET status='archived',provisioning_status='revoked',provisioning_token_hash=NULL,provisioning_token_expires_at=NULL,deactivated_at=now(),updated_at=now() WHERE device_uid=$1`,[session.device_uid]);
+    await writeAuditLog(req,{action:'deactivate_device_onboarding',entity_type:'device_onboarding',entity_id:session.id,old_values:{status:session.status},new_values:{status:'deactivated'},metadata:{device_uid:session.device_uid}});
+    res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id)});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',message:e.message});}
+});
 
 
 
@@ -12269,6 +13190,8 @@ async function start() {
   await ensureInviteSchema();
   await ensureBillingFoundation();
   await ensureDeviceRegistrySchema();
+  await ensureDeviceOnboardingFoundation();
+  await ensureDeviceCapabilityFoundation();
   await ensureAssetManagementFoundation();
   await ensureLiveMonitoringFoundation();
   await ensureAlarmEscalationFoundation();
@@ -12279,11 +13202,11 @@ async function start() {
   await ensurePreventiveMaintenanceFoundation();
   await ensureInventoryFoundation();
   await ensureOeeFoundation();
-  const client = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
-  client.on('connect',()=>{ mqttConnected=true; client.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
-  client.on('close',()=>{ mqttConnected=false; });
-  client.on('error',(e)=> console.error('MQTT error:', e.message));
-  client.on('message', handleMessage);
+  mqttClient = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
+  mqttClient.on('connect',()=>{ mqttConnected=true; mqttClient.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
+  mqttClient.on('close',()=>{ mqttConnected=false; });
+  mqttClient.on('error',(e)=> console.error('MQTT error:', e.message));
+  mqttClient.on('message', handleMessage);
   app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
   startAlarmEscalationDeliveryWorker();
   startAlarmAutomationScheduler();

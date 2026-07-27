@@ -1,0 +1,28 @@
+FACTORYBOX ONE v6.3.1 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine kopyalayın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. Backend'i başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin Panelde Ctrl + F5 yapın.
+6. Sürümün v6.3.1 olduğunu kontrol edin.
+7. Cihazlar > Cihaz Yetkinlikleri ekranını açın.
+8. Cihazı seçin, hazır profil uygulayın ve Yetkinlikleri Kaydet düğmesine basın.
+9. Mobil Panel Ana Adresi alanına bilgisayarın yerel ağ adresini yazın:
+
+   http://BILGISAYAR_IP:3100
+
+10. Kalıcı QR Oluştur / Yenile düğmesine basın.
+11. QR Etiketini İndir düğmesiyle etiketi kaydedip cihaz üzerine yapıştırın.
+12. Telefonda QR kodunu okutun, FactoryBox hesabıyla giriş yapın ve yetkinlikleri mobil panelden düzenleyin.
+
+NOTLAR
+- QR token yalnızca oluşturulduğu anda gösterilir ve veritabanında hash olarak saklanır.
+- Yeni QR oluşturmak önceki etiketi geçersiz hale getirir.
+- Telefon ve bilgisayar aynı ağda olmalıdır.
+- Uygulama içi kamera taraması HTTP yerel ağda kullanılamayabilir; telefonun standart kamerası kullanılabilir.
+- MQTT ile cihaza gönderim için firmware set_capabilities komutunu desteklemelidir.
