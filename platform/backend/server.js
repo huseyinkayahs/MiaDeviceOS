@@ -144,10 +144,11 @@ let billingFoundationReady = false;
 let inviteSchemaReady = false;
 let deviceOnboardingFoundationReady = false;
 let deviceCapabilityFoundationReady = false;
+let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.3.1';
+const APP_VERSION = '6.4.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -2063,6 +2064,64 @@ async function getTenantContextForUser(user) {
     };
   }
 
+  // v6.4: If granular organization access exists for this user, use it as the source of truth.
+  // Customer/factory/site/line scopes are expanded to site access so every existing API keeps
+  // the same tenant-boundary behavior without breaking older app_user_tenant_access records.
+  try {
+    const locationPolicy = await one(`SELECT enabled FROM app_user_location_policy WHERE user_id=$1 LIMIT 1`,[user.id]);
+    const granular = await pool.query(`
+      SELECT
+        ola.access_role,
+        c.code AS customer_code,
+        c.name AS customer_name,
+        f.id::text AS factory_id,
+        f.code AS factory_code,
+        f.name AS factory_name,
+        s.id::text AS site_id,
+        s.code AS site_code,
+        s.name AS site_name,
+        pl.id::text AS production_line_id,
+        pl.code AS production_line_code,
+        pl.name AS production_line_name
+      FROM app_user_location_access ola
+      JOIN customers c ON c.id=ola.customer_id
+      LEFT JOIN factories f ON f.id=ola.factory_id
+      LEFT JOIN sites s ON s.id=ola.site_id
+      LEFT JOIN production_lines pl ON pl.id=ola.production_line_id
+      WHERE ola.user_id=$1 AND ola.status='active'
+      ORDER BY c.code,f.code NULLS FIRST,s.code NULLS FIRST,pl.code NULLS FIRST
+    `,[user.id]);
+    if (locationPolicy?.enabled || granular.rows.length) {
+      const customers=[];const sites=[];const productionLines=[];const customerSeen=new Set();const siteSeen=new Set();const lineSeen=new Set();let hasBroaderThanLineScope=false;
+      for (const row of granular.rows) {
+        if (!row.production_line_id) hasBroaderThanLineScope=true;
+        if (row.production_line_id && !lineSeen.has(row.production_line_id)) {lineSeen.add(row.production_line_id);productionLines.push({id:row.production_line_id,code:row.production_line_code,name:row.production_line_name,site_code:row.site_code,customer_code:row.customer_code});}
+        if (!customerSeen.has(row.customer_code)) {
+          customerSeen.add(row.customer_code);
+          customers.push({code:row.customer_code,name:row.customer_name||row.customer_code,role:row.access_role});
+        }
+        let expanded=[];
+        if (row.site_id) expanded=[{code:row.site_code,name:row.site_name,customer_code:row.customer_code}];
+        else if (row.production_line_id) expanded=(await pool.query(`SELECT s.code,s.name,c.code AS customer_code FROM production_lines pl JOIN sites s ON s.id=pl.site_id JOIN customers c ON c.id=s.customer_id WHERE pl.id=$1`,[row.production_line_id])).rows;
+        else if (row.factory_id) expanded=(await pool.query(`SELECT s.code,s.name,c.code AS customer_code FROM sites s JOIN customers c ON c.id=s.customer_id WHERE s.factory_id=$1 ORDER BY s.name`,[row.factory_id])).rows;
+        else expanded=(await pool.query(`SELECT s.code,s.name,c.code AS customer_code FROM sites s JOIN customers c ON c.id=s.customer_id WHERE c.code=$1 ORDER BY s.name`,[row.customer_code])).rows;
+        for (const site of expanded) {
+          const key=`${site.customer_code}:${site.code}`;
+          if (!siteSeen.has(key)) {siteSeen.add(key);sites.push({...site,role:row.access_role});}
+        }
+      }
+      return {
+        auth_enabled:true,user:publicUser(user),
+        current_customer:customers.find(x=>x.code===user.default_customer_code)||customers[0]||{code:user.default_customer_code||CFG.customerCode,name:user.default_customer_code||CFG.customerName},
+        current_site:sites.find(x=>x.code===user.default_site_code)||sites[0]||{code:user.default_site_code||CFG.siteCode,name:user.default_site_code||CFG.siteName,customer_code:user.default_customer_code||CFG.customerCode},
+        customers,sites,production_lines:productionLines,line_scope_restricted:!hasBroaderThanLineScope&&productionLines.length>0,granular_access:true,access_denied:customers.length===0
+      };
+    }
+  } catch (error) {
+    // Backward compatibility during first boot/migration: fall back to legacy tenant access.
+    if (String(error.code||'') !== '42P01') console.warn('Granular location access fallback:', error.message);
+  }
+
   const access = await pool.query(
     `
     SELECT a.customer_code, a.site_code, a.access_role,
@@ -2134,7 +2193,9 @@ async function getTenantContextForUser(user) {
     current_customer:customers[0] || {code:user.default_customer_code || CFG.customerCode, name:user.default_customer_code || CFG.customerName},
     current_site:sites[0] || {code:user.default_site_code || CFG.siteCode, name:user.default_site_code || CFG.siteName, customer_code:user.default_customer_code || CFG.customerCode},
     customers,
-    sites
+    sites,
+    production_lines:[],
+    line_scope_restricted:false
   };
 }
 
@@ -2888,21 +2949,29 @@ function mobileOperatorRequired(req, res, next) {
 }
 
 function operatorScope(req) {
-  if (!authConfig().enabled || req.user?.role === 'system_admin') return {all:true, customers:[], sites:[]};
+  if (!authConfig().enabled || req.user?.role === 'system_admin') return {all:true, customers:[], sites:[], productionLines:[]};
+  if (req.tenant?.access_denied) return {all:false, customers:['__factorybox_no_access__'], sites:[], productionLines:[]};
   const customers = [...new Set((req.tenant?.customers || []).map(row => String(row.code || '').trim()).filter(Boolean))];
   const sites = [...new Set((req.tenant?.sites || []).map(row => String(row.code || '').trim()).filter(Boolean))];
+  const productionLines = req.tenant?.line_scope_restricted
+    ? [...new Set((req.tenant?.production_lines || []).map(row => String(row.id || '').trim()).filter(Boolean))]
+    : [];
   if (!customers.length) customers.push(String(req.user?.default_customer_code || CFG.customerCode));
-  return {all:false, customers, sites};
+  return {all:false, customers, sites, productionLines};
 }
 
-function operatorScopeClause(req, customerAlias='c', siteAlias='s', startIndex=1) {
+function operatorScopeClause(req, customerAlias='c', siteAlias='s', startIndex=1, machineAlias='m') {
   const scope = operatorScope(req);
   if (scope.all) return {sql:'', params:[], scope};
   const params = [scope.customers];
   const clauses = [`${customerAlias}.code = ANY($${startIndex}::text[])`];
   if (scope.sites.length) {
     params.push(scope.sites);
-    clauses.push(`${siteAlias}.code = ANY($${startIndex + 1}::text[])`);
+    clauses.push(`${siteAlias}.code = ANY($${startIndex + params.length - 1}::text[])`);
+  }
+  if (scope.productionLines.length) {
+    params.push(scope.productionLines);
+    clauses.push(`${machineAlias}.production_line_id = ANY($${startIndex + params.length - 1}::uuid[])`);
   }
   return {sql:` AND ${clauses.join(' AND ')}`, params, scope};
 }
@@ -8565,6 +8634,325 @@ app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
 
 
 
+
+// -----------------------------------------------------------------------------
+// v6.4 Multi-Site / Multi-Factory Management
+// -----------------------------------------------------------------------------
+const ORGANIZATION_STATUSES=['active','pilot','trial','inactive','passive','suspended','archived'];
+const ORGANIZATION_ACCESS_ROLES=['viewer','operator','admin','owner'];
+
+function organizationTimezone(value) {
+  const timezone=String(value||'Europe/Istanbul').trim()||'Europe/Istanbul';
+  try { new Intl.DateTimeFormat('en-US',{timeZone:timezone}).format(new Date()); return timezone; }
+  catch { const e=new Error('Invalid timezone');e.statusCode=400;throw e; }
+}
+
+function organizationCode(value,label='code') { return normalizeAssetCode(value,label); }
+function organizationName(value,label='name') { return cleanAssetName(value,label); }
+function organizationStatus(value,fallback='active') { return validateChoice(value||fallback,ORGANIZATION_STATUSES,'status'); }
+
+async function organizationBackfillHierarchy() {
+  await pool.query(`
+    INSERT INTO factories(customer_id,code,name,location,country,timezone,status,metadata)
+    SELECT c.id,'main',c.name||' Ana Fabrika',NULL,'Türkiye','Europe/Istanbul',
+      CASE WHEN c.status IN ('active','pilot','trial') THEN 'active' ELSE 'inactive' END,
+      jsonb_build_object('auto_created',true,'migration_version','6.4.0')
+    FROM customers c
+    ON CONFLICT(customer_id,code) DO NOTHING
+  `);
+  await pool.query(`UPDATE sites s SET factory_id=f.id,timezone=COALESCE(NULLIF(s.timezone,''),'Europe/Istanbul') FROM factories f WHERE s.customer_id=f.customer_id AND f.code='main' AND s.factory_id IS NULL`);
+  await pool.query(`
+    INSERT INTO production_lines(site_id,code,name,description,status,shift_pattern)
+    SELECT s.id,'general','Genel Üretim Hattı','v6.4 otomatik oluşturulan varsayılan hat','active','{}'::jsonb
+    FROM sites s ON CONFLICT(site_id,code) DO NOTHING
+  `);
+  await pool.query(`UPDATE machines m SET production_line_id=pl.id FROM production_lines pl WHERE pl.site_id=m.site_id AND pl.code='general' AND m.production_line_id IS NULL`);
+}
+
+async function ensureOrganizationFoundation() {
+  if (organizationFoundationReady) return;
+  await pool.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS factories (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      code text NOT NULL,
+      name text NOT NULL,
+      location text,
+      country text NOT NULL DEFAULT 'Türkiye',
+      timezone text NOT NULL DEFAULT 'Europe/Istanbul',
+      status text NOT NULL DEFAULT 'active',
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE(customer_id,code)
+    )
+  `);
+  await pool.query(`
+    ALTER TABLE sites ADD COLUMN IF NOT EXISTS factory_id uuid REFERENCES factories(id) ON DELETE SET NULL;
+    ALTER TABLE sites ADD COLUMN IF NOT EXISTS timezone text NOT NULL DEFAULT 'Europe/Istanbul';
+    ALTER TABLE sites ADD COLUMN IF NOT EXISTS address text;
+    ALTER TABLE sites ADD COLUMN IF NOT EXISTS workweek_start smallint NOT NULL DEFAULT 1;
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS production_lines (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      site_id uuid NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      code text NOT NULL,
+      name text NOT NULL,
+      description text,
+      status text NOT NULL DEFAULT 'active',
+      shift_pattern jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE(site_id,code)
+    )
+  `);
+  await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS production_line_id uuid REFERENCES production_lines(id) ON DELETE SET NULL`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_user_location_access (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id text NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      factory_id uuid REFERENCES factories(id) ON DELETE CASCADE,
+      site_id uuid REFERENCES sites(id) ON DELETE CASCADE,
+      production_line_id uuid REFERENCES production_lines(id) ON DELETE CASCADE,
+      access_role text NOT NULL DEFAULT 'viewer',
+      status text NOT NULL DEFAULT 'active',
+      created_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_user_location_policy (
+      user_id text PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+      enabled boolean NOT NULL DEFAULT true,
+      updated_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_user_location_access_scope ON app_user_location_access(user_id,customer_id,COALESCE(factory_id,'00000000-0000-0000-0000-000000000000'::uuid),COALESCE(site_id,'00000000-0000-0000-0000-000000000000'::uuid),COALESCE(production_line_id,'00000000-0000-0000-0000-000000000000'::uuid))`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_factories_customer_status ON factories(customer_id,status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_sites_factory_status ON sites(factory_id,status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_production_lines_site_status ON production_lines(site_id,status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_machines_production_line ON machines(production_line_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_location_access_user ON app_user_location_access(user_id,status)`);
+
+  // Backward-compatible migration and continuous backfill for assets created through older screens.
+  await organizationBackfillHierarchy();
+  organizationFoundationReady=true;
+}
+
+function organizationAllowedCustomerCodes(req) {
+  if (!authConfig().enabled || req.user?.role==='system_admin') return null;
+  if (req.tenant?.access_denied) return [];
+  return [...new Set((req.tenant?.customers||[]).map(row=>String(row.code||'').trim()).filter(Boolean))];
+}
+
+async function organizationAssertCustomer(req,requestedCode) {
+  const code=organizationCode(requestedCode||req.tenant?.current_customer?.code||CFG.customerCode,'customer code');
+  const allowed=organizationAllowedCustomerCodes(req);
+  if (allowed && !allowed.includes(code)) {const e=new Error('User does not have access to this company');e.statusCode=403;throw e;}
+  const customer=await one(`SELECT id::text,code,name,status FROM customers WHERE code=$1 LIMIT 1`,[code]);
+  if(!customer){const e=new Error('Company not found');e.statusCode=404;throw e;}
+  return customer;
+}
+
+async function organizationAccessRowsForRequest(req,customerId) {
+  if (!authConfig().enabled || req.user?.role==='system_admin') return [];
+  return (await pool.query(`SELECT factory_id::text,site_id::text,production_line_id::text FROM app_user_location_access WHERE user_id=$1 AND customer_id=$2 AND status='active'`,[req.user.id,customerId])).rows;
+}
+
+function organizationScopeFilter(rows) {
+  if (!rows.length) return {restricted:false,factories:new Set(),sites:new Set(),lines:new Set()};
+  const scope={restricted:true,factories:new Set(),sites:new Set(),lines:new Set(),customerWide:false};
+  for(const row of rows){
+    if(!row.factory_id&&!row.site_id&&!row.production_line_id)scope.customerWide=true;
+    if(row.factory_id)scope.factories.add(String(row.factory_id));
+    if(row.site_id)scope.sites.add(String(row.site_id));
+    if(row.production_line_id)scope.lines.add(String(row.production_line_id));
+  }
+  return scope;
+}
+
+async function organizationHierarchySnapshot(req,customerCode) {
+  await ensureOrganizationFoundation();
+  await organizationBackfillHierarchy();
+  const customer=await organizationAssertCustomer(req,customerCode);
+  const accessScope=organizationScopeFilter(await organizationAccessRowsForRequest(req,customer.id));
+  const factories=(await pool.query(`
+    SELECT f.id::text,f.code,f.name,f.location,f.country,f.timezone,f.status,f.metadata,f.created_at,f.updated_at,
+      count(DISTINCT s.id)::int AS site_count,count(DISTINCT pl.id)::int AS line_count,count(DISTINCT m.id)::int AS machine_count,count(DISTINCT d.id)::int AS device_count
+    FROM factories f LEFT JOIN sites s ON s.factory_id=f.id LEFT JOIN production_lines pl ON pl.site_id=s.id LEFT JOIN machines m ON m.site_id=s.id LEFT JOIN devices d ON d.machine_id=m.id
+    WHERE f.customer_id=$1 GROUP BY f.id ORDER BY f.name
+  `,[customer.id])).rows;
+  const sites=(await pool.query(`
+    SELECT s.id::text,s.factory_id::text,s.code,s.name,s.location,s.address,s.timezone,s.workweek_start,s.status,s.created_at,s.updated_at,
+      count(DISTINCT pl.id)::int AS line_count,count(DISTINCT m.id)::int AS machine_count,count(DISTINCT d.id)::int AS device_count
+    FROM sites s LEFT JOIN production_lines pl ON pl.site_id=s.id LEFT JOIN machines m ON m.site_id=s.id LEFT JOIN devices d ON d.machine_id=m.id
+    WHERE s.customer_id=$1 GROUP BY s.id ORDER BY s.name
+  `,[customer.id])).rows;
+  const lines=(await pool.query(`
+    SELECT pl.id::text,pl.site_id::text,pl.code,pl.name,pl.description,pl.status,pl.shift_pattern,pl.created_at,pl.updated_at,
+      count(DISTINCT m.id)::int AS machine_count,count(DISTINCT d.id)::int AS device_count
+    FROM production_lines pl JOIN sites s ON s.id=pl.site_id LEFT JOIN machines m ON m.production_line_id=pl.id LEFT JOIN devices d ON d.machine_id=m.id
+    WHERE s.customer_id=$1 GROUP BY pl.id ORDER BY pl.name
+  `,[customer.id])).rows;
+  const machines=(await pool.query(`
+    SELECT m.id::text,m.site_id::text,m.production_line_id::text,m.code,m.name,m.machine_type,m.status,m.created_at,m.updated_at,
+      count(DISTINCT d.id)::int AS device_count,count(DISTINCT d.id) FILTER(WHERE d.status='online')::int AS online_device_count
+    FROM machines m JOIN sites s ON s.id=m.site_id LEFT JOIN devices d ON d.machine_id=m.id WHERE s.customer_id=$1
+    GROUP BY m.id ORDER BY m.name
+  `,[customer.id])).rows;
+  if (accessScope.restricted&&!accessScope.customerWide) {
+    const allowedSiteIds=new Set(accessScope.sites);const allowedLineIds=new Set(accessScope.lines);const allowedFactoryIds=new Set(accessScope.factories);
+    for(const line of lines)if(allowedLineIds.has(line.id))allowedSiteIds.add(line.site_id);
+    for(const site of sites)if(allowedFactoryIds.has(site.factory_id))allowedSiteIds.add(site.id);
+    const filteredSites=sites.filter(site=>allowedSiteIds.has(site.id));const filteredSiteIds=new Set(filteredSites.map(x=>x.id));
+    const filteredLines=lines.filter(line=>filteredSiteIds.has(line.site_id)&&(allowedLineIds.size===0||allowedLineIds.has(line.id)||accessScope.factories.has(sites.find(s=>s.id===line.site_id)?.factory_id)||accessScope.sites.has(line.site_id)));
+    const filteredLineIds=new Set(filteredLines.map(x=>x.id));
+    const filteredMachines=machines.filter(machine=>filteredSiteIds.has(machine.site_id)&&(!machine.production_line_id||filteredLineIds.has(machine.production_line_id)||accessScope.sites.has(machine.site_id)||accessScope.factories.has(sites.find(s=>s.id===machine.site_id)?.factory_id)));
+    const filteredFactoryIds=new Set(filteredSites.map(x=>x.factory_id));
+    return {customer,factories:factories.filter(x=>filteredFactoryIds.has(x.id)),sites:filteredSites,lines:filteredLines,machines:filteredMachines,scope_restricted:true};
+  }
+  return {customer,factories,sites,lines,machines,scope_restricted:false};
+}
+
+function nestOrganizationHierarchy(snapshot) {
+  const machinesByLine=new Map(),machinesWithoutLineBySite=new Map(),linesBySite=new Map(),sitesByFactory=new Map();
+  for(const m of snapshot.machines){if(m.production_line_id){if(!machinesByLine.has(m.production_line_id))machinesByLine.set(m.production_line_id,[]);machinesByLine.get(m.production_line_id).push(m);}else{if(!machinesWithoutLineBySite.has(m.site_id))machinesWithoutLineBySite.set(m.site_id,[]);machinesWithoutLineBySite.get(m.site_id).push(m);}}
+  for(const line of snapshot.lines){if(!linesBySite.has(line.site_id))linesBySite.set(line.site_id,[]);linesBySite.get(line.site_id).push({...line,machines:machinesByLine.get(line.id)||[]});}
+  for(const site of snapshot.sites){if(!sitesByFactory.has(site.factory_id))sitesByFactory.set(site.factory_id,[]);sitesByFactory.get(site.factory_id).push({...site,production_lines:linesBySite.get(site.id)||[],unassigned_machines:machinesWithoutLineBySite.get(site.id)||[]});}
+  return snapshot.factories.map(factory=>({...factory,sites:sitesByFactory.get(factory.id)||[]}));
+}
+
+app.get('/api/admin/organization/hierarchy',adminRequired,async(req,res)=>{
+  try{
+    const snapshot=await organizationHierarchySnapshot(req,req.query.customer_code);
+    const allowed=organizationAllowedCustomerCodes(req);const params=[];let where='';
+    if(allowed){params.push(allowed);where='WHERE code=ANY($1::text[])';}
+    const companies=(await pool.query(`SELECT id::text,code,name,status FROM customers ${where} ORDER BY name`,params)).rows;
+    res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),customer:snapshot.customer,companies,scope_restricted:snapshot.scope_restricted,summary:{factories:snapshot.factories.length,sites:snapshot.sites.length,production_lines:snapshot.lines.length,machines:snapshot.machines.length,devices:snapshot.machines.reduce((n,x)=>n+Number(x.device_count||0),0)},factories:nestOrganizationHierarchy(snapshot),flat:{factories:snapshot.factories,sites:snapshot.sites,production_lines:snapshot.lines,machines:snapshot.machines}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/organization/factories',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const customer=await organizationAssertCustomer(req,req.body?.customer_code);const created=await one(`INSERT INTO factories(customer_id,code,name,location,country,timezone,status,metadata) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id::text,code,name,location,country,timezone,status,metadata,created_at,updated_at`,[customer.id,organizationCode(req.body?.code,'factory code'),organizationName(req.body?.name,'factory name'),cleanOptionalText(req.body?.location,220),cleanOptionalText(req.body?.country,100)||'Türkiye',organizationTimezone(req.body?.timezone),organizationStatus(req.body?.status,'active'),JSON.stringify(req.body?.metadata||{})]);await writeAuditLog(req,{action:'create_factory',entity_type:'factory',entity_id:created.id,new_values:created,metadata:{customer_code:customer.code}});res.status(201).json({status:'ok',version:APP_VERSION,factory:created});}catch(e){res.status(e.code==='23505'?409:(e.statusCode||500)).json({status:'error',version:APP_VERSION,message:e.code==='23505'?'Factory code already exists for this company':e.message});}
+});
+
+app.patch('/api/admin/organization/factories/:id',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const old=await one(`SELECT f.id::text,f.code,f.name,f.location,f.country,f.timezone,f.status,c.code AS customer_code FROM factories f JOIN customers c ON c.id=f.customer_id WHERE f.id=$1`,[req.params.id]);if(!old)return res.status(404).json({status:'not_found',message:'Factory not found'});await organizationAssertCustomer(req,old.customer_code);const updated=await one(`UPDATE factories SET name=$2,location=$3,country=$4,timezone=$5,status=$6,updated_at=now() WHERE id=$1 RETURNING id::text,code,name,location,country,timezone,status,metadata,created_at,updated_at`,[req.params.id,req.body?.name!==undefined?organizationName(req.body.name,'factory name'):old.name,req.body?.location!==undefined?cleanOptionalText(req.body.location,220):old.location,req.body?.country!==undefined?(cleanOptionalText(req.body.country,100)||'Türkiye'):old.country,req.body?.timezone!==undefined?organizationTimezone(req.body.timezone):old.timezone,req.body?.status!==undefined?organizationStatus(req.body.status):old.status]);await writeAuditLog(req,{action:'update_factory',entity_type:'factory',entity_id:updated.id,old_values:old,new_values:updated});res.json({status:'ok',version:APP_VERSION,factory:updated});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/organization/sites',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const customer=await organizationAssertCustomer(req,req.body?.customer_code);await assertSubscriptionCapacity(customer.code,'sites',1,false);const factory=await one(`SELECT id::text,code,name,timezone FROM factories WHERE id=$1 AND customer_id=$2`,[req.body?.factory_id,customer.id]);if(!factory)return res.status(404).json({status:'not_found',message:'Factory not found'});const created=await one(`INSERT INTO sites(customer_id,factory_id,code,name,location,address,timezone,workweek_start,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id::text,factory_id::text,code,name,location,address,timezone,workweek_start,status,created_at,updated_at`,[customer.id,factory.id,organizationCode(req.body?.code,'site code'),organizationName(req.body?.name,'site name'),cleanOptionalText(req.body?.location,220),cleanOptionalText(req.body?.address,500),organizationTimezone(req.body?.timezone||factory.timezone),Math.min(Math.max(Number(req.body?.workweek_start??1),0),6),organizationStatus(req.body?.status,'active')]);const line=await one(`INSERT INTO production_lines(site_id,code,name,status) VALUES($1,'general','Genel Üretim Hattı','active') ON CONFLICT(site_id,code) DO UPDATE SET updated_at=now() RETURNING id::text,code,name,status`,[created.id]);await writeAuditLog(req,{action:'create_organization_site',entity_type:'site',entity_id:created.id,new_values:created,metadata:{customer_code:customer.code,factory_id:factory.id,default_line_id:line.id}});res.status(201).json({status:'ok',version:APP_VERSION,site:created,default_line:line});}catch(e){res.status(e.code==='23505'?409:(e.statusCode||500)).json({status:'error',version:APP_VERSION,message:e.code==='23505'?'Site code already exists for this company':e.message});}
+});
+
+app.patch('/api/admin/organization/sites/:id',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const old=await one(`SELECT s.id::text,s.factory_id::text,s.code,s.name,s.location,s.address,s.timezone,s.workweek_start,s.status,c.code AS customer_code FROM sites s JOIN customers c ON c.id=s.customer_id WHERE s.id=$1`,[req.params.id]);if(!old)return res.status(404).json({status:'not_found',message:'Site not found'});await organizationAssertCustomer(req,old.customer_code);let factoryId=old.factory_id;if(req.body?.factory_id!==undefined){const f=await one(`SELECT f.id::text FROM factories f JOIN customers c ON c.id=f.customer_id WHERE f.id=$1 AND c.code=$2`,[req.body.factory_id,old.customer_code]);if(!f)return res.status(404).json({status:'not_found',message:'Factory not found'});factoryId=f.id;}const updated=await one(`UPDATE sites SET factory_id=$2,name=$3,location=$4,address=$5,timezone=$6,workweek_start=$7,status=$8,updated_at=now() WHERE id=$1 RETURNING id::text,factory_id::text,code,name,location,address,timezone,workweek_start,status,created_at,updated_at`,[req.params.id,factoryId,req.body?.name!==undefined?organizationName(req.body.name,'site name'):old.name,req.body?.location!==undefined?cleanOptionalText(req.body.location,220):old.location,req.body?.address!==undefined?cleanOptionalText(req.body.address,500):old.address,req.body?.timezone!==undefined?organizationTimezone(req.body.timezone):old.timezone,req.body?.workweek_start!==undefined?Math.min(Math.max(Number(req.body.workweek_start),0),6):old.workweek_start,req.body?.status!==undefined?organizationStatus(req.body.status):old.status]);await writeAuditLog(req,{action:'update_organization_site',entity_type:'site',entity_id:updated.id,old_values:old,new_values:updated});res.json({status:'ok',version:APP_VERSION,site:updated});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/organization/production-lines',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const site=await one(`SELECT s.id::text,s.code AS site_code,c.code AS customer_code FROM sites s JOIN customers c ON c.id=s.customer_id WHERE s.id=$1`,[req.body?.site_id]);if(!site)return res.status(404).json({status:'not_found',message:'Site not found'});await organizationAssertCustomer(req,site.customer_code);const shiftPattern={shift_count:Math.min(Math.max(Number(req.body?.shift_count||1),1),4),workdays:Array.isArray(req.body?.workdays)?req.body.workdays:[1,2,3,4,5]};const created=await one(`INSERT INTO production_lines(site_id,code,name,description,status,shift_pattern) VALUES($1,$2,$3,$4,$5,$6::jsonb) RETURNING id::text,site_id::text,code,name,description,status,shift_pattern,created_at,updated_at`,[site.id,organizationCode(req.body?.code,'line code'),organizationName(req.body?.name,'line name'),cleanOptionalText(req.body?.description,500),organizationStatus(req.body?.status,'active'),JSON.stringify(shiftPattern)]);await writeAuditLog(req,{action:'create_production_line',entity_type:'production_line',entity_id:created.id,new_values:created,metadata:{customer_code:site.customer_code,site_code:site.site_code}});res.status(201).json({status:'ok',version:APP_VERSION,production_line:created});}catch(e){res.status(e.code==='23505'?409:(e.statusCode||500)).json({status:'error',version:APP_VERSION,message:e.code==='23505'?'Production line code already exists for this site':e.message});}
+});
+
+app.patch('/api/admin/organization/production-lines/:id',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const old=await one(`SELECT pl.id::text,pl.site_id::text,pl.code,pl.name,pl.description,pl.status,pl.shift_pattern,c.code AS customer_code FROM production_lines pl JOIN sites s ON s.id=pl.site_id JOIN customers c ON c.id=s.customer_id WHERE pl.id=$1`,[req.params.id]);if(!old)return res.status(404).json({status:'not_found',message:'Production line not found'});await organizationAssertCustomer(req,old.customer_code);const shiftPattern=req.body?.shift_pattern!==undefined?req.body.shift_pattern:old.shift_pattern;const updated=await one(`UPDATE production_lines SET name=$2,description=$3,status=$4,shift_pattern=$5::jsonb,updated_at=now() WHERE id=$1 RETURNING id::text,site_id::text,code,name,description,status,shift_pattern,created_at,updated_at`,[req.params.id,req.body?.name!==undefined?organizationName(req.body.name,'line name'):old.name,req.body?.description!==undefined?cleanOptionalText(req.body.description,500):old.description,req.body?.status!==undefined?organizationStatus(req.body.status):old.status,JSON.stringify(shiftPattern||{})]);await writeAuditLog(req,{action:'update_production_line',entity_type:'production_line',entity_id:updated.id,old_values:old,new_values:updated});res.json({status:'ok',version:APP_VERSION,production_line:updated});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.patch('/api/admin/organization/machines/:id/assignment',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const old=await one(`SELECT m.id::text,m.site_id::text,m.production_line_id::text,m.code,m.name,c.code AS customer_code FROM machines m JOIN sites s ON s.id=m.site_id JOIN customers c ON c.id=s.customer_id WHERE m.id=$1`,[req.params.id]);if(!old)return res.status(404).json({status:'not_found',message:'Machine not found'});await organizationAssertCustomer(req,old.customer_code);const line=await one(`SELECT pl.id::text,pl.site_id::text,pl.code,pl.name,c.code AS customer_code FROM production_lines pl JOIN sites s ON s.id=pl.site_id JOIN customers c ON c.id=s.customer_id WHERE pl.id=$1`,[req.body?.production_line_id]);if(!line)return res.status(404).json({status:'not_found',message:'Production line not found'});if(line.customer_code!==old.customer_code){const e=new Error('Machine and production line must belong to the same company');e.statusCode=409;throw e;}const updated=await one(`UPDATE machines SET site_id=$2,production_line_id=$3,updated_at=now() WHERE id=$1 RETURNING id::text,site_id::text,production_line_id::text,code,name,machine_type,status,updated_at`,[req.params.id,line.site_id,line.id]);await writeAuditLog(req,{action:'assign_machine_production_line',entity_type:'machine',entity_id:updated.id,old_values:old,new_values:updated,metadata:{line_code:line.code}});res.json({status:'ok',version:APP_VERSION,machine:updated});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.get('/api/admin/organization/access',adminRequired,permissionRequired('MANAGE_USERS'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const allowed=organizationAllowedCustomerCodes(req);const params=[];let where='';if(allowed){params.push(allowed);where='WHERE c.code=ANY($1::text[])';}const rows=(await pool.query(`SELECT ola.id::text,ola.user_id,u.email,u.full_name,u.role AS user_role,ola.customer_id::text,c.code AS customer_code,c.name AS customer_name,ola.factory_id::text,f.code AS factory_code,f.name AS factory_name,ola.site_id::text,s.code AS site_code,s.name AS site_name,ola.production_line_id::text,pl.code AS production_line_code,pl.name AS production_line_name,ola.access_role,ola.status,ola.created_at,ola.updated_at FROM app_user_location_access ola JOIN app_users u ON u.id=ola.user_id JOIN customers c ON c.id=ola.customer_id LEFT JOIN factories f ON f.id=ola.factory_id LEFT JOIN sites s ON s.id=ola.site_id LEFT JOIN production_lines pl ON pl.id=ola.production_line_id ${where} ORDER BY u.email,c.name,f.name NULLS FIRST,s.name NULLS FIRST,pl.name NULLS FIRST`,params)).rows;const users=(await pool.query(`SELECT id,email,full_name,role,status FROM app_users WHERE status='active' ORDER BY email`)).rows;res.json({status:'ok',version:APP_VERSION,count:rows.length,access:rows,users});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/organization/access',adminRequired,permissionRequired('MANAGE_USERS'),async(req,res)=>{
+  try{
+    await ensureOrganizationFoundation();
+    const user=await one(`SELECT id,email,full_name,role,status FROM app_users WHERE id=$1`,[req.body?.user_id]);
+    if(!user)return res.status(404).json({status:'not_found',message:'User not found'});
+    const customer=await organizationAssertCustomer(req,req.body?.customer_code);
+    const factoryId=req.body?.factory_id||null;
+    const siteId=req.body?.site_id||null;
+    const lineId=req.body?.production_line_id||null;
+    const role=validateChoice(req.body?.access_role||'viewer',ORGANIZATION_ACCESS_ROLES,'access role');
+    if(lineId){const x=await one(`SELECT pl.id FROM production_lines pl JOIN sites s ON s.id=pl.site_id WHERE pl.id=$1 AND s.customer_id=$2`,[lineId,customer.id]);if(!x){const e=new Error('Production line does not belong to company');e.statusCode=409;throw e;}}
+    if(siteId){const x=await one(`SELECT id FROM sites WHERE id=$1 AND customer_id=$2`,[siteId,customer.id]);if(!x){const e=new Error('Site does not belong to company');e.statusCode=409;throw e;}}
+    if(factoryId){const x=await one(`SELECT id FROM factories WHERE id=$1 AND customer_id=$2`,[factoryId,customer.id]);if(!x){const e=new Error('Factory does not belong to company');e.statusCode=409;throw e;}}
+    const existing=await one(`SELECT id::text FROM app_user_location_access WHERE user_id=$1 AND customer_id=$2 AND factory_id IS NOT DISTINCT FROM $3::uuid AND site_id IS NOT DISTINCT FROM $4::uuid AND production_line_id IS NOT DISTINCT FROM $5::uuid LIMIT 1`,[user.id,customer.id,factoryId,siteId,lineId]);
+    const created=existing
+      ? await one(`UPDATE app_user_location_access SET access_role=$2,status='active',created_by=$3,updated_at=now() WHERE id=$1 RETURNING id::text,user_id,customer_id::text,factory_id::text,site_id::text,production_line_id::text,access_role,status,created_at,updated_at`,[existing.id,role,req.user?.email||'admin'])
+      : await one(`INSERT INTO app_user_location_access(user_id,customer_id,factory_id,site_id,production_line_id,access_role,status,created_by) VALUES($1,$2,$3,$4,$5,$6,'active',$7) RETURNING id::text,user_id,customer_id::text,factory_id::text,site_id::text,production_line_id::text,access_role,status,created_at,updated_at`,[user.id,customer.id,factoryId,siteId,lineId,role,req.user?.email||'admin']);
+    await pool.query(`INSERT INTO app_user_location_policy(user_id,enabled,updated_by) VALUES($1,true,$2) ON CONFLICT(user_id) DO UPDATE SET enabled=true,updated_by=EXCLUDED.updated_by,updated_at=now()`,[user.id,req.user?.email||'admin']);
+    await revokeSessionsForUser(user.id,{actorEmail:req.user?.email||'admin',reason:'organization_access_changed'});
+    await writeAuditLog(req,{action:'grant_location_access',entity_type:'user',entity_id:user.id,new_values:created,metadata:{user_email:user.email,customer_code:customer.code}});
+    res.status(existing?200:201).json({status:'ok',version:APP_VERSION,access:created,updated:Boolean(existing)});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.delete('/api/admin/organization/access/:id' ,adminRequired,permissionRequired('MANAGE_USERS'),async(req,res)=>{
+  try{await ensureOrganizationFoundation();const old=await one(`SELECT ola.*,u.email,c.code AS customer_code FROM app_user_location_access ola JOIN app_users u ON u.id=ola.user_id JOIN customers c ON c.id=ola.customer_id WHERE ola.id=$1`,[req.params.id]);if(!old)return res.status(404).json({status:'not_found',message:'Access record not found'});await organizationAssertCustomer(req,old.customer_code);await pool.query(`DELETE FROM app_user_location_access WHERE id=$1`,[req.params.id]);await revokeSessionsForUser(old.user_id,{actorEmail:req.user?.email||'admin',reason:'organization_access_removed'});await writeAuditLog(req,{action:'revoke_location_access',entity_type:'user',entity_id:old.user_id,old_values:old,metadata:{user_email:old.email,customer_code:old.customer_code}});res.json({status:'ok',version:APP_VERSION,deleted:true});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.get('/api/admin/organization/comparison',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{
+  try{
+    await ensureOrganizationFoundation();
+    await ensureOeeFoundation();
+    const snapshot=await organizationHierarchySnapshot(req,req.query.customer_code);
+    const range=oeeDateRange(req.query.from,req.query.to);
+    const allowedMachineIds=snapshot.machines.map(row=>String(row.id));
+    if(!snapshot.factories.length){
+      return res.json({status:'ok',version:APP_VERSION,customer:snapshot.customer,range:{from:range.from,to:range.to,days:range.days},summary:{factory_count:0,site_count:0,machine_count:0,device_count:0,active_alarm_count:0,total_count:0,best_factory:null},factories:[]});
+    }
+    const oeeData=await loadOeeData(range);
+    const oeeMachineMap=new Map((oeeData.machines||[]).map(row=>[String(row.id),row]));
+    const oeeRows=[];
+    for(const machine of snapshot.machines){
+      const base=oeeMachineMap.get(String(machine.id));
+      if(!base)continue;
+      oeeRows.push(calculateOeeMachineRow(base,base,oeeData.productions||[],oeeData.downtimes||[],oeeData.states||[],range));
+    }
+    let alarmRows=[];
+    if(allowedMachineIds.length){
+      alarmRows=(await pool.query(`SELECT machine_id::text,count(*)::int AS active_count FROM alarms WHERE status='active' AND machine_id=ANY($1::uuid[]) GROUP BY machine_id`,[allowedMachineIds])).rows;
+    }
+    const activeAlarmMap=new Map(alarmRows.map(row=>[String(row.machine_id),Number(row.active_count||0)]));
+    const siteMap=new Map(snapshot.sites.map(site=>[String(site.id),site]));
+    const factories=snapshot.factories.map(factory=>{
+      const factorySiteIds=new Set(snapshot.sites.filter(site=>String(site.factory_id)===String(factory.id)).map(site=>String(site.id)));
+      const factoryMachines=snapshot.machines.filter(machine=>factorySiteIds.has(String(machine.site_id)));
+      const machineIds=new Set(factoryMachines.map(machine=>String(machine.id)));
+      const factoryOeeRows=oeeRows.filter(row=>machineIds.has(String(row.machine_id)));
+      const oeeSummary=calculateOeeSummary(factoryOeeRows);
+      const deviceCount=factoryMachines.reduce((sum,row)=>sum+Number(row.device_count||0),0);
+      const onlineDeviceCount=factoryMachines.reduce((sum,row)=>sum+Number(row.online_device_count||0),0);
+      const activeAlarmCount=factoryMachines.reduce((sum,row)=>sum+Number(activeAlarmMap.get(String(row.id))||0),0);
+      return {
+        id:factory.id,code:factory.code,name:factory.name,location:factory.location,timezone:factory.timezone,status:factory.status,
+        site_count:factorySiteIds.size,machine_count:factoryMachines.length,device_count:deviceCount,online_device_count:onlineDeviceCount,
+        online_pct:deviceCount>0?oeePct(onlineDeviceCount/deviceCount*100):0,active_alarm_count:activeAlarmCount,
+        total_count:oeeSummary.total_count||0,good_count:oeeSummary.good_count||0,reject_count:oeeSummary.reject_count||0,
+        downtime_sec:oeeSummary.unplanned_downtime_sec||0,planned_downtime_sec:oeeSummary.planned_downtime_sec||0,
+        availability_pct:oeeSummary.availability_pct||0,performance_pct:oeeSummary.performance_pct||0,quality_pct:oeeSummary.quality_pct||0,oee_pct:oeeSummary.oee_pct||0
+      };
+    });
+    const summary={
+      factory_count:factories.length,
+      site_count:snapshot.sites.length,
+      machine_count:snapshot.machines.length,
+      device_count:snapshot.machines.reduce((n,x)=>n+Number(x.device_count||0),0),
+      active_alarm_count:factories.reduce((n,x)=>n+Number(x.active_alarm_count||0),0),
+      total_count:factories.reduce((n,x)=>n+Number(x.total_count||0),0),
+      best_factory:factories.slice().sort((a,b)=>Number(b.oee_pct)-Number(a.oee_pct))[0]||null
+    };
+    res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),customer:snapshot.customer,range:{from:range.from,to:range.to,days:range.days},summary,factories});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
 async function ensureDeviceRegistrySchema() {
   await pool.query(`
     ALTER TABLE devices ADD COLUMN IF NOT EXISTS serial_no text;
@@ -13185,6 +13573,7 @@ async function start() {
   await ensureEntities();
   await ensureSaasFoundation();
   await ensureSecurityFoundation();
+  await ensureOrganizationFoundation();
   await ensurePasswordResetSchema();
   await ensureAuditLogSchema();
   await ensureInviteSchema();

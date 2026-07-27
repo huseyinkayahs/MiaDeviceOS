@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.3.1 Admin Panel</title>
+  <title>FactoryBox v6.4.0 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -873,14 +873,40 @@
     @media(max-width:1150px){.capability-layout-v631{grid-template-columns:1fr}.capability-grid-v631{grid-template-columns:repeat(2,minmax(0,1fr))}.capability-toolbar-v631{grid-template-columns:1fr 1fr}}
     @media(max-width:700px){.capability-toolbar-v631,.capability-summary-v631,.capability-grid-v631{grid-template-columns:1fr}.capability-grid-v631 .wide{grid-column:auto}}
 
-  </style>
+  
+    /* v6.4 Multi-Site / Multi-Factory Management */
+    .org-toolbar-v640{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:12px;align-items:end;margin:14px 0}
+    .org-toolbar-v640 label,.org-form-v640 label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#465463}
+    .org-summary-v640{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:11px;margin:12px 0 16px}
+    .org-summary-v640 article{border:1px solid var(--fb-border);border-radius:15px;padding:14px;background:linear-gradient(145deg,#fff,#f5f8fa);box-shadow:0 7px 18px rgba(25,33,42,.04)}
+    .org-summary-v640 span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:850;color:var(--fb-muted)}
+    .org-summary-v640 strong{display:block;margin-top:7px;font-size:21px;color:#202832;overflow-wrap:anywhere}
+    .org-layout-v640{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:15px;align-items:start}
+    .org-panel-v640{border:1px solid var(--fb-border);border-radius:18px;padding:17px;background:#fff;box-shadow:0 10px 25px rgba(27,35,44,.05);margin-bottom:15px}
+    .org-panel-v640 h3{margin:0 0 6px}.org-panel-v640>p{margin:0 0 13px;color:var(--fb-muted);line-height:1.45}
+    .org-form-v640{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.org-form-v640 .wide{grid-column:1/-1}
+    .org-tree-v640{display:grid;gap:12px}.org-factory-v640{border:1px solid #d8e0e7;border-radius:17px;background:#f8fafb;padding:14px}
+    .org-factory-head-v640,.org-site-head-v640,.org-line-head-v640{display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .org-factory-head-v640 strong{font-size:17px}.org-site-v640{margin-top:10px;border-left:4px solid #c67723;border-radius:12px;background:#fff;padding:11px 12px}
+    .org-line-v640{margin:9px 0 0 14px;border:1px solid #e2e7ec;border-radius:11px;padding:9px 10px;background:#fbfcfd}
+    .org-machines-v640{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.org-machine-chip-v640{display:inline-flex;gap:5px;align-items:center;border:1px solid #dce3e9;border-radius:999px;padding:5px 9px;background:#fff;font-size:11px;font-weight:750}
+    .org-machine-chip-v640.online{border-color:#9bc7af;background:#f1fbf5}.org-machine-chip-v640.offline{border-color:#e5b0aa;background:#fff5f3}
+    .org-scope-badge-v640{display:inline-block;border-radius:999px;padding:4px 8px;background:#fff3dd;color:#7d4a0b;font-size:10px;font-weight:850;text-transform:uppercase}
+    .org-comparison-grid-v640{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:13px;margin:14px 0}
+    .org-comparison-card-v640{border:1px solid var(--fb-border);border-radius:17px;padding:15px;background:linear-gradient(145deg,#fff,#f6f8fa)}
+    .org-comparison-card-v640 header{display:flex;justify-content:space-between;gap:10px;align-items:start}.org-comparison-card-v640 h3{margin:0;font-size:16px}
+    .org-oee-v640{font-size:28px;font-weight:900;margin:10px 0 7px}.org-metrics-v640{display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:11px}.org-metrics-v640 span{border-top:1px solid #e6eaee;padding-top:6px}
+    .org-access-scope-v640{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    @media(max-width:1150px){.org-layout-v640{grid-template-columns:1fr}.org-summary-v640{grid-template-columns:repeat(3,minmax(0,1fr))}.org-comparison-grid-v640{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:720px){.org-toolbar-v640,.org-summary-v640,.org-form-v640,.org-access-scope-v640,.org-comparison-grid-v640{grid-template-columns:1fr}.org-form-v640 .wide{grid-column:auto}}
+</style>
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.3.1 — Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.</p>
+      <p id="adminVersionLabel">v6.4.0 — Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -929,11 +955,23 @@
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporları</span></button>
         </div>
       </div>
-      <button class="admin-nav-link-v58" data-admin-nav="tenants"><span>Müşteriler / Tenantlar</span><span class="admin-nav-pill-v58">2</span></button>
+      <div class="admin-nav-group-v517" data-nav-group="organization">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="organization" aria-expanded="false" aria-controls="organizationSubmenuV640">
+          <span>Organizasyon</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">6</span><span class="admin-nav-chevron-v517">⌄</span></span>
+        </button>
+        <div id="organizationSubmenuV640" class="admin-subnav-v517" data-admin-subnav="organization">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="tenants"><span>Şirketler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="organization"><span>Fabrikalar ve Tesisler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="production-lines"><span>Üretim Hatları</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="assets"><span>Makineler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="site-access"><span>Lokasyon Erişimi</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="factory-comparison"><span>Fabrika Karşılaştırması</span></button>
+        </div>
+      </div>
       <button class="admin-nav-link-v58" data-admin-nav="users"><span>Kullanıcılar ve Davetler</span><span class="admin-nav-pill-v58">3</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>Roller ve Yetkiler</span><span class="admin-nav-pill-v58">1</span></button>
       <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>Abonelikler</span><span class="admin-nav-pill-v58">2</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="assets"><span>Varlıklar / Makineler</span><span class="admin-nav-pill-v58">1</span></button>
       <div class="admin-nav-group-v517" data-nav-group="devices">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="devices" aria-expanded="false" aria-controls="devicesSubmenuV630">
           <span>Cihazlar</span>
@@ -949,7 +987,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.3.1: Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.
+      v6.4.0: Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.
     </div>
   </aside>
 
@@ -979,7 +1017,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.3.1: Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.4.0: Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.</p>
       </div>
     </div>
 
@@ -1732,6 +1770,39 @@
     <div id="inventoryPartHistory" class="maintenance-history-v521"><h3>Parça Geçmişi</h3><span class="muted">Bir parçadaki Geçmiş düğmesine bas.</span></div>
   </section>
 
+
+  <section id="organizationSectionV640" class="card wide admin-card" data-admin-view="organization">
+    <div class="section-title-row"><div><h2>Fabrikalar ve Tesisler</h2><p class="muted">Şirket, fabrika, tesis, üretim hattı ve makine hiyerarşisini tek ekrandan yönet.</p></div><button id="refreshOrganizationBtn" class="secondary-btn">Organizasyonu Yenile</button></div>
+    <div class="org-toolbar-v640"><label>Şirket<select id="organizationCustomerSelect"><option value="">Şirket seç...</option></select></label><div class="admin-form-actions"><span id="organizationScopeStatus" class="org-scope-badge-v640">Tüm lokasyonlar</span></div></div>
+    <div id="organizationSummaryV640" class="org-summary-v640">Organizasyon özeti yükleniyor...</div>
+    <div class="org-layout-v640">
+      <div><div class="org-panel-v640"><h3>Organizasyon Ağacı</h3><p>Fabrikadan makineye kadar mevcut yapıyı ve bağlı cihazları gösterir.</p><div id="organizationHierarchyTree" class="org-tree-v640">Hiyerarşi yükleniyor...</div></div>
+        <div class="org-panel-v640"><h3>Fabrika ve Tesis Kayıtları</h3><div id="organizationFactoriesTable">Fabrikalar yükleniyor...</div><div id="organizationSitesTable" style="margin-top:14px">Tesisler yükleniyor...</div></div></div>
+      <aside>
+        <div class="org-panel-v640"><h3>Yeni Fabrika</h3><p>Seçili şirket altında fabrika oluşturur.</p><div class="org-form-v640"><label>Kod<input id="newFactoryCode" placeholder="istanbul"></label><label>Ad<input id="newFactoryName" placeholder="İstanbul Fabrikası"></label><label>Konum<input id="newFactoryLocation" placeholder="İstanbul"></label><label>Ülke<input id="newFactoryCountry" value="Türkiye"></label><label>Saat Dilimi<input id="newFactoryTimezone" value="Europe/Istanbul"></label><label>Durum<select id="newFactoryStatus"><option value="active">active</option><option value="pilot">pilot</option><option value="inactive">inactive</option></select></label><div class="admin-form-actions wide"><button id="createFactoryBtn" class="primary-btn">Fabrika Oluştur</button></div></div><div id="factoryActionStatus" class="mini-status">Fabrika işlemi bekleniyor.</div></div>
+        <div class="org-panel-v640"><h3>Yeni Tesis / Bölüm</h3><p>Fabrika altında tesis veya üretim bölümünü oluşturur.</p><div class="org-form-v640"><label>Fabrika<select id="newOrgSiteFactory"><option value="">Fabrika seç...</option></select></label><label>Kod<input id="newOrgSiteCode" placeholder="lazer-bolumu"></label><label>Ad<input id="newOrgSiteName" placeholder="Lazer Bölümü"></label><label>Konum<input id="newOrgSiteLocation" placeholder="Bina A"></label><label class="wide">Adres<input id="newOrgSiteAddress" placeholder="Açık adres / bölüm notu"></label><label>Saat Dilimi<input id="newOrgSiteTimezone" value="Europe/Istanbul"></label><label>Hafta Başlangıcı<select id="newOrgSiteWeekStart"><option value="1">Pazartesi</option><option value="0">Pazar</option></select></label><label>Durum<select id="newOrgSiteStatus"><option value="active">active</option><option value="pilot">pilot</option><option value="inactive">inactive</option></select></label><div class="admin-form-actions wide"><button id="createOrgSiteBtn" class="primary-btn">Tesis Oluştur</button></div></div><div id="orgSiteActionStatus" class="mini-status">Tesis işlemi bekleniyor.</div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="productionLinesSectionV640" class="card wide admin-card" data-admin-view="production-lines">
+    <div class="section-title-row"><div><h2>Üretim Hatları</h2><p class="muted">Tesislerin üretim hatlarını oluştur, vardiya bilgisini tanımla ve makineleri hatlara ata.</p></div><button id="refreshProductionLinesBtn" class="secondary-btn">Hatları Yenile</button></div>
+    <div class="org-panel-v640"><h3>Yeni Üretim Hattı</h3><div class="org-form-v640"><label>Tesis<select id="newProductionLineSite"><option value="">Tesis seç...</option></select></label><label>Hat Kodu<input id="newProductionLineCode" placeholder="laser-line-1"></label><label>Hat Adı<input id="newProductionLineName" placeholder="Lazer Hattı 1"></label><label>Vardiya Sayısı<input id="newProductionLineShiftCount" type="number" min="1" max="4" value="1"></label><label class="wide">Açıklama<input id="newProductionLineDescription" placeholder="Hat açıklaması"></label><label>Durum<select id="newProductionLineStatus"><option value="active">active</option><option value="inactive">inactive</option></select></label><div class="admin-form-actions"><button id="createProductionLineBtn" class="primary-btn">Üretim Hattı Oluştur</button></div></div><div id="productionLineActionStatus" class="mini-status">Üretim hattı işlemi bekleniyor.</div></div>
+    <div class="org-panel-v640"><h3>Hatlar ve Makine Atamaları</h3><div id="productionLinesTable">Hatlar yükleniyor...</div><div id="organizationMachineAssignments" style="margin-top:15px">Makine atamaları yükleniyor...</div></div>
+  </section>
+
+  <section id="siteAccessSectionV640" class="card wide admin-card" data-admin-view="site-access">
+    <div class="section-title-row"><div><h2>Lokasyon Erişimi</h2><p class="muted">Kullanıcıları şirket, fabrika, tesis veya üretim hattı ile sınırlandır. Yetki değişince açık oturumlar güvenlik amacıyla kapatılır.</p></div><button id="refreshLocationAccessBtn" class="secondary-btn">Erişimleri Yenile</button></div>
+    <div class="org-panel-v640"><h3>Yeni Erişim Kaydı</h3><div class="org-form-v640"><label>Kullanıcı<select id="locationAccessUser"><option value="">Kullanıcı seç...</option></select></label><label>Şirket<select id="locationAccessCustomer"><option value="">Şirket seç...</option></select></label><label>Kapsam<select id="locationAccessScopeType"><option value="customer">Tüm Şirket</option><option value="factory">Fabrika</option><option value="site">Tesis</option><option value="line">Üretim Hattı</option></select></label><label>Rol<select id="locationAccessRole"><option value="viewer">viewer</option><option value="operator">operator</option><option value="admin">admin</option><option value="owner">owner</option></select></label><div class="org-access-scope-v640 wide"><label>Fabrika<select id="locationAccessFactory"><option value="">Seç...</option></select></label><label>Tesis<select id="locationAccessSite"><option value="">Seç...</option></select></label><label>Üretim Hattı<select id="locationAccessLine"><option value="">Seç...</option></select></label></div><div class="admin-form-actions wide"><button id="grantLocationAccessBtn" class="primary-btn">Erişim Ver / Güncelle</button></div></div><div id="locationAccessActionStatus" class="mini-status">Erişim işlemi bekleniyor.</div></div>
+    <div class="org-panel-v640"><h3>Aktif Lokasyon Erişimleri</h3><div id="locationAccessTable">Erişim kayıtları yükleniyor...</div></div>
+  </section>
+
+  <section id="factoryComparisonSectionV640" class="card wide admin-card" data-admin-view="factory-comparison">
+    <div class="section-title-row"><div><h2>Fabrika Karşılaştırması</h2><p class="muted">Fabrikaları cihaz bağlantısı, aktif alarm, üretim, plansız duruş ve OEE değerleriyle karşılaştır.</p></div><button id="refreshFactoryComparisonBtn" class="secondary-btn">Karşılaştırmayı Yenile</button></div>
+    <div class="org-toolbar-v640" style="grid-template-columns:repeat(3,minmax(180px,1fr)) auto"><label>Başlangıç<input id="factoryComparisonFrom" type="date"></label><label>Bitiş<input id="factoryComparisonTo" type="date"></label><label>Şirket<select id="factoryComparisonCustomer"><option value="">Şirket seç...</option></select></label><div class="admin-form-actions"><button id="applyFactoryComparisonBtn" class="primary-btn">Uygula</button></div></div>
+    <div id="factoryComparisonSummary" class="org-summary-v640">Karşılaştırma özeti yükleniyor...</div><div id="factoryComparisonCards" class="org-comparison-grid-v640">Fabrikalar yükleniyor...</div><div class="org-panel-v640"><h3>Karşılaştırma Tablosu</h3><div id="factoryComparisonTable">Karşılaştırma yükleniyor...</div></div>
+  </section>
+
   <section class="card wide admin-card" data-admin-view="permissions">
     <h2>Permission Overview</h2>
     <p class="muted">Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.</p>
@@ -2190,8 +2261,16 @@
   let selectedDeviceOnboardingId = null;
   let latestDeviceOnboardingProvision = null;
   let deviceCapabilityAdminState = {devices:[],catalog:[],profiles:[],selectedUid:'',profileKey:'custom',capabilities:[],configuration:null,permanentQr:null};
+  let organizationAdminState={customers:[],hierarchy:null,access:null,comparison:null};
 
   const I18N_PAIRS = [
+    ['Organizasyon','Organization'],['Şirketler','Companies'],['Fabrikalar ve Tesisler','Factories & Sites'],['Üretim Hatları','Production Lines'],['Makineler','Machines'],['Lokasyon Erişimi','Location Access'],['Fabrika Karşılaştırması','Factory Comparison'],
+    ['Şirket, fabrika, tesis, üretim hattı ve makine hiyerarşisini tek ekrandan yönet.','Manage the company, factory, site, production-line and machine hierarchy from one screen.'],['Organizasyonu Yenile','Refresh Organization'],['Şirket seç...','Select company...'],['Tüm lokasyonlar','All locations'],['Organizasyon özeti yükleniyor...','Loading organization summary...'],['Organizasyon Ağacı','Organization Tree'],['Fabrikadan makineye kadar mevcut yapıyı ve bağlı cihazları gösterir.','Shows the current structure and connected devices from factory down to machine.'],['Hiyerarşi yükleniyor...','Loading hierarchy...'],['Fabrika ve Tesis Kayıtları','Factory and Site Records'],['Fabrikalar yükleniyor...','Loading factories...'],['Tesisler yükleniyor...','Loading sites...'],
+    ['Yeni Fabrika','New Factory'],['Seçili şirket altında fabrika oluşturur.','Creates a factory under the selected company.'],['Fabrika Oluştur','Create Factory'],['Fabrika işlemi bekleniyor.','Waiting for a factory action.'],['Yeni Tesis / Bölüm','New Site / Department'],['Fabrika altında tesis veya üretim bölümünü oluşturur.','Creates a site or production department under a factory.'],['Fabrika seç...','Select factory...'],['Hafta Başlangıcı','Week Start'],['Pazartesi','Monday'],['Pazar','Sunday'],['Tesis Oluştur','Create Site'],['Tesis işlemi bekleniyor.','Waiting for a site action.'],
+    ['Tesislerin üretim hatlarını oluştur, vardiya bilgisini tanımla ve makineleri hatlara ata.','Create production lines for sites, define shift information and assign machines to lines.'],['Hatları Yenile','Refresh Lines'],['Yeni Üretim Hattı','New Production Line'],['Hat Kodu','Line Code'],['Hat Adı','Line Name'],['Vardiya Sayısı','Shift Count'],['Üretim Hattı Oluştur','Create Production Line'],['Üretim hattı işlemi bekleniyor.','Waiting for a production-line action.'],['Hatlar ve Makine Atamaları','Lines and Machine Assignments'],['Hatlar yükleniyor...','Loading lines...'],['Makine atamaları yükleniyor...','Loading machine assignments...'],
+    ['Kullanıcıları şirket, fabrika, tesis veya üretim hattı ile sınırlandır. Yetki değişince açık oturumlar güvenlik amacıyla kapatılır.','Restrict users to a company, factory, site or production line. Open sessions are closed when access changes.'],['Erişimleri Yenile','Refresh Access'],['Yeni Erişim Kaydı','New Access Record'],['Kullanıcı seç...','Select user...'],['Kapsam','Scope'],['Tüm Şirket','Entire Company'],['Erişim Ver / Güncelle','Grant / Update Access'],['Erişim işlemi bekleniyor.','Waiting for an access action.'],['Aktif Lokasyon Erişimleri','Active Location Access'],['Erişim kayıtları yükleniyor...','Loading access records...'],
+    ['Fabrikaları cihaz bağlantısı, aktif alarm, üretim, plansız duruş ve OEE değerleriyle karşılaştır.','Compare factories by device connectivity, active alarms, production, unplanned downtime and OEE.'],['Karşılaştırmayı Yenile','Refresh Comparison'],['Karşılaştırma özeti yükleniyor...','Loading comparison summary...'],['Fabrikalar yükleniyor...','Loading factories...'],['Karşılaştırma Tablosu','Comparison Table'],['Karşılaştırma yükleniyor...','Loading comparison...'],
+
     ['Sistem Sağlığı ve Yedekler','System Health & Backups'],['Durumu Yenile','Refresh Status'],
     ['Aktif oturumlar, giriş koruması, hesap kilitleri, şifre politikası ve güvenlik olaylarını tek merkezden yönet.','Manage active sessions, login protection, account locks, password policy and security events from one center.'],
     ['Sunucudaki açık oturumlar','Open sessions on the server'],['Geçici giriş kilidi','Temporary login lock'],['Şüpheli giriş hareketleri','Suspicious login activity'],['Değişim bekleyen kullanıcı','Users awaiting password change'],
@@ -2285,8 +2364,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.3.1 — Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.','v6.3.1 — Device capabilities, permanent QR and mobile installer are active.'],
-    ['v6.3.1: Cihaz yetkinlikleri, kalıcı QR ve mobil kurulum paneli aktif.','v6.3.1: Device capabilities, permanent QR and mobile installer are active.'],
+    ['v6.4.0 — Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.','v6.4.0 — Multi-factory, site, production-line and location access are active.'],
+    ['v6.4.0: Çoklu fabrika, tesis, üretim hattı ve lokasyon erişimi aktif.','v6.4.0: Multi-factory, site, production-line and location access are active.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -2880,7 +2959,11 @@
     'maintenance-plans':{title_tr:'Önleyici Bakım Planları',title_en:'Preventive Maintenance Plans',desc_tr:'Takvim veya çalışma saati bazlı periyodik bakım planları ve otomatik iş emri zamanlayıcısı.',desc_en:'Calendar- or runtime-based preventive maintenance plans and automatic work-order scheduling.'},
     'work-orders':{title_tr:'Bakım İş Emirleri',title_en:'Maintenance Work Orders',desc_tr:'Planlı bakım iş emirleri, kontrol listeleri, parça kullanımı ve tamamlanma geçmişi.',desc_en:'Planned maintenance work orders, checklists, part usage and completion history.'},
     inventory:{title_tr:'Yedek Parça ve Stok',title_en:'Spare Parts & Inventory',desc_tr:'Yedek parça kartları, stok hareketleri, minimum stok uyarıları ve iş emri tüketimleri.',desc_en:'Spare-part cards, stock movements, minimum-stock alerts and work-order consumption.'},
-    tenants:{title_tr:'Müşteriler / Tenantlar',title_en:'Customers / Tenants',desc_tr:'Müşteri, tenant, tesis ve atölye yönetimi.',desc_en:'Customer, tenant, site and workshop management.'},
+    organization:{title_tr:'Fabrikalar ve Tesisler',title_en:'Factories & Sites',desc_tr:'Şirket, fabrika, tesis, üretim hattı ve makine hiyerarşisi.',desc_en:'Company, factory, site, production-line and machine hierarchy.'},
+    'production-lines':{title_tr:'Üretim Hatları',title_en:'Production Lines',desc_tr:'Üretim hattı kayıtları, vardiyalar ve makine atamaları.',desc_en:'Production-line records, shifts and machine assignments.'},
+    'site-access':{title_tr:'Lokasyon Erişimi',title_en:'Location Access',desc_tr:'Kullanıcıların şirket, fabrika, tesis ve üretim hattı erişimleri.',desc_en:'User access to companies, factories, sites and production lines.'},
+    'factory-comparison':{title_tr:'Fabrika Karşılaştırması',title_en:'Factory Comparison',desc_tr:'Fabrikalar arası OEE, alarm, üretim, duruş ve cihaz bağlantısı karşılaştırması.',desc_en:'Cross-factory comparison of OEE, alarms, production, downtime and device connectivity.'},
+    tenants:{title_tr:'Şirketler / Tenantlar',title_en:'Customers / Tenants',desc_tr:'Müşteri, tenant, tesis ve atölye yönetimi.',desc_en:'Customer, tenant, site and workshop management.'},
     users:{title_tr:'Kullanıcılar ve Davetler',title_en:'Users & Invitations',desc_tr:'Kullanıcılar, davetler ve tenant erişim kayıtları.',desc_en:'Users, invitations and tenant access records.'},
     permissions:{title_tr:'Roller ve Yetkiler',title_en:'Roles & Permissions',desc_tr:'Aktif rol, yetki matrisi ve permission görünümü.',desc_en:'Active role, permission matrix and authorization overview.'},
     subscriptions:{title_tr:'Abonelikler',title_en:'Subscriptions',desc_tr:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.',desc_en:'Plans, subscription status, trial period and quota usage.'},
@@ -2912,6 +2995,12 @@
     'maintenance-plans':'maintenance',
     'work-orders':'maintenance',
     inventory:'maintenance',
+    tenants:'organization',
+    organization:'organization',
+    'production-lines':'organization',
+    assets:'organization',
+    'site-access':'organization',
+    'factory-comparison':'organization',
     devices:'devices',
     onboarding:'devices',
     capabilities:'devices'
@@ -4156,6 +4245,7 @@
   }
 
   function renderCustomers(data) {
+    organizationAdminState.customers=data.customers||[]; renderOrganizationCustomerSelectors();
     const rows = (data.customers || []).map(x => ({...x, __kind:'customer'}));
     const customerInput = document.getElementById('inviteCustomerCode');
     if (customerInput && !customerInput.value && rows.length === 1) customerInput.value = rows[0].code;
@@ -4699,7 +4789,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.3.1`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.4.0`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -4914,6 +5004,53 @@
     return apiJson('/api/admin/system-health/settings',{method:'PATCH',body:JSON.stringify({backup_enabled:value('healthBackupEnabled')==='true',backup_hour:Number(value('healthBackupHour')),retention_days:Number(value('healthRetentionDays')),max_backups:Number(value('healthMaxBackups')),critical_telegram_enabled:value('healthCriticalTelegram')==='true'})});
   }
 
+
+  function orgText(tr,en){return currentLanguage==='en'?en:tr;}
+  function orgSelectedCustomer(){return document.getElementById('organizationCustomerSelect')?.value||document.getElementById('factoryComparisonCustomer')?.value||organizationAdminState.hierarchy?.customer?.code||organizationAdminState.customers[0]?.code||'';}
+  function orgDateDefault(daysAgo=0){const d=new Date();d.setDate(d.getDate()-daysAgo);return d.toISOString().slice(0,10);}
+  function initializeOrganizationDates(){const from=document.getElementById('factoryComparisonFrom'),to=document.getElementById('factoryComparisonTo');if(from&&!from.value)from.value=orgDateDefault(6);if(to&&!to.value)to.value=orgDateDefault(0);}
+  function organizationUrl(path,extra={}){const params=new URLSearchParams(extra);const customer=orgSelectedCustomer();if(customer)params.set('customer_code',customer);const q=params.toString();return `/api/admin/organization/${path}${q?`?${q}`:''}`;}
+  function orgOptions(rows,valueKey='id',labelFn=row=>row.name){return (rows||[]).map(row=>`<option value="${esc(row[valueKey]||'')}">${esc(labelFn(row))}</option>`).join('');}
+
+  function renderOrganizationCustomerSelectors(){
+    const customers=organizationAdminState.customers||[];const current=organizationAdminState.hierarchy?.customer?.code||orgSelectedCustomer();
+    ['organizationCustomerSelect','factoryComparisonCustomer','locationAccessCustomer'].forEach(id=>{const el=document.getElementById(id);if(!el)return;const before=el.value||current;el.innerHTML='<option value="">'+orgText('Şirket seç...','Select company...')+'</option>'+orgOptions(customers,'code',row=>`${row.name} (${row.code})`);if(customers.some(x=>x.code===before))el.value=before;else if(current)el.value=current;});
+  }
+
+  function renderOrganizationHierarchy(data){
+    organizationAdminState.hierarchy=data;if(data.companies)organizationAdminState.customers=data.companies;renderOrganizationCustomerSelectors();
+    const summary=data.summary||{};const target=document.getElementById('organizationSummaryV640');if(target)target.innerHTML=`
+      <article><span>${orgText('Fabrika','Factory')}</span><strong>${esc(summary.factories||0)}</strong></article><article><span>${orgText('Tesis','Site')}</span><strong>${esc(summary.sites||0)}</strong></article><article><span>${orgText('Üretim Hattı','Production Line')}</span><strong>${esc(summary.production_lines||0)}</strong></article><article><span>${orgText('Makine','Machine')}</span><strong>${esc(summary.machines||0)}</strong></article><article><span>${orgText('Cihaz','Device')}</span><strong>${esc(summary.devices||0)}</strong></article>`;
+    const scope=document.getElementById('organizationScopeStatus');if(scope)scope.textContent=data.scope_restricted?orgText('Sınırlandırılmış Erişim','Restricted Access'):orgText('Tüm Lokasyonlar','All Locations');
+    const factories=data.factories||[];const tree=document.getElementById('organizationHierarchyTree');if(tree)tree.innerHTML=factories.length?factories.map(factory=>`<article class="org-factory-v640"><div class="org-factory-head-v640"><div><strong>${esc(factory.name)}</strong><br><small>${esc(factory.code)} · ${esc(factory.location||'-')} · ${esc(factory.timezone||'-')}</small></div><span class="status-badge ${factory.status==='active'?'ok':'warn'}">${esc(factory.status)}</span></div>${(factory.sites||[]).map(site=>`<div class="org-site-v640"><div class="org-site-head-v640"><div><strong>${esc(site.name)}</strong><br><small>${esc(site.code)} · ${esc(site.location||'-')}</small></div><small>${esc(site.machine_count||0)} ${orgText('makine','machines')}</small></div>${(site.production_lines||[]).map(line=>`<div class="org-line-v640"><div class="org-line-head-v640"><strong>${esc(line.name)}</strong><small>${esc(line.code)} · ${esc(line.machine_count||0)} ${orgText('makine','machines')}</small></div><div class="org-machines-v640">${(line.machines||[]).map(machine=>`<span class="org-machine-chip-v640 ${Number(machine.online_device_count||0)>0?'online':'offline'}">${esc(machine.name)} <small>${esc(machine.machine_type||'')}</small></span>`).join('')||`<small>${orgText('Makine yok','No machines')}</small>`}</div></div>`).join('')}${(site.unassigned_machines||[]).length?`<div class="org-line-v640"><strong>${orgText('Hatsız Makineler','Unassigned Machines')}</strong><div class="org-machines-v640">${site.unassigned_machines.map(machine=>`<span class="org-machine-chip-v640">${esc(machine.name)}</span>`).join('')}</div></div>`:''}</div>`).join('')||`<p class="muted">${orgText('Tesis yok.','No sites.')}</p>`}</article>`).join(''):`<span class="muted">${orgText('Fabrika kaydı yok.','No factory records.')}</span>`;
+    const flat=data.flat||{};const factorySelect=document.getElementById('newOrgSiteFactory');if(factorySelect){const v=factorySelect.value;factorySelect.innerHTML='<option value="">'+orgText('Fabrika seç...','Select factory...')+'</option>'+orgOptions(flat.factories,'id',row=>`${row.name} (${row.code})`);if((flat.factories||[]).some(x=>x.id===v))factorySelect.value=v;}
+    const siteSelect=document.getElementById('newProductionLineSite');if(siteSelect){const v=siteSelect.value;siteSelect.innerHTML='<option value="">'+orgText('Tesis seç...','Select site...')+'</option>'+orgOptions(flat.sites,'id',row=>`${row.name} (${row.code})`);if((flat.sites||[]).some(x=>x.id===v))siteSelect.value=v;}
+    renderOrganizationTables();renderProductionLineTables();syncLocationAccessScopeSelectors();
+  }
+
+  function renderOrganizationTables(){const data=organizationAdminState.hierarchy;if(!data)return;const flat=data.flat||{};const factoryTarget=document.getElementById('organizationFactoriesTable');if(factoryTarget)factoryTarget.innerHTML=table([{label:orgText('Kod','Code'),value:r=>r.code},{label:orgText('Ad','Name'),html:true,value:r=>`<input class="org-factory-name" value="${esc(r.name)}">`},{label:orgText('Konum','Location'),html:true,value:r=>`<input class="org-factory-location" value="${esc(r.location||'')}">`},{label:orgText('Saat Dilimi','Timezone'),html:true,value:r=>`<input class="org-factory-timezone" value="${esc(r.timezone||'Europe/Istanbul')}">`},{label:orgText('Durum','Status'),html:true,value:r=>selectHtml('org-factory-status',r.status,['active','pilot','inactive','archived'])},{label:orgText('Özet','Summary'),value:r=>`${r.site_count||0} site · ${r.machine_count||0} machine`},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="save-factory" data-id="${esc(r.id)}">${orgText('Kaydet','Save')}</button>`}],(flat.factories||[]).map(x=>({...x,__kind:'org-factory'})));
+    const siteTarget=document.getElementById('organizationSitesTable');if(siteTarget)siteTarget.innerHTML=table([{label:orgText('Kod','Code'),value:r=>r.code},{label:orgText('Fabrika','Factory'),html:true,value:r=>`<select class="org-site-factory">${orgOptions(flat.factories,'id',x=>x.name).replace(`value="${esc(r.factory_id)}"`,`value="${esc(r.factory_id)}" selected`)}</select>`},{label:orgText('Ad','Name'),html:true,value:r=>`<input class="org-site-name" value="${esc(r.name)}">`},{label:orgText('Konum','Location'),html:true,value:r=>`<input class="org-site-location" value="${esc(r.location||'')}">`},{label:orgText('Saat Dilimi','Timezone'),html:true,value:r=>`<input class="org-site-timezone" value="${esc(r.timezone||'Europe/Istanbul')}">`},{label:orgText('Durum','Status'),html:true,value:r=>selectHtml('org-site-status',r.status,['active','pilot','inactive','archived'])},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="save-site" data-id="${esc(r.id)}">${orgText('Kaydet','Save')}</button>`}],(flat.sites||[]).map(x=>({...x,__kind:'org-site'})));
+  }
+
+  function renderProductionLineTables(){const data=organizationAdminState.hierarchy;if(!data)return;const flat=data.flat||{};const linesTarget=document.getElementById('productionLinesTable');if(linesTarget)linesTarget.innerHTML=table([{label:orgText('Tesis','Site'),value:r=>(flat.sites||[]).find(x=>x.id===r.site_id)?.name||'-'},{label:orgText('Kod','Code'),value:r=>r.code},{label:orgText('Hat Adı','Line Name'),html:true,value:r=>`<input class="org-line-name" value="${esc(r.name)}">`},{label:orgText('Vardiya','Shift'),html:true,value:r=>`<input class="org-line-shifts" type="number" min="1" max="4" value="${esc(r.shift_pattern?.shift_count||1)}">`},{label:orgText('Durum','Status'),html:true,value:r=>selectHtml('org-line-status',r.status,['active','inactive','archived'])},{label:orgText('Makine','Machines'),value:r=>String(r.machine_count||0)},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="save-line" data-id="${esc(r.id)}">${orgText('Kaydet','Save')}</button>`}],(flat.production_lines||[]).map(x=>({...x,__kind:'org-line'})));
+    const machineTarget=document.getElementById('organizationMachineAssignments');if(machineTarget)machineTarget.innerHTML=table([{label:orgText('Makine','Machine'),value:r=>`${r.name} (${r.code})`},{label:orgText('Tesis','Site'),value:r=>(flat.sites||[]).find(x=>x.id===r.site_id)?.name||'-'},{label:orgText('Üretim Hattı','Production Line'),html:true,value:r=>`<select class="org-machine-line">${(flat.production_lines||[]).map(line=>`<option value="${esc(line.id)}" ${line.id===r.production_line_id?'selected':''}>${esc((flat.sites||[]).find(x=>x.id===line.site_id)?.name||'-')} / ${esc(line.name)}</option>`).join('')}</select>`},{label:orgText('Cihaz','Devices'),value:r=>`${r.online_device_count||0}/${r.device_count||0}`},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="assign-machine" data-id="${esc(r.id)}">${orgText('Ata','Assign')}</button>`}],(flat.machines||[]).map(x=>({...x,__kind:'org-machine'})));
+  }
+
+  function renderOrganizationAccess(data){organizationAdminState.access=data;const users=data.users||[];const userSel=document.getElementById('locationAccessUser');if(userSel){const v=userSel.value;userSel.innerHTML='<option value="">'+orgText('Kullanıcı seç...','Select user...')+'</option>'+orgOptions(users,'id',x=>`${x.full_name||x.email} (${x.email})`);if(users.some(x=>x.id===v))userSel.value=v;}const target=document.getElementById('locationAccessTable');if(target)target.innerHTML=table([{label:orgText('Kullanıcı','User'),value:r=>`${r.full_name||'-'} / ${r.email}`},{label:orgText('Şirket','Company'),value:r=>r.customer_name},{label:orgText('Kapsam','Scope'),value:r=>r.production_line_name?`${orgText('Hat','Line')}: ${r.production_line_name}`:r.site_name?`${orgText('Tesis','Site')}: ${r.site_name}`:r.factory_name?`${orgText('Fabrika','Factory')}: ${r.factory_name}`:orgText('Tüm Şirket','Entire Company')},{label:orgText('Rol','Role'),value:r=>r.access_role},{label:orgText('Durum','Status'),value:r=>r.status},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="revoke-access" data-id="${esc(r.id)}">${orgText('Kaldır','Remove')}</button>`}],(data.access||[]).map(x=>({...x,__kind:'org-access'})));}
+
+  function syncLocationAccessScopeSelectors(){const data=organizationAdminState.hierarchy?.flat||{};const scope=document.getElementById('locationAccessScopeType')?.value||'customer';const f=document.getElementById('locationAccessFactory'),si=document.getElementById('locationAccessSite'),li=document.getElementById('locationAccessLine');if(f){const v=f.value;f.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(data.factories,'id',x=>x.name);if((data.factories||[]).some(x=>x.id===v))f.value=v;f.disabled=!['factory','site','line'].includes(scope);}if(si){const selectedFactory=f?.value;const rows=(data.sites||[]).filter(x=>!selectedFactory||x.factory_id===selectedFactory);const v=si.value;si.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(rows,'id',x=>x.name);if(rows.some(x=>x.id===v))si.value=v;si.disabled=!['site','line'].includes(scope);}if(li){const selectedSite=si?.value;const rows=(data.production_lines||[]).filter(x=>!selectedSite||x.site_id===selectedSite);const v=li.value;li.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(rows,'id',x=>x.name);if(rows.some(x=>x.id===v))li.value=v;li.disabled=scope!=='line';}}
+
+  function renderFactoryComparison(data){organizationAdminState.comparison=data;const s=data.summary||{};const summary=document.getElementById('factoryComparisonSummary');if(summary)summary.innerHTML=`<article><span>${orgText('Fabrika','Factories')}</span><strong>${esc(s.factory_count||0)}</strong></article><article><span>${orgText('Tesis','Sites')}</span><strong>${esc(s.site_count||0)}</strong></article><article><span>${orgText('Makine','Machines')}</span><strong>${esc(s.machine_count||0)}</strong></article><article><span>${orgText('Aktif Alarm','Active Alarms')}</span><strong>${esc(s.active_alarm_count||0)}</strong></article><article><span>${orgText('En İyi Fabrika','Best Factory')}</span><strong>${esc(s.best_factory?.name||'-')}</strong></article>`;const cards=document.getElementById('factoryComparisonCards');if(cards)cards.innerHTML=(data.factories||[]).map(r=>`<article class="org-comparison-card-v640"><header><div><h3>${esc(r.name)}</h3><small>${esc(r.location||'-')}</small></div><span class="status-badge ${Number(r.oee_pct)>=85?'ok':Number(r.oee_pct)>=60?'warn':'danger'}">${esc(r.status)}</span></header><div class="org-oee-v640">${esc(r.oee_pct||0)}%</div><div class="org-metrics-v640"><span>Availability<br><strong>${esc(r.availability_pct||0)}%</strong></span><span>Performance<br><strong>${esc(r.performance_pct||0)}%</strong></span><span>Quality<br><strong>${esc(r.quality_pct||0)}%</strong></span><span>${orgText('Cihaz Online','Devices Online')}<br><strong>${esc(r.online_device_count||0)}/${esc(r.device_count||0)}</strong></span><span>${orgText('Üretim','Production')}<br><strong>${esc(r.total_count||0)}</strong></span><span>${orgText('Duruş','Downtime')}<br><strong>${esc(Math.round(Number(r.downtime_sec||0)/60))} dk</strong></span></div></article>`).join('')||`<span class="muted">${orgText('Karşılaştırılacak fabrika yok.','No factories to compare.')}</span>`;const target=document.getElementById('factoryComparisonTable');if(target)target.innerHTML=table([{label:orgText('Fabrika','Factory'),value:r=>r.name},{label:'OEE',value:r=>`${r.oee_pct}%`},{label:'Availability',value:r=>`${r.availability_pct}%`},{label:'Performance',value:r=>`${r.performance_pct}%`},{label:'Quality',value:r=>`${r.quality_pct}%`},{label:orgText('Cihaz','Devices'),value:r=>`${r.online_device_count}/${r.device_count}`},{label:orgText('Aktif Alarm','Active Alarms'),value:r=>String(r.active_alarm_count||0)},{label:orgText('Üretim','Production'),value:r=>String(r.total_count||0)},{label:orgText('Plansız Duruş','Unplanned Downtime'),value:r=>`${Math.round(Number(r.downtime_sec||0)/60)} dk`}],data.factories||[]);}
+
+  async function reloadOrganizationAll(){const customer=orgSelectedCustomer();const h=await getJson(`/api/admin/organization/hierarchy${customer?`?customer_code=${encodeURIComponent(customer)}`:''}`);renderOrganizationHierarchy(h);if(can('MANAGE_USERS')){try{renderOrganizationAccess(await getJson('/api/admin/organization/access'));}catch(e){setError('locationAccessTable',e.message);}}initializeOrganizationDates();const from=document.getElementById('factoryComparisonFrom')?.value,to=document.getElementById('factoryComparisonTo')?.value;renderFactoryComparison(await getJson(`/api/admin/organization/comparison?customer_code=${encodeURIComponent(h.customer.code)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`));}
+
+  async function createFactoryV640(){const body={customer_code:orgSelectedCustomer(),code:document.getElementById('newFactoryCode')?.value,name:document.getElementById('newFactoryName')?.value,location:document.getElementById('newFactoryLocation')?.value,country:document.getElementById('newFactoryCountry')?.value,timezone:document.getElementById('newFactoryTimezone')?.value,status:document.getElementById('newFactoryStatus')?.value};return apiJson('/api/admin/organization/factories',{method:'POST',body:JSON.stringify(body)});}
+  async function createOrgSiteV640(){const body={customer_code:orgSelectedCustomer(),factory_id:document.getElementById('newOrgSiteFactory')?.value,code:document.getElementById('newOrgSiteCode')?.value,name:document.getElementById('newOrgSiteName')?.value,location:document.getElementById('newOrgSiteLocation')?.value,address:document.getElementById('newOrgSiteAddress')?.value,timezone:document.getElementById('newOrgSiteTimezone')?.value,workweek_start:Number(document.getElementById('newOrgSiteWeekStart')?.value||1),status:document.getElementById('newOrgSiteStatus')?.value};return apiJson('/api/admin/organization/sites',{method:'POST',body:JSON.stringify(body)});}
+  async function createProductionLineV640(){const body={site_id:document.getElementById('newProductionLineSite')?.value,code:document.getElementById('newProductionLineCode')?.value,name:document.getElementById('newProductionLineName')?.value,description:document.getElementById('newProductionLineDescription')?.value,shift_count:Number(document.getElementById('newProductionLineShiftCount')?.value||1),status:document.getElementById('newProductionLineStatus')?.value};return apiJson('/api/admin/organization/production-lines',{method:'POST',body:JSON.stringify(body)});}
+  async function grantLocationAccessV640(){const scope=document.getElementById('locationAccessScopeType')?.value||'customer';const body={user_id:document.getElementById('locationAccessUser')?.value,customer_code:document.getElementById('locationAccessCustomer')?.value||orgSelectedCustomer(),factory_id:scope==='factory'?document.getElementById('locationAccessFactory')?.value||null:null,site_id:scope==='site'?document.getElementById('locationAccessSite')?.value||null:null,production_line_id:scope==='line'?document.getElementById('locationAccessLine')?.value||null:null,access_role:document.getElementById('locationAccessRole')?.value};return apiJson('/api/admin/organization/access',{method:'POST',body:JSON.stringify(body)});}
+
+  async function handleOrganizationActionV640(button){const action=button.dataset.orgAction,id=button.dataset.id;const row=button.closest('tr');button.disabled=true;try{if(action==='save-factory')await apiJson(`/api/admin/organization/factories/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-factory-name')?.value,location:row.querySelector('.org-factory-location')?.value,timezone:row.querySelector('.org-factory-timezone')?.value,status:row.querySelector('.org-factory-status')?.value})});if(action==='save-site')await apiJson(`/api/admin/organization/sites/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({factory_id:row.querySelector('.org-site-factory')?.value,name:row.querySelector('.org-site-name')?.value,location:row.querySelector('.org-site-location')?.value,timezone:row.querySelector('.org-site-timezone')?.value,status:row.querySelector('.org-site-status')?.value})});if(action==='save-line')await apiJson(`/api/admin/organization/production-lines/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-line-name')?.value,status:row.querySelector('.org-line-status')?.value,shift_pattern:{shift_count:Number(row.querySelector('.org-line-shifts')?.value||1),workdays:[1,2,3,4,5]}})});if(action==='assign-machine')await apiJson(`/api/admin/organization/machines/${encodeURIComponent(id)}/assignment`,{method:'PATCH',body:JSON.stringify({production_line_id:row.querySelector('.org-machine-line')?.value})});if(action==='revoke-access')await apiJson(`/api/admin/organization/access/${encodeURIComponent(id)}`,{method:'DELETE'});await reloadOrganizationAll();}finally{button.disabled=false;}}
+
   async function loadAdmin() {
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
@@ -4963,6 +5100,9 @@
       }, 'adminCounts'],
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],
+      ['organization-hierarchy', organizationUrl('hierarchy'), renderOrganizationHierarchy, 'organizationHierarchyTree'],
+      ...(can('MANAGE_USERS') ? [['organization-access','/api/admin/organization/access',renderOrganizationAccess,'locationAccessTable']] : []),
+      ['factory-comparison', organizationUrl('comparison',{from:document.getElementById('factoryComparisonFrom')?.value||orgDateDefault(6),to:document.getElementById('factoryComparisonTo')?.value||orgDateDefault(0)}), renderFactoryComparison, 'factoryComparisonTable'],
       ...(can('VIEW_BILLING') ? [
         ['subscription-plans', '/api/admin/subscription-plans', renderSubscriptionPlans, 'subscriptionPlansTable'],
         ['subscriptions', '/api/admin/subscriptions', renderSubscriptions, 'subscriptionsTable']
@@ -6240,6 +6380,22 @@
       const btn=e.target.closest('[data-onboarding-action]');if(!btn)return;btn.disabled=true;
       try{await handleDeviceOnboardingAction(btn);}catch(error){const st=document.getElementById('deviceOnboardingFormResult');if(st)st.textContent=error.message;}finally{btn.disabled=false;}
     });
+
+
+    initializeOrganizationDates();
+    const refreshOrganizationBtn=document.getElementById('refreshOrganizationBtn');if(refreshOrganizationBtn)refreshOrganizationBtn.addEventListener('click',async()=>{refreshOrganizationBtn.disabled=true;try{await reloadOrganizationAll();}catch(e){setError('organizationHierarchyTree',e.message);}finally{refreshOrganizationBtn.disabled=false;}});
+    const refreshProductionLinesBtn=document.getElementById('refreshProductionLinesBtn');if(refreshProductionLinesBtn)refreshProductionLinesBtn.addEventListener('click',reloadOrganizationAll);
+    const refreshLocationAccessBtn=document.getElementById('refreshLocationAccessBtn');if(refreshLocationAccessBtn)refreshLocationAccessBtn.addEventListener('click',reloadOrganizationAll);
+    const refreshFactoryComparisonBtn=document.getElementById('refreshFactoryComparisonBtn');if(refreshFactoryComparisonBtn)refreshFactoryComparisonBtn.addEventListener('click',reloadOrganizationAll);
+    const applyFactoryComparisonBtn=document.getElementById('applyFactoryComparisonBtn');if(applyFactoryComparisonBtn)applyFactoryComparisonBtn.addEventListener('click',reloadOrganizationAll);
+    const orgCustomer=document.getElementById('organizationCustomerSelect');if(orgCustomer)orgCustomer.addEventListener('change',async()=>{const comparison=document.getElementById('factoryComparisonCustomer');if(comparison)comparison.value=orgCustomer.value;const accessCustomer=document.getElementById('locationAccessCustomer');if(accessCustomer)accessCustomer.value=orgCustomer.value;await reloadOrganizationAll();});
+    const comparisonCustomer=document.getElementById('factoryComparisonCustomer');if(comparisonCustomer)comparisonCustomer.addEventListener('change',()=>{if(orgCustomer)orgCustomer.value=comparisonCustomer.value;reloadOrganizationAll();});
+    const createFactoryBtn=document.getElementById('createFactoryBtn');if(createFactoryBtn)createFactoryBtn.addEventListener('click',async()=>{createFactoryBtn.disabled=true;const st=document.getElementById('factoryActionStatus');try{await createFactoryV640();if(st)st.textContent=orgText('Fabrika oluşturuldu.','Factory created.');await reloadOrganizationAll();}catch(e){if(st)st.textContent=e.message;}finally{createFactoryBtn.disabled=false;}});
+    const createOrgSiteBtn=document.getElementById('createOrgSiteBtn');if(createOrgSiteBtn)createOrgSiteBtn.addEventListener('click',async()=>{createOrgSiteBtn.disabled=true;const st=document.getElementById('orgSiteActionStatus');try{await createOrgSiteV640();if(st)st.textContent=orgText('Tesis ve varsayılan üretim hattı oluşturuldu.','Site and default production line created.');await reloadOrganizationAll();}catch(e){if(st)st.textContent=e.message;}finally{createOrgSiteBtn.disabled=false;}});
+    const createProductionLineBtn=document.getElementById('createProductionLineBtn');if(createProductionLineBtn)createProductionLineBtn.addEventListener('click',async()=>{createProductionLineBtn.disabled=true;const st=document.getElementById('productionLineActionStatus');try{await createProductionLineV640();if(st)st.textContent=orgText('Üretim hattı oluşturuldu.','Production line created.');await reloadOrganizationAll();}catch(e){if(st)st.textContent=e.message;}finally{createProductionLineBtn.disabled=false;}});
+    const grantLocationAccessBtn=document.getElementById('grantLocationAccessBtn');if(grantLocationAccessBtn)grantLocationAccessBtn.addEventListener('click',async()=>{grantLocationAccessBtn.disabled=true;const st=document.getElementById('locationAccessActionStatus');try{await grantLocationAccessV640();if(st)st.textContent=orgText('Erişim kaydedildi. Kullanıcının açık oturumları kapatıldı.','Access saved. The user’s open sessions were closed.');await reloadOrganizationAll();}catch(e){if(st)st.textContent=e.message;}finally{grantLocationAccessBtn.disabled=false;}});
+    ['locationAccessScopeType','locationAccessFactory','locationAccessSite'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',syncLocationAccessScopeSelectors);});
+    ['organizationSectionV640','productionLinesSectionV640','siteAccessSectionV640'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',async event=>{const btn=event.target.closest('[data-org-action]');if(!btn)return;try{await handleOrganizationActionV640(btn);}catch(e){document.getElementById('adminStatus').textContent=e.message;}});});
 
     document.body.addEventListener('click', handleAction);
     document.body.addEventListener('change', (e) => {

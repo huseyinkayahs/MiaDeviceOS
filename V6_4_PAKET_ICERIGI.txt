@@ -1,0 +1,14 @@
+FactoryBox One v6.4.0 — Paket İçeriği
+=====================================
+
+Değişen / eklenen dosyalar:
+
+platform/backend/server.js
+platform/backend/public/admin.html
+platform/database/migrations/040_multi_site_multi_factory_management.sql
+docs/V6_4_MULTI_SITE_MULTI_FACTORY_MANAGEMENT.md
+KURULUM_V6_4.txt
+V6_4_PAKET_ICERIGI.txt
+
+Paket tipi:
+PROJE ÜZERİNE KOPYALA — yalnızca değişen ve yeni dosyalar.

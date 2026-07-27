@@ -1,0 +1,29 @@
+FactoryBox One v6.4.0 Kurulum
+================================
+
+1. Backend'i durdurun.
+2. ZIP içeriğini FactoryBox ana proje klasörünün üzerine kopyalayın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. Backend'i başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin Panel'de Ctrl + F5 yapın.
+6. Sürümün v6.4.0 olduğunu kontrol edin.
+7. Organizasyon > Fabrikalar ve Tesisler ekranını açın.
+
+İlk açılışta mevcut kayıtlar otomatik olarak geriye uyumlu hiyerarşiye alınır:
+- Mevcut şirket -> Ana Fabrika
+- Mevcut tesis -> Ana Fabrika altında
+- Mevcut makine -> Genel Üretim Hattı altında
+
+Önerilen ilk test:
+- Yeni fabrika oluşturun.
+- Fabrika altında yeni tesis oluşturun.
+- Tesis altında üretim hattı oluşturun.
+- Bir makineyi yeni üretim hattına atayın.
+- Fabrika Karşılaştırması ekranını açın.
+
+Not:
+Lokasyon erişimi değiştirilince ilgili kullanıcının açık oturumları güvenlik amacıyla kapatılır.
