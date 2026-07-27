@@ -1,0 +1,14 @@
+FactoryBox One v6.2.0 Security Hardening & Session Management
+
+DEĞİŞEN DOSYALAR
+- platform/backend/server.js
+- platform/backend/public/admin.html
+
+YENİ DOSYALAR
+- platform/backend/.env.security.example
+- docs/V6_2_SECURITY_HARDENING_SESSION_MANAGEMENT.md
+- KURULUM_V6_2_0.txt
+- V6_2_0_PAKET_ICERIGI.txt
+
+PAKET TİPİ
+Mevcut proje üzerine kopyalanacak değişiklik paketi.

@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.1.2 Admin Panel</title>
+  <title>FactoryBox v6.2.0 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -442,7 +442,7 @@
     @media(max-width:680px){.general-settings-grid-v600{grid-template-columns:1fr}.general-settings-grid-v600 .wide-setting-v600{grid-column:span 1}}
 
 
-    /* v6.1.2 Industrial content workspace and premium form controls */
+    /* v6.2.0 Industrial content workspace and premium form controls */
     :root {
       --fb-bg:#edf1f4;
       --fb-panel:#ffffff;
@@ -724,6 +724,28 @@
     @media(max-width:1280px){.health-summary-grid-v610{grid-template-columns:repeat(3,minmax(0,1fr))}.health-settings-grid-v610{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:850px){.health-summary-grid-v610,.health-service-grid-v610,.health-settings-grid-v610{grid-template-columns:1fr 1fr}}
     @media(max-width:560px){.health-summary-grid-v610,.health-service-grid-v610,.health-settings-grid-v610{grid-template-columns:1fr}}
+
+
+    /* v6.2.0 Security & Session Management */
+    .security-summary-grid-v620{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0 22px}
+    .security-summary-card-v620{border:1px solid var(--fb-border);border-radius:16px;padding:18px;background:linear-gradient(145deg,#fff,#f7fafc);box-shadow:0 10px 26px rgba(15,23,42,.06)}
+    .security-summary-card-v620 span{display:block;color:var(--fb-muted);font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+    .security-summary-card-v620 strong{display:block;font-size:1.8rem;color:var(--fb-text);line-height:1.1}
+    .security-summary-card-v620 small{display:block;color:var(--fb-muted);margin-top:8px}
+    .security-panel-v620{border:1px solid var(--fb-border);border-radius:18px;padding:20px;margin-top:18px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.05)}
+    .security-panel-v620>header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+    .security-panel-v620>header h3{margin:0 0 5px;font-size:1.12rem}.security-panel-v620>header p{margin:0;color:var(--fb-muted)}
+    .security-settings-grid-v620{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .security-settings-grid-v620 label,.security-password-grid-v620 label{display:flex;flex-direction:column;gap:7px;font-weight:700;color:#526171;font-size:.88rem}
+    .security-password-grid-v620{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end}
+    .security-chip-v620{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:5px 10px;font-size:.72rem;font-weight:900;letter-spacing:.04em;white-space:nowrap}
+    .security-chip-v620.ok{color:#0b6b52;background:#dcf7ed;border:1px solid #a8e5d2}.security-chip-v620.warn{color:#8a5200;background:#fff3d8;border:1px solid #f2d28d}.security-chip-v620.danger{color:#a12626;background:#ffe5e5;border:1px solid #f3b1b1}.security-chip-v620.neutral{color:#51606d;background:#edf2f5;border:1px solid #d4dee5}
+    .security-current-session-v620{box-shadow:inset 4px 0 0 #d97706;background:#fffaf0}
+    .security-actions-v620{display:flex;gap:7px;flex-wrap:wrap}.security-actions-v620 button{padding:7px 10px;font-size:.78rem}
+    .security-policy-note-v620{margin-top:12px;padding:12px 14px;border-left:4px solid #d97706;border-radius:9px;background:#fff8eb;color:#745019}
+    @media(max-width:1100px){.security-summary-grid-v620,.security-settings-grid-v620{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:720px){.security-summary-grid-v620,.security-settings-grid-v620,.security-password-grid-v620{grid-template-columns:1fr}.security-panel-v620>header{flex-direction:column}}
+
 </style>
 </head>
 <body class="admin-ui-v58">
@@ -731,7 +753,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.1.2 — Docker PostgreSQL yedekleme ve sistem sağlığı doğruluk düzeltmesi aktif.</p>
+      <p id="adminVersionLabel">v6.2.0 — Güvenlik sertleştirme ve oturum yönetimi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -769,11 +791,12 @@
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
           <span>Sistem Ayarları</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">5</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">6</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="general"><span>Genel Ayarlar</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="health"><span>Sistem Sağlığı ve Yedekler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="security-center"><span>Güvenlik ve Oturumlar</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Bildirimler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Otomasyon Zamanlayıcı</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporları</span></button>
@@ -789,7 +812,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.1.2: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.
+      v6.2.0: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.
     </div>
   </aside>
 
@@ -819,7 +842,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.1.2: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.2.0: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.</p>
       </div>
     </div>
 
@@ -1190,6 +1213,75 @@
         <select id="systemHealthLogLevel" class="health-log-filter-v610"><option value="all">Tüm seviyeler</option><option value="info">Info</option><option value="warning">Warning</option><option value="error">Error</option></select>
       </header>
       <div id="systemHealthLogs">Sistem günlükleri yükleniyor...</div>
+    </div>
+  </section>
+
+
+
+  <section id="securityCenterSection" class="card wide admin-card" data-admin-view="security-center">
+    <div class="section-title-row">
+      <div>
+        <h2>Güvenlik ve Oturum Yönetimi</h2>
+        <p class="muted">Aktif oturumlar, giriş koruması, hesap kilitleri, şifre politikası ve güvenlik olaylarını tek merkezden yönet.</p>
+      </div>
+      <div class="button-row">
+        <button id="refreshSecurityCenterBtn" class="secondary-btn">Durumu Yenile</button>
+        <button id="saveSecuritySettingsBtn">Ayarları Kaydet</button>
+      </div>
+    </div>
+    <div id="securityCenterStatus" class="mini-status">Güvenlik merkezi yükleniyor...</div>
+
+    <div class="security-summary-grid-v620">
+      <div class="security-summary-card-v620"><span>Aktif Oturum</span><strong id="securityActiveSessions">-</strong><small>Sunucudaki açık oturumlar</small></div>
+      <div class="security-summary-card-v620"><span>Kilitli Hesap</span><strong id="securityLockedUsers">-</strong><small>Geçici giriş kilidi</small></div>
+      <div class="security-summary-card-v620"><span>Hatalı Giriş / 24s</span><strong id="securityFailedLogins">-</strong><small>Şüpheli giriş hareketleri</small></div>
+      <div class="security-summary-card-v620"><span>Şifre Değişimi</span><strong id="securityForcedPasswords">-</strong><small>Değişim bekleyen kullanıcı</small></div>
+    </div>
+
+    <div class="security-panel-v620">
+      <header><div><h3>Güvenlik Politikası</h3><p>Oturum süreleri, hesap kilidi, güçlü şifre ve API koruma ayarları.</p></div></header>
+      <div class="security-settings-grid-v620">
+        <label>Oturum Süresi (saat)<input id="securitySessionHours" type="number" min="1" max="168" value="12"></label>
+        <label>Boşta Kalma Süresi (dk)<input id="securityIdleMinutes" type="number" min="5" max="1440" value="30"></label>
+        <label>Maks. Hatalı Giriş<input id="securityMaxFailed" type="number" min="3" max="20" value="5"></label>
+        <label>Hesap Kilidi (dk)<input id="securityLockoutMinutes" type="number" min="1" max="1440" value="15"></label>
+        <label>Minimum Şifre Uzunluğu<input id="securityPasswordMin" type="number" min="8" max="64" value="10"></label>
+        <label>Büyük Harf<select id="securityRequireUpper"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
+        <label>Küçük Harf<select id="securityRequireLower"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
+        <label>Rakam<select id="securityRequireNumber"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
+        <label>Özel Karakter<select id="securityRequireSpecial"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
+        <label>API Limiti / dakika<input id="securityApiRate" type="number" min="60" max="5000" value="300"></label>
+        <label>Giriş Limiti / 15 dk<input id="securityLoginRate" type="number" min="5" max="200" value="20"></label>
+        <label>Şüpheli Giriş Telegram<select id="securityTelegramAlert"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+        <label>HTTP Güvenlik Başlıkları<select id="securityHeadersEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+        <label>CSRF Origin Kontrolü<select id="securityCsrfEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+      </div>
+      <div id="securityPolicyNote" class="security-policy-note-v620">Şifre politikası yükleniyor...</div>
+    </div>
+
+    <div class="security-panel-v620">
+      <header><div><h3>Şifremi Değiştir</h3><p>Şifre değiştirildiğinde bu cihaz dışındaki açık oturumların tamamı kapatılır.</p></div></header>
+      <div class="security-password-grid-v620">
+        <label>Mevcut Şifre<input id="securityCurrentPassword" type="password" autocomplete="current-password"></label>
+        <label>Yeni Şifre<input id="securityNewPassword" type="password" autocomplete="new-password"></label>
+        <div><button id="changeOwnPasswordBtn">Şifremi Değiştir</button></div>
+      </div>
+      <div id="securityPasswordStatus" class="mini-status">Şifre işlemi bekleniyor.</div>
+    </div>
+
+    <div class="security-panel-v620">
+      <header><div><h3>Aktif Oturumlar</h3><p>IP adresi, cihaz, son aktivite ve oturum süreleri. Mevcut oturum turuncu çizgiyle gösterilir.</p></div></header>
+      <div id="securitySessionsTable">Oturumlar yükleniyor...</div>
+    </div>
+
+    <div class="security-panel-v620">
+      <header><div><h3>Hesap Güvenliği</h3><p>Kilitli hesapları aç, kullanıcı oturumlarını kapat, geçici şifre belirle veya ilk girişte şifre değişimini zorunlu kıl.</p></div></header>
+      <div id="securityUsersTable">Hesap durumları yükleniyor...</div>
+    </div>
+
+    <div class="security-panel-v620">
+      <header><div><h3>Son Güvenlik Olayları</h3><p>Başarılı/hatalı girişler, hesap kilitleri, oturum kapatma ve şifre işlemleri.</p></div></header>
+      <div id="securityEventsTable">Güvenlik olayları yükleniyor...</div>
     </div>
   </section>
 
@@ -1831,7 +1923,19 @@
   let translationObserver = null;
 
   const I18N_PAIRS = [
-    ['Sistem Sağlığı ve Yedekler','System Health & Backups'],['Durumu Yenile','Refresh Status'],['Tam Sağlık Kontrolü','Full Health Check'],
+    ['Sistem Sağlığı ve Yedekler','System Health & Backups'],['Durumu Yenile','Refresh Status'],
+    ['Aktif oturumlar, giriş koruması, hesap kilitleri, şifre politikası ve güvenlik olaylarını tek merkezden yönet.','Manage active sessions, login protection, account locks, password policy and security events from one center.'],
+    ['Sunucudaki açık oturumlar','Open sessions on the server'],['Geçici giriş kilidi','Temporary login lock'],['Şüpheli giriş hareketleri','Suspicious login activity'],['Değişim bekleyen kullanıcı','Users awaiting password change'],
+    ['Oturum süreleri, hesap kilidi, güçlü şifre ve API koruma ayarları.','Session durations, account lockout, strong-password and API protection settings.'],
+    ['Oturum Süresi (saat)','Session Duration (hours)'],['Boşta Kalma Süresi (dk)','Idle Timeout (min)'],['Maks. Hatalı Giriş','Max Failed Logins'],['Hesap Kilidi (dk)','Account Lockout (min)'],['Minimum Şifre Uzunluğu','Minimum Password Length'],
+    ['Büyük Harf','Uppercase'],['Küçük Harf','Lowercase'],['Rakam','Number'],['Özel Karakter','Special Character'],['Zorunlu','Required'],['İsteğe Bağlı','Optional'],
+    ['API Limiti / dakika','API Limit / minute'],['Giriş Limiti / 15 dk','Login Limit / 15 min'],['Şüpheli Giriş Telegram','Suspicious Login Telegram'],['HTTP Güvenlik Başlıkları','HTTP Security Headers'],['CSRF Origin Kontrolü','CSRF Origin Check'],
+    ['Şifre değiştirildiğinde bu cihaz dışındaki açık oturumların tamamı kapatılır.','Changing the password closes every open session except this device.'],['Şifre işlemi bekleniyor.','Waiting for password action.'],
+    ['IP adresi, cihaz, son aktivite ve oturum süreleri. Mevcut oturum turuncu çizgiyle gösterilir.','IP address, device, last activity and session times. The current session is shown with an orange line.'],
+    ['Kilitli hesapları aç, kullanıcı oturumlarını kapat, geçici şifre belirle veya ilk girişte şifre değişimini zorunlu kıl.','Unlock accounts, close user sessions, set a temporary password or require a password change at first login.'],
+    ['Başarılı/hatalı girişler, hesap kilitleri, oturum kapatma ve şifre işlemleri.','Successful/failed logins, account locks, session closures and password actions.'],
+    ['Güvenlik merkezi yükleniyor...','Loading Security Center...'],['Şifre politikası yükleniyor...','Loading password policy...'],['Oturumlar yükleniyor...','Loading sessions...'],['Hesap durumları yükleniyor...','Loading account status...'],['Güvenlik olayları yükleniyor...','Loading security events...'],
+['Tam Sağlık Kontrolü','Full Health Check'],
     ['Genel Durum','Overall Status'],['PostgreSQL','PostgreSQL'],['Disk Kullanımı','Disk Usage'],['Son Yedek','Latest Backup'],
     ['Servis Durumları','Service Status'],['Otomatik Yedek Ayarları','Automatic Backup Settings'],['Otomatik Günlük Yedek','Automatic Daily Backup'],
     ['Yedek Saati','Backup Hour'],['Saklama Süresi (gün)','Retention Period (days)'],['Maksimum Yedek','Maximum Backups'],
@@ -1846,7 +1950,7 @@
     ['Eksik, varsayılan veya üretim ortamında risk oluşturabilecek yapılandırmaları gösterir.','Shows missing, default or production-risk configuration items.'],
     ['Dosya boyutu, SHA256 doğrulaması, pg_restore ön kontrolü ve indirme işlemleri.','File size, SHA256 verification, pg_restore pre-check and download actions.'],
     ['Sağlık kontrolleri, yedekleme ve kritik bildirim olayları.','Health checks, backup and critical notification events.'],
-    ['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],
+    ['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],['Güvenlik ve Oturumlar','Security & Sessions'],['Güvenlik ve Oturum Yönetimi','Security & Session Management'],['Aktif Oturum','Active Sessions'],['Kilitli Hesap','Locked Accounts'],['Hatalı Giriş / 24s','Failed Logins / 24h'],['Şifre Değişimi','Password Change'],['Güvenlik Politikası','Security Policy'],['Şifremi Değiştir','Change My Password'],['Mevcut Şifre','Current Password'],['Yeni Şifre','New Password'],['Aktif Oturumlar','Active Sessions'],['Hesap Güvenliği','Account Security'],['Son Güvenlik Olayları','Recent Security Events'],['Durumu Yenile','Refresh Status'],
     ['Canlı İzleme','Live Monitoring'],['OEE ve Duruş','OEE & Downtime'],['Alarm Merkezi','Alarm Center'],
     ['Alarm Analitiği','Alarm Analytics'],['Alarm SLA','Alarm SLA'],['Bildirim Teslimatı','Escalation Delivery'],
     ['Bakım','Maintenance'],['Servis Talepleri','Service Tickets'],['Bakım Planları','Maintenance Plans'],
@@ -1912,8 +2016,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.1.2 — Docker PostgreSQL yedekleme ve sistem sağlığı doğruluk düzeltmesi aktif.','v6.1.2 — Docker PostgreSQL backup and System Health accuracy hotfix is active.'],
-    ['v6.1.2: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.','v6.1.2: Docker PostgreSQL backup and bilingual System Health Center are active.'],
+    ['v6.2.0 — Güvenlik sertleştirme ve oturum yönetimi aktif.','v6.2.0 — Security hardening and session management are active.'],
+    ['v6.2.0: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.','v6.2.0: Security Center, session management and login protection are active.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -2037,7 +2141,7 @@
 
     ["Admin panel menüsü", "Admin panel menu"],
     ["Tam çeviri ve endüstriyel içerik arayüzü aktif.", "Full localization and industrial content UI are active."],
-    ["Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.", "Docker PostgreSQL backup and bilingual System Health Center are active."],
+    ["Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.", "Security Center, session management and login protection are active."],
     ["Tüm sistem yetkileri", "All system permissions"],
     ["Tüm tenant yönetimi", "Full tenant management"],
     ["Customer/site/invite/billing görüntüleme/audit yönetimi", "Customer/site/invite/billing viewing and audit management"],
@@ -2358,11 +2462,11 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '6.0.1').replace(/^v/i, '');
+    const safeVersion = String(version || '6.2.0').replace(/^v/i, '');
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Docker PostgreSQL backup and System Health accuracy hotfix is active.` : `v${safeVersion} — Docker PostgreSQL yedekleme ve sistem sağlığı doğruluk düzeltmesi aktif.`;
-    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Docker PostgreSQL backup and bilingual System Health Center are active.` : `v${safeVersion}: Docker PostgreSQL yedekleme ve iki dilli sistem sağlığı merkezi aktif.`;
+    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Security hardening and session management are active.` : `v${safeVersion} — Güvenlik sertleştirme ve oturum yönetimi aktif.`;
+    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Security Center, session management and login protection are active.` : `v${safeVersion}: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.`;
     document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
   }
 
@@ -2499,6 +2603,7 @@
     escalations:{title_tr:'Bildirim Teslimatı',title_en:'Escalation Delivery',desc_tr:'SLA dışı alarm kuyruğu, E-posta/Telegram teslimatı ve gönderim geçmişi.',desc_en:'Out-of-SLA alarm queue, Email/Telegram delivery and delivery history.'},
     general:{title_tr:'Genel Ayarlar',title_en:'General Settings',desc_tr:'Panel dili, saat dilimi, tarih/saat biçimi ve genel çalışma tercihleri.',desc_en:'Panel language, time zone, date/time format and general operating preferences.'},
     health:{title_tr:'Sistem Sağlığı ve Yedekler',title_en:'System Health & Backups',desc_tr:'Backend, veritabanı, MQTT, servisler, disk, loglar ve otomatik yedekleme merkezi.',desc_en:'Central health center for backend, database, MQTT, services, disk, logs and automatic backups.'},
+    'security-center':{title_tr:'Güvenlik ve Oturum Yönetimi',title_en:'Security & Session Management',desc_tr:'Aktif oturumlar, giriş koruması, hesap kilitleri, şifre politikası ve güvenlik olayları.',desc_en:'Active sessions, login protection, account locks, password policy and security events.'},
     notifications:{title_tr:'Bildirim Ayarları',title_en:'Notification Settings',desc_tr:'Telegram, E-posta, test mesajları ve teslimat çalışanı ayarları.',desc_en:'Telegram, Email, test messages and delivery worker settings.'},
     scheduler:{title_tr:'Otomasyon Zamanlayıcı',title_en:'Automation Scheduler',desc_tr:'Otomatik SLA taraması, yeniden deneme, teslimat ve Dead Letter yönetimi.',desc_en:'Automatic SLA scanning, retry, delivery and Dead Letter management.'},
     reports:{title_tr:'Alarm Raporları',title_en:'Alarm Reports',desc_tr:'Günlük ve haftalık alarm özetleri, Telegram/E-posta teslimatı ve rapor geçmişi.',desc_en:'Daily and weekly alarm summaries, Telegram/Email delivery and report history.'},
@@ -2528,6 +2633,7 @@
     escalations:'alarm',
     general:'system',
     health:'system',
+    'security-center':'system',
     notifications:'system',
     scheduler:'system',
     reports:'system',
@@ -2706,6 +2812,14 @@
 
     if (res.status === 403) {
       throw new Error(body?.message || 'Bu işlem için yetkin yok.');
+    }
+
+    if (res.status === 423) {
+      throw new Error(body?.message || (currentLanguage==='en'?'Account is locked.':'Hesap kilitli.'));
+    }
+
+    if (res.status === 429) {
+      throw new Error(body?.message || (currentLanguage==='en'?'Too many requests.':'Çok fazla istek gönderildi.'));
     }
 
     if (!res.ok) {
@@ -3975,7 +4089,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.1.2`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.2.0`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -4147,6 +4261,34 @@
   }
 
 
+
+  let lastSecurityCenterData=null;
+  function securityChipV620(text,type='neutral'){return `<span class="security-chip-v620 ${esc(type)}">${esc(text)}</span>`;}
+  function securityBoolValue(id,value){const el=document.getElementById(id);if(el)el.value=String(Boolean(value));}
+  function renderSecurityCenter(data){
+    lastSecurityCenterData=data;const en=currentLanguage==='en';const summary=data.summary||{};const settings=data.settings||{};const policy=data.password_policy||{};
+    const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value??'-';};
+    setText('securityActiveSessions',summary.active_sessions||0);setText('securityLockedUsers',summary.locked_users||0);setText('securityFailedLogins',summary.failed_logins_24h||0);setText('securityForcedPasswords',summary.forced_password_changes||0);
+    const setVal=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined&&value!==null)el.value=String(value);};
+    setVal('securitySessionHours',settings.session_hours);setVal('securityIdleMinutes',settings.idle_timeout_minutes);setVal('securityMaxFailed',settings.max_failed_attempts);setVal('securityLockoutMinutes',settings.lockout_minutes);setVal('securityPasswordMin',settings.password_min_length);setVal('securityApiRate',settings.api_rate_limit_per_minute);setVal('securityLoginRate',settings.login_rate_limit_per_15m);
+    securityBoolValue('securityRequireUpper',settings.password_require_upper);securityBoolValue('securityRequireLower',settings.password_require_lower);securityBoolValue('securityRequireNumber',settings.password_require_number);securityBoolValue('securityRequireSpecial',settings.password_require_special);securityBoolValue('securityTelegramAlert',settings.suspicious_login_telegram);securityBoolValue('securityHeadersEnabled',settings.secure_headers_enabled);securityBoolValue('securityCsrfEnabled',settings.csrf_origin_check_enabled);
+    const requirements=[policy.require_upper?(en?'uppercase':'büyük harf'):null,policy.require_lower?(en?'lowercase':'küçük harf'):null,policy.require_number?(en?'number':'rakam'):null,policy.require_special?(en?'special character':'özel karakter'):null].filter(Boolean);
+    setText('securityPolicyNote',`${en?'Password policy':'Şifre politikası'}: ${policy.min_length||10}+ ${en?'characters':'karakter'}${requirements.length?' · '+requirements.join(' · '):''}.`);
+    setText('securityCenterStatus',`${en?'Updated':'Güncellendi'}: ${fmtDate(data.generated_at)} · ${en?'Security headers':'Güvenlik başlıkları'}: ${settings.secure_headers_enabled?'ON':'OFF'} · CSRF: ${settings.csrf_origin_check_enabled?'ON':'OFF'}`);
+
+    const sessions=data.sessions||[];const sessionTarget=document.getElementById('securitySessionsTable');
+    if(sessionTarget)sessionTarget.innerHTML=sessions.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'User':'Kullanıcı'}</th><th>${en?'Device / IP':'Cihaz / IP'}</th><th>${en?'Created':'Oluşturuldu'}</th><th>${en?'Last Activity':'Son Aktivite'}</th><th>${en?'Idle Expiry':'Boşta Bitiş'}</th><th>${en?'Action':'Aksiyon'}</th></tr></thead><tbody>${sessions.map(row=>`<tr class="${row.id===data.current_session_id?'security-current-session-v620':''}"><td><strong>${esc(row.full_name||row.email)}</strong><br><small>${esc(row.email)} · ${esc(row.role)}</small></td><td>${esc(row.device_label||'-')}<br><small>${esc(row.ip_address||'-')}</small></td><td>${esc(fmtDate(row.created_at))}</td><td>${esc(fmtDate(row.last_seen_at))}</td><td>${esc(fmtDate(row.idle_expires_at))}</td><td>${row.id===data.current_session_id?securityChipV620(en?'Current':'Mevcut','warn'):`<button data-security-action="revoke-session" data-id="${esc(row.id)}" class="secondary-btn">${en?'Close':'Kapat'}</button>`}</td></tr>`).join('')}</tbody></table></div>`:`<span class="muted">${en?'No active sessions.':'Aktif oturum yok.'}</span>`;
+
+    const users=data.locked_users||[];const usersTarget=document.getElementById('securityUsersTable');
+    if(usersTarget)usersTarget.innerHTML=users.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'User':'Kullanıcı'}</th><th>${en?'Status':'Durum'}</th><th>${en?'Failed':'Hatalı'}</th><th>${en?'Locked Until':'Kilit Bitişi'}</th><th>${en?'Last Failed IP':'Son Hatalı IP'}</th><th>${en?'Actions':'Aksiyonlar'}</th></tr></thead><tbody>${users.map(row=>{const locked=row.locked_until&&new Date(row.locked_until)>new Date();return `<tr><td><strong>${esc(row.full_name||row.email)}</strong><br><small>${esc(row.email)} · ${esc(row.role)}</small></td><td>${locked?securityChipV620(en?'LOCKED':'KİLİTLİ','danger'):row.force_password_change?securityChipV620(en?'PASSWORD CHANGE':'ŞİFRE DEĞİŞİMİ','warn'):securityChipV620(en?'WATCH':'İZLE','neutral')}</td><td>${esc(row.failed_login_count||0)}</td><td>${esc(fmtDate(row.locked_until))}</td><td>${esc(row.last_failed_ip||'-')}</td><td><div class="security-actions-v620">${locked?`<button data-security-action="unlock-user" data-id="${esc(row.id)}">${en?'Unlock':'Kilidi Aç'}</button>`:''}<button data-security-action="revoke-user-sessions" data-id="${esc(row.id)}" class="secondary-btn">${en?'Close Sessions':'Oturumları Kapat'}</button><button data-security-action="force-password" data-id="${esc(row.id)}" class="secondary-btn">${en?'Force Change':'Değişimi Zorunlu Kıl'}</button><button data-security-action="reset-password" data-id="${esc(row.id)}" class="secondary-btn">${en?'Reset Password':'Şifre Sıfırla'}</button></div></td></tr>`}).join('')}</tbody></table></div>`:`<span class="muted">${en?'No locked or flagged accounts.':'Kilitli veya işaretli hesap yok.'}</span>`;
+
+    const events=data.events||[];const eventsTarget=document.getElementById('securityEventsTable');
+    if(eventsTarget)eventsTarget.innerHTML=events.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'Date':'Tarih'}</th><th>${en?'Event':'Olay'}</th><th>${en?'Actor':'Aktör'}</th><th>IP</th><th>${en?'Details':'Detay'}</th></tr></thead><tbody>${events.map(row=>`<tr><td>${esc(fmtDate(row.created_at))}</td><td>${securityChipV620(row.action,['account_locked','login_rate_limited','login_blocked_locked_account'].includes(row.action)?'danger':row.action==='login_failed'?'warn':'neutral')}</td><td>${esc(row.actor_email||'-')}</td><td>${esc(row.ip_address||'-')}</td><td>${esc(compactJson(row.metadata))}</td></tr>`).join('')}</tbody></table></div>`:`<span class="muted">${en?'No security events.':'Güvenlik olayı yok.'}</span>`;
+  }
+
+  async function loadSecurityCenter(){const data=await getJson('/api/admin/security-center');renderSecurityCenter(data);return data;}
+  async function saveSecuritySettings(){const val=id=>document.getElementById(id)?.value;return apiJson('/api/admin/security-center/settings',{method:'PATCH',body:JSON.stringify({session_hours:Number(val('securitySessionHours')),idle_timeout_minutes:Number(val('securityIdleMinutes')),max_failed_attempts:Number(val('securityMaxFailed')),lockout_minutes:Number(val('securityLockoutMinutes')),password_min_length:Number(val('securityPasswordMin')),password_require_upper:val('securityRequireUpper')==='true',password_require_lower:val('securityRequireLower')==='true',password_require_number:val('securityRequireNumber')==='true',password_require_special:val('securityRequireSpecial')==='true',api_rate_limit_per_minute:Number(val('securityApiRate')),login_rate_limit_per_15m:Number(val('securityLoginRate')),suspicious_login_telegram:val('securityTelegramAlert')==='true',secure_headers_enabled:val('securityHeadersEnabled')==='true',csrf_origin_check_enabled:val('securityCsrfEnabled')==='true'})});}
+
   async function downloadSystemBackupV610(id) {
     const token=authToken();
     const res=await fetch(`/api/admin/system-health/backups/${encodeURIComponent(id)}/download`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
@@ -4191,6 +4333,7 @@
       ['alarm-escalation-delivery-status', '/api/admin/alarm-escalation/delivery-status', renderAlarmEscalationDeliveryStatus, 'alarmEscalationDeliveryStatus'],
       ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
       ['system-health', '/api/admin/system-health', renderSystemHealth, 'systemHealthStatus'],
+      ...(can('MANAGE_USERS') ? [['security-center','/api/admin/security-center',renderSecurityCenter,'securityCenterStatus']] : []),
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
       ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus'],
@@ -5319,6 +5462,16 @@
     const systemHealthSection=document.getElementById('systemHealthSection');
     if(systemHealthSection)systemHealthSection.addEventListener('click',async(e)=>{const btn=e.target.closest('[data-health-action]');if(!btn)return;const action=btn.dataset.healthAction;const id=btn.dataset.id;if(action==='download'){btn.disabled=true;const status=document.getElementById('systemBackupActionStatus');try{await downloadSystemBackupV610(id);if(status)status.textContent=currentLanguage==='en'?'Backup download started.':'Yedek indirme başlatıldı.';}catch(error){if(status)status.textContent=error.message;}finally{btn.disabled=false;}return;}if(action==='verify'){btn.disabled=true;const status=document.getElementById('systemBackupActionStatus');try{const data=await apiJson(`/api/admin/system-health/backups/${encodeURIComponent(id)}/verify`,{method:'POST',body:'{}'});if(status)status.textContent=data.valid?(currentLanguage==='en'?'Backup verified.':'Yedek doğrulandı.'):(currentLanguage==='en'?'Backup verification failed.':'Yedek doğrulaması başarısız.');await loadSystemHealth();}catch(error){if(status)status.textContent=error.message;}finally{btn.disabled=false;}}});
     const systemHealthLogLevel=document.getElementById('systemHealthLogLevel');if(systemHealthLogLevel)systemHealthLogLevel.addEventListener('change',renderSystemHealthLogs);
+
+
+    const refreshSecurityCenterBtn=document.getElementById('refreshSecurityCenterBtn');
+    if(refreshSecurityCenterBtn)refreshSecurityCenterBtn.addEventListener('click',async()=>{refreshSecurityCenterBtn.disabled=true;try{await loadSecurityCenter();}catch(e){setError('securityCenterStatus',e.message);}finally{refreshSecurityCenterBtn.disabled=false;}});
+    const saveSecuritySettingsBtn=document.getElementById('saveSecuritySettingsBtn');
+    if(saveSecuritySettingsBtn)saveSecuritySettingsBtn.addEventListener('click',async()=>{saveSecuritySettingsBtn.disabled=true;const st=document.getElementById('securityCenterStatus');try{await saveSecuritySettings();if(st)st.textContent=currentLanguage==='en'?'Security settings saved.':'Güvenlik ayarları kaydedildi.';await loadSecurityCenter();}catch(e){if(st)st.textContent=e.message;}finally{saveSecuritySettingsBtn.disabled=false;}});
+    const changeOwnPasswordBtn=document.getElementById('changeOwnPasswordBtn');
+    if(changeOwnPasswordBtn)changeOwnPasswordBtn.addEventListener('click',async()=>{changeOwnPasswordBtn.disabled=true;const st=document.getElementById('securityPasswordStatus');try{const current=document.getElementById('securityCurrentPassword')?.value||'';const next=document.getElementById('securityNewPassword')?.value||'';const result=await apiJson('/api/auth/change-password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});document.getElementById('securityCurrentPassword').value='';document.getElementById('securityNewPassword').value='';if(st)st.textContent=`${currentLanguage==='en'?'Password changed. Other sessions closed':'Şifre değiştirildi. Diğer oturumlar kapatıldı'}: ${result.sessions_revoked||0}`;await loadSecurityCenter();}catch(e){if(st)st.textContent=e.message;}finally{changeOwnPasswordBtn.disabled=false;}});
+    const securityCenterSection=document.getElementById('securityCenterSection');
+    if(securityCenterSection)securityCenterSection.addEventListener('click',async(e)=>{const btn=e.target.closest('[data-security-action]');if(!btn)return;const action=btn.dataset.securityAction;const id=btn.dataset.id;btn.disabled=true;const st=document.getElementById('securityCenterStatus');try{if(action==='revoke-session')await apiJson(`/api/admin/security-center/sessions/${encodeURIComponent(id)}/revoke`,{method:'POST',body:'{}'});if(action==='unlock-user')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/unlock`,{method:'POST',body:'{}'});if(action==='revoke-user-sessions')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/revoke-sessions`,{method:'POST',body:'{}'});if(action==='force-password')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/force-password-change`,{method:'POST',body:JSON.stringify({force:true})});if(action==='reset-password'){const password=prompt(currentLanguage==='en'?'Enter a new temporary password:':'Yeni geçici şifreyi gir:');if(!password)return;await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/reset-password`,{method:'POST',body:JSON.stringify({new_password:password,force_change:true})});}if(st)st.textContent=currentLanguage==='en'?'Security action completed.':'Güvenlik işlemi tamamlandı.';await loadSecurityCenter();}catch(error){if(st)st.textContent=error.message;}finally{btn.disabled=false;}});
 
     document.body.addEventListener('click', handleAction);
     document.body.addEventListener('change', (e) => {

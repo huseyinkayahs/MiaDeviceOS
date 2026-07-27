@@ -1,0 +1,26 @@
+FACTORYBOX ONE v6.2.0 KURULUM
+
+1. Backend'i durdurun.
+2. ZIP içeriğini C:\New DeviceOs Project klasörünün üzerine kopyalayın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. Backend'i başlatın:
+
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+
+5. Admin Panel'de Ctrl + F5 yapın.
+6. Sürümün v6.2.0 olduğunu kontrol edin.
+7. Sistem Ayarları > Güvenlik ve Oturumlar ekranını açın.
+
+İLK TEST
+
+- Aktif Oturum: En az 1
+- HTTP Güvenlik Başlıkları: Açık
+- CSRF Origin Kontrolü: Açık
+- Oturum Süresi: 12 saat
+- Boşta Kalma: 30 dakika
+- Maks. Hatalı Giriş: 5
+- Hesap Kilidi: 15 dakika
+- Minimum Şifre: 10 karakter
+
+Not: Yeni şifreler güçlü şifre politikasına uymalıdır.

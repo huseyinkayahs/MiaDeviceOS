@@ -37,8 +37,92 @@ const pool = new Pool({
 });
 
 const app = express();
-app.use(cors());
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+const apiRateBuckets = new Map();
+const loginRateBuckets = new Map();
+let securityFoundationReady = false;
+let securitySettingsCache = {
+  session_hours:12,
+  idle_timeout_minutes:30,
+  max_failed_attempts:5,
+  lockout_minutes:15,
+  password_min_length:10,
+  password_require_upper:true,
+  password_require_lower:true,
+  password_require_number:true,
+  password_require_special:true,
+  api_rate_limit_per_minute:300,
+  login_rate_limit_per_15m:20,
+  suspicious_login_telegram:true,
+  secure_headers_enabled:true,
+  csrf_origin_check_enabled:true
+};
+
+function configuredCorsOrigins() {
+  return String(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',').map(x => x.trim()).filter(Boolean);
+}
+
+app.use((req,res,next)=>{
+  if (securitySettingsCache.secure_headers_enabled !== false) {
+    res.setHeader('X-Content-Type-Options','nosniff');
+    res.setHeader('X-Frame-Options','DENY');
+    res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');
+    res.setHeader('Cross-Origin-Opener-Policy','same-origin');
+    res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+    const forwardedProto=String(req.headers['x-forwarded-proto']||'').toLowerCase();
+    if (req.secure || forwardedProto==='https') res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
+  }
+  if (req.path.startsWith('/api/')) res.setHeader('Cache-Control','no-store');
+  next();
+});
+
+app.use(cors({
+  origin(origin, callback) {
+    const allowed=configuredCorsOrigins();
+    if (!origin || !allowed.length || allowed.includes(origin)) return callback(null,true);
+    return callback(new Error('CORS origin is not allowed'));
+  },
+  methods:['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
+  allowedHeaders:['Content-Type','Authorization','X-CSRF-Token'],
+  maxAge:600
+}));
 app.use(express.json({limit:'1mb'}));
+
+function consumeRateBucket(store,key,limit,windowMs) {
+  const now=Date.now();
+  let bucket=store.get(key);
+  if (!bucket || now>=bucket.reset_at) bucket={count:0,reset_at:now+windowMs};
+  bucket.count+=1;store.set(key,bucket);
+  if (store.size>10000) for (const [k,v] of store.entries()) if (now>=v.reset_at) store.delete(k);
+  return {allowed:bucket.count<=limit,remaining:Math.max(0,limit-bucket.count),reset_at:bucket.reset_at};
+}
+
+app.use('/api',(req,res,next)=>{
+  const limit=Math.max(60,Number(securitySettingsCache.api_rate_limit_per_minute||300));
+  const result=consumeRateBucket(apiRateBuckets,`${reqIp(req)}:${Math.floor(Date.now()/60000)}`,limit,60000);
+  res.setHeader('X-RateLimit-Limit',String(limit));
+  res.setHeader('X-RateLimit-Remaining',String(result.remaining));
+  if (!result.allowed) return res.status(429).json({status:'rate_limited',message:'Too many API requests. Please try again shortly.'});
+  next();
+});
+
+app.use('/api',(req,res,next)=>{
+  if (!securitySettingsCache.csrf_origin_check_enabled || ['GET','HEAD','OPTIONS'].includes(req.method)) return next();
+  const origin=String(req.headers.origin||'').trim();
+  if (!origin) return next();
+  try {
+    const originUrl=new URL(origin);
+    const expectedHost=String(req.headers['x-forwarded-host']||req.headers.host||'');
+    const allowed=configuredCorsOrigins();
+    if (originUrl.host===expectedHost || allowed.includes(origin)) return next();
+  } catch(_) {}
+  return res.status(403).json({status:'forbidden',message:'Request origin verification failed'});
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   etag:false,
   maxAge:0,
@@ -60,7 +144,7 @@ let inviteSchemaReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.1.2';
+const APP_VERSION = '6.2.0';
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -1001,7 +1085,10 @@ function publicUser(row) {
     status:row.status,
     permissions:publicPermissions(row),
     default_customer_code:row.default_customer_code,
-    default_site_code:row.default_site_code
+    default_site_code:row.default_site_code,
+    force_password_change:Boolean(row.force_password_change),
+    locked_until:row.locked_until || null,
+    last_login_at:row.last_login_at || null
   };
 }
 
@@ -1016,9 +1103,17 @@ function getSession(req) {
   if (!token) return null;
   const session = authSessions.get(token);
   if (!session) return null;
-  if (Date.now() > session.expires_at) {
+  const now=Date.now();
+  if (now > session.expires_at || now > session.idle_expires_at) {
     authSessions.delete(token);
+    markSessionEnded(session,'expired',now>session.expires_at?'absolute_timeout':'idle_timeout').catch(()=>{});
     return null;
+  }
+  session.last_seen_at=now;
+  session.idle_expires_at=Math.min(session.expires_at,now+Number(session.idle_timeout_minutes||30)*60*1000);
+  if (now-Number(session.last_persisted_at||0)>60000) {
+    session.last_persisted_at=now;
+    pool.query(`UPDATE app_sessions SET last_seen_at=now(),idle_expires_at=$2,ip_address=$3 WHERE id=$1 AND status='active'`,[session.id,new Date(session.idle_expires_at),reqIp(req)]).catch(()=>{});
   }
   return session;
 }
@@ -1055,10 +1150,21 @@ function maskEmail(email) {
   return `${visible}${'*'.repeat(Math.max(2, name.length - visible.length))}@${domain}`;
 }
 
-function validateNewPassword(password) {
+function securityPasswordPolicy(settings=securitySettingsCache) {
+  return {
+    min_length:Math.max(8,Number(settings.password_min_length||10)),
+    require_upper:Boolean(settings.password_require_upper),
+    require_lower:Boolean(settings.password_require_lower),
+    require_number:Boolean(settings.password_require_number),
+    require_special:Boolean(settings.password_require_special)
+  };
+}
+
+function validateNewPassword(password, settings=securitySettingsCache) {
   const clean = String(password || '');
-  if (clean.length < 8) {
-    const err = new Error('Password must be at least 8 characters');
+  const policy=securityPasswordPolicy(settings);
+  if (clean.length < policy.min_length) {
+    const err = new Error(`Password must be at least ${policy.min_length} characters`);
     err.statusCode = 400;
     throw err;
   }
@@ -1067,18 +1173,120 @@ function validateNewPassword(password) {
     err.statusCode = 400;
     throw err;
   }
+  if (policy.require_upper && !/[A-Z]/.test(clean)) { const e=new Error('Password must include an uppercase letter');e.statusCode=400;throw e; }
+  if (policy.require_lower && !/[a-z]/.test(clean)) { const e=new Error('Password must include a lowercase letter');e.statusCode=400;throw e; }
+  if (policy.require_number && !/[0-9]/.test(clean)) { const e=new Error('Password must include a number');e.statusCode=400;throw e; }
+  if (policy.require_special && !/[^A-Za-z0-9]/.test(clean)) { const e=new Error('Password must include a special character');e.statusCode=400;throw e; }
   return clean;
 }
 
-function revokeSessionsForUser(userId) {
-  let revoked = 0;
-  for (const [token, session] of authSessions.entries()) {
-    if (String(session?.user?.id || '') === String(userId || '')) {
-      authSessions.delete(token);
-      revoked += 1;
-    }
+function sessionTokenHash(token) {
+  return crypto.createHash('sha256').update(String(token||'')).digest('hex');
+}
+
+function securityDeviceLabel(userAgent) {
+  const ua=String(userAgent||'');
+  const osLabel=/Windows/i.test(ua)?'Windows':/Android/i.test(ua)?'Android':/iPhone|iPad/i.test(ua)?'iOS':/Mac OS/i.test(ua)?'macOS':/Linux/i.test(ua)?'Linux':'Unknown OS';
+  const browser=/Edg\//i.test(ua)?'Edge':/Chrome\//i.test(ua)?'Chrome':/Firefox\//i.test(ua)?'Firefox':/Safari\//i.test(ua)?'Safari':'Browser';
+  return `${osLabel} · ${browser}`;
+}
+
+async function refreshSecuritySettingsCache() {
+  if (!securityFoundationReady) return securitySettingsCache;
+  const row=await one(`SELECT * FROM security_settings WHERE id=1`);
+  if (row) securitySettingsCache={...securitySettingsCache,...row};
+  return securitySettingsCache;
+}
+
+async function ensureSecurityFoundation() {
+  if (securityFoundationReady) return;
+  await pool.query(`
+    ALTER TABLE app_users
+      ADD COLUMN IF NOT EXISTS failed_login_count integer NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS locked_until timestamptz,
+      ADD COLUMN IF NOT EXISTS last_failed_login_at timestamptz,
+      ADD COLUMN IF NOT EXISTS last_failed_ip text,
+      ADD COLUMN IF NOT EXISTS last_login_ip text,
+      ADD COLUMN IF NOT EXISTS last_login_user_agent text,
+      ADD COLUMN IF NOT EXISTS password_changed_at timestamptz,
+      ADD COLUMN IF NOT EXISTS force_password_change boolean NOT NULL DEFAULT false
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS security_settings (
+      id integer PRIMARY KEY DEFAULT 1 CHECK(id=1),
+      session_hours integer NOT NULL DEFAULT 12 CHECK(session_hours BETWEEN 1 AND 168),
+      idle_timeout_minutes integer NOT NULL DEFAULT 30 CHECK(idle_timeout_minutes BETWEEN 5 AND 1440),
+      max_failed_attempts integer NOT NULL DEFAULT 5 CHECK(max_failed_attempts BETWEEN 3 AND 20),
+      lockout_minutes integer NOT NULL DEFAULT 15 CHECK(lockout_minutes BETWEEN 1 AND 1440),
+      password_min_length integer NOT NULL DEFAULT 10 CHECK(password_min_length BETWEEN 8 AND 64),
+      password_require_upper boolean NOT NULL DEFAULT true,
+      password_require_lower boolean NOT NULL DEFAULT true,
+      password_require_number boolean NOT NULL DEFAULT true,
+      password_require_special boolean NOT NULL DEFAULT true,
+      api_rate_limit_per_minute integer NOT NULL DEFAULT 300 CHECK(api_rate_limit_per_minute BETWEEN 60 AND 5000),
+      login_rate_limit_per_15m integer NOT NULL DEFAULT 20 CHECK(login_rate_limit_per_15m BETWEEN 5 AND 200),
+      suspicious_login_telegram boolean NOT NULL DEFAULT true,
+      secure_headers_enabled boolean NOT NULL DEFAULT true,
+      csrf_origin_check_enabled boolean NOT NULL DEFAULT true,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`INSERT INTO security_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_sessions (
+      id text PRIMARY KEY,
+      token_hash text NOT NULL UNIQUE,
+      user_id text NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      last_seen_at timestamptz NOT NULL DEFAULT now(),
+      expires_at timestamptz NOT NULL,
+      idle_expires_at timestamptz NOT NULL,
+      ip_address text,
+      user_agent text,
+      device_label text,
+      status text NOT NULL DEFAULT 'active' CHECK(status IN ('active','revoked','expired')),
+      revoked_at timestamptz,
+      revoked_by text,
+      revoke_reason text
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_app_sessions_user_status ON app_sessions(user_id,status,created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_app_sessions_expiry ON app_sessions(status,expires_at,idle_expires_at)`);
+  await pool.query(`UPDATE app_sessions SET status='expired',revoke_reason=COALESCE(revoke_reason,'server_restart') WHERE status='active'`);
+  securityFoundationReady=true;
+  await refreshSecuritySettingsCache();
+}
+
+async function createManagedSession(req,user,tenant) {
+  await ensureSecurityFoundation();
+  const settings=await refreshSecuritySettingsCache();
+  const token=crypto.randomBytes(32).toString('hex');
+  const id=`ses_${crypto.randomBytes(12).toString('hex')}`;
+  const now=Date.now();
+  const sessionHours=Math.max(1,Number(settings.session_hours||authConfig().sessionHours||12));
+  const idleMinutes=Math.max(5,Number(settings.idle_timeout_minutes||30));
+  const expiresAt=now+sessionHours*60*60*1000;
+  const idleExpiresAt=Math.min(expiresAt,now+idleMinutes*60*1000);
+  const session={token,id,user,tenant,created_at:now,last_seen_at:now,last_persisted_at:now,expires_at:expiresAt,idle_expires_at:idleExpiresAt,idle_timeout_minutes:idleMinutes,ip_address:reqIp(req),user_agent:req.headers['user-agent']||'',device_label:securityDeviceLabel(req.headers['user-agent'])};
+  authSessions.set(token,session);
+  await pool.query(`INSERT INTO app_sessions(id,token_hash,user_id,created_at,last_seen_at,expires_at,idle_expires_at,ip_address,user_agent,device_label,status) VALUES($1,$2,$3,now(),now(),$4,$5,$6,$7,$8,'active')`,[id,sessionTokenHash(token),user.id,new Date(expiresAt),new Date(idleExpiresAt),session.ip_address,session.user_agent,session.device_label]);
+  return session;
+}
+
+async function markSessionEnded(session,status='revoked',reason='revoked',actorEmail=null) {
+  if (!session?.id) return;
+  await pool.query(`UPDATE app_sessions SET status=$2,revoked_at=CASE WHEN $2='revoked' THEN now() ELSE revoked_at END,revoked_by=$3,revoke_reason=$4,last_seen_at=now() WHERE id=$1`,[session.id,status,actorEmail,reason]);
+}
+
+async function revokeSessionsForUser(userId,{preserveToken=null,actorEmail=null,reason='user_sessions_revoked'}={}) {
+  let revoked=0;
+  for (const [token,session] of authSessions.entries()) {
+    if (String(session?.user?.id||'')===String(userId||'') && token!==preserveToken) { authSessions.delete(token);revoked+=1; }
   }
-  return revoked;
+  await ensureSecurityFoundation();
+  const result=await pool.query(`UPDATE app_sessions SET status='revoked',revoked_at=now(),revoked_by=$2,revoke_reason=$3 WHERE user_id=$1 AND status='active' ${preserveToken?"AND token_hash<>$4":""}`,[userId,actorEmail,reason,...(preserveToken?[sessionTokenHash(preserveToken)]:[])]);
+  return Math.max(revoked,result.rowCount||0);
 }
 
 function passwordResetRequestAllowed(req, email) {
@@ -1378,26 +1586,22 @@ async function ensureSaasFoundation() {
   const cfg = authConfig();
 
   if (cfg.adminEmail && cfg.adminPassword) {
-    const salt = makeSalt();
-    const passwordHash = hashPassword(cfg.adminPassword, salt);
     const existing = await one(`SELECT id FROM app_users WHERE lower(email)=lower($1) LIMIT 1`, [cfg.adminEmail]);
-    const id = existing?.id || makeUserId();
-
-    await pool.query(
-      `
-      INSERT INTO app_users(id,email,password_hash,password_salt,full_name,role,status,default_customer_code,default_site_code)
-      VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8)
-      ON CONFLICT(email) DO UPDATE SET
-        password_hash=EXCLUDED.password_hash,
-        password_salt=EXCLUDED.password_salt,
-        role=EXCLUDED.role,
-        status='active',
-        default_customer_code=EXCLUDED.default_customer_code,
-        default_site_code=EXCLUDED.default_site_code,
-        updated_at=now()
-      `,
-      [id, cfg.adminEmail, passwordHash, salt, 'FactoryBox Admin', cfg.defaultRole, CFG.customerCode, CFG.siteCode]
-    );
+    if (!existing) {
+      const salt = makeSalt();
+      const passwordHash = hashPassword(cfg.adminPassword, salt);
+      await pool.query(
+        `INSERT INTO app_users(id,email,password_hash,password_salt,full_name,role,status,default_customer_code,default_site_code)
+         VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8)`,
+        [makeUserId(), cfg.adminEmail, passwordHash, salt, 'FactoryBox Admin', cfg.defaultRole, CFG.customerCode, CFG.siteCode]
+      );
+    } else {
+      await pool.query(`UPDATE app_users SET role=$1,status='active',default_customer_code=$2,default_site_code=$3,updated_at=now() WHERE id=$4`,[cfg.defaultRole,CFG.customerCode,CFG.siteCode,existing.id]);
+      if (String(process.env.FACTORYBOX_ADMIN_SYNC_PASSWORD||'false').toLowerCase()==='true') {
+        const salt=makeSalt();const passwordHash=hashPassword(cfg.adminPassword,salt);
+        await pool.query(`UPDATE app_users SET password_hash=$1,password_salt=$2,updated_at=now() WHERE id=$3`,[passwordHash,salt,existing.id]);
+      }
+    }
 
     await pool.query(
       `
@@ -1949,6 +2153,7 @@ function authRequired(req, res, next) {
 
   req.user = session.user;
   req.tenant = session.tenant;
+  req.authSession = session;
   return next();
 }
 
@@ -2060,7 +2265,10 @@ app.get('/api/auth/me', async (req,res)=>{
     subscription:await getSubscriptionSnapshot(
       session.tenant?.current_customer?.code || session.user?.default_customer_code || CFG.customerCode
     ),
-    expires_at:new Date(session.expires_at).toISOString()
+    expires_at:new Date(session.expires_at).toISOString(),
+    idle_expires_at:new Date(session.idle_expires_at).toISOString(),
+    session_id:session.id,
+    security:{force_password_change:Boolean(session.user?.force_password_change)}
   });
 });
 
@@ -2207,7 +2415,8 @@ app.post('/api/auth/reset-password', async (req,res)=>{
     }
 
     const token = String(req.body?.token || '');
-    const password = validateNewPassword(req.body?.password);
+    await ensureSecurityFoundation();
+    const password = validateNewPassword(req.body?.password, await refreshSecuritySettingsCache());
 
     await ensurePasswordResetSchema();
     client = await pool.connect();
@@ -2229,7 +2438,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
     const passwordHash = hashPassword(password, salt);
 
     await client.query(
-      `UPDATE app_users SET password_hash=$1, password_salt=$2, updated_at=now() WHERE id=$3`,
+      `UPDATE app_users SET password_hash=$1, password_salt=$2, password_changed_at=now(), force_password_change=false, failed_login_count=0, locked_until=NULL, updated_at=now() WHERE id=$3`,
       [passwordHash, salt, reset.user_id]
     );
 
@@ -2246,7 +2455,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
     client.release();
     client = null;
 
-    const revokedSessions = revokeSessionsForUser(reset.user_id);
+    const revokedSessions = await revokeSessionsForUser(reset.user_id,{reason:'password_reset'});
 
     await writeAuditLog(req, {
       action:'reset_user_password',
@@ -2298,16 +2507,9 @@ app.post('/api/auth/signup', async (req,res)=>{
       siteName:req.body?.site_name
     });
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + (cfg.sessionHours * 60 * 60 * 1000);
-
-    authSessions.set(token, {
-      token,
-      user:created.user,
-      tenant:created.tenant,
-      created_at:Date.now(),
-      expires_at:expiresAt
-    });
+    const managedSession = await createManagedSession(req, created.user, created.tenant);
+    const token = managedSession.token;
+    const expiresAt = managedSession.expires_at;
 
     await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [created.user.id]);
 
@@ -2351,101 +2553,136 @@ app.post('/api/auth/login', async (req,res)=>{
     const cfg = authConfig();
 
     if (!cfg.enabled) {
-      return res.json({
-        status:'ok',
-        version:APP_VERSION,
-        authenticated:true,
-        auth_enabled:false,
-        token:null,
-        message:'AUTH_ENABLED=false, login bypassed for local development'
-      });
+      return res.json({status:'ok',version:APP_VERSION,authenticated:true,auth_enabled:false,token:null,message:'AUTH_ENABLED=false, login bypassed for local development'});
+    }
+
+    await ensureSecurityFoundation();
+    const settings=await refreshSecuritySettingsCache();
+    const rateLimit=Math.max(5,Number(settings.login_rate_limit_per_15m||20));
+    const rate=consumeRateBucket(loginRateBuckets,`login:${reqIp(req)}`,rateLimit,15*60*1000);
+    if (!rate.allowed) {
+      await writeAuditLog(req,{action:'login_rate_limited',entity_type:'auth',entity_id:reqIp(req),old_values:null,new_values:null,metadata:{ip:reqIp(req),limit:rateLimit}});
+      return res.status(429).json({status:'rate_limited',message:'Too many login attempts. Try again later.'});
     }
 
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
+    if (!email || !password) return res.status(400).json({status:'error',message:'Email and password required'});
 
-    if (!email || !password) {
-      return res.status(400).json({status:'error', message:'Email and password required'});
+    const user=await one(`SELECT * FROM app_users WHERE lower(email)=lower($1) AND status='active' LIMIT 1`,[email]);
+    const now=new Date();
+    if (user?.locked_until && new Date(user.locked_until)>now) {
+      await writeAuditLog(req,{action:'login_blocked_locked_account',entity_type:'user',entity_id:user.id,old_values:null,new_values:null,metadata:{email,locked_until:user.locked_until}});
+      return res.status(423).json({status:'locked',message:'Account is temporarily locked',locked_until:user.locked_until});
     }
 
-    const user = await one(
-      `SELECT * FROM app_users WHERE lower(email)=lower($1) AND status='active' LIMIT 1`,
-      [email]
-    );
-
-    if (!user || !verifyPassword(password, user.password_salt, user.password_hash)) {
-      await writeAuditLog(req, {
-        action:'login_failed',
-        entity_type:'auth',
-        entity_id:email,
-        old_values:null,
-        new_values:null,
-        metadata:{email, reason:'invalid_credentials'}
-      });
-      return res.status(401).json({status:'unauthorized', message:'Invalid email or password'});
+    if (!user || !verifyPassword(password,user.password_salt,user.password_hash)) {
+      let lockUntil=null;let failedCount=1;
+      if (user) {
+        failedCount=Number(user.failed_login_count||0)+1;
+        if (failedCount>=Number(settings.max_failed_attempts||5)) lockUntil=new Date(Date.now()+Number(settings.lockout_minutes||15)*60*1000);
+        await pool.query(`UPDATE app_users SET failed_login_count=$1,last_failed_login_at=now(),last_failed_ip=$2,locked_until=$3,updated_at=now() WHERE id=$4`,[failedCount,reqIp(req),lockUntil,user.id]);
+      }
+      await writeAuditLog(req,{action:lockUntil?'account_locked':'login_failed',entity_type:user?'user':'auth',entity_id:user?.id||email,old_values:null,new_values:null,metadata:{email,reason:'invalid_credentials',failed_count:failedCount,locked_until:lockUntil}});
+      if (lockUntil && settings.suspicious_login_telegram) {
+        sendSystemHealthTelegramAlert(`🔐 FactoryBox security alert\nAccount locked: ${email}\nIP: ${reqIp(req)}\nUntil: ${lockUntil.toISOString()}`).catch(()=>{});
+      }
+      return res.status(lockUntil?423:401).json({status:lockUntil?'locked':'unauthorized',message:lockUntil?'Account temporarily locked due to failed login attempts':'Invalid email or password',locked_until:lockUntil});
     }
 
-    const tenant = await getTenantContextForUser(user);
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + (cfg.sessionHours * 60 * 60 * 1000);
+    const tenant=await getTenantContextForUser(user);
+    const managedSession=await createManagedSession(req,user,tenant);
+    await pool.query(`UPDATE app_users SET last_login_at=now(),last_login_ip=$2,last_login_user_agent=$3,failed_login_count=0,locked_until=NULL,updated_at=now() WHERE id=$1`,[user.id,reqIp(req),req.headers['user-agent']||null]);
+    user.failed_login_count=0;user.locked_until=null;user.last_login_ip=reqIp(req);user.last_login_user_agent=req.headers['user-agent']||null;
 
-    authSessions.set(token, {
-      token,
-      user,
-      tenant,
-      created_at:Date.now(),
-      expires_at:expiresAt
-    });
+    await writeAuditLog(req,{action:'login_success',entity_type:'user',entity_id:user.id,old_values:null,new_values:{last_login_at:nowIso()},metadata:{email:user.email,session_id:managedSession.id,device:managedSession.device_label,ip:reqIp(req),customer_code:tenant?.current_customer?.code||user.default_customer_code||null}});
 
-    await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [user.id]);
-
-    await writeAuditLog(req, {
-      action:'login_success',
-      entity_type:'user',
-      entity_id:user.id,
-      old_values:null,
-      new_values:{last_login_at:nowIso()},
-      metadata:{email:user.email, customer_code:tenant?.current_customer?.code || user.default_customer_code || null}
-    });
-
-    res.json({
-      status:'ok',
-      version:APP_VERSION,
-      authenticated:true,
-      token,
-      user:publicUser(user),
-      tenant,
-      subscription:await getSubscriptionSnapshot(
-        tenant?.current_customer?.code || user.default_customer_code || CFG.customerCode
-      ),
-      expires_at:new Date(expiresAt).toISOString()
-    });
-  } catch(e) {
-    res.status(500).json({status:'error', message:e.message});
-  }
+    res.json({status:'ok',version:APP_VERSION,authenticated:true,token:managedSession.token,user:publicUser(user),tenant,subscription:await getSubscriptionSnapshot(tenant?.current_customer?.code||user.default_customer_code||CFG.customerCode),expires_at:new Date(managedSession.expires_at).toISOString(),idle_expires_at:new Date(managedSession.idle_expires_at).toISOString(),session_id:managedSession.id,force_password_change:Boolean(user.force_password_change)});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',message:e.message}); }
 });
 
 app.post('/api/auth/logout', async (req,res)=>{
-  const token = bearerToken(req);
-  const session = token ? authSessions.get(token) : null;
+  const token=bearerToken(req);const session=token?authSessions.get(token):null;
   if (token) authSessions.delete(token);
+  if (session) await markSessionEnded(session,'revoked','user_logout',session.user?.email||null);
+  if (session?.user) await writeAuditLog(req,{action:'logout',entity_type:'user',entity_id:session.user.id,old_values:null,new_values:{logged_out:true},metadata:{email:session.user.email,session_id:session.id}});
+  res.json({status:'ok',version:APP_VERSION,logged_out:true});
+});
 
-  if (session?.user) {
-    await writeAuditLog(req, {
-      action:'logout',
-      entity_type:'user',
-      entity_id:session.user.id,
-      old_values:null,
-      new_values:{logged_out:true},
-      metadata:{email:session.user.email}
-    });
-  }
-
-  res.json({status:'ok', version:APP_VERSION, logged_out:true});
+app.post('/api/auth/change-password', authRequired, async (req,res)=>{
+  try {
+    await ensureSecurityFoundation();
+    const current=String(req.body?.current_password||'');
+    const next=validateNewPassword(req.body?.new_password,await refreshSecuritySettingsCache());
+    const user=await one(`SELECT * FROM app_users WHERE id=$1 LIMIT 1`,[req.user.id]);
+    if (!user || !verifyPassword(current,user.password_salt,user.password_hash)) return res.status(400).json({status:'error',message:'Current password is incorrect'});
+    if (verifyPassword(next,user.password_salt,user.password_hash)) return res.status(400).json({status:'error',message:'New password must be different from the current password'});
+    const salt=makeSalt();const hash=hashPassword(next,salt);
+    await pool.query(`UPDATE app_users SET password_hash=$1,password_salt=$2,password_changed_at=now(),force_password_change=false,failed_login_count=0,locked_until=NULL,updated_at=now() WHERE id=$3`,[hash,salt,user.id]);
+    const preserved=bearerToken(req);const revoked=await revokeSessionsForUser(user.id,{preserveToken:preserved,actorEmail:user.email,reason:'password_changed'});
+    if (req.authSession) req.authSession.user.force_password_change=false;
+    await writeAuditLog(req,{action:'change_own_password',entity_type:'user',entity_id:user.id,old_values:null,new_values:{password_changed:true,sessions_revoked:revoked},metadata:{session_id:req.authSession?.id||null}});
+    res.json({status:'ok',version:APP_VERSION,password_changed:true,sessions_revoked:revoked});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',message:e.message}); }
 });
 
 
 
+
+
+app.get('/api/admin/security-center', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {
+    await ensureSecurityFoundation();
+    await pool.query(`UPDATE app_sessions SET status='expired',revoke_reason=COALESCE(revoke_reason,'timeout') WHERE status='active' AND (expires_at<now() OR idle_expires_at<now())`);
+    const settings=await refreshSecuritySettingsCache();
+    const sessions=(await pool.query(`SELECT s.id,s.user_id,u.email,u.full_name,u.role,s.created_at,s.last_seen_at,s.expires_at,s.idle_expires_at,s.ip_address,s.device_label,s.user_agent,s.status,s.revoked_at,s.revoked_by,s.revoke_reason FROM app_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.status='active' ORDER BY s.last_seen_at DESC LIMIT 300`)).rows;
+    const lockedUsers=(await pool.query(`SELECT id,email,full_name,role,status,failed_login_count,locked_until,last_failed_login_at,last_failed_ip,last_login_at,last_login_ip,force_password_change,password_changed_at FROM app_users ORDER BY CASE WHEN locked_until>now() THEN 0 WHEN force_password_change THEN 1 WHEN failed_login_count>0 THEN 2 ELSE 3 END,locked_until DESC NULLS LAST,last_failed_login_at DESC NULLS LAST,email LIMIT 300`)).rows;
+    const summary=await one(`SELECT (SELECT count(*) FROM app_sessions WHERE status='active' AND expires_at>now() AND idle_expires_at>now())::int active_sessions,(SELECT count(*) FROM app_users WHERE locked_until>now())::int locked_users,(SELECT count(*) FROM admin_audit_logs WHERE action IN ('login_failed','account_locked','login_rate_limited','login_blocked_locked_account') AND created_at>=now()-interval '24 hours')::int failed_logins_24h,(SELECT count(*) FROM app_users WHERE force_password_change=true)::int forced_password_changes`);
+    const events=(await pool.query(`SELECT id::text,created_at,actor_email,action,entity_type,entity_id,ip_address,user_agent,metadata FROM admin_audit_logs WHERE action IN ('login_success','login_failed','account_locked','login_rate_limited','login_blocked_locked_account','logout','change_own_password','admin_reset_password','revoke_session','revoke_user_sessions','unlock_user','force_password_change') ORDER BY created_at DESC LIMIT 100`)).rows;
+    res.json({status:'ok',version:APP_VERSION,generated_at:new Date().toISOString(),current_session_id:req.authSession?.id||null,settings,password_policy:securityPasswordPolicy(settings),summary,sessions,locked_users:lockedUsers,events});
+  } catch(e) { res.status(500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.patch('/api/admin/security-center/settings', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {
+    await ensureSecurityFoundation();const old=await refreshSecuritySettingsCache();const b=req.body||{};
+    const int=(v,min,max,fallback)=>Math.min(max,Math.max(min,Number.isFinite(Number(v))?Math.round(Number(v)):fallback));
+    const values={session_hours:int(b.session_hours,1,168,old.session_hours),idle_timeout_minutes:int(b.idle_timeout_minutes,5,1440,old.idle_timeout_minutes),max_failed_attempts:int(b.max_failed_attempts,3,20,old.max_failed_attempts),lockout_minutes:int(b.lockout_minutes,1,1440,old.lockout_minutes),password_min_length:int(b.password_min_length,8,64,old.password_min_length),password_require_upper:b.password_require_upper===undefined?old.password_require_upper:Boolean(b.password_require_upper),password_require_lower:b.password_require_lower===undefined?old.password_require_lower:Boolean(b.password_require_lower),password_require_number:b.password_require_number===undefined?old.password_require_number:Boolean(b.password_require_number),password_require_special:b.password_require_special===undefined?old.password_require_special:Boolean(b.password_require_special),api_rate_limit_per_minute:int(b.api_rate_limit_per_minute,60,5000,old.api_rate_limit_per_minute),login_rate_limit_per_15m:int(b.login_rate_limit_per_15m,5,200,old.login_rate_limit_per_15m),suspicious_login_telegram:b.suspicious_login_telegram===undefined?old.suspicious_login_telegram:Boolean(b.suspicious_login_telegram),secure_headers_enabled:b.secure_headers_enabled===undefined?old.secure_headers_enabled:Boolean(b.secure_headers_enabled),csrf_origin_check_enabled:b.csrf_origin_check_enabled===undefined?old.csrf_origin_check_enabled:Boolean(b.csrf_origin_check_enabled)};
+    await pool.query(`UPDATE security_settings SET session_hours=$1,idle_timeout_minutes=$2,max_failed_attempts=$3,lockout_minutes=$4,password_min_length=$5,password_require_upper=$6,password_require_lower=$7,password_require_number=$8,password_require_special=$9,api_rate_limit_per_minute=$10,login_rate_limit_per_15m=$11,suspicious_login_telegram=$12,secure_headers_enabled=$13,csrf_origin_check_enabled=$14,updated_by=$15,updated_at=now() WHERE id=1`,[values.session_hours,values.idle_timeout_minutes,values.max_failed_attempts,values.lockout_minutes,values.password_min_length,values.password_require_upper,values.password_require_lower,values.password_require_number,values.password_require_special,values.api_rate_limit_per_minute,values.login_rate_limit_per_15m,values.suspicious_login_telegram,values.secure_headers_enabled,values.csrf_origin_check_enabled,req.user?.email||'local-admin']);
+    const settings=await refreshSecuritySettingsCache();
+    await writeAuditLog(req,{action:'update_security_settings',entity_type:'security_settings',entity_id:'global',old_values:old,new_values:settings,metadata:null});
+    res.json({status:'ok',version:APP_VERSION,settings,password_policy:securityPasswordPolicy(settings)});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',message:e.message}); }
+});
+
+app.post('/api/admin/security-center/sessions/:id/revoke', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {
+    await ensureSecurityFoundation();const id=String(req.params.id);const row=await one(`SELECT s.*,u.email FROM app_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.id=$1 LIMIT 1`,[id]);if(!row)return res.status(404).json({status:'not_found',message:'Session not found'});
+    if (id===req.authSession?.id) return res.status(400).json({status:'error',message:'Use logout to close your current session'});
+    for(const [token,session] of authSessions.entries()) if(session.id===id) authSessions.delete(token);
+    await pool.query(`UPDATE app_sessions SET status='revoked',revoked_at=now(),revoked_by=$2,revoke_reason='admin_revoked' WHERE id=$1`,[id,req.user?.email||'local-admin']);
+    await writeAuditLog(req,{action:'revoke_session',entity_type:'session',entity_id:id,old_values:{status:row.status},new_values:{status:'revoked'},metadata:{user_email:row.email}});
+    res.json({status:'ok',version:APP_VERSION,revoked:true});
+  } catch(e){res.status(500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/security-center/users/:id/revoke-sessions', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {const id=String(req.params.id);const preserve=String(req.user?.id||'')===id?bearerToken(req):null;const count=await revokeSessionsForUser(id,{preserveToken:preserve,actorEmail:req.user?.email||'local-admin',reason:'admin_revoked_user_sessions'});await writeAuditLog(req,{action:'revoke_user_sessions',entity_type:'user',entity_id:id,old_values:null,new_values:{revoked_sessions:count},metadata:{preserved_current:Boolean(preserve)}});res.json({status:'ok',version:APP_VERSION,revoked_sessions:count});} catch(e){res.status(500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/security-center/users/:id/unlock', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {const user=await one(`UPDATE app_users SET failed_login_count=0,locked_until=NULL,last_failed_login_at=NULL,last_failed_ip=NULL,updated_at=now() WHERE id=$1 RETURNING id,email,full_name,role,status`,[req.params.id]);if(!user)return res.status(404).json({status:'not_found',message:'User not found'});await writeAuditLog(req,{action:'unlock_user',entity_type:'user',entity_id:user.id,old_values:null,new_values:{unlocked:true},metadata:{email:user.email}});res.json({status:'ok',version:APP_VERSION,user});}catch(e){res.status(500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/security-center/users/:id/force-password-change', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {const force=req.body?.force===undefined?true:Boolean(req.body.force);const user=await one(`UPDATE app_users SET force_password_change=$1,updated_at=now() WHERE id=$2 RETURNING id,email,full_name,role,status,force_password_change`,[force,req.params.id]);if(!user)return res.status(404).json({status:'not_found',message:'User not found'});await writeAuditLog(req,{action:'force_password_change',entity_type:'user',entity_id:user.id,old_values:null,new_values:{force_password_change:force},metadata:{email:user.email}});res.json({status:'ok',version:APP_VERSION,user});}catch(e){res.status(500).json({status:'error',message:e.message});}
+});
+
+app.post('/api/admin/security-center/users/:id/reset-password', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {
+    await ensureSecurityFoundation();const password=validateNewPassword(req.body?.new_password,await refreshSecuritySettingsCache());const force=req.body?.force_change===undefined?true:Boolean(req.body.force_change);const user=await one(`SELECT id,email FROM app_users WHERE id=$1 LIMIT 1`,[req.params.id]);if(!user)return res.status(404).json({status:'not_found',message:'User not found'});const salt=makeSalt();const hash=hashPassword(password,salt);await pool.query(`UPDATE app_users SET password_hash=$1,password_salt=$2,password_changed_at=now(),force_password_change=$3,failed_login_count=0,locked_until=NULL,updated_at=now() WHERE id=$4`,[hash,salt,force,user.id]);const revoked=await revokeSessionsForUser(user.id,{actorEmail:req.user?.email||'local-admin',reason:'admin_password_reset'});await writeAuditLog(req,{action:'admin_reset_password',entity_type:'user',entity_id:user.id,old_values:null,new_values:{password_reset:true,force_password_change:force,sessions_revoked:revoked},metadata:{email:user.email}});res.json({status:'ok',version:APP_VERSION,password_reset:true,sessions_revoked:revoked,force_password_change:force});
+  } catch(e){res.status(e.statusCode||500).json({status:'error',message:e.message});}
+});
 
 app.get('/api/subscription/current', authRequired, async (req,res)=>{
   try {
@@ -2550,6 +2787,7 @@ function adminRequired(req, res, next) {
 
   req.user = session.user;
   req.tenant = session.tenant;
+  req.authSession = session;
   req.permissions = publicPermissions(session.user);
   return next();
 }
@@ -9506,18 +9744,11 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
     });
 
     const tenant = await getTenantContextForUser(user);
-    const sessionToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + (authConfig().sessionHours * 60 * 60 * 1000);
+    const managedSession = await createManagedSession(req,user,tenant);
+    const sessionToken = managedSession.token;
+    const expiresAt = managedSession.expires_at;
 
-    authSessions.set(sessionToken, {
-      token:sessionToken,
-      user,
-      tenant,
-      created_at:Date.now(),
-      expires_at:expiresAt
-    });
-
-    await pool.query(`UPDATE app_users SET last_login_at=now(), updated_at=now() WHERE id=$1`, [user.id]);
+    await pool.query(`UPDATE app_users SET last_login_at=now(),last_login_ip=$2,last_login_user_agent=$3,failed_login_count=0,locked_until=NULL,updated_at=now() WHERE id=$1`, [user.id,reqIp(req),req.headers['user-agent']||null]);
 
     res.json({
       status:'ok',
@@ -9814,6 +10045,9 @@ app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANA
       return res.status(404).json({status:'not_found', user_id:req.params.id});
     }
 
+    let revokedSessions = 0;
+    if (status !== 'active') revokedSessions = await revokeSessionsForUser(user.id,{actorEmail:req.user.email,reason:`user_status_${status}`});
+
     await writeAuditLog(req, {
       action:'update_user_status',
       entity_type:'user',
@@ -9827,7 +10061,8 @@ app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANA
       status:'ok',
       version:APP_VERSION,
       action:'update_user_status',
-      user
+      user,
+      revoked_sessions:revokedSessions
     });
   } catch(e) {
     res.status(e.statusCode || 500).json({status:'error', message:e.message});
@@ -9867,6 +10102,8 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
       [role === 'viewer' ? 'viewer' : role === 'operator' ? 'operator' : 'owner', user.email]
     );
 
+    const revokedSessions = await revokeSessionsForUser(user.id,{preserveToken:String(req.user?.id||'')===String(user.id)?bearerToken(req):null,actorEmail:req.user.email,reason:'role_changed'});
+
     await writeAuditLog(req, {
       action:'update_user_role',
       entity_type:'user',
@@ -9880,7 +10117,8 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
       status:'ok',
       version:APP_VERSION,
       action:'update_user_role',
-      user
+      user,
+      revoked_sessions:revokedSessions
     });
   } catch(e) {
     res.status(e.statusCode || 500).json({status:'error', message:e.message});
@@ -12025,6 +12263,7 @@ async function start() {
   await pool.query('SELECT 1');
   await ensureEntities();
   await ensureSaasFoundation();
+  await ensureSecurityFoundation();
   await ensurePasswordResetSchema();
   await ensureAuditLogSchema();
   await ensureInviteSchema();
