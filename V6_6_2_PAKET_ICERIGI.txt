@@ -1,0 +1,14 @@
+FactoryBox One v6.6.2 - Değişen Dosyalar
+
+deployment/production/docker-compose.production.yml
+deployment/production/mosquitto/config/mosquitto.conf
+deployment/production/install.ps1
+deployment/production/repair-mqtt.ps1
+deployment/production/.env.production.example
+platform/backend/server.js
+platform/backend/public/admin.html
+platform/backend/package.json
+platform/backend/package-lock.json
+docs/V6_6_2_MQTT_PASSWORD_FILE_CONTAINER_HOTFIX.md
+KURULUM_V6_6_2.txt
+V6_6_2_PAKET_ICERIGI.txt

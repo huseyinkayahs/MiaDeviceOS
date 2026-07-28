@@ -1,0 +1,24 @@
+FactoryBox One v6.6.0 Production Deployment Pack
+
+Değişen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/package.json
+- platform/backend/package-lock.json
+
+Yeni production dosyaları:
+- deployment/production/docker-compose.production.yml
+- deployment/production/Dockerfile.backend
+- deployment/production/.env.production.example
+- deployment/production/install.ps1
+- deployment/production/update.ps1
+- deployment/production/rollback.ps1
+- deployment/production/health-check.ps1
+- deployment/production/start-production.ps1
+- deployment/production/renew-certificate.ps1
+- deployment/production/system-info.ps1
+- deployment/production/nginx/*
+- deployment/production/mosquitto/*
+- deployment/production/scripts/run-migrations.js
+- docs/V6_6_PRODUCTION_DEPLOYMENT_DOMAIN_HTTPS_INSTALLER.md
+- .dockerignore

@@ -123,6 +123,11 @@ app.use('/api',(req,res,next)=>{
   return res.status(403).json({status:'forbidden',message:'Request origin verification failed'});
 });
 
+// Production entry point: always open the current Admin Panel instead of a legacy index.html.
+app.get(['/', '/index.html'], (_req, res) => {
+  res.redirect(302, '/admin.html');
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   etag:false,
   maxAge:0,
@@ -137,6 +142,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 let mqttConnected = false;
 let mqttClient = null;
+let httpServer = null;
 let lastMqttMessageAt = null;
 let lastMqttTopic = null;
 let ids = null;
@@ -148,7 +154,41 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.5.3';
+const APP_VERSION = '6.6.6';
+
+
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'factorybox-backend',
+    version: APP_VERSION,
+    uptime_sec: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/readyz', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({
+      status: 'ready',
+      service: 'factorybox-backend',
+      version: APP_VERSION,
+      database: 'connected',
+      mqtt: mqttConnected ? 'connected' : 'not_connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'not_ready',
+      service: 'factorybox-backend',
+      version: APP_VERSION,
+      database: 'disconnected',
+      message: String(error.message || error),
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 function subscriptionEnforcementEnabled() {
   return String(process.env.SUBSCRIPTION_ENFORCEMENT_ENABLED || 'true').toLowerCase() !== 'false';
@@ -6356,9 +6396,15 @@ async function runSystemBackupSchedule() {
   } catch(error) { console.error('Automatic database backup error:',error.message); }
 }
 
-function restartSystemHealthSchedulers() {
+function stopSystemHealthSchedulers() {
   if (systemHealthBackupTimer) clearInterval(systemHealthBackupTimer);
   if (systemHealthMonitorTimer) clearInterval(systemHealthMonitorTimer);
+  systemHealthBackupTimer = null;
+  systemHealthMonitorTimer = null;
+}
+
+function restartSystemHealthSchedulers() {
+  stopSystemHealthSchedulers();
   systemHealthBackupTimer=setInterval(runSystemBackupSchedule,60000);systemHealthBackupTimer.unref?.();
   systemHealthMonitorTimer=setInterval(runSystemHealthMonitor,300000);systemHealthMonitorTimer.unref?.();
   setTimeout(runSystemHealthMonitor,5000).unref?.();
@@ -13938,12 +13984,15 @@ async function start() {
   await ensureInventoryFoundation();
   await ensureOeeFoundation();
   await ensureSmartAiCenterFoundation();
-  mqttClient = mqtt.connect(CFG.mqttUrl, { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 });
+  const mqttOptions = { clientId:`factorybox-platform-backend-${Math.random().toString(16).slice(2)}`, clean:true, reconnectPeriod:3000 };
+  if (process.env.MQTT_USERNAME) mqttOptions.username = String(process.env.MQTT_USERNAME);
+  if (process.env.MQTT_PASSWORD) mqttOptions.password = String(process.env.MQTT_PASSWORD);
+  mqttClient = mqtt.connect(CFG.mqttUrl, mqttOptions);
   mqttClient.on('connect',()=>{ mqttConnected=true; mqttClient.subscribe(`${CFG.baseTopic}/#`, (err)=> console.log(err ? err.message : `MQTT subscribed: ${CFG.baseTopic}/#`)); });
   mqttClient.on('close',()=>{ mqttConnected=false; });
   mqttClient.on('error',(e)=> console.error('MQTT error:', e.message));
   mqttClient.on('message', handleMessage);
-  app.listen(PORT, ()=> console.log(`FactoryBox Platform Backend + SmartAI MVP: http://localhost:${PORT}`));
+  httpServer = app.listen(PORT, '0.0.0.0', ()=> console.log(`FactoryBox Platform Backend v${APP_VERSION}: http://0.0.0.0:${PORT}`));
   startAlarmEscalationDeliveryWorker();
   startAlarmAutomationScheduler();
   startAlarmReportScheduler();
@@ -13951,6 +14000,37 @@ async function start() {
   restartSystemHealthSchedulers();
   startSmartAiScheduler();
 }
+
+
+
+let shutdownStarted = false;
+async function gracefulShutdown(signal) {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  console.log(`Graceful shutdown started: ${signal}`);
+  const forceTimer = setTimeout(() => {
+    console.error('Graceful shutdown timeout; forcing process exit.');
+    process.exit(1);
+  }, 15000);
+  forceTimer.unref?.();
+  try { stopAlarmEscalationDeliveryWorker(); } catch (_) {}
+  try { stopAlarmAutomationScheduler(); } catch (_) {}
+  try { stopAlarmReportScheduler(); } catch (_) {}
+  try { stopMaintenanceScheduler(); } catch (_) {}
+  try { stopSystemHealthSchedulers?.(); } catch (_) {}
+  try { stopSmartAiScheduler?.(); } catch (_) {}
+  try { mqttClient?.end(true); } catch (_) {}
+  if (httpServer) {
+    await new Promise(resolve => httpServer.close(() => resolve()));
+  }
+  try { await pool.end(); } catch (_) {}
+  clearTimeout(forceTimer);
+  console.log('Graceful shutdown completed.');
+  process.exit(0);
+}
+
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.once('SIGINT', () => gracefulShutdown('SIGINT'));
 
 start().catch(e=>{ console.error('Backend start failed:', e); process.exit(1); });
 

@@ -1,0 +1,15 @@
+FactoryBox One v6.6.5 Production Entry Routing Hotfix
+
+Degisen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/package.json
+- platform/backend/package-lock.json
+- deployment/production/docker-compose.production.yml
+- deployment/production/install.ps1
+- deployment/production/repair-mqtt.ps1
+- deployment/production/repair-production-entry.ps1
+- deployment/production/nginx/templates/local-https.conf
+- deployment/production/nginx/templates/bootstrap-http.conf
+- deployment/production/nginx/templates/domain-https.conf
+- docs/V6_6_5_PRODUCTION_ENTRY_ROUTING_HOTFIX.md

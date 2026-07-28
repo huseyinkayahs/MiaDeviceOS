@@ -1,0 +1,15 @@
+FactoryBox One v6.6.0 Kurulum
+
+1. ZIP içeriğini C:\New DeviceOs Project üzerine kopyalayın.
+2. Mevcut geliştirme backend'ini npm ile test etmek için:
+   cd "C:\New DeviceOs Project\platform\backend"
+   npm.cmd start
+3. Admin panelde v6.6.0 sürümünü kontrol edin.
+4. Production kurulum testi için PowerShell'i yönetici olarak açın:
+   cd "C:\New DeviceOs Project\deployment\production"
+   Set-ExecutionPolicy -Scope Process Bypass
+   .\install.ps1 -Mode Local
+5. Yerel production panel adresi kurulum sonunda ekranda gösterilir.
+
+UYARI:
+Mevcut geliştirme Docker servisleri ile production servislerini aynı anda kullanmadan önce port çakışmalarını kontrol edin. Gerçek domain kurulumu için DNS, 80 ve 443 portları hazır olmalıdır.

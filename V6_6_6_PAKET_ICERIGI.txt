@@ -1,0 +1,18 @@
+FactoryBox One v6.6.6 Production HTTPS Redirect Port Preservation Hotfix
+
+Değişen / eklenen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/package.json
+- platform/backend/package-lock.json
+- deployment/production/.env.production.example
+- deployment/production/docker-compose.production.yml
+- deployment/production/install.ps1
+- deployment/production/repair-mqtt.ps1
+- deployment/production/repair-production-entry.ps1
+- deployment/production/repair-https-redirect.ps1
+- deployment/production/nginx/templates/local-https.conf
+- deployment/production/nginx/templates/domain-https.conf
+- deployment/production/nginx/templates/bootstrap-http.conf
+- docs/V6_6_6_PRODUCTION_HTTPS_REDIRECT_PORT_HOTFIX.md
+- KURULUM_V6_6_6.txt

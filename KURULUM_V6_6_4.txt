@@ -1,0 +1,7 @@
+1. ZIP dosyasini proje kok klasorunun uzerine cikarin.
+2. deployment\production klasorunde CMD acin.
+3. Calistirin:
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\repair-mqtt.ps1"
+4. docker compose ps ile servisleri kontrol edin.
+
+UYARI: docker compose down -v kullanmayin.

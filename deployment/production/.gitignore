@@ -1,0 +1,8 @@
+.env.production
+INSTALLATION_CREDENTIALS.txt
+FactoryBox_System_Info_*.txt
+nginx/active/default.conf
+mosquitto/config/password_file
+certs/
+data/
+state/

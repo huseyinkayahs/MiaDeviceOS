@@ -1,0 +1,9 @@
+FACTORYBOX ONE v6.6.3 KURULUM / ONARIM
+
+1. ZIP içeriğini mevcut proje klasörünün üzerine kopyalayın.
+2. CMD ile deployment\production klasörüne geçin.
+3. Aşağıdaki komutu çalıştırın:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\repair-mqtt.ps1"
+
+Bu işlem PostgreSQL volumeunu silmez. docker compose down -v kullanmayın.

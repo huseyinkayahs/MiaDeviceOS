@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.5.3 Admin Panel</title>
+  <title>FactoryBox v6.6.6 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -900,7 +900,7 @@
     @media(max-width:1150px){.org-layout-v640{grid-template-columns:1fr}.org-summary-v640{grid-template-columns:repeat(3,minmax(0,1fr))}.org-comparison-grid-v640{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:720px){.org-toolbar-v640,.org-summary-v640,.org-form-v640,.org-access-scope-v640,.org-comparison-grid-v640{grid-template-columns:1fr}.org-form-v640 .wide{grid-column:auto}}
 
-    /* v6.5.3 SmartAI Reports & Natural Language Insights */
+    /* v6.6.6 Production Deployment, HTTPS & Installer */
     .smartai-grid-v650{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin:14px 0}
     .smartai-kpi-v650{border:1px solid var(--fb-border);border-radius:17px;padding:15px;background:linear-gradient(145deg,#fff,#f7f9fa);box-shadow:0 9px 22px rgba(28,36,45,.05)}
     .smartai-kpi-v650 span{display:block;color:var(--fb-muted);font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.smartai-kpi-v650 strong{display:block;margin-top:7px;font-size:23px;color:#222b34}
@@ -926,7 +926,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.5.3 — SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.</p>
+      <p id="adminVersionLabel">v6.6.6 — Production HTTPS yönlendirmesinde port koruma hotfix aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -1021,7 +1021,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.5.3: SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.
+      v6.6.6: Production HTTPS yönlendirmesinde port koruma hotfix aktif.
     </div>
   </aside>
 
@@ -1051,7 +1051,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.5.3: SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.6.6: Production HTTPS yönlendirmesinde port koruma hotfix aktif.</p>
       </div>
     </div>
 
@@ -2481,8 +2481,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.5.3 — SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.','v6.5.3 — SmartAI report history and action buttons are fixed.'],
-    ['v6.5.3: SmartAI rapor geçmişi ve işlem düğmeleri düzeltildi.','v6.5.3: SmartAI report history and action buttons are fixed.'],
+    ['v6.6.6 — Production HTTPS yönlendirmesinde port koruma hotfix aktif.','v6.6.6 — Production HTTPS redirect port-preservation hotfix is active.'],
+    ['v6.6.6: Production HTTPS yönlendirmesinde port koruma hotfix aktif.','v6.6.6: Production HTTPS redirect port-preservation hotfix is active.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -4914,7 +4914,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.5.3`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.6.6`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -5177,7 +5177,7 @@
   async function handleOrganizationActionV640(button){const action=button.dataset.orgAction,id=button.dataset.id;const row=button.closest('tr');button.disabled=true;try{if(action==='save-factory')await apiJson(`/api/admin/organization/factories/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-factory-name')?.value,location:row.querySelector('.org-factory-location')?.value,timezone:row.querySelector('.org-factory-timezone')?.value,status:row.querySelector('.org-factory-status')?.value})});if(action==='save-site')await apiJson(`/api/admin/organization/sites/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({factory_id:row.querySelector('.org-site-factory')?.value,name:row.querySelector('.org-site-name')?.value,location:row.querySelector('.org-site-location')?.value,timezone:row.querySelector('.org-site-timezone')?.value,status:row.querySelector('.org-site-status')?.value})});if(action==='save-line')await apiJson(`/api/admin/organization/production-lines/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-line-name')?.value,status:row.querySelector('.org-line-status')?.value,shift_pattern:{shift_count:Number(row.querySelector('.org-line-shifts')?.value||1),workdays:[1,2,3,4,5]}})});if(action==='assign-machine')await apiJson(`/api/admin/organization/machines/${encodeURIComponent(id)}/assignment`,{method:'PATCH',body:JSON.stringify({production_line_id:row.querySelector('.org-machine-line')?.value})});if(action==='revoke-access')await apiJson(`/api/admin/organization/access/${encodeURIComponent(id)}`,{method:'DELETE'});await reloadOrganizationAll();}finally{button.disabled=false;}}
 
 
-  // v6.5.3 SmartAI Admin Center
+  // v6.6.6 SmartAI Admin Center
   function smartAiUi(tr,en){return currentLanguage==='en'?en:tr;}
   function smartAiBoolValue(id){return document.getElementById(id)?.value==='true';}
   function smartAiSelectedCustomer(){return document.getElementById('smartAiCustomerSelect')?.value||smartAiState.hierarchy?.customer?.code||'';}

@@ -1,0 +1,10 @@
+FactoryBox v6.6.1 MQTT Container Stability Hotfix
+
+1. Paketi proje ana klasorunun uzerine kopyalayin.
+2. CMD icinde production klasorune gecin.
+3. Su komutu calistirin:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\repair-mqtt.ps1"
+
+Alternatif olarak install.ps1 yeniden calistirilabilir. PostgreSQL named volume korunur.
+Kesinlikle docker compose down -v kullanmayin.

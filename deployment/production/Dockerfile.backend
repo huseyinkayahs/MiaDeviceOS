@@ -1,0 +1,25 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache curl tini postgresql-client tzdata
+
+WORKDIR /app
+
+COPY platform/backend/package.json platform/backend/package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY platform/backend/server.js ./server.js
+COPY platform/backend/public ./public
+COPY platform/database/migrations ./migrations
+COPY deployment/production/scripts/run-migrations.js ./scripts/run-migrations.js
+
+RUN mkdir -p /app/backups /app/logs && chown -R node:node /app
+
+ENV NODE_ENV=production \
+    PORT=3100 \
+    TZ=Europe/Istanbul
+
+USER node
+EXPOSE 3100
+
+ENTRYPOINT ["/sbin/tini","--"]
+CMD ["sh","-c","node /app/scripts/run-migrations.js && node server.js"]

@@ -1,0 +1,18 @@
+FACTORYBOX ONE v6.6.2 KURULUM / ONARIM
+
+1. Production kurulum penceresini kapatın veya hata sonrası komut satırına dönün.
+2. ZIP içeriğini mevcut FactoryBox proje klasörünün üzerine kopyalayın.
+3. Dosyaların değiştirilmesini kabul edin.
+4. CMD içinde production klasörüne geçin:
+
+cd /d "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\deployment\production"
+
+5. Onarımı çalıştırın:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\repair-mqtt.ps1"
+
+6. Durumu kontrol edin:
+
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+
+UYARI: docker compose down -v kullanmayın. -v production veritabanı volume'unu silebilir.

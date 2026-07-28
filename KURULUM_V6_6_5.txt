@@ -1,0 +1,9 @@
+1. ZIP dosyasini proje ana klasorunun uzerine cikarin.
+2. CMD ile deployment\production klasorune gecin.
+3. Calistirin:
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\repair-production-entry.ps1"
+4. Kontrol edin:
+   docker compose --env-file .env.production -f docker-compose.production.yml ps
+5. Tarayicida ana adresi acin. Otomatik /admin.html sayfasina yonlenmelidir.
+
+NOT: docker compose down -v kullanmayin.
