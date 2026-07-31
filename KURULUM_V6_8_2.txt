@@ -1,0 +1,10 @@
+HukaTech Platform v6.8.2 Mail Routing Fix
+
+1. ZIP içeriğini önce ana geliştirme klasörünün üzerine kopyalayın.
+2. Aynı ZIP içeriğini C:\FactoryBox üzerine kopyalayın.
+3. CMD:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\APPLY_V6_8_2_MAIL_ROUTING_FIX.ps1"
+4. Şifremi Unuttum akışını tekrar test edin.
+
+Beklenen gönderen:
+HukaTech <noreply@hukatech.com>

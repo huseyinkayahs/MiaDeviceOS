@@ -1,0 +1,20 @@
+FACTORYBOX ONE v6.8.1 — HUKATECH BREVO CENTRAL MAIL PROVIDER
+
+1) Bu ZIP dosyasını mevcut proje klasörünün üzerine kopyalayın.
+2) deployment\production\.env.mail-gateway.example dosyasını .env.mail-gateway olarak kopyalayın.
+3) .env.mail-gateway içinde yalnızca merkezi sunucuda şu alanı doldurun:
+   MAIL_GATEWAY_BREVO_API_KEY=...
+4) Gönderici değerleri şu şekilde kalmalıdır:
+   MAIL_GATEWAY_SENDER_NAME=HukaTech
+   MAIL_GATEWAY_FROM_EMAIL=noreply@hukatech.com
+   MAIL_GATEWAY_REPLY_TO=
+5) Brevo API anahtarını müşteri .env.production dosyasına yazmayın.
+6) Müşteri kurulumunda yalnızca Installation ID ve iptal edilebilir Gateway API key kullanılır.
+
+Merkezi gateway yeniden oluşturma — Windows CMD tek satır:
+cd /d C:\FactoryBox\deployment\production && docker compose --env-file ".env.mail-gateway" -f "docker-compose.mail-gateway.yml" up -d --build
+
+Merkezi gateway durum kontrolü — Windows CMD tek satır:
+cd /d C:\FactoryBox\deployment\production && docker compose --env-file ".env.mail-gateway" -f "docker-compose.mail-gateway.yml" ps
+
+Not: send.hukatech.com Brevo branded subdomainidir. Gateway için mail.hukatech.com kullanılacaktır.

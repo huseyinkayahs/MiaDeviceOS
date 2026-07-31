@@ -52,7 +52,7 @@ services:
       start_period: 20s
 
   backend:
-    image: factorybox-backend:${FACTORYBOX_IMAGE_TAG:-v6.6.6}
+    image: factorybox-backend:${FACTORYBOX_IMAGE_TAG:-v6.8.2}
     build:
       context: ../..
       dockerfile: deployment/production/Dockerfile.backend
@@ -60,6 +60,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+      - .env.customer-mail
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: 3100
@@ -110,6 +113,43 @@ services:
       interval: 20s
       timeout: 5s
       retries: 5
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: factorybox-prod-cloudflared
+    restart: unless-stopped
+    profiles: ["remote"]
+    command: tunnel --no-autoupdate --loglevel info --metrics 0.0.0.0:2000 run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      TZ: ${TZ:-Europe/Istanbul}
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cloudflared-quick:
+    image: cloudflare/cloudflared:latest
+    container_name: factorybox-prod-cloudflared-quick
+    restart: unless-stopped
+    profiles: ["quick-remote"]
+    command: tunnel --url http://nginx:8081
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   n8n:
     image: n8nio/n8n:latest

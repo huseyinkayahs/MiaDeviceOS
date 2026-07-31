@@ -1,0 +1,21 @@
+FACTORYBOX ONE v6.7.0 - CLOUD ACCESS & REMOTE MANAGEMENT
+
+1) Backend'i / production servislerini durdurmayin; ZIP dosyasini proje veya C:\FactoryBox klasorunun uzerine kopyalayin.
+2) Production klasorunde yonetici PowerShell acin.
+3) Uygulama guncellemesi:
+
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\apply-v6.7.0.ps1"
+
+4) Admin panelde Ctrl+F5 yapin ve v6.7.0 kontrol edin.
+5) System Settings > Remote Access & Domain ekranini acin.
+
+GECICI INTERNET TESTI:
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\start-quick-remote-access.ps1"
+
+KALICI DOMAIN:
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\enable-cloudflare-tunnel.ps1" -TunnelToken "TOKEN" -PublicUrl "https://panel.example.com" -AccessProtected
+
+UZAK ERISIMI KAPATMA:
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\disable-remote-access.ps1"
+
+NOT: Quick Tunnel test amaclidir. Production icin named tunnel + Cloudflare Access kullanin.

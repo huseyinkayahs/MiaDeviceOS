@@ -1,0 +1,8 @@
+FactoryBox One v6.7.1 Quick Tunnel Origin / CORS Login Hotfix
+
+Degisen dosyalar:
+- platform/backend/server.js
+- platform/backend/package.json
+
+Dokumantasyon:
+- docs/V6_7_1_QUICK_TUNNEL_ORIGIN_CORS_LOGIN_HOTFIX.md

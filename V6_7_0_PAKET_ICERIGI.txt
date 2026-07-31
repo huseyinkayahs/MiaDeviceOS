@@ -1,0 +1,20 @@
+FactoryBox One v6.7.0 Cloud Access, Domain & Remote Management
+
+Degisen dosyalar:
+- platform/backend/server.js
+- platform/backend/public/admin.html
+- platform/backend/package.json
+- platform/backend/package-lock.json
+- deployment/production/docker-compose.production.yml
+- deployment/production/.env.production.example
+- deployment/production/install.ps1
+- deployment/production/nginx/templates/*.conf
+
+Yeni dosyalar:
+- deployment/production/apply-v6.7.0.ps1
+- deployment/production/enable-cloudflare-tunnel.ps1
+- deployment/production/start-quick-remote-access.ps1
+- deployment/production/disable-remote-access.ps1
+- deployment/production/remote-access-status.ps1
+- docs/V6_7_0_CLOUD_ACCESS_REMOTE_MANAGEMENT.md
+- KURULUM_V6_7_0.txt

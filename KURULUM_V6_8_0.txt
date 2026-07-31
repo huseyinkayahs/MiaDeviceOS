@@ -1,0 +1,60 @@
+FactoryBox One v6.8.0 — Central Mail Gateway Foundation
+=============================================================
+
+IMPORTANT
+---------
+- This package does not overwrite .env.production.
+- Standard customer installations must not contain FactoryBox SMTP credentials.
+- Keep FACTORYBOX_ADMIN_SYNC_PASSWORD=false after password recovery.
+- Copy the package to BOTH the live folder and the main development folder.
+
+LIVE INSTALLATION
+-----------------
+1. Extract the ZIP over:
+   C:\FactoryBox
+
+2. Rebuild only the backend:
+   docker compose --env-file "C:\FactoryBox\deployment\production\.env.production" -f "C:\FactoryBox\deployment\production\docker-compose.production.yml" up -d --build --no-deps backend
+
+3. Check:
+   curl.exe -k -s https://localhost:8443/healthz
+
+   Expected version:
+   "6.8.0"
+
+MAIN DEVELOPMENT
+----------------
+Extract the same ZIP over:
+C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+
+Then:
+cd /d "C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)\platform\backend"
+node --check server.js
+node -p "require('./package.json').version"
+
+CUSTOMER MAIL MODE
+------------------
+Add the values from:
+deployment\production\.env.customer-mail.example
+
+Standard mode:
+FACTORYBOX_MAIL_MODE=gateway
+FACTORYBOX_MAIL_ALLOW_SMTP_FALLBACK=false
+
+The central gateway URL and revocable installation API key must be issued by FactoryBox.
+
+CENTRAL GATEWAY SERVER
+----------------------
+See:
+docs\V6_8_0_CENTRAL_MAIL_GATEWAY_FOUNDATION.md
+
+The separate central service is started with:
+docker compose --env-file ".env.mail-gateway" -f "docker-compose.mail-gateway.yml" up -d --build
+
+LOCAL PILOT ONLY
+----------------
+When the central gateway runs on the same Windows Docker host:
+FACTORYBOX_MAIL_GATEWAY_URL=http://host.docker.internal:3101
+
+In real customer deployments use a TLS URL such as:
+https://mail.factorybox.com

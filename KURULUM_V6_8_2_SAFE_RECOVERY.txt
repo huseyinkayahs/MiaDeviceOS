@@ -1,0 +1,23 @@
+HukaTech Platform v6.8.2 Safe Recovery
+
+Amaç:
+- Bozulmuş .env.production dosyasına karşı boyut koruması eklemek
+- Backend sürümünü temiz şekilde v6.8.2 olarak yeniden derlemek
+- Nginx'i backend ile birlikte sağlıklı başlatmak
+- Quick Tunnel açılırken backend yeniden oluşturulduktan sonra Nginx'i de yenilemek
+- Şifre sıfırlama bağlantısında yeni trycloudflare adresini PUBLIC_APP_URL olarak kullanmak
+
+Kurulum sırası:
+1. ZIP içeriğini ana geliştirme klasörünün üzerine kopyalayın.
+2. ZIP içeriğini C:\FactoryBox klasörünün üzerine kopyalayın.
+3. CMD:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\APPLY_V6_8_2_SAFE_RECOVERY.ps1"
+4. Beklenen son satır:
+   HUKATECH_V6_8_2_SAFE_RECOVERY_OK
+5. Quick Tunnel başlatmak için:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\start-quick-remote-access.ps1"
+
+Güvenlik:
+- Paket .env dosyası, Brevo anahtarı, SMTP şifresi veya müşteri API anahtarı içermez.
+- Script mevcut .env dosyalarını zaman damgalı şekilde yedekler.
+- 64 KB üzerindeki ortam dosyalarında işlem otomatik durur.

@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "6.6.6",
-  "description": "FactoryBox One v6.6.6 production HTTPS redirect port preservation hotfix",
+  "version": "6.8.2",
+  "description": "HukaTech Platform v6.8.2 Central Mail Gateway Routing and Password Reset Branding Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

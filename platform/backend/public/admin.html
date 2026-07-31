@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.6.6 Admin Panel</title>
+  <title>FactoryBox v6.8.1 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -268,6 +268,12 @@
     .notification-channel-card-v518 .channel-state.disabled { background:#e2e8f0; color:#475569; }
     .notification-secret-note-v518 { margin-top:6px; font-size:12px; color:var(--fb-muted); }
     .notification-test-actions-v518 { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-top:12px; }
+    .mail-mode-panel-v680 { margin-top:14px; padding:15px; border:1px solid var(--fb-border); border-radius:14px; background:#f8fafc; }
+    .mail-mode-panel-v680 h4 { margin:0 0 10px; font-size:15px; }
+    .mail-mode-panel-v680[hidden] { display:none !important; }
+    .mail-gateway-flow-v680 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
+    .mail-gateway-flow-v680 span { padding:6px 9px; border:1px solid var(--fb-border); border-radius:999px; background:#fff; font-size:12px; font-weight:800; }
+    .mail-gateway-flow-v680 b { color:var(--fb-muted); }
     #automationSchedulerSection { min-width:0; overflow:hidden; }
     .scheduler-flow-v519 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0; padding:14px; border:1px dashed var(--fb-border); border-radius:16px; background:#f8fafc; }
     .scheduler-flow-v519 span { padding:7px 10px; border-radius:999px; background:#fff; border:1px solid var(--fb-border); font-size:12px; font-weight:700; }
@@ -919,6 +925,18 @@
     .smartai-detail-v650{white-space:pre-wrap;line-height:1.5;background:#111820;color:#e9f0f5;border-radius:14px;padding:15px;max-height:440px;overflow:auto}
     @media(max-width:1150px){.smartai-layout-v650{grid-template-columns:1fr}.smartai-grid-v650{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:720px){.smartai-grid-v650,.smartai-form-v650{grid-template-columns:1fr}.smartai-form-v650 .wide,.smartai-form-v650 .span-2{grid-column:auto}.smartai-score-v650{align-items:flex-start;flex-direction:column}}
+
+
+    /* v6.8.1 Cloud Access & Remote Management */
+    .remote-grid-v670{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin:14px 0}
+    .remote-card-v670{border:1px solid var(--fb-border);border-radius:17px;padding:15px;background:linear-gradient(145deg,#fff,#f5f8fa);box-shadow:0 8px 20px rgba(25,34,43,.05)}
+    .remote-card-v670 span{display:block;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.06em;color:var(--fb-muted)}.remote-card-v670 strong{display:block;margin-top:8px;font-size:21px;color:#202832;overflow-wrap:anywhere}.remote-card-v670 small{display:block;margin-top:6px;color:#687685;line-height:1.4}
+    .remote-layout-v670{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(330px,.8fr);gap:15px;align-items:start}.remote-panel-v670{border:1px solid var(--fb-border);border-radius:18px;padding:17px;background:#fff;box-shadow:0 10px 25px rgba(27,35,44,.05);margin-bottom:15px}.remote-panel-v670 h3{margin:0 0 6px}.remote-panel-v670>p{margin:0 0 13px;color:var(--fb-muted);line-height:1.5}
+    .remote-form-v670{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.remote-form-v670 label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#465463}.remote-form-v670 .wide{grid-column:1/-1}.remote-form-v670 textarea{min-height:90px;resize:vertical}
+    .remote-checklist-v670{display:grid;gap:9px}.remote-check-v670{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e0e6eb;border-radius:12px;padding:10px 12px;background:#fafcfd}.remote-check-v670.ok{border-color:#b8dfca;background:#f1faf5}.remote-check-v670.warn{border-color:#f1d29f;background:#fff8ec}.remote-check-v670 b{font-size:11px;text-transform:uppercase}
+    .remote-code-v670{background:#111820;color:#e7eef4;border-radius:14px;padding:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.55 Consolas,monospace}.remote-note-v670{border-left:5px solid #c67723;border-radius:14px;background:#fff9f0;padding:13px 15px;color:#5f4b32;line-height:1.5}
+    @media(max-width:1100px){.remote-layout-v670{grid-template-columns:1fr}.remote-grid-v670{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.remote-grid-v670,.remote-form-v670{grid-template-columns:1fr}.remote-form-v670 .wide{grid-column:auto}}
+
 </style>
 </head>
 <body class="admin-ui-v58">
@@ -926,7 +944,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.6.6 — Production HTTPS yönlendirmesinde port koruma hotfix aktif.</p>
+      <p id="adminVersionLabel">v6.8.1 — Central Mail Gateway, Cloud Access ve Remote Management aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -964,11 +982,12 @@
       <div class="admin-nav-group-v517" data-nav-group="system">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
           <span>Sistem Ayarları</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">6</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">7</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="general"><span>Genel Ayarlar</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="health"><span>Sistem Sağlığı ve Yedekler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="remote-access"><span>Uzak Erişim ve Domain</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="security-center"><span>Güvenlik ve Oturumlar</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Bildirimler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Otomasyon Zamanlayıcı</span></button>
@@ -1021,7 +1040,7 @@
     </nav>
 
     <div class="admin-sidebar-footer-v58">
-      v6.6.6: Production HTTPS yönlendirmesinde port koruma hotfix aktif.
+      v6.8.1: Central Mail Gateway, Cloud Access ve Remote Management aktif.
     </div>
   </aside>
 
@@ -1051,7 +1070,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.6.6: Production HTTPS yönlendirmesinde port koruma hotfix aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.8.1: Central Mail Gateway, Cloud Access ve Remote Management aktif.</p>
       </div>
     </div>
 
@@ -1359,6 +1378,61 @@
   </section>
 
 
+
+
+  <section id="remoteAccessSection" class="card wide admin-card" data-admin-view="remote-access">
+    <div class="section-title-row">
+      <div>
+        <h2>Uzak Erişim, Domain ve Cloudflare Tunnel</h2>
+        <p class="muted">Modemde port açmadan FactoryBox panelini farklı Wi-Fi ve mobil internet üzerinden güvenli biçimde erişilebilir hale getir.</p>
+      </div>
+      <div class="button-row">
+        <button id="refreshRemoteAccessBtn" class="secondary-btn">Durumu Yenile</button>
+        <button id="testRemoteAccessBtn" class="secondary-btn">Uzak Adresi Test Et</button>
+        <button id="saveRemoteAccessBtn">Ayarları Kaydet</button>
+      </div>
+    </div>
+    <div id="remoteAccessStatus" class="mini-status">Uzak erişim durumu yükleniyor...</div>
+    <div class="remote-grid-v670">
+      <div class="remote-card-v670"><span>Uzak Erişim</span><strong id="remoteAccessState">-</strong><small id="remoteAccessStateDetail">-</small></div>
+      <div class="remote-card-v670"><span>Çalışma Modu</span><strong id="remoteAccessModeValue">-</strong><small>Quick test veya kalıcı named tunnel</small></div>
+      <div class="remote-card-v670"><span>Tunnel Token</span><strong id="remoteAccessTokenValue">-</strong><small>Token panelde gösterilmez</small></div>
+      <div class="remote-card-v670"><span>Son Kontrol</span><strong id="remoteAccessLastCheck">-</strong><small id="remoteAccessLatency">-</small></div>
+    </div>
+    <div class="remote-layout-v670">
+      <div>
+        <div class="remote-panel-v670">
+          <h3>Uzak Erişim Ayarları</h3>
+          <p>Bu ekran güvenlik ve görünüm ayarlarını saklar. Cloudflare Tunnel tokeni yalnızca production bilgisayarındaki <code>.env.production</code> dosyasında tutulur.</p>
+          <div class="remote-form-v670">
+            <label>Mod<select id="remoteAccessMode"><option value="disabled">Kapalı</option><option value="quick">Quick Tunnel / Test</option><option value="named">Named Tunnel / Production</option></select></label>
+            <label>Cloudflare Access Koruması<select id="remoteAccessProtected"><option value="false">Kapalı / Henüz ayarlanmadı</option><option value="true">Açık</option></select></label>
+            <label class="wide">Uzak Panel Adresi<input id="remoteAccessPublicUrl" type="url" placeholder="https://panel.example.com"></label>
+            <label class="wide">İzin Verilen E-posta Domainleri<input id="remoteAccessAllowedDomains" type="text" placeholder="example.com, partner.com"></label>
+            <label>Uzaktan Teknik Servis<select id="remoteAccessTechnicalService"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
+            <label class="wide">Notlar<textarea id="remoteAccessNotes" placeholder="Domain, Cloudflare Access politikası ve teknik servis notları"></textarea></label>
+          </div>
+        </div>
+        <div class="remote-panel-v670">
+          <h3>Production Bilgisayarında Çalıştırılacak Komut</h3>
+          <p>Kalıcı erişim için Cloudflare panelinden oluşturduğun Tunnel tokenini kullan.</p>
+          <div id="remoteAccessCommand" class="remote-code-v670">Komut hazırlanıyor...</div>
+        </div>
+      </div>
+      <div>
+        <div class="remote-panel-v670">
+          <h3>Güvenlik Kontrol Listesi</h3>
+          <div id="remoteAccessChecklist" class="remote-checklist-v670">Kontroller yükleniyor...</div>
+        </div>
+        <div class="remote-panel-v670">
+          <h3>Bağlantı Bilgisi</h3>
+          <div id="remoteAccessConnectionInfo" class="remote-note-v670">Uzak erişim ayarları bekleniyor.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
   <section id="systemHealthSection" class="card wide admin-card" data-admin-view="health">
     <div class="section-title-row">
       <div>
@@ -1498,7 +1572,7 @@
     <div class="section-title-row">
       <div>
         <h2>Notification Settings / Channel Tests</h2>
-        <p class="muted">v5.18: Telegram, Email ve Delivery Worker ayarlarını tek ekrandan yönet ve test et.</p>
+        <p class="muted">v6.8.1: Telegram, HukaTech Central Mail Gateway, Brevo API ve Delivery Worker ayarlarını tek ekrandan yönet.</p>
       </div>
       <div class="admin-topbar-actions-v58">
         <button id="refreshNotificationSettingsBtn" class="secondary-btn">Ayarları Yenile</button>
@@ -1533,21 +1607,54 @@
       </div>
 
       <div class="notification-channel-card-v518">
-        <h3>Email / SMTP</h3>
+        <h3>Email Delivery</h3>
         <div id="notificationEmailState">Durum yükleniyor...</div>
+
         <div class="admin-form-grid">
           <label>Enabled<select id="notificationEmailEnabled"><option value="true">true</option><option value="false">false</option></select></label>
-          <label>SMTP Host<input id="notificationSmtpHost" type="text" placeholder="smtp.example.com"></label>
-          <label>SMTP Port<input id="notificationSmtpPort" type="number" min="1" max="65535" value="587"></label>
-          <label>Secure<select id="notificationSmtpSecure"><option value="false">false</option><option value="true">true</option></select></label>
-          <label>SMTP User<input id="notificationSmtpUser" type="text"></label>
-          <label>SMTP Password<input id="notificationSmtpPass" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut şifre korunur"></label>
-          <label>From<input id="notificationSmtpFrom" type="text"></label>
+          <label>Gönderim Modu
+            <select id="notificationEmailMode">
+              <option value="gateway">HukaTech Central Gateway</option>
+              <option value="direct_smtp">Direct SMTP / Geliştirme</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+          <label>Gönderen Adı<input id="notificationEmailSenderName" type="text" placeholder="HukaTech | Müşteri Adı"></label>
           <label>Varsayılan Alıcılar<input id="notificationEmailDefaultTo" type="text" placeholder="mail1@firma.com, mail2@firma.com"></label>
         </div>
-        <p class="notification-secret-note-v518">SMTP şifresi panelde gösterilmez. Yeni şifre girilmezse mevcut değer korunur.</p>
+
+        <div id="notificationGatewayFields" class="mail-mode-panel-v680">
+          <h4>HukaTech Central Mail Gateway</h4>
+          <div class="mail-gateway-flow-v680">
+            <span>Müşteri FactoryBox</span><b>→</b><span>HukaTech Mail Gateway</span><b>→</b><span>noreply@hukatech.com</span>
+          </div>
+          <div class="admin-form-grid">
+            <label>Gateway URL<input id="notificationMailGatewayUrl" type="url" placeholder="https://mail.hukatech.com"></label>
+            <label>Installation ID<input id="notificationMailInstallationId" type="text" placeholder="customer-installation-id"></label>
+            <label>Gateway API Key<input id="notificationMailApiKey" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut anahtar korunur"></label>
+            <label>SMTP Fallback
+              <select id="notificationMailSmtpFallback"><option value="false">false</option><option value="true">true</option></select>
+            </label>
+          </div>
+          <p class="notification-secret-note-v518">SMTP şifresi müşteri kurulumunda tutulmaz. Gateway anahtarı iptal edilebilir ve panelde açık gösterilmez.</p>
+        </div>
+
+        <div id="notificationSmtpFields" class="mail-mode-panel-v680" hidden>
+          <h4>Direct SMTP / Yalnızca geliştirme ve özel kurumsal kurulum</h4>
+          <div class="admin-form-grid">
+            <label>SMTP Host<input id="notificationSmtpHost" type="text" placeholder="smtp.example.com"></label>
+            <label>SMTP Port<input id="notificationSmtpPort" type="number" min="1" max="65535" value="587"></label>
+            <label>Secure<select id="notificationSmtpSecure"><option value="false">false</option><option value="true">true</option></select></label>
+            <label>SMTP User<input id="notificationSmtpUser" type="text"></label>
+            <label>SMTP Password<input id="notificationSmtpPass" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut şifre korunur"></label>
+            <label>From<input id="notificationSmtpFrom" type="text"></label>
+          </div>
+          <p class="notification-secret-note-v518">Standart müşteri kurulumlarında Direct SMTP kullanılmaz.</p>
+        </div>
+
         <div class="notification-test-actions-v518">
           <label>Test E-postası<input id="notificationEmailTestTarget" type="email" placeholder="Boş = varsayılan alıcı"></label>
+          <button id="checkMailGatewayBtn" class="secondary-btn">Gateway Bağlantısını Kontrol Et</button>
           <button id="testEmailNotificationBtn" class="secondary-btn">Email Test Mesajı</button>
         </div>
       </div>
@@ -2415,6 +2522,7 @@
     ['Eksik, varsayılan veya üretim ortamında risk oluşturabilecek yapılandırmaları gösterir.','Shows missing, default or production-risk configuration items.'],
     ['Dosya boyutu, SHA256 doğrulaması, pg_restore ön kontrolü ve indirme işlemleri.','File size, SHA256 verification, pg_restore pre-check and download actions.'],
     ['Sağlık kontrolleri, yedekleme ve kritik bildirim olayları.','Health checks, backup and critical notification events.'],
+    ['Uzak Erişim ve Domain','Remote Access & Domain'],['Uzak Erişim, Domain ve Cloudflare Tunnel','Remote Access, Domain & Cloudflare Tunnel'],['Durumu Yenile','Refresh Status'],['Uzak Adresi Test Et','Test Remote URL'],['Ayarları Kaydet','Save Settings'],['Uzak Erişim Ayarları','Remote Access Settings'],['Çalışma Modu','Operating Mode'],['Uzak Panel Adresi','Remote Panel URL'],['Cloudflare Access Koruması','Cloudflare Access Protection'],['İzin Verilen E-posta Domainleri','Allowed Email Domains'],['Uzaktan Teknik Servis','Remote Technical Service'],['Production Bilgisayarında Çalıştırılacak Komut','Command to Run on the Production Computer'],['Güvenlik Kontrol Listesi','Security Checklist'],['Bağlantı Bilgisi','Connection Information'],
     ['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],['Güvenlik ve Oturumlar','Security & Sessions'],['Güvenlik ve Oturum Yönetimi','Security & Session Management'],['Aktif Oturum','Active Sessions'],['Kilitli Hesap','Locked Accounts'],['Hatalı Giriş / 24s','Failed Logins / 24h'],['Şifre Değişimi','Password Change'],['Güvenlik Politikası','Security Policy'],['Şifremi Değiştir','Change My Password'],['Mevcut Şifre','Current Password'],['Yeni Şifre','New Password'],['Aktif Oturumlar','Active Sessions'],['Hesap Güvenliği','Account Security'],['Son Güvenlik Olayları','Recent Security Events'],['Durumu Yenile','Refresh Status'],
     ['Canlı İzleme','Live Monitoring'],['OEE ve Duruş','OEE & Downtime'],['Alarm Merkezi','Alarm Center'],
     ['Alarm Analitiği','Alarm Analytics'],['Alarm SLA','Alarm SLA'],['Bildirim Teslimatı','Escalation Delivery'],
@@ -2481,8 +2589,8 @@
     ['Tesis Adı','Site Name'],['Tesis Oluştur','Create Site'],['CSV İndir','Download CSV'],['İşlem','Action'],['Varlık Türü','Entity Type'],
     ['Aktör Email','Actor Email'],['Limit','Limit'],['Özet yükleniyor...','Loading summary...'],['KPI özeti yükleniyor...','Loading KPI summary...'],
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
-    ['v6.6.6 — Production HTTPS yönlendirmesinde port koruma hotfix aktif.','v6.6.6 — Production HTTPS redirect port-preservation hotfix is active.'],
-    ['v6.6.6: Production HTTPS yönlendirmesinde port koruma hotfix aktif.','v6.6.6: Production HTTPS redirect port-preservation hotfix is active.'],
+    ['v6.8.1 — Central Mail Gateway, Cloud Access ve Remote Management aktif.','v6.8.1 — Central Mail Gateway, Cloud Access and Remote Management are active.'],
+    ['v6.8.1: Central Mail Gateway, Cloud Access ve Remote Management aktif.','v6.8.1: Central Mail Gateway, Cloud Access and Remote Management are active.'],
     ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
     ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
@@ -2510,7 +2618,7 @@
     ['Delivery Worker durumu yükleniyor...','Loading Delivery Worker status...'],['Escalation Queue özeti yükleniyor...','Loading Escalation Queue summary...'],
     ['Escalation Olay Geçmişi','Escalation Event History'],['Escalation olayları yükleniyor...','Loading escalation events...'],
     ['Bildirim Ayarları / Kanal Testleri','Notification Settings / Channel Tests'],
-    ['v5.18: Telegram, Email ve Delivery Worker ayarlarını tek ekrandan yönet ve test et.','v5.18: Manage and test Telegram, Email and Delivery Worker settings from one screen.'],
+    ['v6.8.1: Telegram, HukaTech Central Mail Gateway, Brevo API ve Delivery Worker ayarlarını tek ekrandan yönet.','v6.8.1: Manage Telegram, HukaTech Central Mail Gateway, Brevo API and the Delivery Worker from one screen.'],
     ['Bildirim ayarları yükleniyor...','Loading notification settings...'],['Durum yükleniyor...','Loading status...'],
     ['Bot token panelde gösterilmez. Yeni token girilmezse mevcut değer korunur.','The bot token is not displayed. The current value is preserved unless a new token is entered.'],
     ['SMTP şifresi panelde gösterilmez. Yeni şifre girilmezse mevcut değer korunur.','The SMTP password is not displayed. The current value is preserved unless a new password is entered.'],
@@ -3068,6 +3176,7 @@
     escalations:{title_tr:'Bildirim Teslimatı',title_en:'Escalation Delivery',desc_tr:'SLA dışı alarm kuyruğu, E-posta/Telegram teslimatı ve gönderim geçmişi.',desc_en:'Out-of-SLA alarm queue, Email/Telegram delivery and delivery history.'},
     general:{title_tr:'Genel Ayarlar',title_en:'General Settings',desc_tr:'Panel dili, saat dilimi, tarih/saat biçimi ve genel çalışma tercihleri.',desc_en:'Panel language, time zone, date/time format and general operating preferences.'},
     health:{title_tr:'Sistem Sağlığı ve Yedekler',title_en:'System Health & Backups',desc_tr:'Backend, veritabanı, MQTT, servisler, disk, loglar ve otomatik yedekleme merkezi.',desc_en:'Central health center for backend, database, MQTT, services, disk, logs and automatic backups.'},
+    'remote-access':{title_tr:'Uzak Erişim ve Domain',title_en:'Remote Access & Domain',desc_tr:'Cloudflare Tunnel, public domain, uzaktan erişim sağlığı ve güvenlik kontrolleri.',desc_en:'Cloudflare Tunnel, public domain, remote-access health and security checks.'},
     'security-center':{title_tr:'Güvenlik ve Oturum Yönetimi',title_en:'Security & Session Management',desc_tr:'Aktif oturumlar, giriş koruması, hesap kilitleri, şifre politikası ve güvenlik olayları.',desc_en:'Active sessions, login protection, account locks, password policy and security events.'},
     notifications:{title_tr:'Bildirim Ayarları',title_en:'Notification Settings',desc_tr:'Telegram, E-posta, test mesajları ve teslimat çalışanı ayarları.',desc_en:'Telegram, Email, test messages and delivery worker settings.'},
     scheduler:{title_tr:'Otomasyon Zamanlayıcı',title_en:'Automation Scheduler',desc_tr:'Otomatik SLA taraması, yeniden deneme, teslimat ve Dead Letter yönetimi.',desc_en:'Automatic SLA scanning, retry, delivery and Dead Letter management.'},
@@ -3108,6 +3217,7 @@
     escalations:'alarm',
     general:'system',
     health:'system',
+    'remote-access':'system',
     'security-center':'system',
     notifications:'system',
     scheduler:'system',
@@ -4133,10 +4243,21 @@
     return `${detail} · ${fmtDate(test.created_at)}`;
   }
 
+  function syncNotificationEmailModeFields() {
+    const mode = document.getElementById('notificationEmailMode')?.value || 'direct_smtp';
+    const gatewayFields = document.getElementById('notificationGatewayFields');
+    const smtpFields = document.getElementById('notificationSmtpFields');
+    const gatewayButton = document.getElementById('checkMailGatewayBtn');
+    if (gatewayFields) gatewayFields.hidden = mode !== 'gateway';
+    if (smtpFields) smtpFields.hidden = mode !== 'direct_smtp';
+    if (gatewayButton) gatewayButton.hidden = mode !== 'gateway';
+  }
+
   function renderNotificationSettings(data) {
     const delivery = data.delivery || {};
     const telegram = data.telegram || {};
     const email = data.email || {};
+    const gateway = email.gateway || {};
     const latest = data.latest_delivery || null;
     const canManage = Boolean(data.can_manage);
 
@@ -4150,6 +4271,11 @@
     setValue('notificationBatchSize', delivery.batch_size || 20);
     setValue('notificationTelegramEnabled', String(Boolean(telegram.enabled)));
     setValue('notificationEmailEnabled', String(Boolean(email.enabled)));
+    setValue('notificationEmailMode', email.mode || 'direct_smtp');
+    setValue('notificationEmailSenderName', email.sender_name || '');
+    setValue('notificationMailGatewayUrl', gateway.url || '');
+    setValue('notificationMailInstallationId', gateway.installation_id || '');
+    setValue('notificationMailSmtpFallback', String(Boolean(gateway.allow_smtp_fallback)));
     setValue('notificationSmtpHost', email.host || '');
     setValue('notificationSmtpPort', email.port || 587);
     setValue('notificationSmtpSecure', String(Boolean(email.secure)));
@@ -4165,13 +4291,18 @@
     if (telegramToken) telegramToken.placeholder = telegram.token_configured ? `Mevcut token: ${telegram.token_masked}` : 'Telegram bot token gerekli';
     const smtpPass = document.getElementById('notificationSmtpPass');
     if (smtpPass) smtpPass.placeholder = email.password_configured ? `Mevcut şifre: ${email.password_masked}` : 'SMTP şifresi gerekli';
+    const gatewayKey = document.getElementById('notificationMailApiKey');
+    if (gatewayKey) gatewayKey.placeholder = gateway.api_key_configured ? `Mevcut anahtar: ${gateway.api_key_masked}` : 'Gateway API anahtarı gerekli';
+
+    syncNotificationEmailModeFields();
 
     const status = document.getElementById('notificationSettingsStatus');
     if (status) {
+      const modeText = email.mode === 'gateway' ? 'CENTRAL' : email.mode === 'direct_smtp' ? 'SMTP' : 'OFF';
       status.innerHTML = `
         <div class="kpi-grid-v59">
           <div class="kpi-card-v59"><span>Delivery</span><strong>${delivery.enabled ? 'ON' : 'OFF'}</strong><small>Escalation teslimatı</small></div>
-          <div class="kpi-card-v59"><span>Auto Worker</span><strong>${delivery.auto_enabled ? 'ON' : 'OFF'}</strong><small>${esc(delivery.interval_sec || 60)} sn · batch ${esc(delivery.batch_size || 20)}</small></div>
+          <div class="kpi-card-v59"><span>Email Modu</span><strong>${modeText}</strong><small>${email.configured ? 'Yapılandırıldı' : 'Ayar bekliyor'}</small></div>
           <div class="kpi-card-v59"><span>Son Teslimat</span><strong>${latest ? esc(String(latest.delivery_status || '-').toUpperCase()) : '-'}</strong><small>${latest ? esc(fmtDate(latest.last_attempt_at)) : 'Henüz kayıt yok'}</small></div>
           <div class="kpi-card-v59"><span>Ayar Kaynağı</span><strong>${data.settings_source === 'database' ? 'DB' : 'ENV'}</strong><small>${esc(data.updated_by || 'Ortam değişkenleri')}</small></div>
         </div>`;
@@ -4179,14 +4310,22 @@
 
     const telegramState = document.getElementById('notificationTelegramState');
     if (telegramState) telegramState.innerHTML = `${notificationStateHtml(telegram.enabled, telegram.configured, 'Telegram')}<p class="muted">Chat ID: ${esc(telegram.chat_id_masked || 'yok')}<br>${esc(notificationLastTestText(telegram.last_test))}</p>`;
-    const emailState = document.getElementById('notificationEmailState');
-    if (emailState) emailState.innerHTML = `${notificationStateHtml(email.enabled, email.configured, 'Email')}<p class="muted">${esc(email.host || 'SMTP host yok')} · ${esc(email.default_to || 'varsayılan alıcı yok')}<br>${esc(notificationLastTestText(email.last_test))}</p>`;
 
-    ['saveNotificationSettingsBtn','testTelegramNotificationBtn','testEmailNotificationBtn'].forEach(id => {
+    const emailState = document.getElementById('notificationEmailState');
+    if (emailState) {
+      const modeLabel = email.mode === 'gateway' ? 'Central Gateway' : email.mode === 'direct_smtp' ? 'Direct SMTP' : 'Disabled';
+      const detail = email.mode === 'gateway'
+        ? `${gateway.url || 'Gateway URL yok'} · Installation: ${gateway.installation_id || 'yok'}`
+        : `${email.host || 'SMTP host yok'} · ${email.from || 'from yok'}`;
+      emailState.innerHTML = `${notificationStateHtml(email.enabled && email.mode !== 'disabled', email.configured, modeLabel)}<p class="muted">${esc(detail)}<br>${esc(notificationLastTestText(email.last_test))}</p>`;
+    }
+
+    ['saveNotificationSettingsBtn','testTelegramNotificationBtn','testEmailNotificationBtn','checkMailGatewayBtn'].forEach(id => {
       const button = document.getElementById(id);
       if (button) button.disabled = !canManage;
     });
   }
+
 
   function renderAutomationScheduler(data) {
     const scheduler = data.scheduler || {};
@@ -4914,7 +5053,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.6.6`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.8.1`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -5122,6 +5261,28 @@
     const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
 
+
+
+  let remoteAccessStateV670={settings:{},runtime:{},security:{},checklist:[]};
+  function remoteAccessBool(value){return value===true||String(value).toLowerCase()==='true';}
+  function remoteAccessModeLabel(mode){const labels={disabled:currentLanguage==='en'?'DISABLED':'KAPALI',quick:'QUICK TUNNEL',named:'NAMED TUNNEL'};return labels[mode]||String(mode||'-').toUpperCase();}
+  function renderRemoteAccessV670(data){
+    remoteAccessStateV670=data||remoteAccessStateV670;const settings=data.settings||{},runtime=data.runtime||{};
+    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.8.1'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
+    const state=document.getElementById('remoteAccessState');if(state)state.textContent=runtime.status==='online'?(currentLanguage==='en'?'ONLINE':'ÇEVRİMİÇİ'):runtime.status==='configured'?(currentLanguage==='en'?'CONFIGURED':'YAPILANDIRILDI'):runtime.status==='waiting_configuration'?(currentLanguage==='en'?'WAITING':'AYAR BEKLİYOR'):(currentLanguage==='en'?'OFF':'KAPALI');
+    const detail=document.getElementById('remoteAccessStateDetail');if(detail)detail.textContent=runtime.last_error||settings.public_url||'-';
+    const mode=document.getElementById('remoteAccessModeValue');if(mode)mode.textContent=remoteAccessModeLabel(settings.mode);
+    const token=document.getElementById('remoteAccessTokenValue');if(token)token.textContent=settings.mode==='quick'?(currentLanguage==='en'?'NOT REQUIRED':'GEREKMİYOR'):(settings.token_configured?(currentLanguage==='en'?'CONFIGURED':'HAZIR'):(currentLanguage==='en'?'NOT READY':'HAZIR DEĞİL'));
+    const last=document.getElementById('remoteAccessLastCheck');if(last)last.textContent=runtime.last_check_at?fmtDate(runtime.last_check_at):'-';
+    const latency=document.getElementById('remoteAccessLatency');if(latency)latency.textContent=runtime.last_latency_ms!=null?`${runtime.last_latency_ms} ms · HTTP ${runtime.last_http_status||'-'}`:(runtime.last_error||'-');
+    const fields={remoteAccessMode:settings.mode||'disabled',remoteAccessProtected:String(Boolean(settings.access_protected)),remoteAccessPublicUrl:settings.public_url||'',remoteAccessAllowedDomains:settings.allowed_email_domains||'',remoteAccessTechnicalService:String(Boolean(settings.technical_service_enabled)),remoteAccessNotes:settings.notes||''};Object.entries(fields).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.value=value;});
+    const checks=document.getElementById('remoteAccessChecklist');if(checks)checks.innerHTML=(data.checklist||[]).map(item=>`<div class="remote-check-v670 ${item.ok?'ok':'warn'}"><span>${esc(currentLanguage==='en'?item.message_en:item.message_tr)}</span><b>${item.ok?(currentLanguage==='en'?'OK':'HAZIR'):(currentLanguage==='en'?'CHECK':'KONTROL')}</b></div>`).join('')||'-';
+    const info=document.getElementById('remoteAccessConnectionInfo');if(info)info.innerHTML=settings.mode==='quick'?(currentLanguage==='en'?'Quick Tunnel is temporary; the URL changes after restart. Use it only for testing.':'Quick Tunnel geçicidir; yeniden başlatmada adres değişir. Yalnızca test için kullan.'):(settings.mode==='named'?(currentLanguage==='en'?'Named Tunnel provides a stable domain. Configure the public hostname origin as <b>http://nginx:8081</b> and protect it with Cloudflare Access.':'Named Tunnel sabit domain sağlar. Public hostname kaynağını <b>http://nginx:8081</b> yap ve Cloudflare Access ile koru.'):(currentLanguage==='en'?'Remote access is disabled. Local HTTPS access continues to work.':'Uzak erişim kapalı. Yerel HTTPS erişimi çalışmaya devam eder.'));
+    const command=document.getElementById('remoteAccessCommand');if(command){const dir='C:\\FactoryBox\\deployment\\production';command.textContent=settings.mode==='quick'?`cd /d "${dir}"\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\\start-quick-remote-access.ps1"`:`cd /d "${dir}"\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\\enable-cloudflare-tunnel.ps1" -TunnelToken "CLOUDFLARE_TOKEN" -PublicUrl "${settings.public_url||'https://panel.example.com'}"`;}
+  }
+  async function loadRemoteAccessV670(probe=false){const data=await getJson(`/api/admin/remote-access${probe?'?probe=1':''}`);renderRemoteAccessV670(data);return data;}
+  async function saveRemoteAccessV670(){const body={mode:document.getElementById('remoteAccessMode')?.value||'disabled',public_url:document.getElementById('remoteAccessPublicUrl')?.value.trim()||'',access_protected:remoteAccessBool(document.getElementById('remoteAccessProtected')?.value),allowed_email_domains:document.getElementById('remoteAccessAllowedDomains')?.value||'',technical_service_enabled:remoteAccessBool(document.getElementById('remoteAccessTechnicalService')?.value),notes:document.getElementById('remoteAccessNotes')?.value||''};const data=await apiJson('/api/admin/remote-access',{method:'PATCH',body:JSON.stringify(body)});renderRemoteAccessV670(data);return data;}
+
   async function loadSystemHealth(force=false) { const data=await getJson(`/api/admin/system-health${force?'?force=1':''}`);renderSystemHealth(data);return data; }
 
   async function saveSystemHealthSettings() {
@@ -5267,6 +5428,7 @@
       ['alarm-escalation-delivery-status', '/api/admin/alarm-escalation/delivery-status', renderAlarmEscalationDeliveryStatus, 'alarmEscalationDeliveryStatus'],
       ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary'],
       ['system-health', '/api/admin/system-health', renderSystemHealth, 'systemHealthStatus'],
+      ['remote-access', '/api/admin/remote-access', renderRemoteAccessV670, 'remoteAccessStatus'],
       ...(can('MANAGE_USERS') ? [['security-center','/api/admin/security-center',renderSecurityCenter,'securityCenterStatus']] : []),
       ['notification-settings', '/api/admin/notification-settings', renderNotificationSettings, 'notificationSettingsStatus'],
       ['automation-scheduler', '/api/admin/automation-scheduler', renderAutomationScheduler, 'automationSchedulerStatus'],
@@ -5562,6 +5724,12 @@
       telegram_chat_id:document.getElementById('notificationTelegramChatId').value.trim(),
       telegram_bot_token:document.getElementById('notificationTelegramToken').value.trim(),
       email_enabled:document.getElementById('notificationEmailEnabled').value === 'true',
+      email_mode:document.getElementById('notificationEmailMode').value,
+      email_sender_name:document.getElementById('notificationEmailSenderName').value.trim(),
+      mail_gateway_url:document.getElementById('notificationMailGatewayUrl').value.trim(),
+      mail_gateway_installation_id:document.getElementById('notificationMailInstallationId').value.trim(),
+      mail_gateway_api_key:document.getElementById('notificationMailApiKey').value,
+      mail_gateway_allow_smtp_fallback:document.getElementById('notificationMailSmtpFallback').value === 'true',
       smtp_host:document.getElementById('notificationSmtpHost').value.trim(),
       smtp_port:Number(document.getElementById('notificationSmtpPort').value),
       smtp_secure:document.getElementById('notificationSmtpSecure').value === 'true',
@@ -5573,6 +5741,7 @@
     const data = await apiJson('/api/admin/notification-settings', {method:'PATCH',body:JSON.stringify(body)});
     document.getElementById('notificationTelegramToken').value = '';
     document.getElementById('notificationSmtpPass').value = '';
+    document.getElementById('notificationMailApiKey').value = '';
     return data;
   }
 
@@ -5581,6 +5750,10 @@
       ? {chat_id:document.getElementById('notificationTelegramTestTarget').value.trim()}
       : {to:document.getElementById('notificationEmailTestTarget').value.trim()};
     return apiJson(`/api/admin/notification-settings/test-${channel}`, {method:'POST',body:JSON.stringify(body)});
+  }
+
+  async function checkMailGatewayConnection() {
+    return apiJson('/api/admin/notification-settings/gateway-status');
   }
 
   async function saveAutomationScheduler() {
@@ -6184,6 +6357,7 @@
     const saveNotificationSettingsBtn = document.getElementById('saveNotificationSettingsBtn');
     const testTelegramNotificationBtn = document.getElementById('testTelegramNotificationBtn');
     const testEmailNotificationBtn = document.getElementById('testEmailNotificationBtn');
+    const checkMailGatewayBtn = document.getElementById('checkMailGatewayBtn');
     const refreshAutomationSchedulerBtn = document.getElementById('refreshAutomationSchedulerBtn');
     const saveAutomationSchedulerBtn = document.getElementById('saveAutomationSchedulerBtn');
     const runAutomationSchedulerBtn = document.getElementById('runAutomationSchedulerBtn');
@@ -6225,6 +6399,7 @@
     if (refreshAlarmEscalationEventsBtn) refreshAlarmEscalationEventsBtn.addEventListener('click', loadAdmin);
     if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click', loadAdmin);
     if (refreshNotificationSettingsBtn) refreshNotificationSettingsBtn.addEventListener('click', loadAdmin);
+    document.getElementById('notificationEmailMode')?.addEventListener('change', syncNotificationEmailModeFields);
     if (refreshAutomationSchedulerBtn) refreshAutomationSchedulerBtn.addEventListener('click', loadAdmin);
     if (refreshAlarmReportsBtn) refreshAlarmReportsBtn.addEventListener('click', loadAdmin);
     if (refreshMaintenanceTicketsBtn) refreshMaintenanceTicketsBtn.addEventListener('click', loadAdmin);
@@ -6345,6 +6520,18 @@
         document.getElementById('notificationSettingsResult').textContent = e.message;
       } finally {
         testTelegramNotificationBtn.disabled = false;
+      }
+    });
+    if (checkMailGatewayBtn) checkMailGatewayBtn.addEventListener('click', async () => {
+      checkMailGatewayBtn.disabled = true;
+      document.getElementById('notificationSettingsResult').textContent = 'HukaTech Central Mail Gateway bağlantısı kontrol ediliyor...';
+      try {
+        const result = await checkMailGatewayConnection();
+        document.getElementById('notificationSettingsResult').textContent = `Central Mail Connected · ${result.customer_name || result.installation_id || '-'} · v${result.version || '-'}`;
+      } catch(e) {
+        document.getElementById('notificationSettingsResult').textContent = `Gateway bağlantı hatası: ${e.message}`;
+      } finally {
+        checkMailGatewayBtn.disabled = false;
       }
     });
     if (testEmailNotificationBtn) testEmailNotificationBtn.addEventListener('click', async () => {
@@ -6503,6 +6690,12 @@
     const languagePreview=document.getElementById('generalLanguage');
     if(languagePreview)languagePreview.addEventListener('change',()=>{currentLanguage=languagePreview.value;localStorage.setItem('factorybox_ui_language',currentLanguage);applyTranslations(document);const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||'dashboard';setAdminView(activeView);renderGeneralSettings({...generalSettingsOptions,settings:{...generalSettings,language:currentLanguage},options:generalSettingsOptions});});
 
+
+
+
+    const refreshRemoteAccessBtn=document.getElementById('refreshRemoteAccessBtn');if(refreshRemoteAccessBtn)refreshRemoteAccessBtn.addEventListener('click',async()=>{refreshRemoteAccessBtn.disabled=true;try{await loadRemoteAccessV670(false);}catch(e){setError('remoteAccessStatus',e.message);}finally{refreshRemoteAccessBtn.disabled=false;}});
+    const saveRemoteAccessBtn=document.getElementById('saveRemoteAccessBtn');if(saveRemoteAccessBtn)saveRemoteAccessBtn.addEventListener('click',async()=>{saveRemoteAccessBtn.disabled=true;const st=document.getElementById('remoteAccessStatus');try{await saveRemoteAccessV670();if(st)st.textContent=currentLanguage==='en'?'Remote access settings saved.':'Uzak erişim ayarları kaydedildi.';}catch(e){if(st)st.textContent=e.message;}finally{saveRemoteAccessBtn.disabled=false;}});
+    const testRemoteAccessBtn=document.getElementById('testRemoteAccessBtn');if(testRemoteAccessBtn)testRemoteAccessBtn.addEventListener('click',async()=>{testRemoteAccessBtn.disabled=true;const st=document.getElementById('remoteAccessStatus');try{const public_url=document.getElementById('remoteAccessPublicUrl')?.value.trim()||'';const data=await apiJson('/api/admin/remote-access/test',{method:'POST',body:JSON.stringify({public_url})});if(st)st.textContent=`${currentLanguage==='en'?'Remote access is online':'Uzak erişim çevrimiçi'} · HTTP ${data.result?.status||'-'} · ${data.result?.latency_ms||'-'} ms`;await loadRemoteAccessV670(false);}catch(e){if(st)st.textContent=e.message;await loadRemoteAccessV670(false).catch(()=>{});}finally{testRemoteAccessBtn.disabled=false;}});
 
     const refreshSystemHealthBtn=document.getElementById('refreshSystemHealthBtn');
     if(refreshSystemHealthBtn)refreshSystemHealthBtn.addEventListener('click',async()=>{refreshSystemHealthBtn.disabled=true;try{await loadSystemHealth(false);}catch(e){setError('systemHealthStatus',e.message);}finally{refreshSystemHealthBtn.disabled=false;}});

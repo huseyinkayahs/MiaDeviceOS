@@ -102,7 +102,7 @@ if ($needsSecrets) {
   Set-EnvValue $EnvFile 'N8N_BASIC_AUTH_PASSWORD' (New-Secret 24)
   Set-EnvValue $EnvFile 'PGADMIN_DEFAULT_PASSWORD' (New-Secret 24)
 }
-Set-EnvValue $EnvFile 'FACTORYBOX_IMAGE_TAG' 'v6.6.6'
+Set-EnvValue $EnvFile 'FACTORYBOX_IMAGE_TAG' 'v6.7.0'
 Set-EnvValue $EnvFile 'AUTH_ENABLED' 'true'
 Set-EnvValue $EnvFile 'FACTORYBOX_ADMIN_EMAIL' $AdminEmail
 Set-EnvValue $EnvFile 'FACTORYBOX_DEPLOYMENT_MODE' $Mode.ToLowerInvariant()
@@ -141,12 +141,12 @@ $mqttPass = Get-EnvValue $EnvFile 'MQTT_PASSWORD'
 if ([string]::IsNullOrWhiteSpace($mqttUser) -or [string]::IsNullOrWhiteSpace($mqttPass)) {
   throw 'MQTT_USERNAME veya MQTT_PASSWORD boş bırakılamaz.'
 }
-# v6.6.6: password_file container başlatılırken /tmp altında oluşturulur.
+# v6.7.0: password_file container başlatılırken /tmp altında oluşturulur.
 # Windows bind-mount izinleri ve klasöre dönüşen password_file sorunları böylece engellenir.
 $legacyPasswordPath = Join-Path $ProductionDir 'mosquitto\config\password_file'
 if (Test-Path $legacyPasswordPath) { Remove-Item -Force -Recurse $legacyPasswordPath }
 
-# v6.6.6: Onceki hatali MQTT containerini kaldir. PostgreSQL volume ve diger veriler korunur.
+# v6.7.0: Onceki hatali MQTT containerini kaldir. PostgreSQL volume ve diger veriler korunur.
 $existingMqtt = & docker ps -a --filter "name=^/factorybox-prod-mqtt$" --format "{{.Names}}"
 if ($existingMqtt -eq 'factorybox-prod-mqtt') {
   Write-Step 'Eski MQTT containeri guvenli sekilde yenileniyor'
@@ -195,7 +195,7 @@ if (-not $SkipStartupRegistration) {
 $adminPassword = Get-EnvValue $EnvFile 'FACTORYBOX_ADMIN_PASSWORD'
 $publicUrl = Get-EnvValue $EnvFile 'FACTORYBOX_PUBLIC_URL'
 @"
-FactoryBox v6.6.6 Production Installation
+FactoryBox v6.7.0 Production Installation
 Panel: $publicUrl
 Admin Email: $AdminEmail
 Admin Password: $adminPassword

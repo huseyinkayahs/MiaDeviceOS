@@ -1,0 +1,15 @@
+FactoryBox One v6.8.1 güncelleme paketi
+
+- HukaTech Central Mail Gateway için Brevo API sağlayıcısı
+- noreply@hukatech.com merkezi gönderici
+- Otomatik “bu e-postayı yanıtlamayın” alt bilgisi
+- Brevo gerçek bağlantı sağlık kontrolü
+- SMTP uyumluluk modu
+- Güncellenmiş Admin, Login ve Reset Password sürüm etiketleri
+- Merkezi ve müşteri örnek mail ayarları
+- Kurulum ve sprint dokümantasyonu
+
+Gizli bilgi içermez:
+- Brevo API anahtarı yoktur
+- SMTP şifresi yoktur
+- Gerçek .env / .env.production dosyaları yoktur

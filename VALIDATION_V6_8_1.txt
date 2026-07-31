@@ -1,0 +1,12 @@
+FactoryBox One v6.8.1 doğrulama özeti
+
+[OK] server.js Node.js sözdizimi kontrolü
+[OK] package.json ve package-lock.json JSON kontrolü
+[OK] docker-compose YAML parse kontrolü
+[OK] Brevo provider mock gönderim testi
+[OK] Brevo API anahtarı paket içinde bulunmuyor
+[OK] .env ve .env.production paket dışında tutuluyor
+[OK] Brevo provider endpointi: /v3/smtp/email
+[OK] Brevo API sağlık kontrolü: /v3/account
+[OK] Merkezi no-reply alt bilgisi HTML ve text içeriklere uygulanıyor
+[OK] Müşteri tarafında Brevo/SMTP anahtarı gerekmiyor

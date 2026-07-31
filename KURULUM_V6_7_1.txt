@@ -1,0 +1,19 @@
+1. ZIP dosyasini C:\FactoryBox klasorunun uzerine acin.
+2. Dosyalarin degistirilmesini/onaylanmasini kabul edin.
+3. Gercek production env dosyanizi kullanarak yalnizca backend servisini yeniden build edin.
+
+Ornek CMD komutu:
+
+docker compose --env-file "C:\FactoryBox\deployment\production\.env.production" -f "C:\FactoryBox\deployment\production\docker-compose.production.yml" up -d --build --no-deps backend
+
+4. Kontrol:
+
+docker compose --env-file "C:\FactoryBox\deployment\production\.env.production" -f "C:\FactoryBox\deployment\production\docker-compose.production.yml" ps
+
+5. Health kontrolu:
+
+curl.exe -k https://localhost:8443/healthz
+
+Beklenen version: 6.7.1
+
+NOT: Production env dosyanizin adi farkliysa, daha once kullandiginiz gercek dolu env dosyasinin yolunu yazin.

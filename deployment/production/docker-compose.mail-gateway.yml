@@ -1,0 +1,64 @@
+name: factorybox-mail-gateway
+
+services:
+  mail-gateway-postgres:
+    image: postgres:16-alpine
+    container_name: factorybox-mail-gateway-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.mail-gateway
+    environment:
+      POSTGRES_DB: ${MAIL_GATEWAY_PGDATABASE:-factorybox_mail_gateway}
+      POSTGRES_USER: ${MAIL_GATEWAY_PGUSER:-factorybox_mail_gateway}
+      POSTGRES_PASSWORD: ${MAIL_GATEWAY_PGPASSWORD}
+      TZ: ${TZ:-Europe/Istanbul}
+    volumes:
+      - factorybox_mail_gateway_pgdata:/var/lib/postgresql/data
+    networks:
+      - gateway-backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mail-gateway:
+    image: factorybox-mail-gateway:${FACTORYBOX_IMAGE_TAG:-v6.8.2}
+    build:
+      context: ../..
+      dockerfile: deployment/production/Dockerfile.backend
+    container_name: factorybox-mail-gateway
+    restart: unless-stopped
+    env_file:
+      - .env.mail-gateway
+    environment:
+      NODE_ENV: production
+      PORT: 3100
+      PGHOST: mail-gateway-postgres
+      PGPORT: 5432
+      PGDATABASE: ${MAIL_GATEWAY_PGDATABASE:-factorybox_mail_gateway}
+      PGUSER: ${MAIL_GATEWAY_PGUSER:-factorybox_mail_gateway}
+      PGPASSWORD: ${MAIL_GATEWAY_PGPASSWORD}
+      MAIL_GATEWAY_ONLY: "true"
+      MAIL_GATEWAY_SERVER_ENABLED: "true"
+    depends_on:
+      mail-gateway-postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${MAIL_GATEWAY_PORT:-3101}:3100"
+    networks:
+      - gateway-backend
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 20s
+      timeout: 8s
+      retries: 8
+      start_period: 30s
+
+networks:
+  gateway-backend:
+    internal: false
+
+volumes:
+  factorybox_mail_gateway_pgdata:

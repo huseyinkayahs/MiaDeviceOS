@@ -1,0 +1,19 @@
+FACTORYBOX ONE v6.8.1 — BACKEND MAIL GATEWAY CONNECTION FIX
+
+Amaç:
+- Production backend container'ının .env.customer-mail dosyasını yüklemesi.
+- Yerel HukaTech Central Mail Gateway'e host.docker.internal üzerinden erişebilmesi.
+
+İçerik:
+- deployment\production\docker-compose.production.yml (tam dosya)
+
+Güvenlik:
+- Bu pakette API key, parola veya gerçek .env dosyası yoktur.
+- .env.customer-mail mevcut çalışan kurulumda kalır ve Git'e eklenmez.
+
+Kurulum:
+1) ZIP içeriğini önce ana geliştirme klasörünün üzerine kopyalayın.
+2) Ardından aynı ZIP içeriğini C:\FactoryBox üzerine kopyalayın.
+3) Yerel pilot testinde .env.customer-mail içindeki URL şu olmalıdır:
+   FACTORYBOX_MAIL_GATEWAY_URL=http://host.docker.internal:3101
+4) Production backend'i yeniden oluşturun.

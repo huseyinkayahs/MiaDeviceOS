@@ -42,6 +42,8 @@ app.set('trust proxy', 1);
 
 const apiRateBuckets = new Map();
 const loginRateBuckets = new Map();
+const mailGatewayMinuteBuckets = new Map();
+const mailGatewayDailyBuckets = new Map();
 let securityFoundationReady = false;
 let securitySettingsCache = {
   session_hours:12,
@@ -60,9 +62,86 @@ let securitySettingsCache = {
   csrf_origin_check_enabled:true
 };
 
+function normalizeOrigin(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) return null;
+    if (parsed.pathname && parsed.pathname !== '/') return null;
+    return parsed.origin.toLowerCase();
+  } catch (_) {
+    return null;
+  }
+}
+
 function configuredCorsOrigins() {
   return String(process.env.CORS_ALLOWED_ORIGINS || '')
-    .split(',').map(x => x.trim()).filter(Boolean);
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean);
+}
+
+function firstForwardedHeaderValue(value) {
+  return String(value || '').split(',')[0].trim();
+}
+
+function effectiveRequestOrigin(req) {
+  const forwardedProto = firstForwardedHeaderValue(req.headers['x-forwarded-proto']).toLowerCase();
+  const forwardedHost = firstForwardedHeaderValue(req.headers['x-forwarded-host']).toLowerCase();
+  const protocol = forwardedProto || (req.secure ? 'https' : String(req.protocol || 'http').toLowerCase());
+  const host = forwardedHost || String(req.headers.host || '').trim().toLowerCase();
+  if (!host) return null;
+  return normalizeOrigin(`${protocol}://${host}`);
+}
+
+function isSameRequestOrigin(req, origin) {
+  const normalized = normalizeOrigin(origin);
+  const requestOrigin = effectiveRequestOrigin(req);
+  return Boolean(normalized && requestOrigin && normalized === requestOrigin);
+}
+
+function isTryCloudflareHostname(origin) {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
+  try {
+    const hostname = new URL(normalized).hostname.toLowerCase();
+    return hostname === 'trycloudflare.com' || hostname.endsWith('.trycloudflare.com');
+  } catch (_) {
+    return false;
+  }
+}
+
+function isTrustedQuickTunnelOriginForRequest(req, origin) {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
+  try {
+    const parsed = new URL(normalized);
+    const suffix = '.trycloudflare.com';
+    const isQuickTunnel = parsed.protocol === 'https:'
+      && !parsed.port
+      && parsed.hostname.toLowerCase().endsWith(suffix)
+      && parsed.hostname.length > suffix.length;
+    return isQuickTunnel && isSameRequestOrigin(req, normalized);
+  } catch (_) {
+    return false;
+  }
+}
+
+function isAllowedRequestOrigin(req, origin, { allowAnyWhenUnconfigured = false } = {}) {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
+
+  // Quick Tunnel origins are accepted only over HTTPS and only when the
+  // public tunnel host exactly matches the host currently serving the request.
+  if (isTryCloudflareHostname(normalized)) {
+    return isTrustedQuickTunnelOriginForRequest(req, normalized);
+  }
+
+  if (isSameRequestOrigin(req, normalized)) return true;
+  if (configuredCorsOrigins().includes(normalized)) return true;
+  return allowAnyWhenUnconfigured && configuredCorsOrigins().length === 0;
 }
 
 app.use((req,res,next)=>{
@@ -80,12 +159,19 @@ app.use((req,res,next)=>{
   next();
 });
 
+app.use((req,res,next)=>{
+  const origin=String(req.headers.origin||'').trim();
+  const allowAnyWhenUnconfigured=configuredCorsOrigins().length===0;
+  if (!origin || isAllowedRequestOrigin(req,origin,{allowAnyWhenUnconfigured})) return next();
+  return res.status(403).json({
+    status:'forbidden',
+    code:'ORIGIN_NOT_ALLOWED',
+    message:'Request origin is not allowed'
+  });
+});
+
 app.use(cors({
-  origin(origin, callback) {
-    const allowed=configuredCorsOrigins();
-    if (!origin || !allowed.length || allowed.includes(origin)) return callback(null,true);
-    return callback(new Error('CORS origin is not allowed'));
-  },
+  origin:true,
   methods:['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
   allowedHeaders:['Content-Type','Authorization','X-CSRF-Token'],
   maxAge:600
@@ -114,13 +200,27 @@ app.use('/api',(req,res,next)=>{
   if (!securitySettingsCache.csrf_origin_check_enabled || ['GET','HEAD','OPTIONS'].includes(req.method)) return next();
   const origin=String(req.headers.origin||'').trim();
   if (!origin) return next();
-  try {
-    const originUrl=new URL(origin);
-    const expectedHost=String(req.headers['x-forwarded-host']||req.headers.host||'');
-    const allowed=configuredCorsOrigins();
-    if (originUrl.host===expectedHost || allowed.includes(origin)) return next();
-  } catch(_) {}
-  return res.status(403).json({status:'forbidden',message:'Request origin verification failed'});
+  if (isAllowedRequestOrigin(req,origin)) return next();
+  return res.status(403).json({
+    status:'forbidden',
+    code:'ORIGIN_VERIFICATION_FAILED',
+    message:'Request origin verification failed'
+  });
+});
+
+function mailGatewayOnlyEnabled() {
+  return String(process.env.MAIL_GATEWAY_ONLY || 'false').toLowerCase() === 'true';
+}
+
+// A central gateway deployment exposes only health and mail-gateway APIs.
+app.use((req,res,next)=>{
+  if (!mailGatewayOnlyEnabled()) return next();
+  if (req.path === '/healthz' || req.path === '/readyz' || req.path.startsWith('/api/mail-gateway/')) return next();
+  return res.status(404).json({
+    status:'not_found',
+    version:'6.8.2',
+    service:'hukatech-central-mail-gateway'
+  });
 });
 
 // Production entry point: always open the current Admin Panel instead of a legacy index.html.
@@ -154,7 +254,7 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.6.6';
+const APP_VERSION = '6.8.2';
 
 
 app.get('/healthz', (_req, res) => {
@@ -1174,13 +1274,50 @@ function isPasswordResetTokenFormat(token) {
   return /^[a-f0-9]{64}$/i.test(String(token || ''));
 }
 
-function publicAppBaseUrl(req) {
-  const configured = String(process.env.PUBLIC_APP_URL || '').trim().replace(/\/+$/, '');
-  if (configured) return configured;
+function normalizeConfiguredPublicAppUrl(value) {
+  let raw = String(value || '').replace(/^\uFEFF/, '').trim();
+  raw = raw.replace(/^(?:PUBLIC_APP_URL|PUBLIC_API_URL|FACTORYBOX_PUBLIC_URL|REMOTE_PUBLIC_URL)\s*=\s*/i, '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    if (parsed.username || parsed.password) return '';
+    parsed.search = '';
+    parsed.hash = '';
+    const pathName = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname.replace(/\/+$/, '') : '';
+    return `${parsed.origin}${pathName}`;
+  } catch (_) {
+    return '';
+  }
+}
 
-  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3100';
-  return `${proto}://${host}`;
+function isInternalDockerPublicHost(value) {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    if (['backend','mail-gateway','host.docker.internal','localhost','127.0.0.1','::1'].includes(host)) return true;
+    const match = host.match(/^172\.(\d{1,3})\./);
+    return Boolean(match && Number(match[1]) >= 16 && Number(match[1]) <= 31);
+  } catch (_) {
+    return true;
+  }
+}
+
+function publicAppBaseUrl(req) {
+  const configured = normalizeConfiguredPublicAppUrl(process.env.PUBLIC_APP_URL);
+  if (configured && !isInternalDockerPublicHost(configured)) return configured;
+
+  const proto = firstForwardedHeaderValue(req.headers['x-forwarded-proto']) || req.protocol || 'https';
+  const host = firstForwardedHeaderValue(req.headers['x-forwarded-host']) || req.headers.host || '';
+  const requestUrl = normalizeConfiguredPublicAppUrl(host ? `${proto}://${host}` : '');
+  if (requestUrl && !isInternalDockerPublicHost(requestUrl)) return requestUrl;
+
+  const remoteUrl = normalizeConfiguredPublicAppUrl(process.env.REMOTE_PUBLIC_URL);
+  if (remoteUrl && !isInternalDockerPublicHost(remoteUrl)) return remoteUrl;
+
+  const factoryUrl = normalizeConfiguredPublicAppUrl(process.env.FACTORYBOX_PUBLIC_URL);
+  if (factoryUrl && !isInternalDockerPublicHost(factoryUrl)) return factoryUrl;
+
+  return requestUrl || factoryUrl || 'http://localhost:3100';
 }
 
 function publicPasswordResetUrl(req, token) {
@@ -1387,16 +1524,16 @@ async function ensurePasswordResetSchema() {
 }
 
 function passwordResetEmailSubject() {
-  return 'FactoryBox şifre sıfırlama bağlantınız';
+  return 'HukaTech şifre sıfırlama bağlantınız';
 }
 
 function passwordResetEmailHtml(user, resetUrl, expiresMinutes) {
   const name = user.full_name || user.email;
-  return emailShellHtml('FactoryBox Şifre Sıfırlama', `
+  return emailShellHtml('HukaTech Şifre Sıfırlama', `
     <h1 style="margin:0 0 12px 0;color:#102033;">Şifrenizi sıfırlayın</h1>
     <p style="font-size:15px;line-height:1.6;color:#334155;">
       Merhaba <strong>${h(name)}</strong>,<br>
-      FactoryBox hesabınız için bir şifre sıfırlama isteği aldık.
+      HukaTech Platform hesabınız için bir şifre sıfırlama isteği aldık.
     </p>
 
     <p style="margin:22px 0;">
@@ -2440,7 +2577,9 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
         to:user.email,
         subject:passwordResetEmailSubject(),
         html:passwordResetEmailHtml(user, resetUrl, cfg.passwordResetTokenMinutes),
-        text:passwordResetEmailText(user, resetUrl, cfg.passwordResetTokenMinutes)
+        text:passwordResetEmailText(user, resetUrl, cfg.passwordResetTokenMinutes),
+        purpose:'password_reset',
+        metadata:{customer_code:user.default_customer_code || CFG.customerCode}
       });
     } catch(e) {
       emailResult = {sent:false, reason:e.message, message_id:null};
@@ -4550,7 +4689,7 @@ async function sendMaintenanceWorkOrderNotification(workOrder, channelsValue) {
       if (channel === 'email') {
         const cfg=emailConfig();
         if (!cfg.enabled || !cfg.configured || !cfg.defaultTo) throw new Error('Email channel is not configured');
-        const result=await sendReportEmail({to:cfg.defaultTo,subject:`FactoryBox Bakım İş Emri ${workOrder.work_order_no}`,text,html:`<pre style="font-family:Arial,sans-serif;white-space:pre-wrap">${text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</pre>`});
+        const result=await sendReportEmail({to:cfg.defaultTo,subject:`FactoryBox Bakım İş Emri ${workOrder.work_order_no}`,text,html:`<pre style="font-family:Arial,sans-serif;white-space:pre-wrap">${text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</pre>`,purpose:'maintenance',metadata:{event_id:workOrder.id,machine_code:workOrder.machine_code}});
         if (!result.sent) throw new Error(result.reason || 'Email not sent');
         await pool.query(`INSERT INTO maintenance_notification_deliveries(work_order_id,channel,status,target,provider_message_id) VALUES($1,'email','delivered',$2,$3)`,[workOrder.id,cfg.defaultTo,result.message_id||null]);
         results.push({channel,status:'delivered',message_id:result.message_id||null});
@@ -5814,7 +5953,7 @@ const GENERAL_SETTING_WEEK_STARTS = ['monday','sunday'];
 const GENERAL_SETTING_DEFAULT_VIEWS = [
   'dashboard','live','oee','alarms','analytics','sla','escalations','maintenance',
   'maintenance-plans','work-orders','inventory','general','health','notifications','scheduler',
-  'reports','tenants','users','permissions','subscriptions','assets','devices','onboarding','security'
+  'reports','remote-access','tenants','users','permissions','subscriptions','assets','devices','onboarding','security'
 ];
 const GENERAL_SETTING_TIMEZONES = [
   'Europe/Istanbul','UTC','Europe/London','Europe/Berlin','Europe/Paris',
@@ -5939,6 +6078,168 @@ app.patch('/api/admin/general-settings', adminRequired, permissionRequired('MANA
   } catch(error) {
     res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message});
   }
+});
+
+
+
+
+// v6.7.1 Quick Tunnel Origin / CORS Login Hotfix
+const REMOTE_ACCESS_MODES = ['disabled','quick','named'];
+let remoteAccessFoundationReady = false;
+const remoteAccessRuntime = {
+  last_check_at:null,
+  last_check_ok:null,
+  last_http_status:null,
+  last_error:null,
+  last_latency_ms:null
+};
+
+function remoteAccessEnvEnabled() {
+  return String(process.env.REMOTE_ACCESS_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+function remoteAccessEnvMode() {
+  const raw=String(process.env.REMOTE_ACCESS_MODE || '').trim().toLowerCase();
+  return REMOTE_ACCESS_MODES.includes(raw)?raw:null;
+}
+
+function remoteAccessNormalizeUrl(value) {
+  const clean=String(value||'').trim().replace(/\/+$/,'');
+  if (!clean) return '';
+  let parsed;
+  try { parsed=new URL(clean); }
+  catch { const error=new Error('public_url is invalid');error.statusCode=400;throw error; }
+  if (!['https:','http:'].includes(parsed.protocol)) { const error=new Error('public_url must use HTTPS or HTTP');error.statusCode=400;throw error; }
+  return parsed.toString().replace(/\/$/,'');
+}
+
+function remoteAccessDomains(value) {
+  return String(value||'').split(/[\n,;]+/).map(v=>v.trim().toLowerCase()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).slice(0,50).join(',');
+}
+
+async function ensureRemoteAccessFoundation() {
+  if (remoteAccessFoundationReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS remote_access_settings (
+      id smallint PRIMARY KEY DEFAULT 1 CHECK (id=1),
+      mode text NOT NULL DEFAULT 'disabled',
+      public_url text NOT NULL DEFAULT '',
+      access_protected boolean NOT NULL DEFAULT false,
+      allowed_email_domains text NOT NULL DEFAULT '',
+      technical_service_enabled boolean NOT NULL DEFAULT false,
+      notes text NOT NULL DEFAULT '',
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`INSERT INTO remote_access_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`ALTER TABLE remote_access_settings ADD COLUMN IF NOT EXISTS mode text NOT NULL DEFAULT 'disabled'`);
+  await pool.query(`ALTER TABLE remote_access_settings ADD COLUMN IF NOT EXISTS public_url text NOT NULL DEFAULT ''`);
+  await pool.query(`ALTER TABLE remote_access_settings ADD COLUMN IF NOT EXISTS access_protected boolean NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE remote_access_settings ADD COLUMN IF NOT EXISTS allowed_email_domains text NOT NULL DEFAULT ''`);
+  await pool.query(`ALTER TABLE remote_access_settings ADD COLUMN IF NOT EXISTS technical_service_enabled boolean NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE remote_access_settings ADD COLUMN IF NOT EXISTS notes text NOT NULL DEFAULT ''`);
+  remoteAccessFoundationReady=true;
+}
+
+async function remoteAccessProbe(publicUrl) {
+  const base=remoteAccessNormalizeUrl(publicUrl);
+  if (!base) return {ok:false,status:null,latency_ms:null,error:'Public URL is not configured'};
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),10000);
+  const started=Date.now();
+  try {
+    const response=await fetch(`${base}/healthz`,{method:'GET',headers:{'accept':'application/json'},redirect:'follow',signal:controller.signal});
+    const latency=Date.now()-started;
+    let body=null;
+    try { body=await response.json(); } catch {}
+    return {ok:response.ok,status:response.status,latency_ms:latency,error:response.ok?null:`HTTP ${response.status}`,body};
+  } catch(error) {
+    return {ok:false,status:null,latency_ms:Date.now()-started,error:error.name==='AbortError'?'Remote access test timed out':error.message};
+  } finally { clearTimeout(timer); }
+}
+
+async function remoteAccessSnapshot({probe=false}={}) {
+  await ensureRemoteAccessFoundation();
+  const settings=await one(`SELECT * FROM remote_access_settings WHERE id=1`);
+  const envMode=remoteAccessEnvMode();
+  const mode=envMode || (REMOTE_ACCESS_MODES.includes(settings.mode)?settings.mode:'disabled');
+  const enabled=remoteAccessEnvEnabled() || mode!=='disabled';
+  const envPublicUrl=String(process.env.REMOTE_PUBLIC_URL||'').trim();
+  const publicUrl=envPublicUrl || String(settings.public_url||'').trim();
+  const tokenConfigured=Boolean(String(process.env.CLOUDFLARE_TUNNEL_TOKEN||'').trim());
+  let check=null;
+  if (probe && publicUrl) {
+    check=await remoteAccessProbe(publicUrl);
+    remoteAccessRuntime.last_check_at=new Date().toISOString();
+    remoteAccessRuntime.last_check_ok=check.ok;
+    remoteAccessRuntime.last_http_status=check.status;
+    remoteAccessRuntime.last_error=check.error;
+    remoteAccessRuntime.last_latency_ms=check.latency_ms;
+  }
+  const effectiveCheck=check || (remoteAccessRuntime.last_check_at?{
+    ok:remoteAccessRuntime.last_check_ok,status:remoteAccessRuntime.last_http_status,error:remoteAccessRuntime.last_error,latency_ms:remoteAccessRuntime.last_latency_ms
+  }:null);
+  const status=!enabled?'disabled':effectiveCheck?.ok?'online':publicUrl?'configured':'waiting_configuration';
+  return {
+    settings:{
+      ...settings,
+      mode,
+      public_url:publicUrl,
+      enabled,
+      token_configured:tokenConfigured,
+      origin_service:'http://nginx:8081'
+    },
+    runtime:{...remoteAccessRuntime,status},
+    security:{
+      auth_enabled:authConfig().enabled,
+      https_public_url:Boolean(publicUrl && publicUrl.toLowerCase().startsWith('https://')),
+      cloudflare_access_protected:Boolean(settings.access_protected),
+      allowed_email_domains:String(settings.allowed_email_domains||'').split(',').filter(Boolean),
+      token_exposed:false,
+      inbound_router_port_required:false
+    },
+    checklist:[
+      {key:'auth',ok:authConfig().enabled,message_tr:'FactoryBox kullanıcı girişi açık',message_en:'FactoryBox authentication is enabled'},
+      {key:'https',ok:Boolean(publicUrl&&publicUrl.startsWith('https://')),message_tr:'Uzak adres HTTPS kullanıyor',message_en:'Remote URL uses HTTPS'},
+      {key:'access',ok:Boolean(settings.access_protected),message_tr:'Cloudflare Access koruması işaretlendi',message_en:'Cloudflare Access protection is marked as enabled'},
+      {key:'token',ok:mode==='quick'||tokenConfigured,message_tr:'Tunnel çalıştırma bilgisi hazır',message_en:'Tunnel runtime configuration is ready'}
+    ]
+  };
+}
+
+app.get('/api/admin/remote-access', adminRequired, permissionRequired('VIEW_DASHBOARD'), async(req,res)=>{
+  try { res.json({status:'ok',version:APP_VERSION,can_manage:!authConfig().enabled||hasPermission(req.user,'MANAGE_SITES'),...(await remoteAccessSnapshot({probe:req.query.probe==='1'}))}); }
+  catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.patch('/api/admin/remote-access', adminRequired, permissionRequired('MANAGE_SITES'), async(req,res)=>{
+  try {
+    await ensureRemoteAccessFoundation();
+    const old=await one(`SELECT * FROM remote_access_settings WHERE id=1`);
+    const body=req.body||{};
+    const mode=REMOTE_ACCESS_MODES.includes(String(body.mode||old.mode).toLowerCase())?String(body.mode||old.mode).toLowerCase():old.mode;
+    const publicUrl=body.public_url===undefined?old.public_url:remoteAccessNormalizeUrl(body.public_url);
+    const accessProtected=body.access_protected===undefined?Boolean(old.access_protected):Boolean(body.access_protected);
+    const allowedDomains=body.allowed_email_domains===undefined?old.allowed_email_domains:remoteAccessDomains(body.allowed_email_domains);
+    const technical=body.technical_service_enabled===undefined?Boolean(old.technical_service_enabled):Boolean(body.technical_service_enabled);
+    const notes=body.notes===undefined?old.notes:String(body.notes||'').trim().slice(0,1000);
+    const actor=req.user||getSession(req)?.user||{};
+    const settings=await one(`UPDATE remote_access_settings SET mode=$1,public_url=$2,access_protected=$3,allowed_email_domains=$4,technical_service_enabled=$5,notes=$6,updated_by=$7,updated_at=now() WHERE id=1 RETURNING *`,[mode,publicUrl,accessProtected,allowedDomains,technical,notes,actor.email||'admin']);
+    await writeAuditLog(req,{action:'update_remote_access_settings',entity_type:'remote_access',entity_id:'global',old_values:old,new_values:settings,metadata:{token_changed:false}});
+    res.json({status:'ok',version:APP_VERSION,...(await remoteAccessSnapshot())});
+  } catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.post('/api/admin/remote-access/test', adminRequired, permissionRequired('VIEW_DASHBOARD'), async(req,res)=>{
+  try {
+    const snapshot=await remoteAccessSnapshot();
+    const publicUrl=remoteAccessNormalizeUrl(req.body?.public_url||snapshot.settings.public_url);
+    const result=await remoteAccessProbe(publicUrl);
+    remoteAccessRuntime.last_check_at=new Date().toISOString();remoteAccessRuntime.last_check_ok=result.ok;remoteAccessRuntime.last_http_status=result.status;remoteAccessRuntime.last_error=result.error;remoteAccessRuntime.last_latency_ms=result.latency_ms;
+    await writeAuditLog(req,{action:'test_remote_access',entity_type:'remote_access',entity_id:'global',new_values:{public_url:publicUrl,ok:result.ok,http_status:result.status,latency_ms:result.latency_ms}});
+    res.status(result.ok?200:502).json({status:result.ok?'ok':'unreachable',version:APP_VERSION,public_url:publicUrl,result});
+  } catch(error) { res.status(error.statusCode||500).json({status:'error',version:APP_VERSION,message:error.message}); }
 });
 
 
@@ -6472,6 +6773,12 @@ async function ensureNotificationSettingsFoundation() {
       smtp_pass text,
       smtp_from text,
       email_default_to text,
+      email_mode text,
+      email_sender_name text,
+      mail_gateway_url text,
+      mail_gateway_installation_id text,
+      mail_gateway_api_key text,
+      mail_gateway_allow_smtp_fallback boolean,
       scheduler_enabled boolean,
       scheduler_interval_sec integer,
       retry_enabled boolean,
@@ -6493,6 +6800,12 @@ async function ensureNotificationSettingsFoundation() {
     )
   `);
   await pool.query(`INSERT INTO notification_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS email_mode text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS email_sender_name text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS mail_gateway_url text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS mail_gateway_installation_id text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS mail_gateway_api_key text`);
+  await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS mail_gateway_allow_smtp_fallback boolean`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS scheduler_enabled boolean`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS scheduler_interval_sec integer`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS retry_enabled boolean`);
@@ -6509,6 +6822,33 @@ async function ensureNotificationSettingsFoundation() {
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_weekly_enabled boolean`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_weekly_day integer`);
   await pool.query(`ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alarm_report_weekly_hour integer`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS outbound_email_deliveries (
+      id bigserial PRIMARY KEY,
+      request_id text NOT NULL UNIQUE,
+      purpose text NOT NULL,
+      mode text NOT NULL,
+      provider text,
+      recipient_count integer NOT NULL DEFAULT 0,
+      recipients_masked jsonb NOT NULL DEFAULT '[]'::jsonb,
+      subject text,
+      status text NOT NULL CHECK (status IN ('processing','delivered','failed')),
+      provider_message_id text,
+      error_message text,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      delivered_at timestamptz,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_outbound_email_deliveries_created
+    ON outbound_email_deliveries(created_at DESC)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_outbound_email_deliveries_status
+    ON outbound_email_deliveries(status, created_at DESC)
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS alarm_report_deliveries (
       id bigserial PRIMARY KEY,
@@ -6582,6 +6922,37 @@ async function ensureNotificationSettingsFoundation() {
   await loadNotificationRuntimeSettings();
 }
 
+
+async function ensureMailGatewayFoundation() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS mail_gateway_deliveries (
+      id bigserial PRIMARY KEY,
+      installation_id text NOT NULL,
+      request_id text NOT NULL,
+      purpose text NOT NULL,
+      recipient_count integer NOT NULL DEFAULT 0,
+      recipients_masked jsonb NOT NULL DEFAULT '[]'::jsonb,
+      subject text,
+      status text NOT NULL CHECK (status IN ('processing','delivered','failed')),
+      provider_message_id text,
+      error_message text,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      delivered_at timestamptz,
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE(installation_id, request_id)
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_mail_gateway_deliveries_created
+    ON mail_gateway_deliveries(created_at DESC)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_mail_gateway_deliveries_installation
+    ON mail_gateway_deliveries(installation_id, created_at DESC)
+  `);
+}
+
 async function loadNotificationRuntimeSettings() {
   const row = await one(`SELECT * FROM notification_settings WHERE id=1`);
   notificationRuntimeSettings = row || {};
@@ -6592,6 +6963,11 @@ function notificationBoolInput(value, fallback) {
   if (value === undefined) return fallback;
   if (typeof value === 'boolean') return value;
   return String(value).toLowerCase() === 'true';
+}
+
+function notificationEmailModeInput(value, fallback = 'direct_smtp') {
+  const clean = String(value === undefined ? fallback : value || '').trim().toLowerCase();
+  return ['gateway','direct_smtp','disabled'].includes(clean) ? clean : 'direct_smtp';
 }
 
 function notificationIntInput(value, fallback, min, max) {
@@ -6652,7 +7028,8 @@ async function notificationSettingsSnapshot(actor = null) {
   const overrideKeys = [
     'delivery_enabled','auto_delivery_enabled','interval_sec','batch_size',
     'telegram_enabled','telegram_bot_token','telegram_chat_id',
-    'email_enabled','smtp_host','smtp_port','smtp_secure','smtp_user','smtp_pass','smtp_from','email_default_to',
+    'email_enabled','email_mode','email_sender_name','mail_gateway_url','mail_gateway_installation_id','mail_gateway_api_key','mail_gateway_allow_smtp_fallback',
+    'smtp_host','smtp_port','smtp_secure','smtp_user','smtp_pass','smtp_from','email_default_to',
     'scheduler_enabled','scheduler_interval_sec','retry_enabled','retry_base_delay_sec','retry_max_delay_sec','retry_max_attempts',
     'alarm_report_scheduler_enabled','alarm_report_timezone','alarm_report_channels',
     'alarm_report_telegram_chat_ids','alarm_report_email_recipients',
@@ -6681,6 +7058,8 @@ async function notificationSettingsSnapshot(actor = null) {
     email:{
       enabled:email.enabled,
       configured:email.configured,
+      mode:email.mode,
+      sender_name:email.senderName,
       host:email.host,
       port:email.port,
       secure:email.secure,
@@ -6689,6 +7068,15 @@ async function notificationSettingsSnapshot(actor = null) {
       password_masked:maskNotificationValue(email.pass),
       from:email.from,
       default_to:email.defaultTo,
+      smtp_configured:email.smtpConfigured,
+      gateway:{
+        configured:email.gateway.configured,
+        url:email.gateway.url,
+        installation_id:email.gateway.installationId,
+        api_key_configured:Boolean(email.gateway.apiKey),
+        api_key_masked:maskNotificationValue(email.gateway.apiKey),
+        allow_smtp_fallback:email.gateway.allowSmtpFallback
+      },
       last_test:lastTests.email || null
     },
     latest_delivery:latestDelivery || null,
@@ -6761,7 +7149,9 @@ async function sendEscalationEmail(event) {
     to:event.recipients,
     subject:escalationDeliverySubject(event),
     html:escalationDeliveryEmailHtml(event),
-    text:escalationDeliveryText(event)
+    text:escalationDeliveryText(event),
+    purpose:'alarm',
+    metadata:{event_id:event.id,machine_code:event.machine_code}
   });
   if (!result.sent) throw new Error(result.reason || 'Escalation email could not be sent');
   return {
@@ -7432,7 +7822,9 @@ async function sendAlarmReportEmail(report, recipientValue = '') {
     to:recipientValue || alarmReportEmailRecipients(),
     subject:`FactoryBox ${report.title} - ${report.period?.label || ''}`,
     html:alarmReportEmailHtml(report),
-    text:alarmReportText(report)
+    text:alarmReportText(report),
+    purpose:'alarm_report',
+    metadata:{report_type:report.report_type || report.title}
   });
   if (!result.sent) throw new Error(result.reason || 'Alarm raporu e-postası gönderilemedi');
   return {provider:'email',message_id:result.message_id || null,to:result.to || [],accepted:result.accepted || [],rejected:result.rejected || []};
@@ -7648,6 +8040,7 @@ app.patch('/api/admin/notification-settings', adminRequired, permissionRequired(
     await ensureNotificationSettingsFoundation();
     const current = notificationRuntimeSettings || {};
     const body = req.body || {};
+    const gatewayLocked = environmentMailGatewayEnforced();
     const next = {
       delivery_enabled:notificationBoolInput(body.delivery_enabled, current.delivery_enabled),
       auto_delivery_enabled:notificationBoolInput(body.auto_delivery_enabled, current.auto_delivery_enabled),
@@ -7657,12 +8050,18 @@ app.patch('/api/admin/notification-settings', adminRequired, permissionRequired(
       telegram_bot_token:notificationSecretInput(body.telegram_bot_token, current.telegram_bot_token),
       telegram_chat_id:notificationSecretInput(body.telegram_chat_id, current.telegram_chat_id),
       email_enabled:notificationBoolInput(body.email_enabled, current.email_enabled),
-      smtp_host:notificationTextInput(body.smtp_host, current.smtp_host, 500),
-      smtp_port:notificationIntInput(body.smtp_port, current.smtp_port, 1, 65535),
-      smtp_secure:notificationBoolInput(body.smtp_secure, current.smtp_secure),
-      smtp_user:notificationTextInput(body.smtp_user, current.smtp_user, 500),
-      smtp_pass:notificationSecretInput(body.smtp_pass, current.smtp_pass),
-      smtp_from:notificationTextInput(body.smtp_from, current.smtp_from, 500),
+      email_mode:gatewayLocked ? 'gateway' : notificationEmailModeInput(body.email_mode, current.email_mode),
+      email_sender_name:gatewayLocked ? String(process.env.FACTORYBOX_MAIL_SENDER_NAME || 'HukaTech').trim().slice(0,200) : notificationTextInput(body.email_sender_name, current.email_sender_name, 200),
+      mail_gateway_url:gatewayLocked ? '' : notificationTextInput(body.mail_gateway_url, current.mail_gateway_url, 1000),
+      mail_gateway_installation_id:gatewayLocked ? '' : notificationTextInput(body.mail_gateway_installation_id, current.mail_gateway_installation_id, 200),
+      mail_gateway_api_key:gatewayLocked ? '' : notificationSecretInput(body.mail_gateway_api_key, current.mail_gateway_api_key),
+      mail_gateway_allow_smtp_fallback:gatewayLocked ? false : notificationBoolInput(body.mail_gateway_allow_smtp_fallback, current.mail_gateway_allow_smtp_fallback),
+      smtp_host:gatewayLocked ? '' : notificationTextInput(body.smtp_host, current.smtp_host, 500),
+      smtp_port:gatewayLocked ? 587 : notificationIntInput(body.smtp_port, current.smtp_port, 1, 65535),
+      smtp_secure:gatewayLocked ? false : notificationBoolInput(body.smtp_secure, current.smtp_secure),
+      smtp_user:gatewayLocked ? '' : notificationTextInput(body.smtp_user, current.smtp_user, 500),
+      smtp_pass:gatewayLocked ? '' : notificationSecretInput(body.smtp_pass, current.smtp_pass),
+      smtp_from:gatewayLocked ? '' : notificationTextInput(body.smtp_from, current.smtp_from, 500),
       email_default_to:notificationTextInput(body.email_default_to, current.email_default_to, 2000)
     };
     const actorEmail = req.user?.email || getSession(req)?.user?.email || 'system';
@@ -7671,14 +8070,20 @@ app.patch('/api/admin/notification-settings', adminRequired, permissionRequired(
       UPDATE notification_settings SET
         delivery_enabled=$1, auto_delivery_enabled=$2, interval_sec=$3, batch_size=$4,
         telegram_enabled=$5, telegram_bot_token=$6, telegram_chat_id=$7,
-        email_enabled=$8, smtp_host=$9, smtp_port=$10, smtp_secure=$11,
-        smtp_user=$12, smtp_pass=$13, smtp_from=$14, email_default_to=$15,
-        updated_by=$16, updated_at=now()
+        email_enabled=$8, email_mode=$9, email_sender_name=$10,
+        mail_gateway_url=$11, mail_gateway_installation_id=$12, mail_gateway_api_key=$13,
+        mail_gateway_allow_smtp_fallback=$14,
+        smtp_host=$15, smtp_port=$16, smtp_secure=$17,
+        smtp_user=$18, smtp_pass=$19, smtp_from=$20, email_default_to=$21,
+        updated_by=$22, updated_at=now()
       WHERE id=1
     `, [
       next.delivery_enabled,next.auto_delivery_enabled,next.interval_sec,next.batch_size,
       next.telegram_enabled,next.telegram_bot_token,next.telegram_chat_id,
-      next.email_enabled,next.smtp_host,next.smtp_port,next.smtp_secure,
+      next.email_enabled,next.email_mode,next.email_sender_name,
+      next.mail_gateway_url,next.mail_gateway_installation_id,next.mail_gateway_api_key,
+      next.mail_gateway_allow_smtp_fallback,
+      next.smtp_host,next.smtp_port,next.smtp_secure,
       next.smtp_user,next.smtp_pass,next.smtp_from,next.email_default_to,actorEmail
     ]);
     await loadNotificationRuntimeSettings();
@@ -7689,9 +8094,9 @@ app.patch('/api/admin/notification-settings', adminRequired, permissionRequired(
       action:'update_notification_settings',
       entity_type:'notification_settings',
       entity_id:'global',
-      old_values:{delivery:oldSnapshot.delivery,telegram:{enabled:oldSnapshot.telegram.enabled,configured:oldSnapshot.telegram.configured},email:{enabled:oldSnapshot.email.enabled,configured:oldSnapshot.email.configured}},
-      new_values:{delivery:snapshot.delivery,telegram:{enabled:snapshot.telegram.enabled,configured:snapshot.telegram.configured},email:{enabled:snapshot.email.enabled,configured:snapshot.email.configured}},
-      metadata:{secrets_changed:Boolean(body.telegram_bot_token || body.smtp_pass)}
+      old_values:{delivery:oldSnapshot.delivery,telegram:{enabled:oldSnapshot.telegram.enabled,configured:oldSnapshot.telegram.configured},email:{enabled:oldSnapshot.email.enabled,configured:oldSnapshot.email.configured,mode:oldSnapshot.email.mode}},
+      new_values:{delivery:snapshot.delivery,telegram:{enabled:snapshot.telegram.enabled,configured:snapshot.telegram.configured},email:{enabled:snapshot.email.enabled,configured:snapshot.email.configured,mode:snapshot.email.mode}},
+      metadata:{secrets_changed:Boolean(body.telegram_bot_token || body.smtp_pass || body.mail_gateway_api_key)}
     });
     res.json({status:'ok', version:APP_VERSION, ...snapshot});
   } catch(e) {
@@ -7738,7 +8143,9 @@ app.post('/api/admin/notification-settings/test-email', adminRequired, permissio
       to:target,
       subject:`FactoryBox v${APP_VERSION} Email Test`,
       html:emailShellHtml('FactoryBox Email Test', `<h1 style="margin:0 0 12px;color:#102033;">Bildirim kanalı hazır</h1><p>FactoryBox v${APP_VERSION} test e-postası başarıyla gönderildi.</p>`),
-      text:`FactoryBox v${APP_VERSION} test e-postası. Email bildirim kanalı hazır ve çalışıyor.`
+      text:`FactoryBox v${APP_VERSION} test e-postası. Email bildirim kanalı hazır ve çalışıyor.`,
+      purpose:'test',
+      metadata:{customer_code:CFG.customerCode,site_code:CFG.siteCode}
     });
     if (!result.sent) throw new Error(result.reason || 'Email could not be sent');
     const test = await recordNotificationTest({channel:'email',status:'delivered',target,providerMessageId:result.message_id,actorEmail});
@@ -10578,7 +10985,9 @@ async function deliverInviteEmail(req, invite) {
       to:invite.email,
       subject:inviteEmailSubject(invite),
       html:inviteEmailHtml(invite, inviteUrl),
-      text:inviteText(invite, inviteUrl)
+      text:inviteText(invite, inviteUrl),
+      purpose:'user_invite',
+      metadata:{customer_code:invite.customer_code,site_code:invite.site_code}
     });
   } catch(e) {
     emailResult = {
@@ -13175,18 +13584,82 @@ app.get('/api/sites/:siteCode/ai/openai-report/telegram', async (req,res)=>{
 
 
 
+function mailGatewayModeValue(value, fallback = 'direct_smtp') {
+  const clean = String(value || fallback || '').trim().toLowerCase();
+  return ['gateway','direct_smtp','disabled'].includes(clean) ? clean : fallback;
+}
+
+function normalizeMailGatewayBaseUrl(value) {
+  const raw = String(value || '').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    const localHosts = new Set(['localhost','127.0.0.1','::1','backend','mail-gateway','host.docker.internal']);
+    if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && localHosts.has(parsed.hostname.toLowerCase()))) return '';
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) return '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch (_) {
+    return '';
+  }
+}
+
+function environmentMailGatewayEnforced() {
+  return String(process.env.FACTORYBOX_MAIL_MODE || '').trim().toLowerCase() === 'gateway';
+}
+
 function emailConfig() {
-  const host = String(runtimeNotificationValue('smtp_host', process.env.SMTP_HOST || '') || '').trim();
-  const port = Number(runtimeNotificationValue('smtp_port', process.env.SMTP_PORT || 587));
-  const secureRaw = runtimeNotificationValue('smtp_secure', process.env.SMTP_SECURE || '');
-  const user = String(runtimeNotificationValue('smtp_user', process.env.SMTP_USER || '') || '').trim();
-  const pass = String(runtimeNotificationValue('smtp_pass', process.env.SMTP_PASS || '') || '');
-  const from = String(runtimeNotificationValue('smtp_from', process.env.SMTP_FROM || user) || '').trim();
+  const envMode = String(process.env.FACTORYBOX_MAIL_MODE || '').trim().toLowerCase();
+  const envModeConfigured = ['gateway','direct_smtp','disabled'].includes(envMode);
+  const mode = envModeConfigured
+    ? envMode
+    : mailGatewayModeValue(runtimeNotificationValue('email_mode', 'direct_smtp'));
+  const gatewayEnforced = mode === 'gateway' && envModeConfigured;
+
+  const host = gatewayEnforced ? '' : String(runtimeNotificationValue('smtp_host', process.env.SMTP_HOST || '') || '').trim();
+  const port = gatewayEnforced ? 587 : Number(runtimeNotificationValue('smtp_port', process.env.SMTP_PORT || 587));
+  const secureRaw = gatewayEnforced ? false : runtimeNotificationValue('smtp_secure', process.env.SMTP_SECURE || '');
+  const user = gatewayEnforced ? '' : String(runtimeNotificationValue('smtp_user', process.env.SMTP_USER || '') || '').trim();
+  const pass = gatewayEnforced ? '' : String(runtimeNotificationValue('smtp_pass', process.env.SMTP_PASS || '') || '');
+  const from = gatewayEnforced ? '' : String(runtimeNotificationValue('smtp_from', process.env.SMTP_FROM || user) || '').trim();
   const defaultTo = String(runtimeNotificationValue('email_default_to', process.env.REPORT_EMAIL_TO || '') || '').trim();
   const secure = String(secureRaw).toLowerCase() === 'true' || port === 465;
+  const enabled = runtimeBoolean('email_enabled', 'EMAIL_REPORTS_ENABLED', true);
+
+  const senderNameSource = gatewayEnforced
+    ? (process.env.FACTORYBOX_MAIL_SENDER_NAME || 'HukaTech')
+    : runtimeNotificationValue('email_sender_name', process.env.FACTORYBOX_MAIL_SENDER_NAME || `FactoryBox | ${CFG.customerName}`);
+  const senderName = String(senderNameSource || 'HukaTech').trim().slice(0, 200);
+
+  const gatewayUrlSource = gatewayEnforced
+    ? process.env.FACTORYBOX_MAIL_GATEWAY_URL
+    : runtimeNotificationValue('mail_gateway_url', process.env.FACTORYBOX_MAIL_GATEWAY_URL || '');
+  const gatewayInstallationIdSource = gatewayEnforced
+    ? process.env.FACTORYBOX_MAIL_INSTALLATION_ID
+    : runtimeNotificationValue('mail_gateway_installation_id', process.env.FACTORYBOX_MAIL_INSTALLATION_ID || CFG.customerCode);
+  const gatewayApiKeySource = gatewayEnforced
+    ? process.env.FACTORYBOX_MAIL_API_KEY
+    : runtimeNotificationValue('mail_gateway_api_key', process.env.FACTORYBOX_MAIL_API_KEY || '');
+
+  const gatewayUrl = normalizeMailGatewayBaseUrl(gatewayUrlSource);
+  const gatewayInstallationId = String(gatewayInstallationIdSource || '').trim().slice(0, 200);
+  const gatewayApiKey = String(gatewayApiKeySource || '').trim();
+  const gatewayAllowSmtpFallback = gatewayEnforced
+    ? false
+    : runtimeBoolean('mail_gateway_allow_smtp_fallback', 'FACTORYBOX_MAIL_ALLOW_SMTP_FALLBACK', false);
+
+  const smtpConfigured = Boolean(host && user && pass && from);
+  const gatewayConfigured = Boolean(gatewayUrl && gatewayInstallationId && gatewayApiKey);
+  const configured = mode === 'gateway'
+    ? gatewayConfigured
+    : mode === 'direct_smtp'
+      ? smtpConfigured
+      : false;
 
   return {
-    enabled:runtimeBoolean('email_enabled', 'EMAIL_REPORTS_ENABLED', true),
+    enabled,
+    mode,
+    configured,
+    senderName,
     host,
     port:Number.isFinite(port) ? port : 587,
     secure,
@@ -13194,15 +13667,39 @@ function emailConfig() {
     pass,
     from,
     defaultTo,
-    configured:Boolean(host && user && pass && from)
+    smtpConfigured,
+    gatewayEnforced,
+    gateway:{
+      url:gatewayUrl,
+      installationId:gatewayInstallationId,
+      apiKey:gatewayApiKey,
+      allowSmtpFallback:gatewayAllowSmtpFallback,
+      configured:gatewayConfigured,
+      timeoutMs:Math.min(Math.max(Number(process.env.FACTORYBOX_MAIL_GATEWAY_TIMEOUT_MS || 15000), 2000), 60000)
+    }
   };
 }
 
 function splitEmails(value) {
-  return String(value || '')
+  return [...new Set(String(value || '')
     .split(',')
-    .map(x => x.trim())
-    .filter(Boolean);
+    .map(x => x.trim().toLowerCase())
+    .filter(Boolean))];
+}
+
+function isValidEmailRecipient(value) {
+  const clean = String(value || '').trim();
+  return clean.length <= 320
+    && !/[\r\n]/.test(clean)
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean);
+}
+
+function validatedEmailRecipients(value, max = 50) {
+  const recipients = splitEmails(value);
+  if (recipients.length > max) throw new Error(`Too many email recipients; maximum is ${max}`);
+  const invalid = recipients.filter(item => !isValidEmailRecipient(item));
+  if (invalid.length) throw new Error('One or more recipient email addresses are invalid');
+  return recipients;
 }
 
 function stripHtml(html) {
@@ -13214,6 +13711,32 @@ function stripHtml(html) {
     .trim();
 }
 
+function safeEmailHeader(value, max = 300) {
+  return String(value || '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
+}
+
+function mailPurpose(value) {
+  const clean = String(value || 'notification').trim().toLowerCase();
+  const allowed = new Set([
+    'notification','password_reset','user_invite','alarm','alarm_report',
+    'maintenance','daily_report','weekly_report','subscription','test'
+  ]);
+  return allowed.has(clean) ? clean : 'notification';
+}
+
+function mailMetadata(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const result = {};
+  for (const key of ['customer_code','site_code','machine_code','report_type','event_id']) {
+    if (source[key] !== undefined && source[key] !== null) result[key] = String(source[key]).slice(0, 200);
+  }
+  return result;
+}
+
+function maskedRecipientList(recipients) {
+  return recipients.map(maskEmail);
+}
+
 function emailSubjectForReport(site, report, prefix = 'FactoryBox Günlük Rapor') {
   const score = report.health_score ?? report.overall_score ?? report.report_json?.overall_score ?? '-';
   const siteName = site?.name || site?.code || 'site';
@@ -13221,48 +13744,625 @@ function emailSubjectForReport(site, report, prefix = 'FactoryBox Günlük Rapor
   return `${prefix} - ${siteName} - Skor ${score}/100 - ${date}`;
 }
 
-async function sendReportEmail({to, subject, html, text}) {
-  const cfg = emailConfig();
-
-  if (!cfg.enabled) {
-    return {sent:false, reason:'EMAIL_REPORTS_ENABLED=false'};
+async function recordOutboundEmailStart({requestId,purpose,mode,recipients,subject,metadata}) {
+  try {
+    await pool.query(`
+      INSERT INTO outbound_email_deliveries
+        (request_id,purpose,mode,recipient_count,recipients_masked,subject,status,metadata)
+      VALUES($1,$2,$3,$4,$5::jsonb,$6,'processing',$7::jsonb)
+      ON CONFLICT(request_id) DO UPDATE SET
+        purpose=EXCLUDED.purpose,mode=EXCLUDED.mode,recipient_count=EXCLUDED.recipient_count,
+        recipients_masked=EXCLUDED.recipients_masked,subject=EXCLUDED.subject,status='processing',
+        error_message=NULL,metadata=EXCLUDED.metadata,updated_at=now()
+    `, [
+      requestId,purpose,mode,recipients.length,JSON.stringify(maskedRecipientList(recipients)),
+      safeEmailHeader(subject,500),JSON.stringify(mailMetadata(metadata))
+    ]);
+  } catch (error) {
+    console.warn('Outbound email start log failed:', error.message);
   }
+}
 
-  if (!cfg.configured) {
-    return {sent:false, reason:'SMTP settings not configured'};
+async function recordOutboundEmailFinish({requestId,status,provider,messageId,errorMessage}) {
+  try {
+    await pool.query(`
+      UPDATE outbound_email_deliveries SET
+        status=$2,provider=$3,provider_message_id=$4,error_message=$5,
+        delivered_at=CASE WHEN $2='delivered' THEN now() ELSE delivered_at END,
+        updated_at=now()
+      WHERE request_id=$1
+    `, [requestId,status,provider || null,messageId || null,errorMessage ? String(errorMessage).slice(0,1000) : null]);
+  } catch (error) {
+    console.warn('Outbound email finish log failed:', error.message);
   }
+}
 
-  const recipients = splitEmails(to || cfg.defaultTo);
-  if (!recipients.length) {
-    return {sent:false, reason:'Recipient email not configured'};
-  }
+async function sendDirectSmtpEmail({to,subject,html,text,fromName=null,replyTo=null}, smtpConfig = emailConfig()) {
+  if (!smtpConfig.smtpConfigured) return {sent:false,reason:'SMTP settings not configured',provider:'smtp'};
+  const recipients = Array.isArray(to) ? to : validatedEmailRecipients(to);
+  if (!recipients.length) return {sent:false,reason:'Recipient email not configured',provider:'smtp'};
 
   const transporter = nodemailer.createTransport({
-    host:cfg.host,
-    port:cfg.port,
-    secure:cfg.secure,
-    auth:{
-      user:cfg.user,
-      pass:cfg.pass
-    }
+    host:smtpConfig.host,
+    port:smtpConfig.port,
+    secure:smtpConfig.secure,
+    auth:{user:smtpConfig.user,pass:smtpConfig.pass},
+    connectionTimeout:15000,
+    greetingTimeout:15000,
+    socketTimeout:30000
   });
 
+  const displayName = safeEmailHeader(fromName || smtpConfig.senderName || 'FactoryBox', 160);
+  const fromValue = displayName ? `${displayName} <${smtpConfig.from}>` : smtpConfig.from;
   const info = await transporter.sendMail({
-    from:cfg.from,
+    from:fromValue,
     to:recipients.join(','),
-    subject,
+    subject:safeEmailHeader(subject,300),
     text:text || stripHtml(html),
-    html
+    html,
+    ...(replyTo ? {replyTo:safeEmailHeader(replyTo,320)} : {})
   });
 
   return {
     sent:true,
+    provider:'smtp',
     message_id:info.messageId || null,
     accepted:info.accepted || [],
     rejected:info.rejected || [],
     to:recipients
   };
 }
+
+async function sendViaMailGateway({to,subject,html,text,purpose,metadata,requestId}, cfg = emailConfig()) {
+  if (!cfg.gateway.configured) return {sent:false,reason:'HukaTech Central Mail Gateway is not configured',provider:'factorybox_gateway'};
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), cfg.gateway.timeoutMs);
+  timeout.unref?.();
+  try {
+    const response = await fetch(`${cfg.gateway.url}/api/mail-gateway/v1/send`, {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'authorization':`Bearer ${cfg.gateway.apiKey}`,
+        'x-factorybox-installation-id':cfg.gateway.installationId,
+        'x-factorybox-version':APP_VERSION,
+        'x-request-id':requestId
+      },
+      body:JSON.stringify({
+        request_id:requestId,
+        purpose,
+        to,
+        subject:safeEmailHeader(subject,300),
+        html:String(html || ''),
+        text:String(text || ''),
+        sender_name:cfg.senderName,
+        metadata:{
+          customer_code:CFG.customerCode,
+          customer_name:CFG.customerName,
+          site_code:CFG.siteCode,
+          ...mailMetadata(metadata)
+        }
+      }),
+      signal:controller.signal
+    });
+    const raw = await response.text();
+    let payload = {};
+    try { payload = raw ? JSON.parse(raw) : {}; } catch (_) {}
+    if (!response.ok || payload.sent === false) {
+      throw new Error(payload.message || payload.reason || `Mail Gateway HTTP ${response.status}`);
+    }
+    return {
+      sent:true,
+      provider:'factorybox_gateway',
+      message_id:payload.message_id || null,
+      gateway_request_id:payload.request_id || requestId,
+      duplicate:Boolean(payload.duplicate),
+      accepted:payload.accepted || to,
+      rejected:payload.rejected || [],
+      to
+    };
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('HukaTech Central Mail Gateway timeout');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function checkMailGatewayConnection() {
+  const cfg = emailConfig();
+  if (!cfg.gateway.configured) return {connected:false,configured:false,message:'HukaTech Central Mail Gateway is not configured'};
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), cfg.gateway.timeoutMs);
+  timeout.unref?.();
+  try {
+    const response = await fetch(`${cfg.gateway.url}/api/mail-gateway/v1/status`, {
+      method:'GET',
+      headers:{
+        'authorization':`Bearer ${cfg.gateway.apiKey}`,
+        'x-factorybox-installation-id':cfg.gateway.installationId,
+        'x-factorybox-version':APP_VERSION
+      },
+      signal:controller.signal
+    });
+    const raw = await response.text();
+    let payload = {};
+    try { payload = raw ? JSON.parse(raw) : {}; } catch (_) {}
+    if (!response.ok) throw new Error(payload.message || `Mail Gateway HTTP ${response.status}`);
+    return {connected:true,configured:true,...payload};
+  } catch (error) {
+    if (error.name === 'AbortError') return {connected:false,configured:true,message:'HukaTech Central Mail Gateway timeout'};
+    return {connected:false,configured:true,message:error.message};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sendReportEmail({to, subject, html, text, purpose='notification', metadata={}}) {
+  const cfg = emailConfig();
+  const cleanPurpose = mailPurpose(purpose);
+  const recipients = validatedEmailRecipients(to || cfg.defaultTo);
+  const requestId = crypto.randomUUID();
+  const mode = cfg.mode;
+
+  if (!cfg.enabled || mode === 'disabled') {
+    return {sent:false,reason:!cfg.enabled ? 'EMAIL_REPORTS_ENABLED=false' : 'Email delivery mode is disabled',mode,provider:null};
+  }
+  if (!recipients.length) return {sent:false,reason:'Recipient email not configured',mode,provider:null};
+  if (!cfg.configured) {
+    return {
+      sent:false,
+      reason:mode === 'gateway' ? 'HukaTech Central Mail Gateway is not configured' : 'SMTP settings not configured',
+      mode,
+      provider:mode === 'gateway' ? 'factorybox_gateway' : 'smtp'
+    };
+  }
+
+  await recordOutboundEmailStart({
+    requestId,purpose:cleanPurpose,mode,recipients,subject,metadata
+  });
+
+  try {
+    let result;
+    if (mode === 'gateway') {
+      try {
+        result = await sendViaMailGateway({
+          to:recipients,subject,html,text,purpose:cleanPurpose,metadata,requestId
+        }, cfg);
+      } catch (gatewayError) {
+        if (!cfg.gateway.allowSmtpFallback || !cfg.smtpConfigured) throw gatewayError;
+        result = await sendDirectSmtpEmail({
+          to:recipients,subject,html,text,fromName:cfg.senderName
+        }, cfg);
+        result.fallback_from = 'factorybox_gateway';
+        result.gateway_error = gatewayError.message;
+      }
+    } else {
+      result = await sendDirectSmtpEmail({
+        to:recipients,subject,html,text,fromName:cfg.senderName
+      }, cfg);
+    }
+
+    if (!result.sent) {
+      await recordOutboundEmailFinish({
+        requestId,status:'failed',provider:result.provider,errorMessage:result.reason
+      });
+      return {...result,request_id:requestId,mode};
+    }
+
+    await recordOutboundEmailFinish({
+      requestId,status:'delivered',provider:result.provider,messageId:result.message_id
+    });
+    return {...result,request_id:requestId,mode};
+  } catch (error) {
+    await recordOutboundEmailFinish({
+      requestId,status:'failed',
+      provider:mode === 'gateway' ? 'factorybox_gateway' : 'smtp',
+      errorMessage:error.message
+    });
+    throw error;
+  }
+}
+
+function mailGatewayServerEnabled() {
+  return String(process.env.MAIL_GATEWAY_SERVER_ENABLED || 'false').toLowerCase() === 'true';
+}
+
+function sha256Hex(value) {
+  return crypto.createHash('sha256').update(String(value || '')).digest('hex');
+}
+
+function timingSafeStringEqual(left, right) {
+  const a = Buffer.from(String(left || ''));
+  const b = Buffer.from(String(right || ''));
+  return a.length === b.length && crypto.timingSafeEqual(a,b);
+}
+
+function mailGatewayInstallationRecords() {
+  const records = new Map();
+  const raw = String(process.env.MAIL_GATEWAY_INSTALLATIONS_JSON || '').trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        for (const row of parsed) {
+          const id = String(row?.installation_id || row?.id || '').trim();
+          if (id) records.set(id,{...row,installation_id:id});
+        }
+      } else if (parsed && typeof parsed === 'object') {
+        for (const [id,value] of Object.entries(parsed)) {
+          if (value && typeof value === 'object') records.set(String(id),{...value,installation_id:String(id)});
+        }
+      }
+    } catch (error) {
+      console.error('MAIL_GATEWAY_INSTALLATIONS_JSON parse error:', error.message);
+    }
+  }
+
+  const singleId = String(process.env.MAIL_GATEWAY_SINGLE_INSTALLATION_ID || '').trim();
+  if (singleId) {
+    records.set(singleId,{
+      installation_id:singleId,
+      customer_name:String(process.env.MAIL_GATEWAY_SINGLE_CUSTOMER_NAME || singleId).trim(),
+      api_key:String(process.env.MAIL_GATEWAY_SINGLE_API_KEY || ''),
+      api_key_sha256:String(process.env.MAIL_GATEWAY_SINGLE_API_KEY_SHA256 || '').trim().toLowerCase(),
+      enabled:String(process.env.MAIL_GATEWAY_SINGLE_ENABLED || 'true').toLowerCase() !== 'false'
+    });
+  }
+  return records;
+}
+
+function gatewayInstallationKeyMatches(record, providedKey) {
+  if (!record || !providedKey) return false;
+  const expectedHash = String(record.api_key_sha256 || '').trim().toLowerCase();
+  if (expectedHash) return timingSafeStringEqual(sha256Hex(providedKey), expectedHash);
+  return timingSafeStringEqual(providedKey, String(record.api_key || ''));
+}
+
+function mailGatewayBearerToken(req) {
+  const header = String(req.headers.authorization || '');
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+}
+
+function mailGatewayProviderValue(value, fallback = 'brevo_api') {
+  const clean = String(value || fallback || '').trim().toLowerCase();
+  return ['brevo_api','smtp','disabled'].includes(clean) ? clean : fallback;
+}
+
+function normalizeBrevoApiBaseUrl(value) {
+  const raw = String(value || 'https://api.brevo.com/v3').trim().replace(/\/+$/, '');
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) return '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch (_) {
+    return '';
+  }
+}
+
+function mailGatewayServerProviderConfig() {
+  const provider = mailGatewayProviderValue(process.env.MAIL_GATEWAY_PROVIDER || 'brevo_api');
+  const senderName = safeEmailHeader(process.env.MAIL_GATEWAY_SENDER_NAME || 'HukaTech',160) || 'HukaTech';
+  const from = String(process.env.MAIL_GATEWAY_FROM_EMAIL || process.env.MAIL_GATEWAY_SMTP_FROM || 'noreply@hukatech.com').trim();
+  const replyTo = String(process.env.MAIL_GATEWAY_REPLY_TO || '').trim();
+  const noReplyText = String(process.env.MAIL_GATEWAY_NO_REPLY_TEXT || 'Bu e-posta HukaTech tarafından otomatik olarak gönderilmiştir. Lütfen bu e-postayı yanıtlamayın.').trim();
+
+  const brevoApiBaseUrl = normalizeBrevoApiBaseUrl(process.env.MAIL_GATEWAY_BREVO_API_BASE_URL || 'https://api.brevo.com/v3');
+  const brevoApiKey = String(process.env.MAIL_GATEWAY_BREVO_API_KEY || process.env.BREVO_API_KEY || '').trim();
+  const brevoTimeoutMs = Math.min(Math.max(Number(process.env.MAIL_GATEWAY_BREVO_TIMEOUT_MS || 15000),2000),60000);
+
+  const smtpHost = String(process.env.MAIL_GATEWAY_SMTP_HOST || '').trim();
+  const smtpPort = Number(process.env.MAIL_GATEWAY_SMTP_PORT || 587);
+  const smtpUser = String(process.env.MAIL_GATEWAY_SMTP_USER || '').trim();
+  const smtpPass = String(process.env.MAIL_GATEWAY_SMTP_PASS || '');
+  const smtpSecure = String(process.env.MAIL_GATEWAY_SMTP_SECURE || '').toLowerCase() === 'true' || smtpPort === 465;
+  const smtpConfigured = Boolean(smtpHost && smtpUser && smtpPass && from);
+  const brevoConfigured = Boolean(brevoApiBaseUrl && brevoApiKey && isValidEmailRecipient(from));
+  const configured = provider === 'brevo_api' ? brevoConfigured : provider === 'smtp' ? smtpConfigured : false;
+
+  return {
+    enabled:mailGatewayServerEnabled(),
+    provider,
+    configured,
+    senderName,
+    from,
+    replyTo:isValidEmailRecipient(replyTo) ? replyTo : '',
+    noReplyText,
+    brevo:{
+      apiBaseUrl:brevoApiBaseUrl,
+      apiKey:brevoApiKey,
+      timeoutMs:brevoTimeoutMs,
+      configured:brevoConfigured
+    },
+    smtpConfigured,
+    host:smtpHost,
+    port:Number.isFinite(smtpPort) ? smtpPort : 587,
+    secure:smtpSecure,
+    user:smtpUser,
+    pass:smtpPass
+  };
+}
+
+function appendNoReplyText(text, notice) {
+  const body = String(text || '').trim();
+  const footer = String(notice || '').trim();
+  if (!footer || body.toLocaleLowerCase('tr-TR').includes('lütfen bu e-postayı yanıtlamayın')) return body;
+  return body ? `${body}\n\n---\n${footer}` : footer;
+}
+
+function appendNoReplyHtml(html, notice) {
+  const body = String(html || '');
+  const footer = String(notice || '').trim();
+  if (!footer || body.toLocaleLowerCase('tr-TR').includes('lütfen bu e-postayı yanıtlamayın')) return body;
+  const footerHtml = `<div style="margin-top:22px;padding-top:14px;border-top:1px solid #dfe7f2;color:#6b7788;font-size:12px;line-height:1.55;">${h(footer)}</div>`;
+  if (/<\/body>/i.test(body)) return body.replace(/<\/body>/i, `${footerHtml}</body>`);
+  return `${body}${footerHtml}`;
+}
+
+async function checkBrevoApiConnection(cfg) {
+  if (!cfg.brevo.configured) return {connected:false,configured:false,message:'Brevo API is not configured'};
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), cfg.brevo.timeoutMs);
+  timeout.unref?.();
+  try {
+    const response = await fetch(`${cfg.brevo.apiBaseUrl}/account`, {
+      method:'GET',
+      headers:{'accept':'application/json','api-key':cfg.brevo.apiKey},
+      signal:controller.signal
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || payload.code || `Brevo HTTP ${response.status}`);
+    return {connected:true,configured:true,provider:'brevo_api',message:'Brevo API connection is ready'};
+  } catch (error) {
+    if (error.name === 'AbortError') return {connected:false,configured:true,provider:'brevo_api',message:'Brevo API timeout'};
+    return {connected:false,configured:true,provider:'brevo_api',message:String(error.message || error).slice(0,500)};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function checkMailGatewayProviderConnection(cfg = mailGatewayServerProviderConfig()) {
+  if (!cfg.enabled) return {connected:false,configured:false,provider:cfg.provider,message:'Central Mail Gateway is disabled'};
+  if (cfg.provider === 'disabled') return {connected:false,configured:false,provider:'disabled',message:'Mail provider is disabled'};
+  if (cfg.provider === 'brevo_api') return checkBrevoApiConnection(cfg);
+  return {
+    connected:cfg.smtpConfigured,
+    configured:cfg.smtpConfigured,
+    provider:'smtp',
+    message:cfg.smtpConfigured ? 'SMTP provider is configured' : 'SMTP provider is not configured'
+  };
+}
+
+async function sendBrevoApiEmail({to,subject,html,text,requestId,purpose}, cfg) {
+  if (!cfg.brevo.configured) return {sent:false,reason:'Brevo API settings not configured',provider:'brevo_api'};
+  const recipients = Array.isArray(to) ? to : validatedEmailRecipients(to);
+  if (!recipients.length) return {sent:false,reason:'Recipient email not configured',provider:'brevo_api'};
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), cfg.brevo.timeoutMs);
+  timeout.unref?.();
+  try {
+    const payload = {
+      sender:{name:cfg.senderName,email:cfg.from},
+      to:recipients.map(email => ({email})),
+      subject:safeEmailHeader(subject,300),
+      htmlContent:appendNoReplyHtml(html,cfg.noReplyText),
+      textContent:appendNoReplyText(text || stripHtml(html),cfg.noReplyText),
+      headers:{
+        'X-Hukatech-Request-Id':safeEmailHeader(requestId,200),
+        'X-Hukatech-Purpose':safeEmailHeader(purpose,80)
+      }
+    };
+    if (cfg.replyTo) payload.replyTo={email:cfg.replyTo};
+
+    const response = await fetch(`${cfg.brevo.apiBaseUrl}/smtp/email`, {
+      method:'POST',
+      headers:{
+        'accept':'application/json',
+        'content-type':'application/json',
+        'api-key':cfg.brevo.apiKey
+      },
+      body:JSON.stringify(payload),
+      signal:controller.signal
+    });
+    const raw = await response.text();
+    let responsePayload = {};
+    try { responsePayload = raw ? JSON.parse(raw) : {}; } catch (_) {}
+    if (!response.ok) throw new Error(responsePayload.message || responsePayload.code || `Brevo HTTP ${response.status}`);
+    return {
+      sent:true,
+      provider:'brevo_api',
+      message_id:responsePayload.messageId || responsePayload.message_id || null,
+      accepted:recipients,
+      rejected:[],
+      to:recipients
+    };
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('Brevo API timeout');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sendMailGatewayProviderEmail({to,subject,html,text,requestId,purpose}, cfg = mailGatewayServerProviderConfig()) {
+  if (cfg.provider === 'brevo_api') return sendBrevoApiEmail({to,subject,html,text,requestId,purpose},cfg);
+  if (cfg.provider === 'smtp') {
+    return sendDirectSmtpEmail({
+      to,
+      subject,
+      html:appendNoReplyHtml(html,cfg.noReplyText),
+      text:appendNoReplyText(text || stripHtml(html),cfg.noReplyText),
+      fromName:cfg.senderName,
+      replyTo:cfg.replyTo || null
+    },{
+      ...cfg,
+      smtpConfigured:cfg.smtpConfigured
+    });
+  }
+  return {sent:false,reason:'Central mail provider is disabled',provider:'disabled'};
+}
+
+function mailGatewayAuth(req,res,next) {
+  if (!mailGatewayServerEnabled()) {
+    return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Mail Gateway server is disabled'});
+  }
+  const installationId = safeEmailHeader(req.headers['x-factorybox-installation-id'],200);
+  const apiKey = mailGatewayBearerToken(req);
+  const record = mailGatewayInstallationRecords().get(installationId);
+  if (!record || record.enabled === false || !gatewayInstallationKeyMatches(record,apiKey)) {
+    return res.status(401).json({status:'unauthorized',version:APP_VERSION,message:'Invalid Mail Gateway credentials'});
+  }
+
+  const minuteLimit = Math.min(Math.max(Number(record.max_per_minute || process.env.MAIL_GATEWAY_MAX_PER_MINUTE || 30),1),1000);
+  const dailyLimit = Math.min(Math.max(Number(record.max_per_day || process.env.MAIL_GATEWAY_MAX_PER_DAY || 500),1),100000);
+  const minute = consumeRateBucket(mailGatewayMinuteBuckets,installationId,minuteLimit,60*1000);
+  const day = consumeRateBucket(mailGatewayDailyBuckets,installationId,dailyLimit,24*60*60*1000);
+  res.setHeader('X-MailGateway-Minute-Remaining',String(minute.remaining));
+  res.setHeader('X-MailGateway-Day-Remaining',String(day.remaining));
+  if (!minute.allowed || !day.allowed) {
+    return res.status(429).json({status:'rate_limited',version:APP_VERSION,message:'Mail Gateway rate limit exceeded'});
+  }
+  req.mailGatewayInstallation = {
+    ...record,
+    installation_id:installationId,
+    customer_name:safeEmailHeader(record.customer_name || installationId,160)
+  };
+  next();
+}
+
+app.get('/api/mail-gateway/v1/status', mailGatewayAuth, async (req,res)=>{
+  const provider = mailGatewayServerProviderConfig();
+  const providerStatus = await checkMailGatewayProviderConnection(provider);
+  res.status(providerStatus.connected ? 200 : 503).json({
+    status:providerStatus.connected ? 'ok' : 'not_ready',
+    version:APP_VERSION,
+    service:'hukatech-central-mail-gateway',
+    connected:providerStatus.connected,
+    configured:providerStatus.configured,
+    provider:provider.provider,
+    installation_id:req.mailGatewayInstallation.installation_id,
+    customer_name:req.mailGatewayInstallation.customer_name,
+    sender_email_configured:Boolean(provider.from),
+    api_key_configured:provider.provider === 'brevo_api' ? Boolean(provider.brevo.apiKey) : undefined,
+    smtp_configured:provider.provider === 'smtp' ? provider.smtpConfigured : undefined,
+    message:providerStatus.message,
+    timestamp:new Date().toISOString()
+  });
+});
+
+app.post('/api/mail-gateway/v1/send', mailGatewayAuth, async (req,res)=>{
+  const installation = req.mailGatewayInstallation;
+  const requestId = safeEmailHeader(req.body?.request_id || req.headers['x-request-id'] || crypto.randomUUID(),200);
+  const purpose = mailPurpose(req.body?.purpose);
+  let recipients;
+  try {
+    recipients = validatedEmailRecipients(req.body?.to,20);
+  } catch (error) {
+    return res.status(400).json({status:'error',version:APP_VERSION,sent:false,message:error.message});
+  }
+  if (!requestId || !recipients.length) {
+    return res.status(400).json({status:'error',version:APP_VERSION,sent:false,message:'request_id and recipients are required'});
+  }
+  const subject = safeEmailHeader(req.body?.subject,300);
+  const html = String(req.body?.html || '');
+  const text = String(req.body?.text || '');
+  if (!subject || (!html && !text)) {
+    return res.status(400).json({status:'error',version:APP_VERSION,sent:false,message:'subject and email content are required'});
+  }
+  if (html.length > 700000 || text.length > 250000) {
+    return res.status(413).json({status:'error',version:APP_VERSION,sent:false,message:'Email content is too large'});
+  }
+
+  await ensureMailGatewayFoundation();
+  const existing = await one(`
+    SELECT status,provider_message_id,error_message,created_at,updated_at
+    FROM mail_gateway_deliveries
+    WHERE installation_id=$1 AND request_id=$2
+    LIMIT 1
+  `,[installation.installation_id,requestId]);
+
+  if (existing?.status === 'delivered') {
+    return res.json({
+      status:'ok',version:APP_VERSION,sent:true,duplicate:true,request_id:requestId,
+      message_id:existing.provider_message_id || null,accepted:recipients,rejected:[]
+    });
+  }
+  if (existing?.status === 'processing' && Date.now() - new Date(existing.updated_at).getTime() < 5*60*1000) {
+    return res.status(409).json({
+      status:'processing',version:APP_VERSION,sent:false,request_id:requestId,
+      message:'This mail request is already processing'
+    });
+  }
+
+  await pool.query(`
+    INSERT INTO mail_gateway_deliveries
+      (installation_id,request_id,purpose,recipient_count,recipients_masked,subject,status,metadata)
+    VALUES($1,$2,$3,$4,$5::jsonb,$6,'processing',$7::jsonb)
+    ON CONFLICT(installation_id,request_id) DO UPDATE SET
+      purpose=EXCLUDED.purpose,recipient_count=EXCLUDED.recipient_count,
+      recipients_masked=EXCLUDED.recipients_masked,subject=EXCLUDED.subject,
+      status='processing',error_message=NULL,metadata=EXCLUDED.metadata,updated_at=now()
+  `,[
+    installation.installation_id,requestId,purpose,recipients.length,
+    JSON.stringify(maskedRecipientList(recipients)),subject,
+    JSON.stringify(mailMetadata(req.body?.metadata))
+  ]);
+
+  const provider = mailGatewayServerProviderConfig();
+  if (!provider.configured) {
+    const reason = provider.provider === 'brevo_api'
+      ? 'Central Mail Gateway Brevo API is not configured'
+      : provider.provider === 'smtp'
+        ? 'Central Mail Gateway SMTP is not configured'
+        : 'Central Mail Gateway provider is disabled';
+    await pool.query(`UPDATE mail_gateway_deliveries SET status='failed',error_message=$3,updated_at=now() WHERE installation_id=$1 AND request_id=$2`,[
+      installation.installation_id,requestId,reason
+    ]);
+    return res.status(503).json({status:'not_ready',version:APP_VERSION,sent:false,request_id:requestId,message:reason});
+  }
+
+  try {
+    const result = await sendMailGatewayProviderEmail({
+      to:recipients,
+      subject,
+      html,
+      text,
+      requestId,
+      purpose
+    }, provider);
+    if (!result.sent) throw new Error(result.reason || 'Central mail delivery failed');
+
+    await pool.query(`
+      UPDATE mail_gateway_deliveries SET
+        status='delivered',provider_message_id=$3,error_message=NULL,delivered_at=now(),updated_at=now()
+      WHERE installation_id=$1 AND request_id=$2
+    `,[installation.installation_id,requestId,result.message_id || null]);
+
+    return res.json({
+      status:'ok',version:APP_VERSION,sent:true,request_id:requestId,
+      message_id:result.message_id || null,accepted:result.accepted || recipients,
+      rejected:result.rejected || [],provider:result.provider || provider.provider
+    });
+  } catch (error) {
+    await pool.query(`
+      UPDATE mail_gateway_deliveries SET status='failed',error_message=$3,updated_at=now()
+      WHERE installation_id=$1 AND request_id=$2
+    `,[installation.installation_id,requestId,String(error.message || error).slice(0,1000)]);
+    return res.status(502).json({
+      status:'error',version:APP_VERSION,sent:false,request_id:requestId,
+      provider:provider.provider,
+      message:String(error.message || error)
+    });
+  }
+
+});
+
+app.get('/api/admin/notification-settings/gateway-status', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
+  const result = await checkMailGatewayConnection();
+  res.status(result.connected ? 200 : 503).json({status:result.connected ? 'ok' : 'not_ready',version:APP_VERSION,...result});
+});
 
 function emailShellHtml(title, bodyHtml) {
   return `<!doctype html>
@@ -13276,7 +14376,10 @@ function emailShellHtml(title, bodyHtml) {
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #dfe7f2;">
       ${bodyHtml}
     </div>
-    <p style="color:#6b7788;font-size:12px;margin-top:14px;">FactoryBox / MiaDeviceOS - Email Report Delivery - v${APP_VERSION}</p>
+    <div style="color:#6b7788;font-size:12px;line-height:1.55;margin-top:14px;">
+      <div>HukaTech platform bildirimi · v${APP_VERSION}</div>
+      <div>Bu e-posta otomatik olarak gönderilmiştir. Lütfen bu e-postayı yanıtlamayın.</div>
+    </div>
   </div>
 </body>
 </html>`;
@@ -13301,10 +14404,11 @@ app.get('/api/email/status', async (req,res)=>{
     email:{
       enabled:cfg.enabled,
       configured:cfg.configured,
-      host:cfg.host ? 'set' : 'missing',
-      port:cfg.port,
-      secure:cfg.secure,
-      from:cfg.from ? 'set' : 'missing',
+      mode:cfg.mode,
+      provider:cfg.mode === 'gateway' ? 'hukatech_central_gateway' : cfg.mode === 'direct_smtp' ? 'smtp' : 'disabled',
+      gateway_enforced:Boolean(cfg.gatewayEnforced),
+      gateway_configured:Boolean(cfg.gateway.configured),
+      smtp_configured:Boolean(cfg.smtpConfigured),
       default_to:cfg.defaultTo ? 'set' : 'missing'
     }
   });
@@ -13962,6 +15066,11 @@ function restartMaintenanceScheduler() { startMaintenanceScheduler().catch(error
 
 async function start() {
   await pool.query('SELECT 1');
+  await ensureMailGatewayFoundation();
+  if (mailGatewayOnlyEnabled()) {
+    httpServer = app.listen(PORT, '0.0.0.0', ()=> console.log(`HukaTech Central Mail Gateway v${APP_VERSION}: http://0.0.0.0:${PORT}`));
+    return;
+  }
   await ensureEntities();
   await ensureSaasFoundation();
   await ensureSecurityFoundation();
@@ -13978,6 +15087,7 @@ async function start() {
   await ensureAlarmEscalationFoundation();
   await ensureNotificationSettingsFoundation();
   await ensureGeneralSettingsFoundation();
+  await ensureRemoteAccessFoundation();
   await ensureSystemHealthFoundation();
   await ensureMaintenanceFoundation();
   await ensurePreventiveMaintenanceFoundation();

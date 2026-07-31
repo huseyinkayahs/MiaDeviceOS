@@ -1,0 +1,10 @@
+FactoryBox v6.7.0 Quick Tunnel NativeCommandError Fix
+
+Duzeltilen sorun:
+- docker compose rm komutunun "No stopped containers" mesajinin PowerShell tarafindan hata sayilmasi
+- cloudflared loglarinin stderr uzerinden gelmesi nedeniyle NativeCommandError olusmasi
+
+Degisen dosya:
+- deployment/production/start-quick-remote-access.ps1
+
+Bu paket once ana gelistirme klasorune, sonra C:\FactoryBox klasorune kopyalanmalidir.

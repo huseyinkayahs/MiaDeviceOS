@@ -1,0 +1,22 @@
+FactoryBox One v6.8.0 Validation
+==================================
+
+PASS - backend server.js JavaScript syntax (node --check)
+PASS - admin.html embedded JavaScript syntax
+PASS - login.html embedded JavaScript syntax
+PASS - reset-password.html embedded JavaScript syntax
+PASS - package.json version = 6.8.0
+PASS - docker-compose.production.yml YAML parse
+PASS - docker-compose.mail-gateway.yml YAML parse
+PASS - v6.7.1 Quick Tunnel/CORS protection preserved
+PASS - Central Gateway client route and configuration present
+PASS - Central Gateway server status/send routes present
+PASS - Customer and central delivery log schemas present
+PASS - No .env.production, SMTP password, or API key included
+
+Not executed:
+- Real SMTP delivery
+- Public https://mail.factorybox.com deployment
+- Live central gateway authentication test
+
+These require the FactoryBox central mail account, server URL, and issued installation key.

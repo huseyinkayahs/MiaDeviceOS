@@ -1,0 +1,26 @@
+FactoryBox One v6.8.0 — Package Contents
+==============================================
+
+Changed production files:
+- platform/backend/server.js
+- platform/backend/package.json
+- platform/backend/public/admin.html
+- platform/backend/public/login.html
+- platform/backend/public/reset-password.html
+- deployment/production/docker-compose.production.yml
+
+New central gateway files:
+- deployment/production/docker-compose.mail-gateway.yml
+- deployment/production/.env.customer-mail.example
+- deployment/production/.env.mail-gateway.example
+- deployment/production/GENERATE_MAIL_GATEWAY_KEY.ps1
+
+Documentation:
+- docs/V6_8_0_CENTRAL_MAIL_GATEWAY_FOUNDATION.md
+- KURULUM_V6_8_0.txt
+
+Not included:
+- .env.production
+- .env.mail-gateway
+- SMTP passwords
+- customer API keys
