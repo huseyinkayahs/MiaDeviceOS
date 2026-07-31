@@ -1,0 +1,28 @@
+HukaTech Platform v6.11.0
+Customer Installation Provisioning & Key Lifecycle
+
+1. ZIP dosyasını ana geliştirme klasörünün üzerine açın:
+   C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+
+2. Aynı ZIP dosyasını production klasörünün üzerine açın:
+   C:\FactoryBox
+
+3. CMD veya PowerShell üzerinden çalıştırın:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\APPLY_V6_11_0_CUSTOMER_INSTALLATION_PROVISIONING.ps1"
+
+4. Beklenen son satır:
+   HUKATECH_V6_11_0_CUSTOMER_PROVISIONING_READY
+
+Müşteri kurulum paketi kullanımı:
+
+- HukaTech panelinde system_admin ile giriş yapın.
+- Organizasyon > Müşteri Kurulumları ekranında müşteri kaydını oluşturun.
+- "Kurulum Paketi" düğmesine basın.
+- İndirilen JSON dosyasını müşteri sunucusuna güvenli biçimde taşıyın.
+- Müşteri sunucusunda çalıştırın:
+
+  powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1" -PackagePath "C:\YOL\HukaTech_Musteri_Customer_Provisioning.json"
+
+- Token tek kullanımlıktır ve varsayılan olarak 30 dakika geçerlidir.
+- Başarılı işlemden sonra JSON paketi varsayılan olarak silinir.
+- Gerçek API anahtarı yalnızca müşteri sunucusundaki .env.customer-mail dosyasına yazılır.

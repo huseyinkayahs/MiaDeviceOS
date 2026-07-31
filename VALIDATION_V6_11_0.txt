@@ -1,0 +1,16 @@
+HukaTech Platform v6.11.0 Validation
+
+[OK] Backend Node.js syntax
+[OK] Admin panel JavaScript syntax
+[OK] package.json version 6.11.0
+[OK] package-lock.json version 6.11.0
+[OK] Docker image defaults v6.11.0
+[OK] Migration 043 included
+[OK] Provisioning token is stored only as SHA-256
+[OK] Provisioning token is single-use and time-limited
+[OK] Token exchange atomically rotates the permanent API key
+[OK] Public central-mail relay forwards only authenticated gateway requests
+[OK] Customer provisioning PowerShell script does not print the permanent API key
+[OK] Existing .env.customer-mail is backed up before replacement
+[OK] Installer waits up to 180 seconds for container health
+[OK] No production .env, SMTP password or API key included in distribution ZIP

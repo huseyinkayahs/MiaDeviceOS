@@ -218,7 +218,7 @@ app.use((req,res,next)=>{
   if (req.path === '/healthz' || req.path === '/readyz' || req.path.startsWith('/api/mail-gateway/')) return next();
   return res.status(404).json({
     status:'not_found',
-    version:'6.10.0',
+    version:'6.11.0',
     service:'hukatech-central-mail-gateway'
   });
 });
@@ -254,7 +254,7 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.10.0';
+const APP_VERSION = '6.11.0';
 
 
 app.get('/healthz', (_req, res) => {
@@ -11986,6 +11986,14 @@ app.patch('/api/admin/sites/:customerCode/:siteCode/status', adminRequired, perm
 app.use('/api', (req,res,next)=>{
   if (req.path.startsWith('/auth/')) return next();
   if (req.path === '/health') return next();
+
+  // These machine-to-machine endpoints must remain outside the browser
+  // session middleware. Their own one-time token or installation API-key
+  // validation is performed by the central gateway.
+  if (req.path === '/public/installations/provision/exchange') return next();
+  if (req.path === '/central-mail/v1/status') return next();
+  if (req.path === '/central-mail/v1/send') return next();
+
   return authRequired(req,res,next);
 });
 
@@ -13819,7 +13827,11 @@ async function sendViaMailGateway({to,subject,html,text,purpose,metadata,request
   const timeout = setTimeout(() => controller.abort(), cfg.gateway.timeoutMs);
   timeout.unref?.();
   try {
-    const response = await fetch(`${cfg.gateway.url}/api/mail-gateway/v1/send`, {
+    const gatewayBase=String(cfg.gateway.url || '').replace(/\/+$/,'');
+    const gatewaySendUrl=/\/api\/central-mail\/v1$/i.test(gatewayBase)
+      ? `${gatewayBase}/send`
+      : `${gatewayBase}/api/mail-gateway/v1/send`;
+    const response = await fetch(gatewaySendUrl, {
       method:'POST',
       headers:{
         'content-type':'application/json',
@@ -13876,7 +13888,11 @@ async function checkMailGatewayConnection() {
   const timeout = setTimeout(() => controller.abort(), cfg.gateway.timeoutMs);
   timeout.unref?.();
   try {
-    const response = await fetch(`${cfg.gateway.url}/api/mail-gateway/v1/status`, {
+    const gatewayBase=String(cfg.gateway.url || '').replace(/\/+$/,'');
+    const gatewayStatusUrl=/\/api\/central-mail\/v1$/i.test(gatewayBase)
+      ? `${gatewayBase}/status`
+      : `${gatewayBase}/api/mail-gateway/v1/status`;
+    const response = await fetch(gatewayStatusUrl, {
       method:'GET',
       headers:{
         'authorization':`Bearer ${cfg.gateway.apiKey}`,
@@ -14076,6 +14092,44 @@ function installationRegistryApiKey() {
   return `htk_${crypto.randomBytes(32).toString('base64url')}`;
 }
 
+function installationProvisioningToken() {
+  return `htp_${crypto.randomBytes(32).toString('base64url')}`;
+}
+
+function installationProvisioningMinutes(value, fallback=30) {
+  const parsed=Number(value ?? fallback);
+  if (!Number.isInteger(parsed) || parsed < 5 || parsed > 1440) {
+    const error=new Error('Provisioning token lifetime must be between 5 and 1440 minutes');
+    error.statusCode=400;
+    throw error;
+  }
+  return parsed;
+}
+
+function installationPublicAppUrl() {
+  const raw=String(process.env.PUBLIC_APP_URL || 'https://panel.hukatech.com').trim().replace(/\/+$/,'');
+  try {
+    const parsed=new URL(raw);
+    if (!['https:','http:'].includes(parsed.protocol)) throw new Error('invalid protocol');
+    return parsed.toString().replace(/\/+$/,'');
+  } catch (_) {
+    return 'https://panel.hukatech.com';
+  }
+}
+
+function installationPublicMailGatewayUrl() {
+  const configured=String(process.env.PUBLIC_MAIL_GATEWAY_URL || process.env.MAIL_GATEWAY_PUBLIC_URL || '').trim().replace(/\/+$/,'');
+  return configured || `${installationPublicAppUrl()}/api/central-mail/v1`;
+}
+
+function centralGatewayInternalBaseUrl() {
+  const explicit=String(process.env.CENTRAL_MAIL_GATEWAY_INTERNAL_URL || '').trim().replace(/\/+$/,'');
+  if (explicit) return explicit;
+  const configured=String(emailConfig().gateway.url || '').trim().replace(/\/+$/,'');
+  if (!configured || /\/api\/central-mail\/v1$/i.test(configured)) return '';
+  return configured;
+}
+
 function installationRegistryPublicRow(row) {
   if (!row) return null;
   return {
@@ -14099,7 +14153,17 @@ function installationRegistryPublicRow(row) {
     created_at:row.created_at,
     updated_at:row.updated_at,
     disabled_at:row.disabled_at,
-    rotated_at:row.rotated_at
+    rotated_at:row.rotated_at,
+    provisioning_status:row.provisioning_status || 'registered',
+    provisioning_token_prefix:row.provisioning_token_prefix || null,
+    provisioning_token_expires_at:row.provisioning_token_expires_at || null,
+    provisioning_token_used_at:row.provisioning_token_used_at || null,
+    package_generated_at:row.package_generated_at || null,
+    provisioned_at:row.provisioned_at || null,
+    verified_at:row.verified_at || null,
+    revoked_at:row.revoked_at || null,
+    last_provisioned_version:row.last_provisioned_version || null,
+    key_generation:Number(row.key_generation || 1)
   };
 }
 
@@ -14136,6 +14200,18 @@ async function ensureInstallationRegistryFoundation() {
       CHECK (max_per_day BETWEEN 1 AND 1000000)
     )
   `);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS provisioning_status text NOT NULL DEFAULT 'registered'`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS provisioning_token_sha256 text`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS provisioning_token_prefix text`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS provisioning_token_expires_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS provisioning_token_used_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS package_generated_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS provisioned_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS verified_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS revoked_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS last_provisioned_version text`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS key_generation integer NOT NULL DEFAULT 1`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_provisioning_status ON customer_installations(provisioning_status, updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_status ON customer_installations(status, updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_customer_code ON customer_installations(customer_code)`);
   await pool.query(`
@@ -14180,6 +14256,15 @@ async function ensureInstallationRegistryFoundation() {
       hash,String(record.api_key || '').slice(0,8) || hash.slice(0,8),Boolean(record.registry_admin),
       installationRegistryLimit(record.max_per_minute,30,1000),installationRegistryLimit(record.max_per_day,500,1000000)
     ]);
+    await pool.query(`
+      UPDATE customer_installations SET
+        provisioning_status='verified',
+        provisioned_at=COALESCE(provisioned_at,now()),
+        verified_at=COALESCE(verified_at,now()),
+        last_provisioned_version=COALESCE(last_provisioned_version,$2),
+        updated_at=now()
+      WHERE installation_id=$1 AND source='environment'
+    `,[record.installation_id,APP_VERSION]);
   }
   installationRegistryFoundationReady=true;
 }
@@ -14422,7 +14507,14 @@ async function mailGatewayAuth(req,res,next) {
       customer_name:safeEmailHeader(record.customer_name || installationId,160),
       registry_admin:Boolean(record.registry_admin)
     };
-    pool.query(`UPDATE customer_installations SET last_authenticated_at=now(),updated_at=now() WHERE installation_id=$1`,[installationId]).catch(()=>{});
+    pool.query(`
+      UPDATE customer_installations SET
+        last_authenticated_at=now(),
+        provisioning_status=CASE WHEN provisioning_status IN ('registered','package_generated','provisioned') THEN 'verified' ELSE provisioning_status END,
+        verified_at=CASE WHEN provisioning_status IN ('registered','package_generated','provisioned') THEN COALESCE(verified_at,now()) ELSE verified_at END,
+        updated_at=now()
+      WHERE installation_id=$1
+    `,[installationId]).catch(()=>{});
     next();
   } catch(error) {
     return res.status(500).json({status:'error',version:APP_VERSION,message:String(error.message || error)});
@@ -14607,7 +14699,7 @@ app.post('/api/mail-gateway/v1/admin/installations',mailGatewayAuth,mailGatewayR
       credentials:{installation_id:installationId,api_key:apiKey,shown_once:true},
       customer_env:[
         'FACTORYBOX_MAIL_MODE=gateway',
-        `FACTORYBOX_MAIL_GATEWAY_URL=${String(process.env.MAIL_GATEWAY_PUBLIC_URL || 'REPLACE_WITH_HUKATECH_GATEWAY_URL').trim()}`,
+        `FACTORYBOX_MAIL_GATEWAY_URL=${installationPublicMailGatewayUrl()}`,
         `FACTORYBOX_MAIL_INSTALLATION_ID=${installationId}`,
         `FACTORYBOX_MAIL_API_KEY=${apiKey}`,
         'FACTORYBOX_MAIL_ALLOW_SMTP_FALLBACK=false'
@@ -14633,6 +14725,12 @@ app.patch('/api/mail-gateway/v1/admin/installations/:installationId',mailGateway
         customer_code=$2,customer_name=$3,slug=$4,public_hostname=$5,tunnel_name=$6,tunnel_status=$7,status=$8,
         max_per_minute=$9,max_per_day=$10,notes=$11,
         disabled_at=CASE WHEN $8='disabled' THEN COALESCE(disabled_at,now()) ELSE NULL END,
+        revoked_at=CASE WHEN $8='disabled' THEN COALESCE(revoked_at,now()) ELSE NULL END,
+        provisioning_status=CASE
+          WHEN $8='disabled' THEN 'revoked'
+          WHEN $8='active' AND provisioning_status='revoked' THEN 'registered'
+          ELSE provisioning_status
+        END,
         updated_at=now()
       WHERE installation_id=$1 RETURNING *
     `,[
@@ -14661,9 +14759,112 @@ app.post('/api/mail-gateway/v1/admin/installations/:installationId/rotate-key',m
     if (!old) return res.status(404).json({status:'not_found',message:'Installation not found'});
     if (old.source === 'environment') return res.status(409).json({status:'managed_by_environment',message:'Environment-managed pilot key must be rotated from the secure environment file'});
     const apiKey=installationRegistryApiKey();
-    const row=await one(`UPDATE customer_installations SET api_key_sha256=$2,api_key_prefix=$3,rotated_at=now(),updated_at=now() WHERE installation_id=$1 RETURNING *`,[old.installation_id,sha256Hex(apiKey),apiKey.slice(0,12)]);
+    const row=await one(`
+      UPDATE customer_installations SET
+        api_key_sha256=$2,api_key_prefix=$3,rotated_at=now(),key_generation=key_generation+1,
+        provisioning_token_sha256=NULL,provisioning_token_prefix=NULL,provisioning_token_expires_at=NULL,
+        provisioning_status=CASE WHEN provisioning_status='package_generated' THEN 'registered' ELSE provisioning_status END,
+        updated_at=now()
+      WHERE installation_id=$1 RETURNING *
+    `,[old.installation_id,sha256Hex(apiKey),apiKey.slice(0,12)]);
     await installationRegistryEvent({installationId:old.installation_id,action:'key_rotated',actorInstallationId:req.mailGatewayInstallation.installation_id,oldValues:{api_key_prefix:old.api_key_prefix},newValues:{api_key_prefix:row.api_key_prefix}});
     res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(row),credentials:{installation_id:old.installation_id,api_key:apiKey,shown_once:true}});
+  } catch(error) {
+    res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+
+app.post('/api/mail-gateway/v1/admin/installations/:installationId/provisioning-token',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const old=await installationRegistryRecord(req.params.installationId);
+    if (!old) return res.status(404).json({status:'not_found',message:'Installation not found'});
+    if (old.source === 'environment') return res.status(409).json({status:'managed_by_environment',message:'Environment-managed pilot installation is already provisioned'});
+    if (['disabled','archived'].includes(old.status)) return res.status(409).json({status:'inactive',message:'Disabled or archived installation cannot be provisioned'});
+    const minutes=installationProvisioningMinutes(req.body?.expires_in_minutes,30);
+    const token=installationProvisioningToken();
+    const expiresAt=new Date(Date.now() + minutes*60*1000);
+    const row=await one(`
+      UPDATE customer_installations SET
+        provisioning_token_sha256=$2,provisioning_token_prefix=$3,provisioning_token_expires_at=$4,
+        provisioning_token_used_at=NULL,package_generated_at=now(),provisioning_status='package_generated',updated_at=now()
+      WHERE installation_id=$1 RETURNING *
+    `,[old.installation_id,sha256Hex(token),token.slice(0,12),expiresAt]);
+    const provisioningPackage={
+      format:'hukatech-customer-provisioning-v1',
+      platform_version:APP_VERSION,
+      installation_id:old.installation_id,
+      customer_code:old.customer_code,
+      customer_name:old.customer_name,
+      public_hostname:old.public_hostname,
+      provisioning_token:token,
+      expires_at:expiresAt.toISOString(),
+      exchange_url:`${installationPublicAppUrl()}/api/public/installations/provision/exchange`,
+      public_mail_gateway_url:installationPublicMailGatewayUrl(),
+      instructions:'Run PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1 with this JSON file on the customer server. The token can be used once.'
+    };
+    await installationRegistryEvent({installationId:old.installation_id,action:'provisioning_package_generated',actorInstallationId:req.mailGatewayInstallation.installation_id,oldValues:installationRegistryPublicRow(old),newValues:installationRegistryPublicRow(row),metadata:{expires_in_minutes:minutes}});
+    res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(row),provisioning_package:provisioningPackage,shown_once:true});
+  } catch(error) {
+    res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+app.get('/api/mail-gateway/v1/admin/installations/:installationId/events',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const installation=await installationRegistryRecord(req.params.installationId);
+    if (!installation) return res.status(404).json({status:'not_found',message:'Installation not found'});
+    const rows=(await pool.query(`
+      SELECT id,installation_id,action,actor_installation_id,actor_email,old_values,new_values,metadata,created_at
+      FROM customer_installation_events WHERE installation_id=$1 ORDER BY created_at DESC LIMIT 100
+    `,[installation.installation_id])).rows;
+    res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(installation),count:rows.length,events:rows});
+  } catch(error) {
+    res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+app.post('/api/mail-gateway/v1/provisioning/exchange',async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const installationId=String(req.body?.installation_id || '').trim();
+    const token=String(req.body?.provisioning_token || '').trim();
+    const clientVersion=String(req.body?.platform_version || '').trim().slice(0,60) || null;
+    if (!/^[a-zA-Z0-9_-]{6,120}$/.test(installationId) || token.length < 30) {
+      return res.status(400).json({status:'error',version:APP_VERSION,message:'Invalid provisioning request'});
+    }
+    const tokenHash=sha256Hex(token);
+    const apiKey=installationRegistryApiKey();
+    const row=await one(`
+      UPDATE customer_installations SET
+        api_key_sha256=$3,api_key_prefix=$4,key_generation=key_generation+1,
+        provisioning_status='provisioned',provisioning_token_sha256=NULL,
+        provisioning_token_used_at=now(),provisioned_at=now(),last_provisioned_version=$5,
+        updated_at=now()
+      WHERE installation_id=$1
+        AND provisioning_token_sha256=$2
+        AND provisioning_token_used_at IS NULL
+        AND provisioning_token_expires_at > now()
+        AND status IN ('pending','active')
+      RETURNING *
+    `,[installationId,tokenHash,sha256Hex(apiKey),apiKey.slice(0,12),clientVersion]);
+    if (!row) return res.status(401).json({status:'invalid_or_expired',version:APP_VERSION,message:'Provisioning token is invalid, expired or already used'});
+    await installationRegistryEvent({installationId,action:'provisioning_token_exchanged',newValues:installationRegistryPublicRow(row),metadata:{platform_version:clientVersion,remote_ip:reqIp(req)}});
+    const customerEnv=[
+      'FACTORYBOX_MAIL_MODE=gateway',
+      `FACTORYBOX_MAIL_GATEWAY_URL=${installationPublicMailGatewayUrl()}`,
+      `FACTORYBOX_MAIL_INSTALLATION_ID=${installationId}`,
+      `FACTORYBOX_MAIL_API_KEY=${apiKey}`,
+      'FACTORYBOX_MAIL_ALLOW_SMTP_FALLBACK=false'
+    ].join('\n');
+    res.json({
+      status:'ok',version:APP_VERSION,shown_once:true,
+      installation:installationRegistryPublicRow(row),
+      credentials:{installation_id:installationId,api_key:apiKey,key_generation:row.key_generation},
+      customer_env:customerEnv
+    });
   } catch(error) {
     res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
   }
@@ -14743,6 +14944,53 @@ app.post('/api/admin/installations/:installationId/rotate-key',systemAdminRequir
     await writeAuditLog(req,{action:'rotate_customer_installation_key',entity_type:'customer_installation',entity_id:req.params.installationId,new_values:{api_key_prefix:result.installation?.api_key_prefix,credentials_shown_once:true}});
     res.json(result);
   } catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+
+app.post('/api/admin/installations/:installationId/provisioning-token',systemAdminRequired,async(req,res)=>{
+  try {
+    const result=await callInstallationRegistryGateway(`/api/mail-gateway/v1/admin/installations/${encodeURIComponent(req.params.installationId)}/provisioning-token`,{method:'POST',body:req.body || {}});
+    await writeAuditLog(req,{action:'generate_customer_provisioning_package',entity_type:'customer_installation',entity_id:req.params.installationId,new_values:{provisioning_status:result.installation?.provisioning_status,expires_at:result.provisioning_package?.expires_at},metadata:{token_shown_once:true}});
+    res.json(result);
+  } catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.get('/api/admin/installations/:installationId/events',systemAdminRequired,async(req,res)=>{
+  try { res.json(await callInstallationRegistryGateway(`/api/mail-gateway/v1/admin/installations/${encodeURIComponent(req.params.installationId)}/events`)); }
+  catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+async function proxyToCentralGateway(req,res,pathname,{method='POST',forwardCustomerHeaders=false}={}) {
+  const base=centralGatewayInternalBaseUrl();
+  if (!base) return res.status(503).json({status:'not_ready',version:APP_VERSION,message:'Central Mail Gateway internal URL is not configured'});
+  const headers={'content-type':'application/json'};
+  if (forwardCustomerHeaders) {
+    for (const name of ['authorization','x-factorybox-installation-id','x-factorybox-version','x-request-id']) {
+      const value=req.headers[name];
+      if (value) headers[name]=String(value);
+    }
+  }
+  try {
+    const response=await fetch(`${base}${pathname}`,{method,headers,...(method==='GET' ? {} : {body:JSON.stringify(req.body || {})})});
+    const text=await response.text();
+    res.status(response.status);
+    res.setHeader('content-type',response.headers.get('content-type') || 'application/json; charset=utf-8');
+    return res.send(text);
+  } catch(error) {
+    return res.status(502).json({status:'gateway_unavailable',version:APP_VERSION,message:error.message});
+  }
+}
+
+app.post('/api/public/installations/provision/exchange',async(req,res)=>{
+  return proxyToCentralGateway(req,res,'/api/mail-gateway/v1/provisioning/exchange');
+});
+
+app.get('/api/central-mail/v1/status',async(req,res)=>{
+  return proxyToCentralGateway(req,res,'/api/mail-gateway/v1/status',{method:'GET',forwardCustomerHeaders:true});
+});
+
+app.post('/api/central-mail/v1/send',async(req,res)=>{
+  return proxyToCentralGateway(req,res,'/api/mail-gateway/v1/send',{forwardCustomerHeaders:true});
 });
 
 app.get('/api/admin/notification-settings/gateway-status', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{

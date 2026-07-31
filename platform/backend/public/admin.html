@@ -2110,7 +2110,7 @@
     <div class="section-title-row">
       <div>
         <h2>Müşteri Kurulum Kayıtları</h2>
-        <p class="muted">Her müşteri kurulumu için ayrı kimlik, tek kullanımlık API anahtarı, kalıcı hostname ve gönderim limiti oluşturur. Yalnızca system_admin kullanabilir.</p>
+        <p class="muted">Her müşteri kurulumu için ayrı kimlik, tek kullanımlık provisioning paketi, güvenli anahtar yaşam döngüsü, kalıcı hostname ve gönderim limiti yönetir. Yalnızca system_admin kullanabilir.</p>
       </div>
       <button id="refreshInstallationsBtn" class="secondary-btn">Kayıtları Yenile</button>
     </div>
@@ -2161,7 +2161,7 @@
       </div>
     </div>
 
-    <div id="installationCredentialResult" class="mini-status muted">API anahtarı yalnızca oluşturma veya yenileme anında bir kez gösterilir.</div>
+    <div id="installationCredentialResult" class="mini-status muted">API anahtarı veya provisioning tokenı yalnızca oluşturma, paket üretme ya da yenileme anında bir kez gösterilir.</div>
     <div id="installationsTable">Yükleniyor...</div>
   </section>
 
@@ -2543,7 +2543,7 @@
   let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
   const I18N_PAIRS = [
-    ['Müşteri Kurulumları','Customer Installations'],['Müşteri Kurulum Kayıtları','Customer Installation Registry'],['Kayıtları Yenile','Refresh Installations'],['Kurulum Kimliği Oluştur','Create Installation Identity'],
+    ['Müşteri Kurulumları','Customer Installations'],['Müşteri Kurulum Kayıtları','Customer Installation Registry'],['Kayıtları Yenile','Refresh Installations'],['Kurulum Kimliği Oluştur','Create Installation Identity'],['Kurulum Paketi','Provisioning Package'],['Geçmiş','History'],['Provisioning','Provisioning'],['Tek kullanımlık kurulum paketi indirildi','One-time provisioning package downloaded'],
     ['SmartAI Raporları','SmartAI Reports'],['AI Raporları','AI Reports'],['Analiz Sor','Ask Analysis'],['Rapor Geçmişi','Report History'],['AI Ayarları','AI Settings'],
     ['Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.','Combine alarm, OEE, downtime, maintenance, inventory and factory data into one management report.'],['SmartAI Yenile','Refresh SmartAI'],['Yeni Rapor Oluştur','Create New Report'],['Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.','The report only reads data; it sends no device commands and changes no operational records.'],['Dönem','Period'],['Günlük','Daily'],['Haftalık','Weekly'],['Aylık','Monthly'],['Özel Tarih','Custom Date'],['Hedef Kitle','Audience'],['Yönetici','Executive'],['Teknik Ekip','Technical Team'],['Rapor Dili','Report Language'],['Analiz Motoru','Analysis Engine'],['FactoryBox Kural Motoru','FactoryBox Rule Engine'],['OpenAI + Kural Motoru','OpenAI + Rule Engine'],['Rapor Oluştur ve Kaydet','Generate and Save Report'],['Rapor işlemi bekleniyor.','Waiting for report action.'],['Henüz rapor oluşturulmadı.','No report has been generated yet.'],
     ['SmartAI Analiz Sor','Ask SmartAI'],['Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.','Ask operational-data questions in natural language. Answers are based on the selected dates and access scope.'],['SALT OKUNUR','READ ONLY'],['Sorunu Yaz','Write Your Question'],['En fazla duran makine','Machine with most downtime'],['Tekrarlayan alarmlar','Repeated alarms'],['Gecikmiş bakımlar','Overdue maintenance'],['Kritik stok','Critical stock'],['Fabrikaları karşılaştır','Compare factories'],['Analiz Et','Analyze'],['Soru bekleniyor.','Waiting for a question.'],['SmartAI cevabı burada görünecek.','The SmartAI answer will appear here.'],['Son Sorular','Recent Questions'],
@@ -4672,6 +4672,12 @@
     return `<strong class="${cls}">${esc(value)}</strong>`;
   }
 
+  function installationProvisioningBadge(status) {
+    const value=String(status||'registered');
+    const cls=value==='verified'?'ok':value==='revoked'?'alarm':value==='provisioned'?'ok':'warn';
+    return `<strong class="${cls}">${esc(value)}</strong>`;
+  }
+
   function showInstallationCredentials(data, title='Kurulum kimliği oluşturuldu') {
     const target=document.getElementById('installationCredentialResult');
     if(!target)return;
@@ -4698,13 +4704,14 @@
       {label:'Installation ID',html:true,value:r=>`<code>${esc(r.installation_id)}</code><br><small>key: ${esc(r.api_key_prefix||'-')}…</small>`},
       {label:'Public Hostname',html:true,value:r=>`<strong>${esc(r.public_hostname||'-')}</strong><br><small>${esc(r.tunnel_name||'-')} · ${esc(r.tunnel_status||'-')}</small>`},
       {label:'Status',html:true,value:r=>installationStatusBadge(r.status)},
+      {label:'Provisioning',html:true,value:r=>`${installationProvisioningBadge(r.provisioning_status)}<br><small>key generation: ${esc(r.key_generation||1)}</small>`},
       {label:'Limits',value:r=>`${r.max_per_minute}/dk · ${r.max_per_day}/gün`},
       {label:'Last Auth',value:r=>fmtDate(r.last_authenticated_at)},
       {label:'Last Mail',value:r=>fmtDate(r.last_mail_at)},
       {label:'Source',value:r=>r.source||'database'},
       {label:'Aksiyon',html:true,value:r=>r.source==='environment'
         ? '<span class="muted">secure env</span>'
-        : `<div class="admin-form-actions"><button class="secondary-btn mini-btn" data-action="installation-toggle" data-id="${esc(r.installation_id)}" data-next-status="${r.status==='active'?'disabled':'active'}">${r.status==='active'?'Devre Dışı':'Aktifleştir'}</button><button class="secondary-btn mini-btn" data-action="installation-rotate" data-id="${esc(r.installation_id)}">Anahtarı Yenile</button></div>`}
+        : `<div class="admin-form-actions"><button class="secondary-btn mini-btn" data-action="installation-provision" data-id="${esc(r.installation_id)}" data-slug="${esc(r.slug||r.customer_code)}">Kurulum Paketi</button><button class="secondary-btn mini-btn" data-action="installation-events" data-id="${esc(r.installation_id)}">Geçmiş</button><button class="secondary-btn mini-btn" data-action="installation-toggle" data-id="${esc(r.installation_id)}" data-next-status="${r.status==='active'?'disabled':'active'}">${r.status==='active'?'Devre Dışı':'Aktifleştir'}</button><button class="secondary-btn mini-btn" data-action="installation-rotate" data-id="${esc(r.installation_id)}">Anahtarı Yenile</button></div>`}
     ],installationRegistryRows.map(r=>({...r,__kind:'installation'})));
   }
 
@@ -4742,6 +4749,28 @@
     if(!window.confirm('Eski API anahtarı hemen geçersiz olacak. Yeni anahtar oluşturulsun mu?'))return;
     const data=await apiJson(`/api/admin/installations/${encodeURIComponent(installationId)}/rotate-key`,{method:'POST',body:'{}'});
     showInstallationCredentials(data,'Kurulum API anahtarı yenilendi');
+  }
+
+
+  async function createInstallationProvisioningPackage(button) {
+    const installationId=button.dataset.id;
+    const slug=button.dataset.slug||installationId;
+    if(!window.confirm('30 dakika geçerli, tek kullanımlık müşteri kurulum paketi oluşturulsun mu?'))return;
+    const data=await apiJson(`/api/admin/installations/${encodeURIComponent(installationId)}/provisioning-token`,{method:'POST',body:JSON.stringify({expires_in_minutes:30})});
+    const pkg=data.provisioning_package;
+    if(!pkg)throw new Error('Provisioning package was not returned');
+    downloadOnboardingJson(`HukaTech_${slug}_Customer_Provisioning.json`,pkg);
+    const target=document.getElementById('installationCredentialResult');
+    target.innerHTML=`<strong>Tek kullanımlık kurulum paketi indirildi</strong><p><code>${esc(installationId)}</code> için token ${esc(fmtDate(pkg.expires_at))} tarihine kadar geçerli. Dosyayı müşterinin sunucusunda <code>PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1</code> ile uygula. Paket dosyasını güvenli taşı ve işlemden sonra sil.</p>`;
+  }
+
+  async function showInstallationEvents(button) {
+    const installationId=button.dataset.id;
+    const data=await getJson(`/api/admin/installations/${encodeURIComponent(installationId)}/events`);
+    const events=data.events||[];
+    const target=document.getElementById('installationCredentialResult');
+    const rows=events.slice(0,20).map(e=>`<tr><td>${esc(fmtDate(e.created_at))}</td><td><strong>${esc(e.action)}</strong></td><td>${esc(e.actor_email||e.actor_installation_id||'-')}</td></tr>`).join('');
+    target.innerHTML=`<strong>Kurulum Geçmişi · ${esc(installationId)}</strong>${rows?`<div class="table-wrap"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Aktör</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">Kayıt yok.</p>'}`;
   }
 
   function renderSites(data) {
@@ -6336,6 +6365,17 @@
         await saveSubscription(button);
         await loadAdmin();
         status.textContent = 'Tenant aboneliği ve limit kontrolü güncellendi.';
+      }
+
+      if (action === 'installation-provision') {
+        await createInstallationProvisioningPackage(button);
+        await loadInstallations();
+        status.textContent = 'Tek kullanımlık müşteri kurulum paketi indirildi.';
+      }
+
+      if (action === 'installation-events') {
+        await showInstallationEvents(button);
+        status.textContent = 'Müşteri kurulum geçmişi yüklendi.';
       }
 
       if (action === 'installation-toggle') {
