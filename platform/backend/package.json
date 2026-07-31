@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "6.8.2",
-  "description": "HukaTech Platform v6.8.2 Central Mail Gateway Routing and Password Reset Branding Fix",
+  "version": "6.10.0",
+  "description": "HukaTech Platform v6.10.0 Customer Installation Registry Foundation",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

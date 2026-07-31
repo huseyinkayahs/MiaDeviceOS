@@ -997,10 +997,11 @@
       <div class="admin-nav-group-v517" data-nav-group="organization">
         <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="organization" aria-expanded="false" aria-controls="organizationSubmenuV640">
           <span>Organizasyon</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">6</span><span class="admin-nav-chevron-v517">⌄</span></span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">7</span><span class="admin-nav-chevron-v517">⌄</span></span>
         </button>
         <div id="organizationSubmenuV640" class="admin-subnav-v517" data-admin-subnav="organization">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="tenants"><span>Şirketler</span></button>
+          <button id="installationRegistryNav" class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="installations"><span>Müşteri Kurulumları</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="organization"><span>Fabrikalar ve Tesisler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="production-lines"><span>Üretim Hatları</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="assets"><span>Makineler</span></button>
@@ -2105,6 +2106,65 @@
     <div id="customersTable">Yükleniyor...</div>
   </section>
 
+  <section id="installationRegistrySection" class="card wide admin-card" data-admin-view="installations">
+    <div class="section-title-row">
+      <div>
+        <h2>Müşteri Kurulum Kayıtları</h2>
+        <p class="muted">Her müşteri kurulumu için ayrı kimlik, tek kullanımlık API anahtarı, kalıcı hostname ve gönderim limiti oluşturur. Yalnızca system_admin kullanabilir.</p>
+      </div>
+      <button id="refreshInstallationsBtn" class="secondary-btn">Kayıtları Yenile</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <label>
+        Customer Code
+        <input id="installationCustomerCode" type="text" placeholder="örn: acme-laser">
+      </label>
+      <label>
+        Customer Name
+        <input id="installationCustomerName" type="text" placeholder="Firma / işletme adı">
+      </label>
+      <label>
+        Subdomain
+        <input id="installationSlug" type="text" placeholder="örn: acme">
+      </label>
+      <label>
+        Public Hostname
+        <input id="installationPublicHostname" type="text" placeholder="acme.hukatech.com">
+      </label>
+      <label>
+        Cloudflare Tunnel Name
+        <input id="installationTunnelName" type="text" placeholder="hukatech-acme-production">
+      </label>
+      <label>
+        Başlangıç Durumu
+        <select id="installationStatus">
+          <option value="active">active</option>
+          <option value="pending">pending</option>
+          <option value="disabled">disabled</option>
+        </select>
+      </label>
+      <label>
+        Dakikalık Mail Limiti
+        <input id="installationMinuteLimit" type="number" min="1" max="1000" value="30">
+      </label>
+      <label>
+        Günlük Mail Limiti
+        <input id="installationDailyLimit" type="number" min="1" max="1000000" value="500">
+      </label>
+      <label>
+        Not
+        <input id="installationNotes" type="text" placeholder="Kurulum / sözleşme notu">
+      </label>
+      <div class="admin-form-actions">
+        <button id="createInstallationBtn" class="primary-btn">Kurulum Kimliği Oluştur</button>
+      </div>
+    </div>
+
+    <div id="installationCredentialResult" class="mini-status muted">API anahtarı yalnızca oluşturma veya yenileme anında bir kez gösterilir.</div>
+    <div id="installationsTable">Yükleniyor...</div>
+  </section>
+
   <section id="billingPlansSection" class="card wide admin-card" data-admin-view="subscriptions">
     <h2>Subscription Plans</h2>
     <p class="muted">Ödeme sağlayıcısından bağımsız paket ve limit tanımları.</p>
@@ -2463,6 +2523,7 @@
   let currentUser = null;
   let currentPermissions = [];
   let subscriptionPlanCodes = ['trial','starter','professional','enterprise'];
+  let installationRegistryRows = [];
 
   let generalSettings = {
     organization_name:'FactoryBox', site_name:'Main Factory', language:'tr', timezone:'Europe/Istanbul',
@@ -2482,6 +2543,7 @@
   let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
   const I18N_PAIRS = [
+    ['Müşteri Kurulumları','Customer Installations'],['Müşteri Kurulum Kayıtları','Customer Installation Registry'],['Kayıtları Yenile','Refresh Installations'],['Kurulum Kimliği Oluştur','Create Installation Identity'],
     ['SmartAI Raporları','SmartAI Reports'],['AI Raporları','AI Reports'],['Analiz Sor','Ask Analysis'],['Rapor Geçmişi','Report History'],['AI Ayarları','AI Settings'],
     ['Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.','Combine alarm, OEE, downtime, maintenance, inventory and factory data into one management report.'],['SmartAI Yenile','Refresh SmartAI'],['Yeni Rapor Oluştur','Create New Report'],['Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.','The report only reads data; it sends no device commands and changes no operational records.'],['Dönem','Period'],['Günlük','Daily'],['Haftalık','Weekly'],['Aylık','Monthly'],['Özel Tarih','Custom Date'],['Hedef Kitle','Audience'],['Yönetici','Executive'],['Teknik Ekip','Technical Team'],['Rapor Dili','Report Language'],['Analiz Motoru','Analysis Engine'],['FactoryBox Kural Motoru','FactoryBox Rule Engine'],['OpenAI + Kural Motoru','OpenAI + Rule Engine'],['Rapor Oluştur ve Kaydet','Generate and Save Report'],['Rapor işlemi bekleniyor.','Waiting for report action.'],['Henüz rapor oluşturulmadı.','No report has been generated yet.'],
     ['SmartAI Analiz Sor','Ask SmartAI'],['Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.','Ask operational-data questions in natural language. Answers are based on the selected dates and access scope.'],['SALT OKUNUR','READ ONLY'],['Sorunu Yaz','Write Your Question'],['En fazla duran makine','Machine with most downtime'],['Tekrarlayan alarmlar','Repeated alarms'],['Gecikmiş bakımlar','Overdue maintenance'],['Kritik stok','Critical stock'],['Fabrikaları karşılaştır','Compare factories'],['Analiz Et','Analyze'],['Soru bekleniyor.','Waiting for a question.'],['SmartAI cevabı burada görünecek.','The SmartAI answer will appear here.'],['Son Sorular','Recent Questions'],
@@ -3194,6 +3256,7 @@
     'site-access':{title_tr:'Lokasyon Erişimi',title_en:'Location Access',desc_tr:'Kullanıcıların şirket, fabrika, tesis ve üretim hattı erişimleri.',desc_en:'User access to companies, factories, sites and production lines.'},
     'factory-comparison':{title_tr:'Fabrika Karşılaştırması',title_en:'Factory Comparison',desc_tr:'Fabrikalar arası OEE, alarm, üretim, duruş ve cihaz bağlantısı karşılaştırması.',desc_en:'Cross-factory comparison of OEE, alarms, production, downtime and device connectivity.'},
     tenants:{title_tr:'Şirketler / Tenantlar',title_en:'Customers / Tenants',desc_tr:'Müşteri, tenant, tesis ve atölye yönetimi.',desc_en:'Customer, tenant, site and workshop management.'},
+    installations:{title_tr:'Müşteri Kurulumları',title_en:'Customer Installations',desc_tr:'Kurulum kimlikleri, güvenli API anahtarları, kalıcı hostname ve mail gateway limitleri.',desc_en:'Installation identities, secure API keys, permanent hostnames and mail-gateway limits.'},
     users:{title_tr:'Kullanıcılar ve Davetler',title_en:'Users & Invitations',desc_tr:'Kullanıcılar, davetler ve tenant erişim kayıtları.',desc_en:'Users, invitations and tenant access records.'},
     permissions:{title_tr:'Roller ve Yetkiler',title_en:'Roles & Permissions',desc_tr:'Aktif rol, yetki matrisi ve permission görünümü.',desc_en:'Active role, permission matrix and authorization overview.'},
     subscriptions:{title_tr:'Abonelikler',title_en:'Subscriptions',desc_tr:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.',desc_en:'Plans, subscription status, trial period and quota usage.'},
@@ -3231,6 +3294,7 @@
     'work-orders':'maintenance',
     inventory:'maintenance',
     tenants:'organization',
+    installations:'organization',
     organization:'organization',
     'production-lines':'organization',
     assets:'organization',
@@ -3495,10 +3559,16 @@
     const billingPlansSection = document.getElementById('billingPlansSection');
     const billingSubscriptionsSection = document.getElementById('billingSubscriptionsSection');
     const deviceRegistrySection = document.getElementById('deviceRegistrySection');
+    const installationRegistrySection = document.getElementById('installationRegistrySection');
+    const installationRegistryNav = document.getElementById('installationRegistryNav');
 
     if (inviteSection && !can('MANAGE_INVITES')) {
       inviteSection.style.display = 'none';
     }
+
+    const installationAdmin = currentUser?.role === 'system_admin';
+    if (installationRegistrySection && !installationAdmin) installationRegistrySection.style.display='none';
+    if (installationRegistryNav && !installationAdmin) installationRegistryNav.style.display='none';
 
     if (auditSection && !can('AUDIT_VIEW')) {
       auditSection.style.display = 'none';
@@ -4596,6 +4666,84 @@
     ], rows);
   }
 
+  function installationStatusBadge(status) {
+    const value=String(status||'pending');
+    const cls=value==='active'?'ok':value==='disabled'||value==='archived'?'alarm':'warn';
+    return `<strong class="${cls}">${esc(value)}</strong>`;
+  }
+
+  function showInstallationCredentials(data, title='Kurulum kimliği oluşturuldu') {
+    const target=document.getElementById('installationCredentialResult');
+    if(!target)return;
+    const credentials=data.credentials||{};
+    const env=data.customer_env||[
+      `FACTORYBOX_MAIL_INSTALLATION_ID=${credentials.installation_id||''}`,
+      `FACTORYBOX_MAIL_API_KEY=${credentials.api_key||''}`,
+      'FACTORYBOX_MAIL_ALLOW_SMTP_FALLBACK=false'
+    ].join('\n');
+    target.dataset.secret=env;
+    target.innerHTML=`<strong>${esc(title)}</strong><p>Bu değer yalnızca bir kez gösterilir. Müşterinin güvenli <code>.env.customer-mail</code> dosyasına kaydet.</p><pre style="white-space:pre-wrap;word-break:break-all;background:#0f1b2a;color:#f4f7fb;padding:14px;border-radius:10px;">${esc(env)}</pre><button id="copyInstallationCredentialBtn" type="button" class="secondary-btn">Güvenli Ayarı Kopyala</button>`;
+    document.getElementById('copyInstallationCredentialBtn')?.addEventListener('click',async()=>{
+      await navigator.clipboard.writeText(target.dataset.secret||'');
+      document.getElementById('adminStatus').textContent='Kurulum kimliği panoya kopyalandı.';
+    });
+  }
+
+  function renderInstallations(data) {
+    installationRegistryRows=data.installations||[];
+    const target=document.getElementById('installationsTable');
+    if(!target)return;
+    target.innerHTML=table([
+      {label:'Customer',html:true,value:r=>`<strong>${esc(r.customer_name)}</strong><br><small>${esc(r.customer_code)}</small>`},
+      {label:'Installation ID',html:true,value:r=>`<code>${esc(r.installation_id)}</code><br><small>key: ${esc(r.api_key_prefix||'-')}…</small>`},
+      {label:'Public Hostname',html:true,value:r=>`<strong>${esc(r.public_hostname||'-')}</strong><br><small>${esc(r.tunnel_name||'-')} · ${esc(r.tunnel_status||'-')}</small>`},
+      {label:'Status',html:true,value:r=>installationStatusBadge(r.status)},
+      {label:'Limits',value:r=>`${r.max_per_minute}/dk · ${r.max_per_day}/gün`},
+      {label:'Last Auth',value:r=>fmtDate(r.last_authenticated_at)},
+      {label:'Last Mail',value:r=>fmtDate(r.last_mail_at)},
+      {label:'Source',value:r=>r.source||'database'},
+      {label:'Aksiyon',html:true,value:r=>r.source==='environment'
+        ? '<span class="muted">secure env</span>'
+        : `<div class="admin-form-actions"><button class="secondary-btn mini-btn" data-action="installation-toggle" data-id="${esc(r.installation_id)}" data-next-status="${r.status==='active'?'disabled':'active'}">${r.status==='active'?'Devre Dışı':'Aktifleştir'}</button><button class="secondary-btn mini-btn" data-action="installation-rotate" data-id="${esc(r.installation_id)}">Anahtarı Yenile</button></div>`}
+    ],installationRegistryRows.map(r=>({...r,__kind:'installation'})));
+  }
+
+  async function loadInstallations() {
+    const data=await getJson('/api/admin/installations');
+    renderInstallations(data);
+    return data;
+  }
+
+  async function createInstallation() {
+    const customer_code=document.getElementById('installationCustomerCode').value.trim();
+    const customer_name=document.getElementById('installationCustomerName').value.trim();
+    const slug=document.getElementById('installationSlug').value.trim();
+    const public_hostname=document.getElementById('installationPublicHostname').value.trim();
+    const tunnel_name=document.getElementById('installationTunnelName').value.trim();
+    const status=document.getElementById('installationStatus').value;
+    const max_per_minute=Number(document.getElementById('installationMinuteLimit').value||30);
+    const max_per_day=Number(document.getElementById('installationDailyLimit').value||500);
+    const notes=document.getElementById('installationNotes').value.trim();
+    const data=await apiJson('/api/admin/installations',{method:'POST',body:JSON.stringify({customer_code,customer_name,slug,public_hostname,tunnel_name,status,max_per_minute,max_per_day,notes})});
+    showInstallationCredentials(data);
+    await loadInstallations();
+    return data;
+  }
+
+  async function setInstallationStatus(button) {
+    const installationId=button.dataset.id;
+    const status=button.dataset.nextStatus;
+    if(status==='disabled'&&!window.confirm('Bu kurulumun merkezi mail gateway erişimi devre dışı bırakılsın mı?'))return;
+    await apiJson(`/api/admin/installations/${encodeURIComponent(installationId)}`,{method:'PATCH',body:JSON.stringify({status})});
+  }
+
+  async function rotateInstallationKey(button) {
+    const installationId=button.dataset.id;
+    if(!window.confirm('Eski API anahtarı hemen geçersiz olacak. Yeni anahtar oluşturulsun mu?'))return;
+    const data=await apiJson(`/api/admin/installations/${encodeURIComponent(installationId)}/rotate-key`,{method:'POST',body:'{}'});
+    showInstallationCredentials(data,'Kurulum API anahtarı yenilendi');
+  }
+
   function renderSites(data) {
     const rows = (data.sites || []).map(x => ({...x, __kind:'site'}));
     document.getElementById('sitesTable').innerHTML = table([
@@ -5457,6 +5605,9 @@
       ['organization-hierarchy', organizationUrl('hierarchy'), renderOrganizationHierarchy, 'organizationHierarchyTree'],
       ...(can('MANAGE_USERS') ? [['organization-access','/api/admin/organization/access',renderOrganizationAccess,'locationAccessTable']] : []),
       ['factory-comparison', organizationUrl('comparison',{from:document.getElementById('factoryComparisonFrom')?.value||orgDateDefault(6),to:document.getElementById('factoryComparisonTo')?.value||orgDateDefault(0)}), renderFactoryComparison, 'factoryComparisonTable'],
+      ...(currentUser?.role === 'system_admin' ? [
+        ['installations','/api/admin/installations',renderInstallations,'installationsTable']
+      ] : []),
       ...(can('VIEW_BILLING') ? [
         ['subscription-plans', '/api/admin/subscription-plans', renderSubscriptionPlans, 'subscriptionPlansTable'],
         ['subscriptions', '/api/admin/subscriptions', renderSubscriptions, 'subscriptionsTable']
@@ -6187,6 +6338,18 @@
         status.textContent = 'Tenant aboneliği ve limit kontrolü güncellendi.';
       }
 
+      if (action === 'installation-toggle') {
+        await setInstallationStatus(button);
+        await loadInstallations();
+        status.textContent = 'Kurulum durumu güncellendi.';
+      }
+
+      if (action === 'installation-rotate') {
+        await rotateInstallationKey(button);
+        await loadInstallations();
+        status.textContent = 'Kurulum API anahtarı yenilendi. Yeni anahtar yalnızca bir kez gösteriliyor.';
+      }
+
       if (action === 'save-device-status') {
         await saveDeviceStatus(button);
         await loadAdmin();
@@ -6600,6 +6763,11 @@
         exportAuditCsvBtn.disabled = false;
       }
     });
+    const refreshInstallationsBtn=document.getElementById('refreshInstallationsBtn');
+    if(refreshInstallationsBtn)refreshInstallationsBtn.addEventListener('click',async()=>{refreshInstallationsBtn.disabled=true;try{await loadInstallations();document.getElementById('adminStatus').textContent='Kurulum kayıtları yenilendi.';}catch(e){setError('installationsTable',e.message);}finally{refreshInstallationsBtn.disabled=false;}});
+    const createInstallationBtn=document.getElementById('createInstallationBtn');
+    if(createInstallationBtn)createInstallationBtn.addEventListener('click',async()=>{createInstallationBtn.disabled=true;try{if(currentUser?.role!=='system_admin')throw new Error('system_admin access required');await createInstallation();document.getElementById('adminStatus').textContent='Müşteri kurulum kimliği oluşturuldu.';}catch(e){document.getElementById('adminStatus').textContent=e.message;}finally{createInstallationBtn.disabled=false;}});
+
     if (createCustomerBtn) createCustomerBtn.addEventListener('click', async () => {
       createCustomerBtn.disabled = true;
       document.getElementById('adminStatus').textContent = 'Customer oluşturuluyor...';

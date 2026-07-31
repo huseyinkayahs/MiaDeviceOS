@@ -218,7 +218,7 @@ app.use((req,res,next)=>{
   if (req.path === '/healthz' || req.path === '/readyz' || req.path.startsWith('/api/mail-gateway/')) return next();
   return res.status(404).json({
     status:'not_found',
-    version:'6.8.2',
+    version:'6.10.0',
     service:'hukatech-central-mail-gateway'
   });
 });
@@ -254,7 +254,7 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.8.2';
+const APP_VERSION = '6.10.0';
 
 
 app.get('/healthz', (_req, res) => {
@@ -14003,10 +14003,17 @@ function mailGatewayInstallationRecords() {
   if (singleId) {
     records.set(singleId,{
       installation_id:singleId,
+      customer_code:String(process.env.MAIL_GATEWAY_SINGLE_CUSTOMER_CODE || singleId).trim(),
       customer_name:String(process.env.MAIL_GATEWAY_SINGLE_CUSTOMER_NAME || singleId).trim(),
+      public_hostname:String(process.env.MAIL_GATEWAY_SINGLE_PUBLIC_HOSTNAME || '').trim().toLowerCase(),
+      tunnel_name:String(process.env.MAIL_GATEWAY_SINGLE_TUNNEL_NAME || '').trim(),
       api_key:String(process.env.MAIL_GATEWAY_SINGLE_API_KEY || ''),
       api_key_sha256:String(process.env.MAIL_GATEWAY_SINGLE_API_KEY_SHA256 || '').trim().toLowerCase(),
-      enabled:String(process.env.MAIL_GATEWAY_SINGLE_ENABLED || 'true').toLowerCase() !== 'false'
+      enabled:String(process.env.MAIL_GATEWAY_SINGLE_ENABLED || 'true').toLowerCase() !== 'false',
+      registry_admin:String(process.env.MAIL_GATEWAY_SINGLE_REGISTRY_ADMIN || 'false').toLowerCase() === 'true',
+      max_per_minute:Number(process.env.MAIL_GATEWAY_SINGLE_MAX_PER_MINUTE || process.env.MAIL_GATEWAY_MAX_PER_MINUTE || 30),
+      max_per_day:Number(process.env.MAIL_GATEWAY_SINGLE_MAX_PER_DAY || process.env.MAIL_GATEWAY_MAX_PER_DAY || 500),
+      source:'environment'
     });
   }
   return records;
@@ -14017,6 +14024,190 @@ function gatewayInstallationKeyMatches(record, providedKey) {
   const expectedHash = String(record.api_key_sha256 || '').trim().toLowerCase();
   if (expectedHash) return timingSafeStringEqual(sha256Hex(providedKey), expectedHash);
   return timingSafeStringEqual(providedKey, String(record.api_key || ''));
+}
+
+
+let installationRegistryFoundationReady = false;
+
+function installationRegistryStatus(value, fallback='active') {
+  const clean=String(value || fallback).trim().toLowerCase();
+  return ['pending','active','disabled','archived'].includes(clean) ? clean : fallback;
+}
+
+function installationRegistrySlug(value) {
+  const clean=String(value || '').trim().toLowerCase()
+    .replace(/[^a-z0-9-]+/g,'-')
+    .replace(/^-+|-+$/g,'')
+    .replace(/-{2,}/g,'-');
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(clean)) {
+    const error=new Error('Installation slug must contain lowercase letters, numbers and dash only');
+    error.statusCode=400;
+    throw error;
+  }
+  return clean;
+}
+
+function installationRegistryHostname(value, slug='') {
+  const raw=String(value || '').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  const host=raw || (slug ? `${slug}.hukatech.com` : '');
+  if (!host || !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+hukatech\.com$/.test(host)) {
+    const error=new Error('Public hostname must be a valid hukatech.com subdomain');
+    error.statusCode=400;
+    throw error;
+  }
+  return host;
+}
+
+function installationRegistryLimit(value, fallback, max) {
+  const parsed=Number(value ?? fallback);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
+    const error=new Error(`Rate limit must be between 1 and ${max}`);
+    error.statusCode=400;
+    throw error;
+  }
+  return parsed;
+}
+
+function installationRegistryId(slug) {
+  return `ht-${slug}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+function installationRegistryApiKey() {
+  return `htk_${crypto.randomBytes(32).toString('base64url')}`;
+}
+
+function installationRegistryPublicRow(row) {
+  if (!row) return null;
+  return {
+    installation_id:row.installation_id,
+    customer_code:row.customer_code,
+    customer_name:row.customer_name,
+    slug:row.slug,
+    public_hostname:row.public_hostname,
+    tunnel_name:row.tunnel_name,
+    tunnel_status:row.tunnel_status,
+    status:row.status,
+    enabled:row.status === 'active',
+    api_key_prefix:row.api_key_prefix,
+    registry_admin:Boolean(row.registry_admin),
+    max_per_minute:Number(row.max_per_minute || 30),
+    max_per_day:Number(row.max_per_day || 500),
+    source:row.source || 'database',
+    notes:row.notes,
+    last_authenticated_at:row.last_authenticated_at,
+    last_mail_at:row.last_mail_at,
+    created_at:row.created_at,
+    updated_at:row.updated_at,
+    disabled_at:row.disabled_at,
+    rotated_at:row.rotated_at
+  };
+}
+
+async function ensureInstallationRegistryFoundation() {
+  if (installationRegistryFoundationReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customer_installations (
+      installation_id text PRIMARY KEY,
+      customer_code text NOT NULL,
+      customer_name text NOT NULL,
+      slug text NOT NULL UNIQUE,
+      public_hostname text NOT NULL UNIQUE,
+      tunnel_name text,
+      tunnel_status text NOT NULL DEFAULT 'pending',
+      status text NOT NULL DEFAULT 'active',
+      api_key_sha256 text NOT NULL,
+      api_key_prefix text NOT NULL,
+      registry_admin boolean NOT NULL DEFAULT false,
+      max_per_minute integer NOT NULL DEFAULT 30,
+      max_per_day integer NOT NULL DEFAULT 500,
+      source text NOT NULL DEFAULT 'database',
+      notes text,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      last_authenticated_at timestamptz,
+      last_mail_at timestamptz,
+      disabled_at timestamptz,
+      rotated_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CHECK (status IN ('pending','active','disabled','archived')),
+      CHECK (tunnel_status IN ('pending','connected','offline','error','not_configured')),
+      CHECK (source IN ('database','environment')),
+      CHECK (max_per_minute BETWEEN 1 AND 1000),
+      CHECK (max_per_day BETWEEN 1 AND 1000000)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_status ON customer_installations(status, updated_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_customer_code ON customer_installations(customer_code)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customer_installation_events (
+      id bigserial PRIMARY KEY,
+      installation_id text NOT NULL,
+      action text NOT NULL,
+      actor_installation_id text,
+      actor_email text,
+      old_values jsonb,
+      new_values jsonb,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installation_events_installation ON customer_installation_events(installation_id, created_at DESC)`);
+
+  for (const record of mailGatewayInstallationRecords().values()) {
+    const hash=String(record.api_key_sha256 || '').trim().toLowerCase() || sha256Hex(record.api_key || '');
+    if (!hash || hash.length !== 64) continue;
+    const fallbackSlug=String(record.customer_code || record.installation_id || 'pilot').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'') || 'pilot';
+    const slug=/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(fallbackSlug) ? fallbackSlug : 'pilot';
+    const hostname=String(record.public_hostname || '').trim().toLowerCase() || `${slug}.hukatech.com`;
+    await pool.query(`
+      INSERT INTO customer_installations(
+        installation_id,customer_code,customer_name,slug,public_hostname,tunnel_name,tunnel_status,status,
+        api_key_sha256,api_key_prefix,registry_admin,max_per_minute,max_per_day,source,updated_at
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'environment',now())
+      ON CONFLICT(installation_id) DO UPDATE SET
+        customer_code=EXCLUDED.customer_code,customer_name=EXCLUDED.customer_name,
+        public_hostname=EXCLUDED.public_hostname,tunnel_name=EXCLUDED.tunnel_name,
+        status=EXCLUDED.status,api_key_sha256=EXCLUDED.api_key_sha256,
+        api_key_prefix=EXCLUDED.api_key_prefix,registry_admin=EXCLUDED.registry_admin,
+        max_per_minute=EXCLUDED.max_per_minute,max_per_day=EXCLUDED.max_per_day,
+        source='environment',updated_at=now()
+    `,[
+      record.installation_id,
+      String(record.customer_code || record.installation_id).slice(0,100),
+      String(record.customer_name || record.installation_id).slice(0,180),
+      slug,hostname,String(record.tunnel_name || '').slice(0,180) || null,
+      record.tunnel_name ? 'connected' : 'not_configured',record.enabled === false ? 'disabled' : 'active',
+      hash,String(record.api_key || '').slice(0,8) || hash.slice(0,8),Boolean(record.registry_admin),
+      installationRegistryLimit(record.max_per_minute,30,1000),installationRegistryLimit(record.max_per_day,500,1000000)
+    ]);
+  }
+  installationRegistryFoundationReady=true;
+}
+
+async function installationRegistryRecord(installationId) {
+  await ensureInstallationRegistryFoundation();
+  return one(`SELECT * FROM customer_installations WHERE installation_id=$1 LIMIT 1`,[installationId]);
+}
+
+async function resolvedMailGatewayInstallationRecord(installationId) {
+  const envRecord=mailGatewayInstallationRecords().get(installationId);
+  if (envRecord) return {...envRecord,status:envRecord.enabled === false ? 'disabled' : 'active'};
+  const row=await installationRegistryRecord(installationId);
+  if (!row) return null;
+  return {
+    ...row,
+    enabled:row.status === 'active',
+    api_key_sha256:String(row.api_key_sha256 || '').toLowerCase()
+  };
+}
+
+async function installationRegistryEvent({installationId,action,actorInstallationId=null,actorEmail=null,oldValues=null,newValues=null,metadata={}}) {
+  await ensureInstallationRegistryFoundation();
+  await pool.query(`
+    INSERT INTO customer_installation_events(
+      installation_id,action,actor_installation_id,actor_email,old_values,new_values,metadata
+    ) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb)
+  `,[installationId,action,actorInstallationId,actorEmail,oldValues ? JSON.stringify(oldValues) : null,newValues ? JSON.stringify(newValues) : null,JSON.stringify(metadata || {})]);
 }
 
 function mailGatewayBearerToken(req) {
@@ -14204,31 +14395,44 @@ async function sendMailGatewayProviderEmail({to,subject,html,text,requestId,purp
   return {sent:false,reason:'Central mail provider is disabled',provider:'disabled'};
 }
 
-function mailGatewayAuth(req,res,next) {
-  if (!mailGatewayServerEnabled()) {
-    return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Mail Gateway server is disabled'});
-  }
-  const installationId = safeEmailHeader(req.headers['x-factorybox-installation-id'],200);
-  const apiKey = mailGatewayBearerToken(req);
-  const record = mailGatewayInstallationRecords().get(installationId);
-  if (!record || record.enabled === false || !gatewayInstallationKeyMatches(record,apiKey)) {
-    return res.status(401).json({status:'unauthorized',version:APP_VERSION,message:'Invalid Mail Gateway credentials'});
-  }
+async function mailGatewayAuth(req,res,next) {
+  try {
+    if (!mailGatewayServerEnabled()) {
+      return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Mail Gateway server is disabled'});
+    }
+    const installationId = safeEmailHeader(req.headers['x-factorybox-installation-id'],200);
+    const apiKey = mailGatewayBearerToken(req);
+    const record = await resolvedMailGatewayInstallationRecord(installationId);
+    if (!record || record.enabled === false || record.status !== 'active' || !gatewayInstallationKeyMatches(record,apiKey)) {
+      return res.status(401).json({status:'unauthorized',version:APP_VERSION,message:'Invalid Mail Gateway credentials'});
+    }
 
-  const minuteLimit = Math.min(Math.max(Number(record.max_per_minute || process.env.MAIL_GATEWAY_MAX_PER_MINUTE || 30),1),1000);
-  const dailyLimit = Math.min(Math.max(Number(record.max_per_day || process.env.MAIL_GATEWAY_MAX_PER_DAY || 500),1),100000);
-  const minute = consumeRateBucket(mailGatewayMinuteBuckets,installationId,minuteLimit,60*1000);
-  const day = consumeRateBucket(mailGatewayDailyBuckets,installationId,dailyLimit,24*60*60*1000);
-  res.setHeader('X-MailGateway-Minute-Remaining',String(minute.remaining));
-  res.setHeader('X-MailGateway-Day-Remaining',String(day.remaining));
-  if (!minute.allowed || !day.allowed) {
-    return res.status(429).json({status:'rate_limited',version:APP_VERSION,message:'Mail Gateway rate limit exceeded'});
+    const minuteLimit = Math.min(Math.max(Number(record.max_per_minute || process.env.MAIL_GATEWAY_MAX_PER_MINUTE || 30),1),1000);
+    const dailyLimit = Math.min(Math.max(Number(record.max_per_day || process.env.MAIL_GATEWAY_MAX_PER_DAY || 500),1),1000000);
+    const minute = consumeRateBucket(mailGatewayMinuteBuckets,installationId,minuteLimit,60*1000);
+    const day = consumeRateBucket(mailGatewayDailyBuckets,installationId,dailyLimit,24*60*60*1000);
+    res.setHeader('X-MailGateway-Minute-Remaining',String(minute.remaining));
+    res.setHeader('X-MailGateway-Day-Remaining',String(day.remaining));
+    if (!minute.allowed || !day.allowed) {
+      return res.status(429).json({status:'rate_limited',version:APP_VERSION,message:'Mail Gateway rate limit exceeded'});
+    }
+    req.mailGatewayInstallation = {
+      ...record,
+      installation_id:installationId,
+      customer_name:safeEmailHeader(record.customer_name || installationId,160),
+      registry_admin:Boolean(record.registry_admin)
+    };
+    pool.query(`UPDATE customer_installations SET last_authenticated_at=now(),updated_at=now() WHERE installation_id=$1`,[installationId]).catch(()=>{});
+    next();
+  } catch(error) {
+    return res.status(500).json({status:'error',version:APP_VERSION,message:String(error.message || error)});
   }
-  req.mailGatewayInstallation = {
-    ...record,
-    installation_id:installationId,
-    customer_name:safeEmailHeader(record.customer_name || installationId,160)
-  };
+}
+
+function mailGatewayRegistryAdminRequired(req,res,next) {
+  if (!req.mailGatewayInstallation?.registry_admin) {
+    return res.status(403).json({status:'forbidden',version:APP_VERSION,message:'Installation registry admin access required'});
+  }
   next();
 }
 
@@ -14339,6 +14543,7 @@ app.post('/api/mail-gateway/v1/send', mailGatewayAuth, async (req,res)=>{
         status='delivered',provider_message_id=$3,error_message=NULL,delivered_at=now(),updated_at=now()
       WHERE installation_id=$1 AND request_id=$2
     `,[installation.installation_id,requestId,result.message_id || null]);
+    await pool.query(`UPDATE customer_installations SET last_mail_at=now(),updated_at=now() WHERE installation_id=$1`,[installation.installation_id]).catch(()=>{});
 
     return res.json({
       status:'ok',version:APP_VERSION,sent:true,request_id:requestId,
@@ -14357,6 +14562,187 @@ app.post('/api/mail-gateway/v1/send', mailGatewayAuth, async (req,res)=>{
     });
   }
 
+});
+
+
+function installationRegistryAdminPayload(body={}) {
+  const slug=installationRegistrySlug(body.slug || body.customer_code || body.customer_name);
+  return {
+    customer_code:String(body.customer_code || slug).trim().slice(0,100),
+    customer_name:String(body.customer_name || body.customer_code || slug).trim().slice(0,180),
+    slug,
+    public_hostname:installationRegistryHostname(body.public_hostname,slug),
+    tunnel_name:String(body.tunnel_name || `hukatech-${slug}-production`).trim().slice(0,180),
+    tunnel_status:['pending','connected','offline','error','not_configured'].includes(String(body.tunnel_status || '').toLowerCase()) ? String(body.tunnel_status).toLowerCase() : 'pending',
+    status:installationRegistryStatus(body.status,'active'),
+    max_per_minute:installationRegistryLimit(body.max_per_minute,30,1000),
+    max_per_day:installationRegistryLimit(body.max_per_day,500,1000000),
+    notes:String(body.notes || '').trim().slice(0,1000) || null
+  };
+}
+
+app.get('/api/mail-gateway/v1/admin/installations',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  await ensureInstallationRegistryFoundation();
+  const rows=(await pool.query(`SELECT * FROM customer_installations ORDER BY created_at DESC LIMIT 1000`)).rows.map(installationRegistryPublicRow);
+  res.json({status:'ok',version:APP_VERSION,count:rows.length,installations:rows});
+});
+
+app.post('/api/mail-gateway/v1/admin/installations',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const data=installationRegistryAdminPayload(req.body || {});
+    const apiKey=installationRegistryApiKey();
+    const installationId=String(req.body?.installation_id || installationRegistryId(data.slug)).trim();
+    if (!/^[a-zA-Z0-9_-]{6,120}$/.test(installationId)) return res.status(400).json({status:'error',message:'Invalid installation_id'});
+    const row=await one(`
+      INSERT INTO customer_installations(
+        installation_id,customer_code,customer_name,slug,public_hostname,tunnel_name,tunnel_status,status,
+        api_key_sha256,api_key_prefix,registry_admin,max_per_minute,max_per_day,source,notes
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,false,$11,$12,'database',$13)
+      RETURNING *
+    `,[installationId,data.customer_code,data.customer_name,data.slug,data.public_hostname,data.tunnel_name,data.tunnel_status,data.status,sha256Hex(apiKey),apiKey.slice(0,12),data.max_per_minute,data.max_per_day,data.notes]);
+    await installationRegistryEvent({installationId,action:'created',actorInstallationId:req.mailGatewayInstallation.installation_id,newValues:installationRegistryPublicRow(row)});
+    res.status(201).json({
+      status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(row),
+      credentials:{installation_id:installationId,api_key:apiKey,shown_once:true},
+      customer_env:[
+        'FACTORYBOX_MAIL_MODE=gateway',
+        `FACTORYBOX_MAIL_GATEWAY_URL=${String(process.env.MAIL_GATEWAY_PUBLIC_URL || 'REPLACE_WITH_HUKATECH_GATEWAY_URL').trim()}`,
+        `FACTORYBOX_MAIL_INSTALLATION_ID=${installationId}`,
+        `FACTORYBOX_MAIL_API_KEY=${apiKey}`,
+        'FACTORYBOX_MAIL_ALLOW_SMTP_FALLBACK=false'
+      ].join('\n')
+    });
+  } catch(error) {
+    const duplicate=String(error.code || '') === '23505';
+    res.status(duplicate ? 409 : (error.statusCode || 500)).json({status:'error',version:APP_VERSION,message:duplicate ? 'Installation ID, slug or hostname already exists' : error.message});
+  }
+});
+
+app.patch('/api/mail-gateway/v1/admin/installations/:installationId',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const old=await installationRegistryRecord(req.params.installationId);
+    if (!old) return res.status(404).json({status:'not_found',message:'Installation not found'});
+    if (old.source === 'environment') return res.status(409).json({status:'managed_by_environment',message:'Environment-managed pilot installation cannot be edited here'});
+    const slug=req.body?.slug === undefined ? old.slug : installationRegistrySlug(req.body.slug);
+    const hostname=req.body?.public_hostname === undefined ? old.public_hostname : installationRegistryHostname(req.body.public_hostname,slug);
+    const status=req.body?.status === undefined ? old.status : installationRegistryStatus(req.body.status,old.status);
+    const row=await one(`
+      UPDATE customer_installations SET
+        customer_code=$2,customer_name=$3,slug=$4,public_hostname=$5,tunnel_name=$6,tunnel_status=$7,status=$8,
+        max_per_minute=$9,max_per_day=$10,notes=$11,
+        disabled_at=CASE WHEN $8='disabled' THEN COALESCE(disabled_at,now()) ELSE NULL END,
+        updated_at=now()
+      WHERE installation_id=$1 RETURNING *
+    `,[
+      old.installation_id,
+      String(req.body?.customer_code ?? old.customer_code).trim().slice(0,100),
+      String(req.body?.customer_name ?? old.customer_name).trim().slice(0,180),
+      slug,hostname,String(req.body?.tunnel_name ?? old.tunnel_name ?? '').trim().slice(0,180) || null,
+      ['pending','connected','offline','error','not_configured'].includes(String(req.body?.tunnel_status ?? old.tunnel_status).toLowerCase()) ? String(req.body?.tunnel_status ?? old.tunnel_status).toLowerCase() : old.tunnel_status,
+      status,
+      installationRegistryLimit(req.body?.max_per_minute,old.max_per_minute,1000),
+      installationRegistryLimit(req.body?.max_per_day,old.max_per_day,1000000),
+      String(req.body?.notes ?? old.notes ?? '').trim().slice(0,1000) || null
+    ]);
+    await installationRegistryEvent({installationId:old.installation_id,action:'updated',actorInstallationId:req.mailGatewayInstallation.installation_id,oldValues:installationRegistryPublicRow(old),newValues:installationRegistryPublicRow(row)});
+    res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(row)});
+  } catch(error) {
+    const duplicate=String(error.code || '') === '23505';
+    res.status(duplicate ? 409 : (error.statusCode || 500)).json({status:'error',version:APP_VERSION,message:duplicate ? 'Slug or hostname already exists' : error.message});
+  }
+});
+
+app.post('/api/mail-gateway/v1/admin/installations/:installationId/rotate-key',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const old=await installationRegistryRecord(req.params.installationId);
+    if (!old) return res.status(404).json({status:'not_found',message:'Installation not found'});
+    if (old.source === 'environment') return res.status(409).json({status:'managed_by_environment',message:'Environment-managed pilot key must be rotated from the secure environment file'});
+    const apiKey=installationRegistryApiKey();
+    const row=await one(`UPDATE customer_installations SET api_key_sha256=$2,api_key_prefix=$3,rotated_at=now(),updated_at=now() WHERE installation_id=$1 RETURNING *`,[old.installation_id,sha256Hex(apiKey),apiKey.slice(0,12)]);
+    await installationRegistryEvent({installationId:old.installation_id,action:'key_rotated',actorInstallationId:req.mailGatewayInstallation.installation_id,oldValues:{api_key_prefix:old.api_key_prefix},newValues:{api_key_prefix:row.api_key_prefix}});
+    res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(row),credentials:{installation_id:old.installation_id,api_key:apiKey,shown_once:true}});
+  } catch(error) {
+    res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+function systemAdminRequired(req,res,next) {
+  if (!authConfig().enabled) return next();
+  return adminRequired(req,res,()=>{
+    if (req.user?.role !== 'system_admin') return res.status(403).json({status:'forbidden',version:APP_VERSION,message:'system_admin access required'});
+    next();
+  });
+}
+
+async function callInstallationRegistryGateway(pathname,{method='GET',body=null}={}) {
+  const cfg=emailConfig();
+  if (!cfg.gateway.configured) {
+    const error=new Error('HukaTech Central Mail Gateway is not configured');
+    error.statusCode=503;
+    throw error;
+  }
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),cfg.gateway.timeoutMs);timer.unref?.();
+  try {
+    const response=await fetch(`${cfg.gateway.url}${pathname}`,{
+      method,
+      headers:{
+        'content-type':'application/json',
+        'authorization':`Bearer ${cfg.gateway.apiKey}`,
+        'x-factorybox-installation-id':cfg.gateway.installationId,
+        'x-factorybox-version':APP_VERSION
+      },
+      ...(body === null ? {} : {body:JSON.stringify(body)}),
+      signal:controller.signal
+    });
+    const payload=await response.json().catch(()=>({}));
+    if (!response.ok) {
+      const error=new Error(payload.message || `Installation Registry HTTP ${response.status}`);
+      error.statusCode=response.status;
+      error.payload=payload;
+      throw error;
+    }
+    return payload;
+  } catch(error) {
+    if (error.name === 'AbortError') {
+      const timeoutError=new Error('Installation Registry request timed out');
+      timeoutError.statusCode=504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally { clearTimeout(timer); }
+}
+
+app.get('/api/admin/installations',systemAdminRequired,async(req,res)=>{
+  try { res.json(await callInstallationRegistryGateway('/api/mail-gateway/v1/admin/installations')); }
+  catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.post('/api/admin/installations',systemAdminRequired,async(req,res)=>{
+  try {
+    const result=await callInstallationRegistryGateway('/api/mail-gateway/v1/admin/installations',{method:'POST',body:req.body || {}});
+    await writeAuditLog(req,{action:'create_customer_installation',entity_type:'customer_installation',entity_id:result.installation?.installation_id,new_values:result.installation,metadata:{credentials_shown_once:true}});
+    res.status(201).json(result);
+  } catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.patch('/api/admin/installations/:installationId',systemAdminRequired,async(req,res)=>{
+  try {
+    const result=await callInstallationRegistryGateway(`/api/mail-gateway/v1/admin/installations/${encodeURIComponent(req.params.installationId)}`,{method:'PATCH',body:req.body || {}});
+    await writeAuditLog(req,{action:'update_customer_installation',entity_type:'customer_installation',entity_id:req.params.installationId,new_values:result.installation});
+    res.json(result);
+  } catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+app.post('/api/admin/installations/:installationId/rotate-key',systemAdminRequired,async(req,res)=>{
+  try {
+    const result=await callInstallationRegistryGateway(`/api/mail-gateway/v1/admin/installations/${encodeURIComponent(req.params.installationId)}/rotate-key`,{method:'POST',body:{}});
+    await writeAuditLog(req,{action:'rotate_customer_installation_key',entity_type:'customer_installation',entity_id:req.params.installationId,new_values:{api_key_prefix:result.installation?.api_key_prefix,credentials_shown_once:true}});
+    res.json(result);
+  } catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
 });
 
 app.get('/api/admin/notification-settings/gateway-status', adminRequired, permissionRequired('VIEW_DASHBOARD'), async (req,res)=>{
@@ -15067,6 +15453,7 @@ function restartMaintenanceScheduler() { startMaintenanceScheduler().catch(error
 async function start() {
   await pool.query('SELECT 1');
   await ensureMailGatewayFoundation();
+  await ensureInstallationRegistryFoundation();
   if (mailGatewayOnlyEnabled()) {
     httpServer = app.listen(PORT, '0.0.0.0', ()=> console.log(`HukaTech Central Mail Gateway v${APP_VERSION}: http://0.0.0.0:${PORT}`));
     return;

@@ -1,0 +1,14 @@
+HukaTech Platform v6.10.0 Validation
+
+[ ] node --check platform\backend\server.js
+[ ] Backend healthy
+[ ] Nginx healthy
+[ ] Mail Gateway healthy
+[ ] /api/auth/status version = 6.10.0
+[ ] system_admin kullanıcısında Organizasyon > Müşteri Kurulumları görünür
+[ ] Yeni kurulum kimliği oluşturulur
+[ ] API anahtarı yalnızca bir kez gösterilir
+[ ] Kurulum devre dışı bırakılınca gateway erişimi reddedilir
+[ ] Kurulum yeniden aktifleştirilir
+[ ] API anahtarı yenilenir ve eski anahtar geçersiz olur
+[ ] panel.hukatech.com erişimi çalışır

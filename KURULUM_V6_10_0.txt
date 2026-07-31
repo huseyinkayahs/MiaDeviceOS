@@ -1,0 +1,27 @@
+HukaTech Platform v6.10.0 - Customer Installation Registry Foundation
+
+1) ZIP içeriğini önce ana geliştirme klasörünün üzerine kopyalayın:
+   C:\New DeviceOs Project\MiaDeviceOS_v0.5_command_engine (1)
+
+2) Aynı ZIP içeriğini production klasörünün üzerine kopyalayın:
+   C:\FactoryBox
+
+3) Production onarım/kurulum scriptini çalıştırın:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\APPLY_V6_10_0_CUSTOMER_INSTALLATION_REGISTRY.ps1"
+
+Beklenen son çıktı:
+   BACKEND_STATUS=healthy
+   NGINX_STATUS=healthy
+   MAIL_GATEWAY_STATUS=healthy
+   BACKEND_VERSION=6.10.0
+   INSTALLATION_REGISTRY_COUNT=1 veya daha fazla
+   HUKATECH_V6_10_0_CUSTOMER_INSTALLATION_REGISTRY_READY
+
+4) Panel:
+   https://panel.hukatech.com
+   Organizasyon > Müşteri Kurulumları
+
+Güvenlik:
+- Yeni müşteri API anahtarı yalnızca oluşturma veya yenileme anında bir kez görünür.
+- Veritabanında yalnızca SHA-256 hash saklanır.
+- ZIP içinde .env, API anahtarı, SMTP şifresi veya Cloudflare tokenı yoktur.
