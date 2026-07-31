@@ -1,7 +1,7 @@
 {
   "name": "factorybox-platform-backend",
-  "version": "6.11.0",
-  "description": "HukaTech Platform v6.11.0 Customer Installation Provisioning & Key Lifecycle",
+  "version": "6.12.0",
+  "description": "HukaTech Platform v6.12.0 Automated Customer Deployment & Cloudflare Tunnel Provisioning",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

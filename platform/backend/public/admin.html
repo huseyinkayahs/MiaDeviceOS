@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.8.1 Admin Panel</title>
+  <title>FactoryBox v6.12.0 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -944,7 +944,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.8.1 — Central Mail Gateway, Cloud Access ve Remote Management aktif.</p>
+      <p id="adminVersionLabel">v6.12.0 &mdash; Otomatik m&uuml;&#351;teri da&#287;&#305;t&#305;m&#305; ve Cloudflare Tunnel y&ouml;netimi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -1071,7 +1071,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.8.1: Central Mail Gateway, Cloud Access ve Remote Management aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.12.0 &mdash; Otomatik m&uuml;&#351;teri da&#287;&#305;t&#305;m&#305; ve Cloudflare Tunnel y&ouml;netimi aktif.</p>
       </div>
     </div>
 
@@ -2110,7 +2110,7 @@
     <div class="section-title-row">
       <div>
         <h2>Müşteri Kurulum Kayıtları</h2>
-        <p class="muted">Her müşteri kurulumu için ayrı kimlik, tek kullanımlık provisioning paketi, güvenli anahtar yaşam döngüsü, kalıcı hostname ve gönderim limiti yönetir. Yalnızca system_admin kullanabilir.</p>
+        <p class="muted">Her müşteri kurulumu için ayrı kimlik, Cloudflare Tunnel ve DNS otomasyonu, tek kullanımlık deployment paketi, güvenli anahtar yaşam döngüsü, kalıcı hostname ve gönderim limiti yönetir. Yalnızca system_admin kullanabilir.</p>
       </div>
       <button id="refreshInstallationsBtn" class="secondary-btn">Kayıtları Yenile</button>
     </div>
@@ -2543,7 +2543,7 @@
   let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
   const I18N_PAIRS = [
-    ['Müşteri Kurulumları','Customer Installations'],['Müşteri Kurulum Kayıtları','Customer Installation Registry'],['Kayıtları Yenile','Refresh Installations'],['Kurulum Kimliği Oluştur','Create Installation Identity'],['Kurulum Paketi','Provisioning Package'],['Geçmiş','History'],['Provisioning','Provisioning'],['Tek kullanımlık kurulum paketi indirildi','One-time provisioning package downloaded'],
+    ['Müşteri Kurulumları','Customer Installations'],['Müşteri Kurulum Kayıtları','Customer Installation Registry'],['Kayıtları Yenile','Refresh Installations'],['Kurulum Kimliği Oluştur','Create Installation Identity'],['Tüneli Hazırla','Prepare Tunnel'],['Otomatik Kurulum Paketi','Automated Deployment Package'],['Geçmiş','History'],['Provisioning','Provisioning'],['Tek kullanımlık kurulum paketi indirildi','One-time provisioning package downloaded'],
     ['SmartAI Raporları','SmartAI Reports'],['AI Raporları','AI Reports'],['Analiz Sor','Ask Analysis'],['Rapor Geçmişi','Report History'],['AI Ayarları','AI Settings'],
     ['Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.','Combine alarm, OEE, downtime, maintenance, inventory and factory data into one management report.'],['SmartAI Yenile','Refresh SmartAI'],['Yeni Rapor Oluştur','Create New Report'],['Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.','The report only reads data; it sends no device commands and changes no operational records.'],['Dönem','Period'],['Günlük','Daily'],['Haftalık','Weekly'],['Aylık','Monthly'],['Özel Tarih','Custom Date'],['Hedef Kitle','Audience'],['Yönetici','Executive'],['Teknik Ekip','Technical Team'],['Rapor Dili','Report Language'],['Analiz Motoru','Analysis Engine'],['FactoryBox Kural Motoru','FactoryBox Rule Engine'],['OpenAI + Kural Motoru','OpenAI + Rule Engine'],['Rapor Oluştur ve Kaydet','Generate and Save Report'],['Rapor işlemi bekleniyor.','Waiting for report action.'],['Henüz rapor oluşturulmadı.','No report has been generated yet.'],
     ['SmartAI Analiz Sor','Ask SmartAI'],['Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.','Ask operational-data questions in natural language. Answers are based on the selected dates and access scope.'],['SALT OKUNUR','READ ONLY'],['Sorunu Yaz','Write Your Question'],['En fazla duran makine','Machine with most downtime'],['Tekrarlayan alarmlar','Repeated alarms'],['Gecikmiş bakımlar','Overdue maintenance'],['Kritik stok','Critical stock'],['Fabrikaları karşılaştır','Compare factories'],['Analiz Et','Analyze'],['Soru bekleniyor.','Waiting for a question.'],['SmartAI cevabı burada görünecek.','The SmartAI answer will appear here.'],['Son Sorular','Recent Questions'],
@@ -3256,7 +3256,7 @@
     'site-access':{title_tr:'Lokasyon Erişimi',title_en:'Location Access',desc_tr:'Kullanıcıların şirket, fabrika, tesis ve üretim hattı erişimleri.',desc_en:'User access to companies, factories, sites and production lines.'},
     'factory-comparison':{title_tr:'Fabrika Karşılaştırması',title_en:'Factory Comparison',desc_tr:'Fabrikalar arası OEE, alarm, üretim, duruş ve cihaz bağlantısı karşılaştırması.',desc_en:'Cross-factory comparison of OEE, alarms, production, downtime and device connectivity.'},
     tenants:{title_tr:'Şirketler / Tenantlar',title_en:'Customers / Tenants',desc_tr:'Müşteri, tenant, tesis ve atölye yönetimi.',desc_en:'Customer, tenant, site and workshop management.'},
-    installations:{title_tr:'Müşteri Kurulumları',title_en:'Customer Installations',desc_tr:'Kurulum kimlikleri, güvenli API anahtarları, kalıcı hostname ve mail gateway limitleri.',desc_en:'Installation identities, secure API keys, permanent hostnames and mail-gateway limits.'},
+    installations:{title_tr:'Müşteri Kurulumları',title_en:'Customer Installations',desc_tr:'Kurulum kimlikleri, otomatik Cloudflare Tunnel, güvenli API anahtarları, kalıcı hostname ve mail gateway limitleri.',desc_en:'Installation identities, secure API keys, permanent hostnames and mail-gateway limits.'},
     users:{title_tr:'Kullanıcılar ve Davetler',title_en:'Users & Invitations',desc_tr:'Kullanıcılar, davetler ve tenant erişim kayıtları.',desc_en:'Users, invitations and tenant access records.'},
     permissions:{title_tr:'Roller ve Yetkiler',title_en:'Roles & Permissions',desc_tr:'Aktif rol, yetki matrisi ve permission görünümü.',desc_en:'Active role, permission matrix and authorization overview.'},
     subscriptions:{title_tr:'Abonelikler',title_en:'Subscriptions',desc_tr:'Planlar, abonelik durumu, deneme süresi ve kota kullanımı.',desc_en:'Plans, subscription status, trial period and quota usage.'},
@@ -4702,7 +4702,7 @@
     target.innerHTML=table([
       {label:'Customer',html:true,value:r=>`<strong>${esc(r.customer_name)}</strong><br><small>${esc(r.customer_code)}</small>`},
       {label:'Installation ID',html:true,value:r=>`<code>${esc(r.installation_id)}</code><br><small>key: ${esc(r.api_key_prefix||'-')}…</small>`},
-      {label:'Public Hostname',html:true,value:r=>`<strong>${esc(r.public_hostname||'-')}</strong><br><small>${esc(r.tunnel_name||'-')} · ${esc(r.tunnel_status||'-')}</small>`},
+      {label:'Public Hostname',html:true,value:r=>`<strong>${esc(r.public_hostname||'-')}</strong><br><small>${esc(r.tunnel_name||'-')} · ${esc(r.tunnel_status||'-')}</small>${r.cloudflare_tunnel_id?`<br><small>CF: ${esc(String(r.cloudflare_tunnel_id).slice(0,8))}…</small>`:''}`},
       {label:'Status',html:true,value:r=>installationStatusBadge(r.status)},
       {label:'Provisioning',html:true,value:r=>`${installationProvisioningBadge(r.provisioning_status)}<br><small>key generation: ${esc(r.key_generation||1)}</small>`},
       {label:'Limits',value:r=>`${r.max_per_minute}/dk · ${r.max_per_day}/gün`},
@@ -4711,7 +4711,7 @@
       {label:'Source',value:r=>r.source||'database'},
       {label:'Aksiyon',html:true,value:r=>r.source==='environment'
         ? '<span class="muted">secure env</span>'
-        : `<div class="admin-form-actions"><button class="secondary-btn mini-btn" data-action="installation-provision" data-id="${esc(r.installation_id)}" data-slug="${esc(r.slug||r.customer_code)}">Kurulum Paketi</button><button class="secondary-btn mini-btn" data-action="installation-events" data-id="${esc(r.installation_id)}">Geçmiş</button><button class="secondary-btn mini-btn" data-action="installation-toggle" data-id="${esc(r.installation_id)}" data-next-status="${r.status==='active'?'disabled':'active'}">${r.status==='active'?'Devre Dışı':'Aktifleştir'}</button><button class="secondary-btn mini-btn" data-action="installation-rotate" data-id="${esc(r.installation_id)}">Anahtarı Yenile</button></div>`}
+        : `<div class="admin-form-actions"><button class="secondary-btn mini-btn" data-action="installation-cloudflare" data-id="${esc(r.installation_id)}">Tüneli Hazırla</button><button class="secondary-btn mini-btn" data-action="installation-provision" data-id="${esc(r.installation_id)}" data-slug="${esc(r.slug||r.customer_code)}">Otomatik Kurulum Paketi</button><button class="secondary-btn mini-btn" data-action="installation-events" data-id="${esc(r.installation_id)}">Geçmiş</button><button class="secondary-btn mini-btn" data-action="installation-toggle" data-id="${esc(r.installation_id)}" data-next-status="${r.status==='active'?'disabled':'active'}">${r.status==='active'?'Devre Dışı':'Aktifleştir'}</button><button class="secondary-btn mini-btn" data-action="installation-rotate" data-id="${esc(r.installation_id)}">Anahtarı Yenile</button></div>`}
     ],installationRegistryRows.map(r=>({...r,__kind:'installation'})));
   }
 
@@ -4752,16 +4752,27 @@
   }
 
 
+
+  async function provisionInstallationCloudflare(button) {
+    const installationId=button.dataset.id;
+    if(!window.confirm('Cloudflare Tunnel, uzaktan yönetilen ingress ve DNS kaydı otomatik oluşturulsun mu?'))return;
+    const data=await apiJson(`/api/admin/installations/${encodeURIComponent(installationId)}/cloudflare-provision`,{method:'POST',body:'{}'});
+    const target=document.getElementById('installationCredentialResult');
+    target.innerHTML=`<strong>Cloudflare altyapısı hazır</strong><p><code>${esc(data.installation?.public_hostname||'')}</code> adresi <code>${esc(data.installation?.tunnel_name||'')}</code> tüneline bağlandı. Tünel müşteri sunucusu çalışana kadar pending görünebilir.</p>`;
+    return data;
+  }
+
+
   async function createInstallationProvisioningPackage(button) {
     const installationId=button.dataset.id;
     const slug=button.dataset.slug||installationId;
-    if(!window.confirm('30 dakika geçerli, tek kullanımlık müşteri kurulum paketi oluşturulsun mu?'))return;
+    if(!window.confirm('Cloudflare Tunnel ve DNS hazırlandıktan sonra 30 dakika geçerli, tek kullanımlık otomatik kurulum paketi oluşturulsun mu?'))return;
     const data=await apiJson(`/api/admin/installations/${encodeURIComponent(installationId)}/provisioning-token`,{method:'POST',body:JSON.stringify({expires_in_minutes:30})});
     const pkg=data.provisioning_package;
     if(!pkg)throw new Error('Provisioning package was not returned');
     downloadOnboardingJson(`HukaTech_${slug}_Customer_Provisioning.json`,pkg);
     const target=document.getElementById('installationCredentialResult');
-    target.innerHTML=`<strong>Tek kullanımlık kurulum paketi indirildi</strong><p><code>${esc(installationId)}</code> için token ${esc(fmtDate(pkg.expires_at))} tarihine kadar geçerli. Dosyayı müşterinin sunucusunda <code>PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1</code> ile uygula. Paket dosyasını güvenli taşı ve işlemden sonra sil.</p>`;
+    target.innerHTML=`<strong>Otomatik müşteri kurulum paketi indirildi</strong><p><code>${esc(installationId)}</code> için token ${esc(fmtDate(pkg.expires_at))} tarihine kadar geçerli. Dosyayı müşterinin sunucusunda yönetici olarak <code>PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1</code> ile uygula; mail anahtarı, PUBLIC_APP_URL ve Cloudflare Tunnel otomatik yapılandırılır. Paket dosyasını güvenli taşı ve işlemden sonra sil.</p>`;
   }
 
   async function showInstallationEvents(button) {
@@ -5230,7 +5241,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.8.1`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.12.0`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -5445,7 +5456,7 @@
   function remoteAccessModeLabel(mode){const labels={disabled:currentLanguage==='en'?'DISABLED':'KAPALI',quick:'QUICK TUNNEL',named:'NAMED TUNNEL'};return labels[mode]||String(mode||'-').toUpperCase();}
   function renderRemoteAccessV670(data){
     remoteAccessStateV670=data||remoteAccessStateV670;const settings=data.settings||{},runtime=data.runtime||{};
-    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.8.1'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
+    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.12.0'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
     const state=document.getElementById('remoteAccessState');if(state)state.textContent=runtime.status==='online'?(currentLanguage==='en'?'ONLINE':'ÇEVRİMİÇİ'):runtime.status==='configured'?(currentLanguage==='en'?'CONFIGURED':'YAPILANDIRILDI'):runtime.status==='waiting_configuration'?(currentLanguage==='en'?'WAITING':'AYAR BEKLİYOR'):(currentLanguage==='en'?'OFF':'KAPALI');
     const detail=document.getElementById('remoteAccessStateDetail');if(detail)detail.textContent=runtime.last_error||settings.public_url||'-';
     const mode=document.getElementById('remoteAccessModeValue');if(mode)mode.textContent=remoteAccessModeLabel(settings.mode);
@@ -6367,10 +6378,16 @@
         status.textContent = 'Tenant aboneliği ve limit kontrolü güncellendi.';
       }
 
+      if (action === 'installation-cloudflare') {
+        await provisionInstallationCloudflare(button);
+        await loadInstallations();
+        status.textContent = 'Cloudflare Tunnel ve DNS kaydı hazırlandı.';
+      }
+
       if (action === 'installation-provision') {
         await createInstallationProvisioningPackage(button);
         await loadInstallations();
-        status.textContent = 'Tek kullanımlık müşteri kurulum paketi indirildi.';
+        status.textContent = 'Otomatik müşteri kurulum paketi indirildi.';
       }
 
       if (action === 'installation-events') {

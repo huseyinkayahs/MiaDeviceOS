@@ -115,8 +115,7 @@ $headers=@{
   'x-factorybox-version'='6.11.0'
 }
 $registry=Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:3101/api/mail-gateway/v1/admin/installations' -Headers $headers
-$columnSql="SELECT count(*) FROM information_schema.columns WHERE table_name='customer_installations' AND column_name IN ('provisioning_status','provisioning_token_sha256','key_generation');"
-$columnCount=($columnSql | docker exec -i factorybox-mail-gateway-postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At' | Out-String).Trim()
+$columnCount=(docker exec factorybox-mail-gateway-postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT count(*) FROM information_schema.columns WHERE table_name=''customer_installations'' AND column_name IN (''provisioning_status'',''provisioning_token_sha256'',''key_generation'');"'|Out-String).Trim()
 if($columnCount -ne '3'){throw "Provisioning columns missing: $columnCount/3"}
 
 $relayCode=(curl.exe -ksS -o NUL -w '%{http_code}' -X POST 'https://127.0.0.1:8443/api/central-mail/v1/send' -H 'Content-Type: application/json' -d '{}')

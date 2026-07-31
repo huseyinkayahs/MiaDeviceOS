@@ -254,7 +254,7 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.11.0';
+const APP_VERSION = '6.12.0';
 
 
 app.get('/healthz', (_req, res) => {
@@ -11987,11 +11987,11 @@ app.use('/api', (req,res,next)=>{
   if (req.path.startsWith('/auth/')) return next();
   if (req.path === '/health') return next();
 
-  // These machine-to-machine endpoints must remain outside the browser
-  // session middleware. Their own one-time token or installation API-key
-  // validation is performed by the central gateway.
+  // Machine-to-machine endpoints authenticate with a provisioning token or
+  // installation API key. They must not be intercepted by browser login auth.
   if (req.path === '/public/installations/provision/exchange') return next();
   if (req.path === '/central-mail/v1/status') return next();
+  if (req.path === '/central-mail/v1/deployment/confirm') return next();
   if (req.path === '/central-mail/v1/send') return next();
 
   return authRequired(req,res,next);
@@ -14163,7 +14163,13 @@ function installationRegistryPublicRow(row) {
     verified_at:row.verified_at || null,
     revoked_at:row.revoked_at || null,
     last_provisioned_version:row.last_provisioned_version || null,
-    key_generation:Number(row.key_generation || 1)
+    key_generation:Number(row.key_generation || 1),
+    cloudflare_tunnel_id:row.cloudflare_tunnel_id || null,
+    cloudflare_dns_record_id:row.cloudflare_dns_record_id || null,
+    cloudflare_origin_service:row.cloudflare_origin_service || null,
+    cloudflare_provisioned_at:row.cloudflare_provisioned_at || null,
+    cloudflare_last_checked_at:row.cloudflare_last_checked_at || null,
+    cloudflare_error:row.cloudflare_error || null
   };
 }
 
@@ -14211,6 +14217,35 @@ async function ensureInstallationRegistryFoundation() {
   await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS revoked_at timestamptz`);
   await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS last_provisioned_version text`);
   await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS key_generation integer NOT NULL DEFAULT 1`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS cloudflare_tunnel_id text`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS cloudflare_dns_record_id text`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS cloudflare_origin_service text`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS cloudflare_provisioned_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS cloudflare_last_checked_at timestamptz`);
+  await pool.query(`ALTER TABLE customer_installations ADD COLUMN IF NOT EXISTS cloudflare_error text`);
+  await pool.query(`
+    DO $$
+    DECLARE
+      current_definition text;
+    BEGIN
+      SELECT pg_get_constraintdef(oid)
+      INTO current_definition
+      FROM pg_constraint
+      WHERE conname='customer_installations_provisioning_status_check'
+        AND conrelid='customer_installations'::regclass;
+
+      IF current_definition IS NULL OR position('cloudflare_ready' in current_definition)=0 THEN
+        ALTER TABLE customer_installations
+          DROP CONSTRAINT IF EXISTS customer_installations_provisioning_status_check;
+        ALTER TABLE customer_installations
+          ADD CONSTRAINT customer_installations_provisioning_status_check
+          CHECK (provisioning_status IN (
+            'registered','cloudflare_ready','package_generated','provisioned','verified','revoked'
+          ));
+      END IF;
+    END $$;
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_installations_cloudflare_tunnel_id ON customer_installations(cloudflare_tunnel_id) WHERE cloudflare_tunnel_id IS NOT NULL`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_provisioning_status ON customer_installations(provisioning_status, updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_status ON customer_installations(status, updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_customer_installations_customer_code ON customer_installations(customer_code)`);
@@ -14548,6 +14583,31 @@ app.get('/api/mail-gateway/v1/status', mailGatewayAuth, async (req,res)=>{
   });
 });
 
+
+app.post('/api/mail-gateway/v1/deployment/confirm', mailGatewayAuth, async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    const installationId=req.mailGatewayInstallation.installation_id;
+    const publicHostname=String(req.body?.public_hostname || '').trim().toLowerCase();
+    const tunnelId=String(req.body?.cloudflare_tunnel_id || '').trim();
+    const row=await one(`
+      UPDATE customer_installations SET
+        tunnel_status='connected',provisioning_status='verified',verified_at=COALESCE(verified_at,now()),
+        cloudflare_last_checked_at=now(),cloudflare_error=NULL,updated_at=now()
+      WHERE installation_id=$1
+        AND ($2='' OR public_hostname=$2)
+        AND ($3='' OR cloudflare_tunnel_id=$3)
+      RETURNING *
+    `,[installationId,publicHostname,tunnelId]);
+    if (!row) return res.status(409).json({status:'mismatch',version:APP_VERSION,message:'Deployment confirmation does not match the registered hostname or tunnel'});
+    await installationRegistryEvent({installationId,action:'customer_deployment_verified',actorInstallationId:installationId,newValues:installationRegistryPublicRow(row),metadata:{public_hostname:publicHostname,cloudflare_tunnel_id:tunnelId,platform_version:String(req.body?.platform_version || '').slice(0,60),remote_ip:reqIp(req)}});
+    res.json({status:'ok',version:APP_VERSION,verified:true,installation:installationRegistryPublicRow(row)});
+  } catch(error) {
+    res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+
 app.post('/api/mail-gateway/v1/send', mailGatewayAuth, async (req,res)=>{
   const installation = req.mailGatewayInstallation;
   const requestId = safeEmailHeader(req.body?.request_id || req.headers['x-request-id'] || crypto.randomUUID(),200);
@@ -14656,6 +14716,159 @@ app.post('/api/mail-gateway/v1/send', mailGatewayAuth, async (req,res)=>{
 
 });
 
+
+
+function cloudflareDeploymentConfig() {
+  const apiToken=String(process.env.CLOUDFLARE_API_TOKEN || '').trim();
+  const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+  const zoneId=String(process.env.CLOUDFLARE_ZONE_ID || '').trim();
+  const zoneName=String(process.env.CLOUDFLARE_ZONE_NAME || 'hukatech.com').trim().toLowerCase();
+  const originService=String(process.env.CLOUDFLARE_CUSTOMER_ORIGIN_SERVICE || 'https://nginx:443').trim();
+  return {
+    apiToken,accountId,zoneId,zoneName,originService,
+    configured:Boolean(apiToken && accountId && zoneId && zoneName && originService)
+  };
+}
+
+async function cloudflareApi(pathname,{method='GET',body=null}={}) {
+  const cfg=cloudflareDeploymentConfig();
+  if (!cfg.configured) {
+    const error=new Error('Cloudflare deployment controller is not configured');
+    error.statusCode=503;
+    throw error;
+  }
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),20000);timer.unref?.();
+  try {
+    const response=await fetch(`https://api.cloudflare.com/client/v4${pathname}`,{
+      method,
+      headers:{'authorization':`Bearer ${cfg.apiToken}`,'content-type':'application/json'},
+      ...(body === null ? {} : {body:JSON.stringify(body)}),
+      signal:controller.signal
+    });
+    const payload=await response.json().catch(()=>({}));
+    if (!response.ok || payload.success === false) {
+      const messages=[...(payload.errors || []),...(payload.messages || [])]
+        .map(item=>item?.message || item?.code).filter(Boolean).join('; ');
+      const error=new Error(messages || `Cloudflare API HTTP ${response.status}`);
+      error.statusCode=response.status >= 400 && response.status < 600 ? response.status : 502;
+      throw error;
+    }
+    return payload.result;
+  } catch(error) {
+    if (error.name === 'AbortError') {
+      const timeoutError=new Error('Cloudflare API request timed out');
+      timeoutError.statusCode=504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally { clearTimeout(timer); }
+}
+
+function cloudflareTunnelStatus(value) {
+  const status=String(value || '').toLowerCase();
+  if (['healthy','active','connected'].includes(status)) return 'connected';
+  if (['inactive','pending','down','degraded'].includes(status)) return status === 'inactive' ? 'pending' : 'offline';
+  return 'pending';
+}
+
+async function cloudflareFindTunnelByName(name) {
+  const cfg=cloudflareDeploymentConfig();
+  const result=await cloudflareApi(`/accounts/${encodeURIComponent(cfg.accountId)}/cfd_tunnel?is_deleted=false&per_page=100`);
+  return (Array.isArray(result) ? result : []).find(item=>String(item?.name || '').toLowerCase() === String(name || '').toLowerCase()) || null;
+}
+
+async function cloudflareProvisionInstallation(installation,{actorInstallationId=null,force=false}={}) {
+  const cfg=cloudflareDeploymentConfig();
+  if (!cfg.configured) {
+    const error=new Error('Cloudflare deployment controller is not configured');
+    error.statusCode=503;
+    throw error;
+  }
+  if (!installation) {
+    const error=new Error('Installation not found');
+    error.statusCode=404;
+    throw error;
+  }
+  if (installation.source === 'environment') {
+    const error=new Error('Environment-managed pilot tunnel cannot be changed here');
+    error.statusCode=409;
+    throw error;
+  }
+  if (['disabled','archived'].includes(installation.status)) {
+    const error=new Error('Disabled or archived installation cannot be deployed');
+    error.statusCode=409;
+    throw error;
+  }
+  if (!installation.public_hostname.endsWith(`.${cfg.zoneName}`)) {
+    const error=new Error(`Public hostname must belong to ${cfg.zoneName}`);
+    error.statusCode=400;
+    throw error;
+  }
+
+  let tunnel=null;
+  if (installation.cloudflare_tunnel_id && !force) {
+    try { tunnel=await cloudflareApi(`/accounts/${encodeURIComponent(cfg.accountId)}/cfd_tunnel/${encodeURIComponent(installation.cloudflare_tunnel_id)}`); }
+    catch(error) { if (error.statusCode !== 404) throw error; }
+  }
+  if (!tunnel) tunnel=await cloudflareFindTunnelByName(installation.tunnel_name);
+  let tunnelCreated=false;
+  if (!tunnel) {
+    tunnel=await cloudflareApi(`/accounts/${encodeURIComponent(cfg.accountId)}/cfd_tunnel`,{
+      method:'POST',body:{name:installation.tunnel_name,config_src:'cloudflare'}
+    });
+    tunnelCreated=true;
+  }
+  const tunnelId=String(tunnel?.id || '').trim();
+  if (!tunnelId) throw new Error('Cloudflare did not return a tunnel ID');
+
+  const originRequest=cfg.originService.toLowerCase().startsWith('https:') ? {noTLSVerify:true} : {};
+  await cloudflareApi(`/accounts/${encodeURIComponent(cfg.accountId)}/cfd_tunnel/${encodeURIComponent(tunnelId)}/configurations`,{
+    method:'PUT',
+    body:{config:{ingress:[
+      {hostname:installation.public_hostname,service:cfg.originService,originRequest},
+      {service:'http_status:404'}
+    ]}}
+  });
+
+  const dnsList=await cloudflareApi(`/zones/${encodeURIComponent(cfg.zoneId)}/dns_records?type=CNAME&name=${encodeURIComponent(installation.public_hostname)}&per_page=100`);
+  const target=`${tunnelId}.cfargotunnel.com`;
+  let dnsRecord=Array.isArray(dnsList) ? dnsList[0] : null;
+  if (dnsRecord) {
+    dnsRecord=await cloudflareApi(`/zones/${encodeURIComponent(cfg.zoneId)}/dns_records/${encodeURIComponent(dnsRecord.id)}`,{
+      method:'PUT',body:{type:'CNAME',name:installation.public_hostname,content:target,proxied:true,ttl:1}
+    });
+  } else {
+    dnsRecord=await cloudflareApi(`/zones/${encodeURIComponent(cfg.zoneId)}/dns_records`,{
+      method:'POST',body:{type:'CNAME',name:installation.public_hostname,content:target,proxied:true,ttl:1}
+    });
+  }
+
+  const old=installation;
+  const row=await one(`
+    UPDATE customer_installations SET
+      cloudflare_tunnel_id=$2,cloudflare_dns_record_id=$3,cloudflare_origin_service=$4,
+      cloudflare_provisioned_at=COALESCE(cloudflare_provisioned_at,now()),cloudflare_last_checked_at=now(),
+      cloudflare_error=NULL,tunnel_status=$5,
+      provisioning_status=CASE WHEN provisioning_status='registered' THEN 'cloudflare_ready' ELSE provisioning_status END,
+      updated_at=now()
+    WHERE installation_id=$1 RETURNING *
+  `,[old.installation_id,tunnelId,String(dnsRecord?.id || '') || null,cfg.originService,cloudflareTunnelStatus(tunnel?.status)]);
+  await installationRegistryEvent({
+    installationId:old.installation_id,action:'cloudflare_tunnel_provisioned',actorInstallationId,
+    oldValues:installationRegistryPublicRow(old),newValues:installationRegistryPublicRow(row),
+    metadata:{tunnel_created:tunnelCreated,tunnel_id:tunnelId,dns_record_id:dnsRecord?.id || null,origin_service:cfg.originService}
+  });
+  return {row,tunnel,dnsRecord,tunnelCreated};
+}
+
+async function cloudflareTunnelToken(tunnelId) {
+  const cfg=cloudflareDeploymentConfig();
+  const result=await cloudflareApi(`/accounts/${encodeURIComponent(cfg.accountId)}/cfd_tunnel/${encodeURIComponent(tunnelId)}/token`);
+  const token=typeof result === 'string' ? result : String(result?.token || '');
+  if (!token) throw new Error('Cloudflare tunnel token was not returned');
+  return token;
+}
 
 function installationRegistryAdminPayload(body={}) {
   const slug=installationRegistrySlug(body.slug || body.customer_code || body.customer_name);
@@ -14775,13 +14988,33 @@ app.post('/api/mail-gateway/v1/admin/installations/:installationId/rotate-key',m
 });
 
 
-app.post('/api/mail-gateway/v1/admin/installations/:installationId/provisioning-token',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+
+app.post('/api/mail-gateway/v1/admin/installations/:installationId/cloudflare-provision',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
   try {
     await ensureInstallationRegistryFoundation();
     const old=await installationRegistryRecord(req.params.installationId);
+    const result=await cloudflareProvisionInstallation(old,{actorInstallationId:req.mailGatewayInstallation.installation_id,force:Boolean(req.body?.force)});
+    res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(result.row),cloudflare:{tunnel_id:result.row.cloudflare_tunnel_id,dns_record_id:result.row.cloudflare_dns_record_id,origin_service:result.row.cloudflare_origin_service,tunnel_created:result.tunnelCreated}});
+  } catch(error) {
+    if (req.params.installationId) {
+      pool.query(`UPDATE customer_installations SET cloudflare_error=$2,tunnel_status='error',cloudflare_last_checked_at=now(),updated_at=now() WHERE installation_id=$1`,[req.params.installationId,String(error.message || error).slice(0,1000)]).catch(()=>{});
+    }
+    res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
+  }
+});
+
+
+app.post('/api/mail-gateway/v1/admin/installations/:installationId/provisioning-token',mailGatewayAuth,mailGatewayRegistryAdminRequired,async(req,res)=>{
+  try {
+    await ensureInstallationRegistryFoundation();
+    let old=await installationRegistryRecord(req.params.installationId);
     if (!old) return res.status(404).json({status:'not_found',message:'Installation not found'});
     if (old.source === 'environment') return res.status(409).json({status:'managed_by_environment',message:'Environment-managed pilot installation is already provisioned'});
     if (['disabled','archived'].includes(old.status)) return res.status(409).json({status:'inactive',message:'Disabled or archived installation cannot be provisioned'});
+    if (!old.cloudflare_tunnel_id || !old.cloudflare_dns_record_id || old.tunnel_status === 'error') {
+      const deployed=await cloudflareProvisionInstallation(old,{actorInstallationId:req.mailGatewayInstallation.installation_id});
+      old=deployed.row;
+    }
     const minutes=installationProvisioningMinutes(req.body?.expires_in_minutes,30);
     const token=installationProvisioningToken();
     const expiresAt=new Date(Date.now() + minutes*60*1000);
@@ -14792,19 +15025,21 @@ app.post('/api/mail-gateway/v1/admin/installations/:installationId/provisioning-
       WHERE installation_id=$1 RETURNING *
     `,[old.installation_id,sha256Hex(token),token.slice(0,12),expiresAt]);
     const provisioningPackage={
-      format:'hukatech-customer-provisioning-v1',
+      format:'hukatech-customer-deployment-v2',
       platform_version:APP_VERSION,
       installation_id:old.installation_id,
       customer_code:old.customer_code,
       customer_name:old.customer_name,
       public_hostname:old.public_hostname,
+      cloudflare_tunnel_id:old.cloudflare_tunnel_id,
+      cloudflare_tunnel_name:old.tunnel_name,
       provisioning_token:token,
       expires_at:expiresAt.toISOString(),
       exchange_url:`${installationPublicAppUrl()}/api/public/installations/provision/exchange`,
       public_mail_gateway_url:installationPublicMailGatewayUrl(),
-      instructions:'Run PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1 with this JSON file on the customer server. The token can be used once.'
+      instructions:'Run PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1 as Administrator on the customer server. The package token can be used once; persistent mail and tunnel credentials are returned only after the secure exchange.'
     };
-    await installationRegistryEvent({installationId:old.installation_id,action:'provisioning_package_generated',actorInstallationId:req.mailGatewayInstallation.installation_id,oldValues:installationRegistryPublicRow(old),newValues:installationRegistryPublicRow(row),metadata:{expires_in_minutes:minutes}});
+    await installationRegistryEvent({installationId:old.installation_id,action:'automated_deployment_package_generated',actorInstallationId:req.mailGatewayInstallation.installation_id,oldValues:installationRegistryPublicRow(old),newValues:installationRegistryPublicRow(row),metadata:{expires_in_minutes:minutes,cloudflare_tunnel_id:old.cloudflare_tunnel_id}});
     res.json({status:'ok',version:APP_VERSION,installation:installationRegistryPublicRow(row),provisioning_package:provisioningPackage,shown_once:true});
   } catch(error) {
     res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
@@ -14836,6 +15071,17 @@ app.post('/api/mail-gateway/v1/provisioning/exchange',async(req,res)=>{
       return res.status(400).json({status:'error',version:APP_VERSION,message:'Invalid provisioning request'});
     }
     const tokenHash=sha256Hex(token);
+    const candidate=await one(`
+      SELECT * FROM customer_installations
+      WHERE installation_id=$1 AND provisioning_token_sha256=$2
+        AND provisioning_token_used_at IS NULL AND provisioning_token_expires_at > now()
+        AND status IN ('pending','active')
+      LIMIT 1
+    `,[installationId,tokenHash]);
+    if (!candidate) return res.status(401).json({status:'invalid_or_expired',version:APP_VERSION,message:'Provisioning token is invalid, expired or already used'});
+    if (!candidate.cloudflare_tunnel_id) return res.status(409).json({status:'cloudflare_not_ready',version:APP_VERSION,message:'Cloudflare Tunnel has not been provisioned for this installation'});
+
+    const tunnelToken=await cloudflareTunnelToken(candidate.cloudflare_tunnel_id);
     const apiKey=installationRegistryApiKey();
     const row=await one(`
       UPDATE customer_installations SET
@@ -14850,8 +15096,8 @@ app.post('/api/mail-gateway/v1/provisioning/exchange',async(req,res)=>{
         AND status IN ('pending','active')
       RETURNING *
     `,[installationId,tokenHash,sha256Hex(apiKey),apiKey.slice(0,12),clientVersion]);
-    if (!row) return res.status(401).json({status:'invalid_or_expired',version:APP_VERSION,message:'Provisioning token is invalid, expired or already used'});
-    await installationRegistryEvent({installationId,action:'provisioning_token_exchanged',newValues:installationRegistryPublicRow(row),metadata:{platform_version:clientVersion,remote_ip:reqIp(req)}});
+    if (!row) return res.status(409).json({status:'already_used',version:APP_VERSION,message:'Provisioning package was already used'});
+    await installationRegistryEvent({installationId,action:'deployment_credentials_exchanged',newValues:installationRegistryPublicRow(row),metadata:{platform_version:clientVersion,remote_ip:reqIp(req),cloudflare_tunnel_id:row.cloudflare_tunnel_id}});
     const customerEnv=[
       'FACTORYBOX_MAIL_MODE=gateway',
       `FACTORYBOX_MAIL_GATEWAY_URL=${installationPublicMailGatewayUrl()}`,
@@ -14863,12 +15109,20 @@ app.post('/api/mail-gateway/v1/provisioning/exchange',async(req,res)=>{
       status:'ok',version:APP_VERSION,shown_once:true,
       installation:installationRegistryPublicRow(row),
       credentials:{installation_id:installationId,api_key:apiKey,key_generation:row.key_generation},
-      customer_env:customerEnv
+      customer_env:customerEnv,
+      cloudflare:{
+        tunnel_id:row.cloudflare_tunnel_id,
+        tunnel_name:row.tunnel_name,
+        tunnel_token:tunnelToken,
+        public_hostname:row.public_hostname,
+        origin_service:row.cloudflare_origin_service || cloudflareDeploymentConfig().originService
+      }
     });
   } catch(error) {
     res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message});
   }
 });
+
 
 function systemAdminRequired(req,res,next) {
   if (!authConfig().enabled) return next();
@@ -14947,6 +15201,16 @@ app.post('/api/admin/installations/:installationId/rotate-key',systemAdminRequir
 });
 
 
+
+app.post('/api/admin/installations/:installationId/cloudflare-provision',systemAdminRequired,async(req,res)=>{
+  try {
+    const result=await callInstallationRegistryGateway(`/api/mail-gateway/v1/admin/installations/${encodeURIComponent(req.params.installationId)}/cloudflare-provision`,{method:'POST',body:req.body || {}});
+    await writeAuditLog(req,{action:'provision_customer_cloudflare_tunnel',entity_type:'customer_installation',entity_id:req.params.installationId,new_values:result.installation,metadata:{cloudflare_tunnel_id:result.cloudflare?.tunnel_id,dns_record_id:result.cloudflare?.dns_record_id}});
+    res.json(result);
+  } catch(error){ res.status(error.statusCode || 500).json({status:'error',version:APP_VERSION,message:error.message}); }
+});
+
+
 app.post('/api/admin/installations/:installationId/provisioning-token',systemAdminRequired,async(req,res)=>{
   try {
     const result=await callInstallationRegistryGateway(`/api/mail-gateway/v1/admin/installations/${encodeURIComponent(req.params.installationId)}/provisioning-token`,{method:'POST',body:req.body || {}});
@@ -14987,6 +15251,10 @@ app.post('/api/public/installations/provision/exchange',async(req,res)=>{
 
 app.get('/api/central-mail/v1/status',async(req,res)=>{
   return proxyToCentralGateway(req,res,'/api/mail-gateway/v1/status',{method:'GET',forwardCustomerHeaders:true});
+});
+
+app.post('/api/central-mail/v1/deployment/confirm',async(req,res)=>{
+  return proxyToCentralGateway(req,res,'/api/mail-gateway/v1/deployment/confirm',{forwardCustomerHeaders:true});
 });
 
 app.post('/api/central-mail/v1/send',async(req,res)=>{

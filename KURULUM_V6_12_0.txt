@@ -1,0 +1,12 @@
+HukaTech Platform v6.12.0
+Automated Customer Deployment & Cloudflare Tunnel Provisioning
+
+1. Paketi ana geliştirme ve production klasörlerine kopyalayın.
+2. C:\FactoryBox\deployment\production\.env.cloudflare dosyasının mevcut ve geçerli olduğunu doğrulayın.
+3. Yönetici PowerShell/CMD üzerinden çalıştırın:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\FactoryBox\deployment\production\APPLY_V6_12_0_AUTOMATED_CUSTOMER_DEPLOYMENT.ps1"
+4. Müşteri Kurulumları ekranında yeni kayıt oluşturun.
+5. Otomatik Kurulum Paketi butonu Tunnel, ingress ve DNS kaydını oluşturur ve tek kullanımlık JSON indirir.
+6. JSON dosyasını müşteri sunucusunda PROVISION_HUKATECH_CUSTOMER_INSTALLATION.ps1 ile yönetici olarak çalıştırın.
+
+GÜVENLİK: .env.cloudflare ve production yedeklerini paylaşmayın. Cloudflare hesap API tokenı müşteriye gönderilmez.
