@@ -254,7 +254,7 @@ let organizationFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.12.0';
+const APP_VERSION = '6.13.2';
 
 
 app.get('/healthz', (_req, res) => {
@@ -708,6 +708,7 @@ async function workflow(eventType, payload) {
 
 async function commandStatus(payload) {
   await workflow(`command_status_${payload.command || 'unknown'}`, payload);
+  if (payload.command === 'set_capabilities') await recordCapabilityCommandStatus(payload);
   if (payload.command === 'get_daily_summary' && payload.status === 'done') await dailySummary(payload);
   if (payload.command === 'get_temperature' && payload.status === 'done') await telemetry(payload, 'command_status_get_temperature');
   if (payload.command === 'get_machine_runtime' && payload.status === 'done') await machineState(payload, 'command_status_get_machine_runtime');
@@ -9918,9 +9919,20 @@ async function ensureDeviceCapabilityFoundation() {
       created_by_email text,
       created_at timestamptz NOT NULL DEFAULT now(),
       published_at timestamptz,
+      publish_command_id text,
+      device_status text,
+      device_message text,
+      device_response jsonb,
+      acknowledged_at timestamptz,
       UNIQUE(device_id,config_version)
     )
   `);
+  await pool.query(`ALTER TABLE device_capability_config_versions ADD COLUMN IF NOT EXISTS publish_command_id text`);
+  await pool.query(`ALTER TABLE device_capability_config_versions ADD COLUMN IF NOT EXISTS device_status text`);
+  await pool.query(`ALTER TABLE device_capability_config_versions ADD COLUMN IF NOT EXISTS device_message text`);
+  await pool.query(`ALTER TABLE device_capability_config_versions ADD COLUMN IF NOT EXISTS device_response jsonb`);
+  await pool.query(`ALTER TABLE device_capability_config_versions ADD COLUMN IF NOT EXISTS acknowledged_at timestamptz`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_capability_versions_command ON device_capability_config_versions(publish_command_id) WHERE publish_command_id IS NOT NULL`);
   deviceCapabilityFoundationReady=true;
 }
 
@@ -10039,6 +10051,118 @@ function capabilityConfiguration(device,capabilities,version=device?.capability_
   };
 }
 
+
+function normalizeCapabilityTransferState(value) {
+  const status=String(value||'').trim().toLowerCase();
+  if (['done','ok','success','successful','applied','completed'].includes(status)) return 'applied';
+  if (['error','failed','failure','rejected','invalid','invalid_or_expired_token'].includes(status)) return 'failed';
+  if (['pending','published','sent','queued','processing','received'].includes(status)) return 'pending';
+  if (status==='saved' || !status) return 'saved';
+  return status;
+}
+
+function publicCapabilityTransferStatus(versionRow,eventRow,currentVersion=0) {
+  const version=versionRow||null;
+  const eventPayload=eventRow?.raw_payload&&typeof eventRow.raw_payload==='object'?eventRow.raw_payload:null;
+  const storedPayload=version?.device_response&&typeof version.device_response==='object'?version.device_response:null;
+  const response=storedPayload||eventPayload||null;
+  const responseVersion=Number(response?.config_version||0);
+  const current=Number(currentVersion||version?.config_version||0);
+  const responseMatchesCurrent=!responseVersion||!current||responseVersion===current;
+  const rawStatus=version?.device_status||response?.status||version?.status||'saved';
+  let state=normalizeCapabilityTransferState(rawStatus);
+  if (!responseMatchesCurrent && state==='applied') state=normalizeCapabilityTransferState(version?.status||'saved');
+  if (state==='published') state='pending';
+  const capabilityCount=Number(response?.capability_count ?? version?.capability_count ?? 0);
+  return {
+    state,
+    status:String(rawStatus||state),
+    config_version:Number(version?.config_version||current||responseVersion||0),
+    capability_count:Number.isFinite(capabilityCount)?capabilityCount:0,
+    command_id:String(version?.publish_command_id||response?.command_id||response?.request_id||''),
+    sent_at:version?.published_at||null,
+    response_at:version?.acknowledged_at||eventRow?.event_ts||null,
+    message:String(version?.device_message||response?.message||''),
+    persisted:response?.persisted===undefined?null:Boolean(response.persisted),
+    storage_bytes:Number.isFinite(Number(response?.storage_bytes))?Number(response.storage_bytes):null,
+    apply_mode:response?.apply_mode||null,
+    hardware_runtime_updated:response?.hardware_runtime_updated===undefined?null:Boolean(response.hardware_runtime_updated),
+    response_matches_current_version:responseMatchesCurrent,
+    response:response||null
+  };
+}
+
+async function capabilityTransferStatusByUid(uid) {
+  await ensureDeviceCapabilityFoundation();
+  const device=await capabilityDeviceByUid(uid);
+  if (!device) return null;
+  const version=await one(`
+    SELECT id,config_version,status,created_at,published_at,publish_command_id,device_status,device_message,device_response,acknowledged_at,
+      jsonb_array_length(capabilities)::int AS capability_count
+    FROM device_capability_config_versions
+    WHERE device_id=$1::uuid
+    ORDER BY config_version DESC
+    LIMIT 1
+  `,[device.id]);
+  const currentVersion=Number(device.capability_config_version||version?.config_version||0);
+  const event=await one(`
+    SELECT event_type,status,event_ts,raw_payload
+    FROM workflow_events
+    WHERE event_type='command_status_set_capabilities'
+      AND (raw_payload->>'device_id'=$1 OR raw_payload->>'device_uid'=$1)
+    ORDER BY
+      CASE
+        WHEN (raw_payload->>'config_version') ~ '^[0-9]+$'
+         AND (raw_payload->>'config_version')::int=$2 THEN 0
+        ELSE 1
+      END,
+      event_ts DESC
+    LIMIT 1
+  `,[String(uid||'').trim(),currentVersion]);
+  const eventCommandId=String(event?.raw_payload?.command_id||event?.raw_payload?.request_id||'');
+  const eventMatchesCommand=!version?.publish_command_id||eventCommandId===String(version.publish_command_id);
+  const eventAfterPublish=!version?.published_at||!event?.event_ts||new Date(event.event_ts).getTime()>=new Date(version.published_at).getTime();
+  const usableEvent=eventMatchesCommand&&eventAfterPublish?event:null;
+  return {device,transfer_status:publicCapabilityTransferStatus(version,usableEvent,currentVersion)};
+}
+
+async function recordCapabilityCommandStatus(payload) {
+  if (String(payload?.command||'')!=='set_capabilities') return null;
+  await ensureDeviceCapabilityFoundation();
+  const commandId=String(payload?.command_id||payload?.request_id||'').trim();
+  const deviceUid=String(payload?.device_id||payload?.device_uid||'').trim();
+  const configVersion=Number(payload?.config_version||0);
+  const state=normalizeCapabilityTransferState(payload?.status);
+  const message=String(payload?.message||'').trim().slice(0,500);
+  const responseJson=JSON.stringify(payload||{});
+  let updated=null;
+  if (commandId) {
+    updated=await one(`
+      UPDATE device_capability_config_versions
+      SET status=$1,device_status=$2,device_message=$3,device_response=$4::jsonb,acknowledged_at=now()
+      WHERE publish_command_id=$5
+      RETURNING id,device_id::text,config_version,status,publish_command_id,acknowledged_at
+    `,[state,state,message,responseJson,commandId]);
+  }
+  if (!updated && deviceUid) {
+    updated=await one(`
+      UPDATE device_capability_config_versions cv
+      SET status=$1,device_status=$2,device_message=$3,device_response=$4::jsonb,acknowledged_at=now()
+      WHERE cv.id=(
+        SELECT cv2.id
+        FROM device_capability_config_versions cv2
+        JOIN devices d ON d.id=cv2.device_id
+        WHERE d.device_uid=$5
+          AND ($6::int<=0 OR cv2.config_version=$6)
+        ORDER BY cv2.config_version DESC
+        LIMIT 1
+      )
+      RETURNING cv.id,cv.device_id::text,cv.config_version,cv.status,cv.publish_command_id,cv.acknowledged_at
+    `,[state,state,message,responseJson,deviceUid,configVersion]);
+  }
+  return updated;
+}
+
 async function saveDeviceCapabilities({uid,profileKey='custom',capabilities=[],source='admin',actorEmail='local-admin'}) {
   await ensureDeviceCapabilityFoundation();
   const normalizedProfile=DEVICE_CAPABILITY_PROFILES.some(row=>row.key===profileKey)?profileKey:'custom';
@@ -10115,7 +10239,17 @@ app.get('/api/admin/device-capabilities/:uid',adminRequired,permissionRequired('
     const data=await deviceCapabilitiesByUid(req.params.uid);
     if(!data)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Device not found'});
     if(!deviceAllowedForRequest(req,data.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
-    res.json({status:'ok',version:APP_VERSION,...data,catalog:publicCapabilityCatalog(),profiles:publicCapabilityProfiles(),configuration:capabilityConfiguration(data.device,data.capabilities)});
+    const transfer=await capabilityTransferStatusByUid(req.params.uid);
+    res.json({status:'ok',version:APP_VERSION,...data,catalog:publicCapabilityCatalog(),profiles:publicCapabilityProfiles(),configuration:capabilityConfiguration(data.device,data.capabilities),transfer_status:transfer?.transfer_status||null});
+  } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
+});
+
+app.get('/api/admin/device-capabilities/:uid/transfer-status',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try {
+    const transfer=await capabilityTransferStatusByUid(req.params.uid);
+    if(!transfer)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Device not found'});
+    if(!deviceAllowedForRequest(req,transfer.device))return res.status(403).json({status:'forbidden',message:'Device tenant access denied'});
+    res.json({status:'ok',version:APP_VERSION,device:transfer.device,transfer_status:transfer.transfer_status});
   } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
 });
 
@@ -10139,10 +10273,24 @@ app.post('/api/admin/device-capabilities/:uid/publish',adminRequired,permissionR
     const topic=`${String(data.device.mqtt_base_topic||'').replace(/\/+$/,'')}/command`;
     if(!data.device.mqtt_base_topic)return res.status(409).json({status:'missing_topic',message:'Device MQTT base topic is missing'});
     const payload={command:'set_capabilities',command_id:`cap-${Date.now()}`,source:'factorybox-capability-center',configuration,ts:new Date().toISOString()};
-    await new Promise((resolve,reject)=>mqttClient.publish(topic,JSON.stringify(payload),{qos:0,retain:false},error=>error?reject(error):resolve()));
-    await pool.query(`UPDATE device_capability_config_versions SET status='published',published_at=now() WHERE device_id=$1::uuid AND config_version=$2`,[data.device.id,data.device.capability_config_version]);
-    await writeAuditLog(req,{action:'publish_device_capabilities',entity_type:'device',entity_id:req.params.uid,old_values:null,new_values:{topic,config_version:data.device.capability_config_version,count:data.capabilities.length},metadata:{source:'admin'}});
-    res.json({status:'ok',version:APP_VERSION,topic,configuration});
+    await pool.query(`
+      UPDATE device_capability_config_versions
+      SET status='pending',published_at=now(),publish_command_id=$3,device_status=NULL,device_message=NULL,device_response=NULL,acknowledged_at=NULL
+      WHERE device_id=$1::uuid AND config_version=$2
+    `,[data.device.id,data.device.capability_config_version,payload.command_id]);
+    try {
+      await new Promise((resolve,reject)=>mqttClient.publish(topic,JSON.stringify(payload),{qos:0,retain:false},error=>error?reject(error):resolve()));
+    } catch(error) {
+      await pool.query(`
+        UPDATE device_capability_config_versions
+        SET status='failed',device_status='failed',device_message=$3,acknowledged_at=now()
+        WHERE device_id=$1::uuid AND config_version=$2
+      `,[data.device.id,data.device.capability_config_version,String(error.message||error).slice(0,500)]);
+      throw error;
+    }
+    await writeAuditLog(req,{action:'publish_device_capabilities',entity_type:'device',entity_id:req.params.uid,old_values:null,new_values:{topic,command_id:payload.command_id,config_version:data.device.capability_config_version,count:data.capabilities.length},metadata:{source:'admin'}});
+    const transfer=await capabilityTransferStatusByUid(req.params.uid);
+    res.json({status:'ok',version:APP_VERSION,topic,command_id:payload.command_id,configuration,transfer_status:transfer?.transfer_status||null});
   } catch(e) { res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message}); }
 });
 

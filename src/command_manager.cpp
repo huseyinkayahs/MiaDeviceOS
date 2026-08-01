@@ -112,6 +112,25 @@ namespace
         return requestId;
     }
 
+    String normalizeCapabilityConfigurationForComparison(const String& json)
+    {
+        JsonDocument doc;
+        const DeserializationError error = deserializeJson(doc, json);
+
+        if (error)
+        {
+            return json;
+        }
+
+        // generated_at changes on every resend, but it does not change the
+        // effective hardware configuration. Ignore it for idempotency checks.
+        doc.remove("generated_at");
+
+        String normalized;
+        serializeJson(doc, normalized);
+        return normalized;
+    }
+
     void setCapabilitiesStatus(
         const String& requestId,
         const char* status,
@@ -1147,7 +1166,12 @@ void handleCommandJson(const char* json)
 
         if (hasStoredConfiguration && configVersion == storedConfigVersion)
         {
-            if (configurationJson == storedConfigurationJson)
+            const String incomingComparable =
+                normalizeCapabilityConfigurationForComparison(configurationJson);
+            const String storedComparable =
+                normalizeCapabilityConfigurationForComparison(storedConfigurationJson);
+
+            if (incomingComparable == storedComparable)
             {
                 setCapabilitiesStatus(
                     requestId,
@@ -1157,7 +1181,7 @@ void handleCommandJson(const char* json)
                     capabilityCount,
                     capabilityProfile,
                     schema,
-                    configurationJson.length(),
+                    storedConfigurationJson.length(),
                     true);
             }
             else

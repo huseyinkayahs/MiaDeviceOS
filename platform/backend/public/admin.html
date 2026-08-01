@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox v6.12.0 Admin Panel</title>
+  <title>FactoryBox v6.13.2 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -876,8 +876,18 @@
     .capability-qr-result-v631 svg{display:block;width:min(210px,100%);height:auto;background:#fff;padding:7px;border-radius:10px;border:1px solid #dde3ea;margin:0 auto 10px}
     .capability-qr-result-v631 code{display:block;overflow-wrap:anywhere;font-size:10px;background:#202832;color:#fff;padding:8px;border-radius:9px}
     .capability-empty-v631{padding:28px;border:1px dashed var(--fb-border);border-radius:16px;text-align:center;color:var(--fb-muted)}
+    .capability-transfer-v632{margin-top:13px;border:1px solid var(--fb-border);border-radius:16px;padding:13px;background:#f8fafc}
+    .capability-transfer-head-v632{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .capability-transfer-head-v632 strong{font-size:13px}.capability-transfer-badge-v632{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+    .capability-transfer-badge-v632.saved{background:#e8edf2;color:#465463}.capability-transfer-badge-v632.pending{background:#fff0d8;color:#9b5700}.capability-transfer-badge-v632.applied{background:#dff7e8;color:#166534}.capability-transfer-badge-v632.failed{background:#fee2e2;color:#991b1b}
+    .capability-transfer-grid-v632{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .capability-transfer-grid-v632 div{border:1px solid #e2e8f0;border-radius:11px;padding:9px;background:#fff;min-width:0}
+    .capability-transfer-grid-v632 span{display:block;color:var(--fb-muted);font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.04em}
+    .capability-transfer-grid-v632 b{display:block;margin-top:4px;font-size:12px;overflow-wrap:anywhere}
+    .capability-transfer-message-v632{margin:10px 0 0!important;padding-top:10px;border-top:1px solid #e2e8f0;font-size:11px;color:#465463!important;overflow-wrap:anywhere}
+
     @media(max-width:1150px){.capability-layout-v631{grid-template-columns:1fr}.capability-grid-v631{grid-template-columns:repeat(2,minmax(0,1fr))}.capability-toolbar-v631{grid-template-columns:1fr 1fr}}
-    @media(max-width:700px){.capability-toolbar-v631,.capability-summary-v631,.capability-grid-v631{grid-template-columns:1fr}.capability-grid-v631 .wide{grid-column:auto}}
+    @media(max-width:700px){.capability-toolbar-v631,.capability-summary-v631,.capability-grid-v631,.capability-transfer-grid-v632{grid-template-columns:1fr}.capability-grid-v631 .wide{grid-column:auto}}
 
   
     /* v6.4 Multi-Site / Multi-Factory Management */
@@ -944,7 +954,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1>FactoryBox Admin</h1>
-      <p id="adminVersionLabel">v6.12.0 &mdash; Otomatik m&uuml;&#351;teri da&#287;&#305;t&#305;m&#305; ve Cloudflare Tunnel y&ouml;netimi aktif.</p>
+      <p id="adminVersionLabel">v6.13.2 &mdash; Cihaz yetkinlik aktar&#305;m durumu ve cihaz onay takibi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -1071,7 +1081,7 @@
     <div class="section-title-row">
       <div>
         <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.12.0 &mdash; Otomatik m&uuml;&#351;teri da&#287;&#305;t&#305;m&#305; ve Cloudflare Tunnel y&ouml;netimi aktif.</p>
+        <p id="adminOverviewVersionLabel" class="muted">v6.13.2 &mdash; Cihaz yetkinlik aktar&#305;m durumu ve cihaz onay takibi aktif.</p>
       </div>
     </div>
 
@@ -2341,6 +2351,10 @@
           <p>Kaydedilen sürümlü yetkinlik konfigürasyonunu MQTT üzerinden cihaza gönderir. Firmware tarafında <code>set_capabilities</code> komutu desteklenmelidir.</p>
           <button id="publishDeviceCapabilitiesBtn" class="secondary-btn">Konfigürasyonu Cihaza Gönder</button>
           <button id="downloadDeviceCapabilitiesBtn" class="secondary-btn">Konfigürasyonu İndir</button>
+          <div id="deviceCapabilityTransferStatus" class="capability-transfer-v632">
+            <div class="capability-transfer-head-v632"><strong>Son Aktarım Durumu</strong><span class="capability-transfer-badge-v632 saved">KAYDEDİLDİ</span></div>
+            <p class="capability-transfer-message-v632">Cihaz yanıtı bekleniyor.</p>
+          </div>
         </div>
       </aside>
     </div>
@@ -2538,7 +2552,7 @@
   let deviceOnboardingOptionsCache = {customers:[],sites:[],machines:[],defaults:{}};
   let selectedDeviceOnboardingId = null;
   let latestDeviceOnboardingProvision = null;
-  let deviceCapabilityAdminState = {devices:[],catalog:[],profiles:[],selectedUid:'',profileKey:'custom',capabilities:[],configuration:null,permanentQr:null};
+  let deviceCapabilityAdminState = {devices:[],catalog:[],profiles:[],selectedUid:'',profileKey:'custom',capabilities:[],configuration:null,permanentQr:null,transferStatus:null,transferPollId:0};
   let organizationAdminState={customers:[],hierarchy:null,access:null,comparison:null};
   let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
@@ -2592,7 +2606,7 @@
     ['İş Emirleri','Work Orders'],['Yedek Parça ve Stok','Spare Parts & Inventory'],['Bildirimler','Notifications'],
     ['Otomasyon Zamanlayıcı','Automation Scheduler'],['Alarm Raporları','Alarm Reports'],['Müşteriler / Tenantlar','Customers / Tenants'],
     ['Kullanıcılar ve Davetler','Users & Invites'],['Roller ve Yetkiler','Roles & Permissions'],['Abonelikler','Subscriptions'],
-    ['Varlıklar / Makineler','Assets / Machines'],['Cihazlar','Devices'],['Cihaz Kayıtları','Device Registry'],['Kurulum Sihirbazı','Installation Wizard'],['Cihaz Yetkinlikleri','Device Capabilities'],['Cihaz Yetkinlikleri ve Sensör Yapılandırması','Device Capabilities & Sensor Configuration'],['Yetkinlikleri Kaydet','Save Capabilities'],['Yetkinlik Ekle','Add Capability'],['Hazır Cihaz Profili','Device Profile Template'],['Profili Uygula','Apply Profile'],['Kalıcı Cihaz QR Etiketi','Permanent Device QR Label'],['Kalıcı QR Oluştur / Yenile','Create / Rotate Permanent QR'],['Mobil Paneli Aç','Open Mobile Installer'],['QR Etiketini İndir','Download QR Label'],['Konfigürasyonu Cihaza Gönder','Send Configuration to Device'],['Konfigürasyonu İndir','Download Configuration'],['Yeni FactoryBox cihazını müşteri, tesis ve makineye bağla; provisioning token/QR üret, canlı bağlantı testlerini tamamla ve cihazı aktive et.','Assign a new FactoryBox device to a customer, site and machine; create a provisioning token/QR, complete live connectivity tests and activate the device.'],['Wi-Fi şifresi sunucuya kaydedilmez. Yalnızca tarayıcıda oluşturulan kurulum JSON dosyasına eklenebilir.','The Wi-Fi password is not stored on the server. It can only be added to the installation JSON file created in the browser.'],['Bir kurulum kaydı oluştur veya aşağıdaki listeden Aç düğmesine bas.','Create an installation record or click Open in the list below.'],['Yeni kurulum bilgileri bekleniyor.','Waiting for new installation information.'],['Kurulum özeti yükleniyor...','Loading installation summary...'],['Kurulum kayıtları yükleniyor...','Loading installation records...'],['Toplam','Total'],['Taslak','Draft'],['Cihaz Bekleniyor','Waiting for Device'],['Bağlı / Test','Connected / Tested'],['Bağlantı','Connection'],['Telemetri','Telemetry'],['Son Görülme','Last Seen'],['Alarm kaydı yok','No alarm record'],['Telemetri yok','No telemetry'],['Cihaz görülmedi','Device not seen'],['Sunucuya kaydedilmez','Not stored on the server'],['Aç','Open'],['draft','draft'],['token_issued','token issued'],['waiting_device','waiting for device'],['connected','connected'],['tested','tested'],['passed','passed'],['skipped','skipped'],['deactivated','deactivated'],['Cihaz Kurulum ve Onboarding Sihirbazı','Device Installation & Onboarding Wizard'],['Yeni Kurulum','New Installation'],['Kurulum Kaydı Oluştur','Create Installation Record'],['Cihaz Bilgileri','Device Information'],['Tesis Eşleştirme','Site Assignment'],['Ağ ve MQTT','Network & MQTT'],['Token ve QR','Token & QR'],['Canlı Testler','Live Tests'],['Aktivasyon','Activation'],['Kurulum Kayıtları','Installation Records'],['Yeni Kurulum Kaydı','New Installation Record'],['Müşteri seç...','Select customer...'],['Tesis seç...','Select site...'],['Yeni / elle gir','New / enter manually'],['Mevcut Makine','Existing Machine'],['Makine Kodu','Machine Code'],['Makine Adı','Machine Name'],['Makine Tipi','Machine Type'],['Seri No','Serial No'],['Beklenen Firmware','Expected Firmware'],['Boş = kontrolü atla','Blank = skip check'],['Ağ Tipi','Network Type'],['Wi-Fi Şifresi','Wi-Fi Password'],['Token Süresi','Token Lifetime'],['Provision Token ve QR Oluştur','Create Provision Token & QR'],['Cihaz Bilgisi İste','Request Device Info'],['Heartbeat İste','Request Heartbeat'],['Test Alarmı Gönder','Send Test Alarm'],['Testleri Çalıştır','Run Tests'],['Firmware Testini Atla','Skip Firmware Test'],['Alarm Testini Atla','Skip Alarm Test'],['Cihazı Aktive Et','Activate Device'],['Kurulumu Yeniden Aç','Reopen Installation'],['Cihazı Devre Dışı Bırak','Deactivate Device'],['Kurulum Raporunu İndir','Download Installation Report'],['Konfigürasyonu İndir','Download Configuration'],['Tokenı Kopyala','Copy Token'],['Güvenlik Aktiviteleri','Security Activity'],
+    ['Varlıklar / Makineler','Assets / Machines'],['Cihazlar','Devices'],['Cihaz Kayıtları','Device Registry'],['Kurulum Sihirbazı','Installation Wizard'],['Cihaz Yetkinlikleri','Device Capabilities'],['Cihaz Yetkinlikleri ve Sensör Yapılandırması','Device Capabilities & Sensor Configuration'],['Yetkinlikleri Kaydet','Save Capabilities'],['Yetkinlik Ekle','Add Capability'],['Hazır Cihaz Profili','Device Profile Template'],['Profili Uygula','Apply Profile'],['Kalıcı Cihaz QR Etiketi','Permanent Device QR Label'],['Kalıcı QR Oluştur / Yenile','Create / Rotate Permanent QR'],['Mobil Paneli Aç','Open Mobile Installer'],['QR Etiketini İndir','Download QR Label'],['Konfigürasyonu Cihaza Gönder','Send Configuration to Device'],['Konfigürasyonu İndir','Download Configuration'],['Son Aktarım Durumu','Last Transfer Status'],['Cihaz yanıtı bekleniyor.','Waiting for device response.'],['Yeni FactoryBox cihazını müşteri, tesis ve makineye bağla; provisioning token/QR üret, canlı bağlantı testlerini tamamla ve cihazı aktive et.','Assign a new FactoryBox device to a customer, site and machine; create a provisioning token/QR, complete live connectivity tests and activate the device.'],['Wi-Fi şifresi sunucuya kaydedilmez. Yalnızca tarayıcıda oluşturulan kurulum JSON dosyasına eklenebilir.','The Wi-Fi password is not stored on the server. It can only be added to the installation JSON file created in the browser.'],['Bir kurulum kaydı oluştur veya aşağıdaki listeden Aç düğmesine bas.','Create an installation record or click Open in the list below.'],['Yeni kurulum bilgileri bekleniyor.','Waiting for new installation information.'],['Kurulum özeti yükleniyor...','Loading installation summary...'],['Kurulum kayıtları yükleniyor...','Loading installation records...'],['Toplam','Total'],['Taslak','Draft'],['Cihaz Bekleniyor','Waiting for Device'],['Bağlı / Test','Connected / Tested'],['Bağlantı','Connection'],['Telemetri','Telemetry'],['Son Görülme','Last Seen'],['Alarm kaydı yok','No alarm record'],['Telemetri yok','No telemetry'],['Cihaz görülmedi','Device not seen'],['Sunucuya kaydedilmez','Not stored on the server'],['Aç','Open'],['draft','draft'],['token_issued','token issued'],['waiting_device','waiting for device'],['connected','connected'],['tested','tested'],['passed','passed'],['skipped','skipped'],['deactivated','deactivated'],['Cihaz Kurulum ve Onboarding Sihirbazı','Device Installation & Onboarding Wizard'],['Yeni Kurulum','New Installation'],['Kurulum Kaydı Oluştur','Create Installation Record'],['Cihaz Bilgileri','Device Information'],['Tesis Eşleştirme','Site Assignment'],['Ağ ve MQTT','Network & MQTT'],['Token ve QR','Token & QR'],['Canlı Testler','Live Tests'],['Aktivasyon','Activation'],['Kurulum Kayıtları','Installation Records'],['Yeni Kurulum Kaydı','New Installation Record'],['Müşteri seç...','Select customer...'],['Tesis seç...','Select site...'],['Yeni / elle gir','New / enter manually'],['Mevcut Makine','Existing Machine'],['Makine Kodu','Machine Code'],['Makine Adı','Machine Name'],['Makine Tipi','Machine Type'],['Seri No','Serial No'],['Beklenen Firmware','Expected Firmware'],['Boş = kontrolü atla','Blank = skip check'],['Ağ Tipi','Network Type'],['Wi-Fi Şifresi','Wi-Fi Password'],['Token Süresi','Token Lifetime'],['Provision Token ve QR Oluştur','Create Provision Token & QR'],['Cihaz Bilgisi İste','Request Device Info'],['Heartbeat İste','Request Heartbeat'],['Test Alarmı Gönder','Send Test Alarm'],['Testleri Çalıştır','Run Tests'],['Firmware Testini Atla','Skip Firmware Test'],['Alarm Testini Atla','Skip Alarm Test'],['Cihazı Aktive Et','Activate Device'],['Kurulumu Yeniden Aç','Reopen Installation'],['Cihazı Devre Dışı Bırak','Deactivate Device'],['Kurulum Raporunu İndir','Download Installation Report'],['Konfigürasyonu İndir','Download Configuration'],['Tokenı Kopyala','Copy Token'],['Güvenlik Aktiviteleri','Security Activity'],
     ['Ayarları Yenile','Refresh Settings'],['Ayarları Kaydet','Save Settings'],['Yenile','Refresh'],['Şimdi Çalıştır','Run Now'],
     ['Şimdi Tara','Scan Now'],['Filtrele','Apply Filter'],['Analizi Uygula','Apply Analysis'],['Analizi Getir','Load Analysis'],
     ['Oluştur','Create'],['Kaydet','Save'],['Sil','Delete'],['Kapat','Close'],['Başlat','Start'],['Tamamla','Complete'],
@@ -4911,6 +4925,58 @@
     if(type)type.innerHTML=(deviceCapabilityAdminState.catalog||[]).map(row=>`<option value="${esc(row.type)}">${esc(capabilityLanguageValue(row,'label')||row.type)}</option>`).join('');
   }
 
+
+  function capabilityTransferLabel(state) {
+    const labels={
+      saved:currentLanguage==='en'?'Saved':'Kaydedildi',
+      pending:currentLanguage==='en'?'Waiting':'Bekliyor',
+      applied:currentLanguage==='en'?'Applied':'Uygulandı',
+      failed:currentLanguage==='en'?'Failed':'Hata'
+    };
+    return labels[state]||String(state||'-');
+  }
+
+  function renderDeviceCapabilityTransferStatus(value=deviceCapabilityAdminState.transferStatus) {
+    const target=document.getElementById('deviceCapabilityTransferStatus');if(!target)return;
+    if(!deviceCapabilityAdminState.selectedUid){
+      target.innerHTML=`<div class="capability-transfer-head-v632"><strong>${currentLanguage==='en'?'Last Transfer Status':'Son Aktarım Durumu'}</strong><span class="capability-transfer-badge-v632 saved">-</span></div><p class="capability-transfer-message-v632">${currentLanguage==='en'?'Select a device.':'Cihaz seç.'}</p>`;return;
+    }
+    const row=value||{state:'saved',config_version:0,capability_count:0};
+    const state=['saved','pending','applied','failed'].includes(row.state)?row.state:'saved';
+    const message=row.message||(state==='pending'?(currentLanguage==='en'?'Waiting for the device acknowledgement.':'Cihaz onayı bekleniyor.'):(state==='saved'?(currentLanguage==='en'?'The configuration has not been sent to the device yet.':'Konfigürasyon henüz cihaza gönderilmedi.'):'-'));
+    const responseTime=row.response_at?fmtDate(row.response_at):'-';
+    const sentTime=row.sent_at?fmtDate(row.sent_at):'-';
+    target.innerHTML=`
+      <div class="capability-transfer-head-v632">
+        <strong>${currentLanguage==='en'?'Last Transfer Status':'Son Aktarım Durumu'}</strong>
+        <span class="capability-transfer-badge-v632 ${state}">${esc(capabilityTransferLabel(state))}</span>
+      </div>
+      <div class="capability-transfer-grid-v632">
+        <div><span>${currentLanguage==='en'?'Config Version':'Konfigürasyon'}</span><b>v${esc(row.config_version||0)}</b></div>
+        <div><span>${currentLanguage==='en'?'Capability Count':'Yetkinlik Sayısı'}</span><b>${esc(row.capability_count||0)}</b></div>
+        <div><span>${currentLanguage==='en'?'Sent At':'Gönderim'}</span><b>${esc(sentTime)}</b></div>
+        <div><span>${currentLanguage==='en'?'Device Response':'Cihaz Yanıtı'}</span><b>${esc(responseTime)}</b></div>
+      </div>
+      <p class="capability-transfer-message-v632">${esc(message)}${row.persisted===true?` · ${currentLanguage==='en'?'Persisted':'Kalıcı kayıt'}`:''}${row.hardware_runtime_updated===false?` · ${currentLanguage==='en'?'Runtime restart not required':'Çalışma anı yeniden başlatılmadı'}`:''}</p>`;
+  }
+
+  async function pollDeviceCapabilityTransferStatus(uid,commandId='') {
+    const pollId=++deviceCapabilityAdminState.transferPollId;
+    for(let attempt=0;attempt<20;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,attempt===0?700:2000));
+      if(pollId!==deviceCapabilityAdminState.transferPollId||uid!==deviceCapabilityAdminState.selectedUid)return;
+      try{
+        const data=await getJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}/transfer-status`);
+        const row=data.transfer_status||null;
+        if(commandId&&row?.command_id&&row.command_id!==commandId)continue;
+        deviceCapabilityAdminState.transferStatus=row;renderDeviceCapabilityTransferStatus();
+        if(['applied','failed'].includes(row?.state))return;
+      }catch(error){
+        if(attempt===19)setError('deviceCapabilityStatus',error.message);
+      }
+    }
+  }
+
   function renderCapabilitySummary() {
     const target=document.getElementById('deviceCapabilitySummary');if(!target)return;
     const device=(deviceCapabilityAdminState.devices||[]).find(row=>row.device_uid===deviceCapabilityAdminState.selectedUid)||{};
@@ -4925,7 +4991,7 @@
 
   function renderDeviceCapabilityEditor() {
     const target=document.getElementById('deviceCapabilityEditor');if(!target)return;
-    renderCapabilitySelectors();renderCapabilitySummary();
+    renderCapabilitySelectors();renderCapabilitySummary();renderDeviceCapabilityTransferStatus();
     if(!deviceCapabilityAdminState.selectedUid){target.className='capability-empty-v631';target.textContent=currentLanguage==='en'?'Select a device to edit.':'Düzenlemek için bir cihaz seç.';return;}
     target.className='capability-editor-v631';
     if(!deviceCapabilityAdminState.capabilities.length){target.innerHTML=`<div class="capability-empty-v631">${currentLanguage==='en'?'No capability has been added. Choose a profile or add a capability.':'Henüz yetkinlik eklenmedi. Hazır profil seç veya yeni yetkinlik ekle.'}</div>`;return;}
@@ -4967,11 +5033,12 @@
   }
 
   async function loadSelectedDeviceCapabilities(uid=deviceCapabilityAdminState.selectedUid) {
-    if(!uid){deviceCapabilityAdminState.selectedUid='';deviceCapabilityAdminState.capabilities=[];renderDeviceCapabilityEditor();return;}
+    if(!uid){deviceCapabilityAdminState.transferPollId++;deviceCapabilityAdminState.selectedUid='';deviceCapabilityAdminState.capabilities=[];deviceCapabilityAdminState.transferStatus=null;renderDeviceCapabilityEditor();return;}
     const data=await getJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}`);
-    deviceCapabilityAdminState.selectedUid=uid;deviceCapabilityAdminState.profileKey=data.device?.capability_profile||'custom';deviceCapabilityAdminState.capabilities=(data.capabilities||[]).map(cloneCapability);deviceCapabilityAdminState.configuration=data.configuration||null;
+    deviceCapabilityAdminState.selectedUid=uid;deviceCapabilityAdminState.profileKey=data.device?.capability_profile||'custom';deviceCapabilityAdminState.capabilities=(data.capabilities||[]).map(cloneCapability);deviceCapabilityAdminState.configuration=data.configuration||null;deviceCapabilityAdminState.transferStatus=data.transfer_status||null;
     const deviceIndex=deviceCapabilityAdminState.devices.findIndex(row=>row.device_uid===uid);if(deviceIndex>=0)deviceCapabilityAdminState.devices[deviceIndex]={...deviceCapabilityAdminState.devices[deviceIndex],...data.device,capability_count:data.capabilities?.length||0};
     renderDeviceCapabilityEditor();
+    if(deviceCapabilityAdminState.transferStatus?.state==='pending')pollDeviceCapabilityTransferStatus(uid,deviceCapabilityAdminState.transferStatus.command_id||'');
   }
 
   function renderDeviceCapabilitiesOverview(data) {
@@ -4991,7 +5058,7 @@
     const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error(currentLanguage==='en'?'Select a device.':'Cihaz seç.');
     const capabilities=readCapabilityCards();const profileKey=document.getElementById('capabilityProfileSelect')?.value||'custom';
     const data=await apiJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}`,{method:'PUT',body:JSON.stringify({profile_key:profileKey,capabilities})});
-    deviceCapabilityAdminState.profileKey=data.device.capability_profile;deviceCapabilityAdminState.capabilities=data.capabilities||[];deviceCapabilityAdminState.configuration=data.configuration||null;
+    deviceCapabilityAdminState.profileKey=data.device.capability_profile;deviceCapabilityAdminState.capabilities=data.capabilities||[];deviceCapabilityAdminState.configuration=data.configuration||null;deviceCapabilityAdminState.transferStatus={state:'saved',status:'saved',config_version:Number(data.device.capability_config_version||0),capability_count:data.capabilities.length,command_id:'',sent_at:null,response_at:null,message:currentLanguage==='en'?'Saved. Send the configuration to apply it on the device.':'Kaydedildi. Cihaza uygulamak için konfigürasyonu gönder.',persisted:null};
     const idx=deviceCapabilityAdminState.devices.findIndex(row=>row.device_uid===uid);if(idx>=0)deviceCapabilityAdminState.devices[idx]={...deviceCapabilityAdminState.devices[idx],...data.device,capability_count:data.capabilities.length};
     renderDeviceCapabilityEditor();return data;
   }
@@ -5241,7 +5308,7 @@
     const brand=document.querySelector('.admin-brand-v58 h1');
     if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.12.0`;
+    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.13.2`;
     applyTranslations(document);
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
     if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
@@ -5456,7 +5523,7 @@
   function remoteAccessModeLabel(mode){const labels={disabled:currentLanguage==='en'?'DISABLED':'KAPALI',quick:'QUICK TUNNEL',named:'NAMED TUNNEL'};return labels[mode]||String(mode||'-').toUpperCase();}
   function renderRemoteAccessV670(data){
     remoteAccessStateV670=data||remoteAccessStateV670;const settings=data.settings||{},runtime=data.runtime||{};
-    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.12.0'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
+    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.13.2'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
     const state=document.getElementById('remoteAccessState');if(state)state.textContent=runtime.status==='online'?(currentLanguage==='en'?'ONLINE':'ÇEVRİMİÇİ'):runtime.status==='configured'?(currentLanguage==='en'?'CONFIGURED':'YAPILANDIRILDI'):runtime.status==='waiting_configuration'?(currentLanguage==='en'?'WAITING':'AYAR BEKLİYOR'):(currentLanguage==='en'?'OFF':'KAPALI');
     const detail=document.getElementById('remoteAccessStateDetail');if(detail)detail.textContent=runtime.last_error||settings.public_url||'-';
     const mode=document.getElementById('remoteAccessModeValue');if(mode)mode.textContent=remoteAccessModeLabel(settings.mode);
@@ -6949,14 +7016,14 @@
 
 
     const capabilityDeviceSelect=document.getElementById('capabilityDeviceSelect');
-    if(capabilityDeviceSelect)capabilityDeviceSelect.addEventListener('change',async()=>{deviceCapabilityAdminState.selectedUid=capabilityDeviceSelect.value;deviceCapabilityAdminState.permanentQr=null;renderPermanentQrResult(null);try{await loadSelectedDeviceCapabilities(capabilityDeviceSelect.value);}catch(error){setError('deviceCapabilityStatus',error.message);}});
+    if(capabilityDeviceSelect)capabilityDeviceSelect.addEventListener('change',async()=>{deviceCapabilityAdminState.transferPollId++;deviceCapabilityAdminState.selectedUid=capabilityDeviceSelect.value;deviceCapabilityAdminState.permanentQr=null;deviceCapabilityAdminState.transferStatus=null;renderPermanentQrResult(null);renderDeviceCapabilityTransferStatus();try{await loadSelectedDeviceCapabilities(capabilityDeviceSelect.value);}catch(error){setError('deviceCapabilityStatus',error.message);}});
     const refreshDeviceCapabilitiesBtn=document.getElementById('refreshDeviceCapabilitiesBtn');
     if(refreshDeviceCapabilitiesBtn)refreshDeviceCapabilitiesBtn.addEventListener('click',async()=>{refreshDeviceCapabilitiesBtn.disabled=true;try{const data=await getJson('/api/admin/device-capabilities');renderDeviceCapabilitiesOverview(data);}catch(error){setError('deviceCapabilityStatus',error.message);}finally{refreshDeviceCapabilitiesBtn.disabled=false;}});
     const applyCapabilityProfileBtn=document.getElementById('applyCapabilityProfileBtn');if(applyCapabilityProfileBtn)applyCapabilityProfileBtn.addEventListener('click',applySelectedCapabilityProfile);
     const addDeviceCapabilityBtn=document.getElementById('addDeviceCapabilityBtn');if(addDeviceCapabilityBtn)addDeviceCapabilityBtn.addEventListener('click',()=>{const type=document.getElementById('newCapabilityType')?.value||'custom';deviceCapabilityAdminState.capabilities=readCapabilityCards();deviceCapabilityAdminState.capabilities.push(defaultCapabilityFromType(type,deviceCapabilityAdminState.capabilities.length));deviceCapabilityAdminState.profileKey='custom';renderDeviceCapabilityEditor();});
     const deviceCapabilityEditor=document.getElementById('deviceCapabilityEditor');if(deviceCapabilityEditor)deviceCapabilityEditor.addEventListener('click',event=>{const button=event.target.closest('[data-capability-remove]');if(!button)return;deviceCapabilityAdminState.capabilities=readCapabilityCards();deviceCapabilityAdminState.capabilities.splice(Number(button.dataset.capabilityRemove),1);deviceCapabilityAdminState.profileKey='custom';renderDeviceCapabilityEditor();});
     const saveDeviceCapabilitiesBtn=document.getElementById('saveDeviceCapabilitiesBtn');if(saveDeviceCapabilitiesBtn)saveDeviceCapabilitiesBtn.addEventListener('click',async()=>{saveDeviceCapabilitiesBtn.disabled=true;const status=document.getElementById('deviceCapabilityStatus');try{if(status)status.textContent=currentLanguage==='en'?'Saving capabilities...':'Yetkinlikler kaydediliyor...';const data=await saveSelectedDeviceCapabilities();if(status)status.textContent=`${currentLanguage==='en'?'Saved':'Kaydedildi'} · v${data.device.capability_config_version} · ${data.capabilities.length}`;}catch(error){if(status)status.textContent=error.message;}finally{saveDeviceCapabilitiesBtn.disabled=false;}});
-    const publishDeviceCapabilitiesBtn=document.getElementById('publishDeviceCapabilitiesBtn');if(publishDeviceCapabilitiesBtn)publishDeviceCapabilitiesBtn.addEventListener('click',async()=>{publishDeviceCapabilitiesBtn.disabled=true;const status=document.getElementById('deviceCapabilityStatus');try{const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error('Cihaz seç.');const data=await apiJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}/publish`,{method:'POST',body:'{}'});if(status)status.textContent=`MQTT: ${data.topic}`;}catch(error){if(status)status.textContent=error.message;}finally{publishDeviceCapabilitiesBtn.disabled=false;}});
+    const publishDeviceCapabilitiesBtn=document.getElementById('publishDeviceCapabilitiesBtn');if(publishDeviceCapabilitiesBtn)publishDeviceCapabilitiesBtn.addEventListener('click',async()=>{publishDeviceCapabilitiesBtn.disabled=true;const status=document.getElementById('deviceCapabilityStatus');try{const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error(currentLanguage==='en'?'Select a device.':'Cihaz seç.');deviceCapabilityAdminState.transferStatus={state:'pending',config_version:Number((deviceCapabilityAdminState.devices||[]).find(row=>row.device_uid===uid)?.capability_config_version||0),capability_count:deviceCapabilityAdminState.capabilities.length,message:currentLanguage==='en'?'Sending configuration to the device...':'Konfigürasyon cihaza gönderiliyor...'};renderDeviceCapabilityTransferStatus();const data=await apiJson(`/api/admin/device-capabilities/${encodeURIComponent(uid)}/publish`,{method:'POST',body:'{}'});deviceCapabilityAdminState.transferStatus=data.transfer_status||deviceCapabilityAdminState.transferStatus;renderDeviceCapabilityTransferStatus();if(status)status.textContent=`${currentLanguage==='en'?'Sent':'Gönderildi'} · MQTT: ${data.topic}`;pollDeviceCapabilityTransferStatus(uid,data.command_id||'');}catch(error){deviceCapabilityAdminState.transferStatus={...(deviceCapabilityAdminState.transferStatus||{}),state:'failed',message:error.message,response_at:new Date().toISOString()};renderDeviceCapabilityTransferStatus();if(status)status.textContent=error.message;}finally{publishDeviceCapabilitiesBtn.disabled=false;}});
     const downloadDeviceCapabilitiesBtn=document.getElementById('downloadDeviceCapabilitiesBtn');if(downloadDeviceCapabilitiesBtn)downloadDeviceCapabilitiesBtn.addEventListener('click',()=>{if(!deviceCapabilityAdminState.selectedUid)return;const caps=readCapabilityCards();const device=(deviceCapabilityAdminState.devices||[]).find(row=>row.device_uid===deviceCapabilityAdminState.selectedUid)||{};downloadJsonFile(`FactoryBox_${deviceCapabilityAdminState.selectedUid}_capabilities.json`,deviceCapabilityAdminState.configuration||{schema:'factorybox-device-capabilities-v1',device_uid:deviceCapabilityAdminState.selectedUid,config_version:device.capability_config_version||0,capability_profile:document.getElementById('capabilityProfileSelect')?.value||'custom',capabilities:caps});});
     const capabilityQrBaseUrl=document.getElementById('capabilityQrBaseUrl');if(capabilityQrBaseUrl&&!capabilityQrBaseUrl.value)capabilityQrBaseUrl.value=window.location.origin;
     const issuePermanentQrBtn=document.getElementById('issuePermanentQrBtn');if(issuePermanentQrBtn)issuePermanentQrBtn.addEventListener('click',async()=>{issuePermanentQrBtn.disabled=true;try{const uid=deviceCapabilityAdminState.selectedUid;if(!uid)throw new Error('Cihaz seç.');const base_url=document.getElementById('capabilityQrBaseUrl')?.value.trim()||window.location.origin;const data=await apiJson(`/api/admin/devices/${encodeURIComponent(uid)}/permanent-qr`,{method:'POST',body:JSON.stringify({base_url})});deviceCapabilityAdminState.permanentQr=data.permanent_qr;renderPermanentQrResult(data.permanent_qr);const idx=deviceCapabilityAdminState.devices.findIndex(row=>row.device_uid===uid);if(idx>=0)deviceCapabilityAdminState.devices[idx]={...deviceCapabilityAdminState.devices[idx],...data.device};renderCapabilitySummary();}catch(error){setError('permanentQrResult',error.message);}finally{issuePermanentQrBtn.disabled=false;}});
