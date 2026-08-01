@@ -3,6 +3,7 @@
 #include "app_version.h"
 #include "device_context.h"
 #include "sensor_manager.h"
+#include "provisioning_manager.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -67,11 +68,13 @@ namespace
 
     String buildStatusPayload()
     {
+        // ESP32 Arduino BLECharacteristic has a 600-byte value limit in this
+        // stack. Keep the status contract intentionally compact; detailed
+        // telemetry continues over MQTT.
         JsonDocument doc;
 
         doc["device_id"] = MIA_DEVICE_ID;
         doc["firmware_version"] = MIA_FIRMWARE_VERSION;
-        doc["platform_name"] = MIA_PLATFORM_NAME;
         doc["event"] = "BLE_STATUS";
         doc["uptime_ms"] = millis();
         doc["wifi_connected"] = deviceContext.state.wifiConnected;
@@ -80,19 +83,37 @@ namespace
         doc["alarm_active"] = deviceContext.alarm.active;
         doc["current"] = deviceContext.state.current;
         doc["temperature"] = deviceContext.state.temperature;
-        doc["temperature_sensor_connected"] = temperatureSensorConnected();
-        doc["temperature_sensor_valid"] = temperatureSensorHasValidReading();
         doc["ble_client_connected"] = deviceContext.ble.clientConnected;
         doc["ble_service_authenticated"] = deviceContext.ble.serviceAuthenticated;
-        doc["ble_command_count"] = deviceContext.ble.commandCount;
-        doc["ble_rejected_command_count"] = deviceContext.ble.rejectedCommandCount;
-        doc["ble_failed_auth_count"] = deviceContext.ble.failedAuthCount;
         doc["last_command"] = deviceContext.ble.lastCommand;
         doc["last_command_status"] = deviceContext.ble.lastCommandStatus;
-        doc["last_command_message"] = deviceContext.ble.lastCommandMessage;
+        doc["provisioning_status"] = provisioningStatusName();
+        doc["provisioning_paired"] = isDeviceProvisioned();
+        doc["provisioning_pending"] = isProvisioningClaimPending();
+        doc["provisioning_http_code"] = provisioningLastHttpCode();
 
         String payload;
+        payload.reserve(520);
         serializeJson(doc, payload);
+
+        // Defensive fallback: never hand an oversized value to BLE.
+        if (payload.length() > 580)
+        {
+            JsonDocument minimal;
+            minimal["device_id"] = MIA_DEVICE_ID;
+            minimal["firmware_version"] = MIA_FIRMWARE_VERSION;
+            minimal["event"] = "BLE_STATUS";
+            minimal["uptime_ms"] = millis();
+            minimal["wifi_connected"] = deviceContext.state.wifiConnected;
+            minimal["mqtt_connected"] = deviceContext.state.mqttConnected;
+            minimal["alarm_active"] = deviceContext.alarm.active;
+            minimal["provisioning_status"] = provisioningStatusName();
+            minimal["provisioning_paired"] = isDeviceProvisioned();
+            minimal["provisioning_pending"] = isProvisioningClaimPending();
+            payload = "";
+            serializeJson(minimal, payload);
+        }
+
         return payload;
     }
 
@@ -193,6 +214,8 @@ namespace
 
         String command = payload;
         String pin = "";
+        String provisioningToken = "";
+        String provisioningUrl = "";
         command.trim();
 
         if (command.startsWith("{"))
@@ -208,8 +231,12 @@ namespace
 
             command = readOptionalString(doc, "command");
             pin = readOptionalString(doc, "pin");
+            provisioningToken = readOptionalString(doc, "token");
+            provisioningUrl = readOptionalString(doc, "claim_url");
             command.trim();
             pin.trim();
+            provisioningToken.trim();
+            provisioningUrl.trim();
         }
 
         Serial.print("BLE komut alindi: ");
@@ -262,6 +289,27 @@ namespace
         {
             setCommandResult(command, "done", "Status returned");
             updateStatusCharacteristic(true);
+            return;
+        }
+
+        if (command == "provision_claim")
+        {
+            if (requestProvisioningClaim(provisioningToken, provisioningUrl))
+            {
+                setCommandResult(
+                    command,
+                    "accepted",
+                    "Provisioning claim queued"
+                );
+                Serial.println("BLE provisioning token RAM icine alindi.");
+                updateStatusCharacteristic(true);
+                return;
+            }
+
+            rejectBleCommand(
+                command,
+                provisioningLastMessage()
+            );
             return;
         }
 

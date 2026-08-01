@@ -119,7 +119,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length)
 
 void setupMQTT()
 {
-    client.setBufferSize(4096);
+    client.setBufferSize(12288);
     client.setServer(MQTT_SERVER, MQTT_PORT);
     client.setCallback(mqttCallback);
     lastMqttReconnectAttemptMs = 0;

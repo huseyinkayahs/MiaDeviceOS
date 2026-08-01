@@ -19,3 +19,12 @@
 // BLE servis modu icin lokal servis PIN. Gercek PIN secrets.h icinde olmalidir.
 #define BLE_SERVICE_PIN "123456"
 #define BLE_MAX_FAILED_AUTH 5
+
+
+// HukaTech cihaz provisioning.
+// PROVISIONING_TOKEN tek kullanimliktir ve panelde Cihaz Kayitlari ekranindan uretilir.
+// Tokeni mesajlarda, Git'te veya destek kayitlarinda paylasmayin.
+#define PROVISIONING_CLAIM_URL "https://panel.hukatech.com/api/device/provision/claim"
+#define PROVISIONING_TOKEN ""
+#define PROVISIONING_MODEL "FactoryBox One"
+#define PROVISIONING_SERIAL_NO ""

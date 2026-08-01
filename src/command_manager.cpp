@@ -11,6 +11,7 @@
 #include "machine_runtime_manager.h"
 #include "digital_input_manager.h"
 #include "sensor_manager.h"
+#include "storage_manager.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -18,6 +19,9 @@
 namespace
 {
     const unsigned long RESTART_DELAY_MS = 1500;
+    const char* CAPABILITY_SCHEMA_V1 = "factorybox-device-capabilities-v1";
+    const size_t MAX_CAPABILITY_CONFIGURATION_BYTES = 8192;
+    const size_t MAX_CAPABILITY_COUNT = 40;
 
     bool commandStatusPending = false;
     String commandStatusPayload;
@@ -33,6 +37,12 @@ namespace
 
         doc["device_id"] = MIA_DEVICE_ID;
         doc["request_id"] = requestId;
+
+        if (requestId.length() > 0)
+        {
+            doc["command_id"] = requestId;
+        }
+
         doc["command"] = command;
         doc["status"] = status;
         doc["message"] = message;
@@ -87,6 +97,192 @@ namespace
         }
 
         return "";
+    }
+
+
+    String readCommandCorrelationId(JsonDocument& doc)
+    {
+        String requestId = readOptionalString(doc, "request_id");
+
+        if (requestId.length() == 0)
+        {
+            requestId = readOptionalString(doc, "command_id");
+        }
+
+        return requestId;
+    }
+
+    void setCapabilitiesStatus(
+        const String& requestId,
+        const char* status,
+        const char* message,
+        int configVersion,
+        int capabilityCount,
+        const String& capabilityProfile,
+        const String& schema,
+        size_t storageBytes,
+        bool persisted
+    )
+    {
+        JsonDocument doc;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+
+        if (requestId.length() > 0)
+        {
+            doc["command_id"] = requestId;
+        }
+
+        doc["command"] = "set_capabilities";
+        doc["status"] = status;
+        doc["message"] = message;
+        doc["uptime_ms"] = millis();
+        doc["config_version"] = configVersion;
+        doc["capability_count"] = capabilityCount;
+        doc["capability_profile"] = capabilityProfile;
+        doc["schema"] = schema;
+        doc["persisted"] = persisted;
+        doc["storage_bytes"] = storageBytes;
+        doc["apply_mode"] = "manifest";
+        doc["hardware_runtime_updated"] = false;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    void setStoredCapabilitiesStatus(const String& requestId)
+    {
+        JsonDocument doc;
+        const String storedJson = loadCapabilityConfigurationFromStorage();
+        const bool persisted = storedJson.length() > 0;
+
+        doc["device_id"] = MIA_DEVICE_ID;
+        doc["request_id"] = requestId;
+
+        if (requestId.length() > 0)
+        {
+            doc["command_id"] = requestId;
+        }
+
+        doc["command"] = "get_capabilities";
+        doc["status"] = "done";
+        doc["message"] = persisted ? "Capability manifest is persisted" : "No capability manifest is stored";
+        doc["uptime_ms"] = millis();
+        doc["config_version"] = loadCapabilityConfigVersionFromStorage();
+        doc["capability_count"] = loadCapabilityCountFromStorage();
+        doc["capability_profile"] = loadCapabilityProfileFromStorage();
+        doc["schema"] = loadCapabilitySchemaFromStorage();
+        doc["persisted"] = persisted;
+        doc["storage_bytes"] = storedJson.length();
+        doc["apply_mode"] = "manifest";
+        doc["hardware_runtime_updated"] = false;
+
+        commandStatusPayload = "";
+        serializeJson(doc, commandStatusPayload);
+        commandStatusPending = true;
+    }
+
+    bool validateCapabilityConfiguration(
+        JsonObject configuration,
+        int& configVersion,
+        int& capabilityCount,
+        String& capabilityProfile,
+        String& schema,
+        String& errorMessage
+    )
+    {
+        if (!configuration["schema"].is<const char*>())
+        {
+            errorMessage = "Missing or invalid capability schema";
+            return false;
+        }
+
+        schema = configuration["schema"].as<String>();
+
+        if (schema != CAPABILITY_SCHEMA_V1)
+        {
+            errorMessage = "Unsupported capability schema";
+            return false;
+        }
+
+        if (!configuration["config_version"].is<int>())
+        {
+            errorMessage = "Missing or invalid config_version";
+            return false;
+        }
+
+        configVersion = configuration["config_version"].as<int>();
+
+        if (configVersion < 0)
+        {
+            errorMessage = "config_version must be zero or greater";
+            return false;
+        }
+
+        capabilityProfile = configuration["capability_profile"].is<const char*>()
+            ? configuration["capability_profile"].as<String>()
+            : "custom";
+
+        if (!configuration["capabilities"].is<JsonArray>())
+        {
+            errorMessage = "Missing or invalid capabilities array";
+            return false;
+        }
+
+        JsonArray capabilities = configuration["capabilities"].as<JsonArray>();
+        capabilityCount = static_cast<int>(capabilities.size());
+
+        if (capabilities.size() > MAX_CAPABILITY_COUNT)
+        {
+            errorMessage = "Maximum 40 capabilities are supported";
+            return false;
+        }
+
+        for (size_t i = 0; i < capabilities.size(); i++)
+        {
+            JsonVariant item = capabilities[i];
+
+            if (!item.is<JsonObject>())
+            {
+                errorMessage = "Each capability must be an object";
+                return false;
+            }
+
+            JsonObject capability = item.as<JsonObject>();
+
+            if (!capability["key"].is<const char*>() ||
+                String(capability["key"].as<const char*>()).length() == 0)
+            {
+                errorMessage = "Each capability requires a key";
+                return false;
+            }
+
+            if (!capability["type"].is<const char*>() ||
+                String(capability["type"].as<const char*>()).length() == 0)
+            {
+                errorMessage = "Each capability requires a type";
+                return false;
+            }
+
+            const String key = capability["key"].as<String>();
+
+            for (size_t compareIndex = i + 1; compareIndex < capabilities.size(); compareIndex++)
+            {
+                JsonObject compareCapability = capabilities[compareIndex].as<JsonObject>();
+
+                if (!compareCapability.isNull() &&
+                    compareCapability["key"].is<const char*>() &&
+                    key == compareCapability["key"].as<String>())
+                {
+                    errorMessage = "Duplicate capability key: " + key;
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
 
@@ -725,6 +921,12 @@ namespace
             return;
         }
 
+        if (command == "get_capabilities")
+        {
+            setStoredCapabilitiesStatus(requestId);
+            return;
+        }
+
         if (command == "get_diagnostics")
         {
             setDiagnosticsStatus(requestId);
@@ -865,8 +1067,148 @@ void handleCommandJson(const char* json)
     }
 
     String command = doc["command"].as<String>();
-    String requestId = readOptionalString(doc, "request_id");
+    String requestId = readCommandCorrelationId(doc);
 
+
+    if (command == "set_capabilities")
+    {
+        if (!doc["configuration"].is<JsonObject>())
+        {
+            setCapabilitiesStatus(requestId, "rejected", "Missing or invalid configuration object", 0, 0, "custom", "", 0, false);
+            return;
+        }
+
+        JsonObject configuration = doc["configuration"].as<JsonObject>();
+        int configVersion = 0;
+        int capabilityCount = 0;
+        String capabilityProfile = "custom";
+        String schema;
+        String errorMessage;
+
+        if (!validateCapabilityConfiguration(
+                configuration,
+                configVersion,
+                capabilityCount,
+                capabilityProfile,
+                schema,
+                errorMessage))
+        {
+            setCapabilitiesStatus(
+                requestId,
+                "rejected",
+                errorMessage.c_str(),
+                configVersion,
+                capabilityCount,
+                capabilityProfile,
+                schema,
+                0,
+                false);
+            return;
+        }
+
+        String configurationJson;
+        serializeJson(configuration, configurationJson);
+
+        if (configurationJson.length() > MAX_CAPABILITY_CONFIGURATION_BYTES)
+        {
+            setCapabilitiesStatus(
+                requestId,
+                "rejected",
+                "Capability configuration exceeds 8192 bytes",
+                configVersion,
+                capabilityCount,
+                capabilityProfile,
+                schema,
+                configurationJson.length(),
+                false);
+            return;
+        }
+
+        const bool hasStoredConfiguration = hasCapabilityConfigurationInStorage();
+        const int storedConfigVersion = loadCapabilityConfigVersionFromStorage();
+        const String storedConfigurationJson = hasStoredConfiguration
+            ? loadCapabilityConfigurationFromStorage()
+            : "";
+
+        if (hasStoredConfiguration && configVersion < storedConfigVersion)
+        {
+            setCapabilitiesStatus(
+                requestId,
+                "rejected",
+                "Older capability configuration cannot replace the active version",
+                configVersion,
+                capabilityCount,
+                capabilityProfile,
+                schema,
+                configurationJson.length(),
+                false);
+            return;
+        }
+
+        if (hasStoredConfiguration && configVersion == storedConfigVersion)
+        {
+            if (configurationJson == storedConfigurationJson)
+            {
+                setCapabilitiesStatus(
+                    requestId,
+                    "done",
+                    "Capability manifest already applied",
+                    configVersion,
+                    capabilityCount,
+                    capabilityProfile,
+                    schema,
+                    configurationJson.length(),
+                    true);
+            }
+            else
+            {
+                setCapabilitiesStatus(
+                    requestId,
+                    "rejected",
+                    "Capability config_version conflict",
+                    configVersion,
+                    capabilityCount,
+                    capabilityProfile,
+                    schema,
+                    configurationJson.length(),
+                    false);
+            }
+
+            return;
+        }
+
+        if (!saveCapabilityConfigurationToStorage(
+                configurationJson,
+                configVersion,
+                capabilityCount,
+                capabilityProfile,
+                schema))
+        {
+            setCapabilitiesStatus(
+                requestId,
+                "failed",
+                "Capability manifest could not be persisted",
+                configVersion,
+                capabilityCount,
+                capabilityProfile,
+                schema,
+                configurationJson.length(),
+                false);
+            return;
+        }
+
+        setCapabilitiesStatus(
+            requestId,
+            "done",
+            "Capability manifest validated and persisted",
+            configVersion,
+            capabilityCount,
+            capabilityProfile,
+            schema,
+            configurationJson.length(),
+            true);
+        return;
+    }
 
     if (command == "set_machine_input_source")
     {

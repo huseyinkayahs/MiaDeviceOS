@@ -10,6 +10,7 @@
 #include "device_context.h"
 #include "heartbeat_manager.h"
 #include "mqtt_manager.h"
+#include "provisioning_manager.h"
 #include "ota_manager.h"
 #include "sensor_manager.h"
 #include "storage_manager.h"
@@ -136,6 +137,16 @@ void appSetup()
 
     setupConfig();
 
+    setupProvisioning();
+
+    // Provision before MQTT and especially BLE allocate their runtime heaps.
+    // This avoids ESP32 TLS handshake failures caused by low contiguous memory.
+    if (isProvisioningClaimPending())
+    {
+        delay(250);
+        attemptProvisioningNow();
+    }
+
     setupMQTT();
 
     setupCommand();
@@ -172,6 +183,8 @@ void appLoop()
     updateProductionManager();
 
     updateWiFi();
+
+    updateProvisioning();
 
     loopMQTT();
 

@@ -44,6 +44,7 @@ services:
       - factorybox_prod_mqttdata:/mosquitto/data
     networks:
       - backend
+      - mqtt_lan
     healthcheck:
       test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -u \"$${MQTT_USERNAME}\" -P \"$${MQTT_PASSWORD}\" -t 'factorybox/health/$${HOSTNAME}' -m 'ok' -q 0 >/dev/null 2>&1"]
       interval: 20s
@@ -195,6 +196,8 @@ networks:
   frontend:
   backend:
     internal: true
+  mqtt_lan:
+    driver: bridge
 
 volumes:
   factorybox_prod_pgdata:
