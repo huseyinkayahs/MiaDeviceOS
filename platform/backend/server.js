@@ -548,9 +548,68 @@ function extractDeviceInfo(payload = {}) {
   };
 }
 
+function payloadDeviceUid(payload = {}) {
+  const info = payload.device_info || payload.device || payload.info || {};
+  return firstValue(
+    payload.device_uid,
+    payload.device_id,
+    payload.deviceId,
+    info.device_uid,
+    info.device_id,
+    info.uid,
+    info.id
+  );
+}
+
+async function resolveEntitiesFromPayload(payload = {}) {
+  const rawDeviceUid = payloadDeviceUid(payload);
+
+  // Legacy payloads without a device identity continue to use the configured
+  // default entity. A payload that explicitly names an unknown device is never
+  // written under the default device.
+  if (rawDeviceUid === null || rawDeviceUid === undefined || rawDeviceUid === '') {
+    return ensureEntities();
+  }
+
+  const deviceUid = String(rawDeviceUid);
+  const row = await one(`
+    SELECT
+      d.id AS device_id,
+      d.device_uid,
+      d.model AS device_model,
+      d.machine_id,
+      m.code AS machine_code,
+      m.name AS machine_name
+    FROM devices d
+    JOIN machines m ON m.id = d.machine_id
+    WHERE d.device_uid = $1
+    LIMIT 1
+  `, [deviceUid]);
+
+  if (!row) {
+    console.warn('MQTT.device.unmapped', { device_uid: deviceUid });
+    return null;
+  }
+
+  return {
+    device: {
+      id: row.device_id,
+      device_uid: row.device_uid,
+      model: row.device_model,
+      machine_id: row.machine_id
+    },
+    machine: {
+      id: row.machine_id,
+      code: row.machine_code,
+      name: row.machine_name
+    }
+  };
+}
+
 async function syncDeviceInfoFromPayload(payload = {}, source = 'mqtt') {
-  const { device } = await ensureEntities();
-  await ensureDeviceInfoSyncSchema();
+  const entities = await resolveEntitiesFromPayload(payload);
+  if (!entities) return null;
+  const { device } = entities;
   await ensureDeviceInfoSyncSchema();
 
   const info = extractDeviceInfo(payload);
@@ -603,7 +662,9 @@ async function seen(payload={}) {
   await syncDeviceInfoFromPayload(payload, 'seen');
 }
 async function telemetry(payload, source) {
-  const { machine, device } = await ensureEntities();
+  const entities = await resolveEntitiesFromPayload(payload);
+  if (!entities) return;
+  const { machine, device } = entities;
   const temp = payload.temperature_sensor?.temperature_c ?? payload.temperature_c ?? payload.temperature;
   await pool.query(`INSERT INTO telemetry_events(device_id,machine_id,event_ts,current_amp,temperature_c,wifi_rssi,uptime_ms,alarm_active,raw_payload)
     VALUES($1,$2,now(),$3,$4,$5,$6,$7,$8::jsonb)`, [
@@ -619,7 +680,9 @@ async function telemetry(payload, source) {
 }
 
 async function machineState(payload, source) {
-  const { machine, device } = await ensureEntities();
+  const entities = await resolveEntitiesFromPayload(payload);
+  if (!entities) return;
+  const { machine, device } = entities;
   const m = payload.machine || {};
   const state = String(payload.state || m.state || payload.machine_state || '').toUpperCase();
   if (!['RUNNING','STOPPED','UNKNOWN'].includes(state)) return;
@@ -635,7 +698,9 @@ async function machineState(payload, source) {
 }
 
 async function alarm(payload) {
-  const { machine, device } = await ensureEntities();
+  const entities = await resolveEntitiesFromPayload(payload);
+  if (!entities) return;
+  const { machine, device } = entities;
 
   const typ = payload.type || payload.alarm_type || payload.alarmType || 'UNKNOWN_ALARM';
   const event = String(payload.event || payload.status || '').toUpperCase();
@@ -689,7 +754,9 @@ async function alarm(payload) {
   await seen(payload);
 }
 async function dailySummary(payload) {
-  const { machine } = await ensureEntities();
+  const entities = await resolveEntitiesFromPayload(payload);
+  if (!entities) return;
+  const { machine } = entities;
   const s = payload.daily_summary || payload.summary || payload.machine || payload.machine_runtime || payload;
   const runtime = n(s.runtime_sec ?? s.daily_runtime_sec ?? s.runtime_total_sec) || 0;
   const stop = n(s.stop_sec ?? s.daily_stop_sec ?? s.stop_total_sec) || 0;
@@ -702,7 +769,9 @@ async function dailySummary(payload) {
 }
 
 async function workflow(eventType, payload) {
-  const { machine } = await ensureEntities();
+  const entities = await resolveEntitiesFromPayload(payload);
+  if (!entities) return;
+  const { machine } = entities;
   await pool.query(`INSERT INTO workflow_events(workflow_name,machine_id,event_type,status,event_ts,raw_payload) VALUES('platform-backend-mvp',$1,$2,$3,now(),$4::jsonb)`, [machine.id, eventType, payload.status || 'done', JSON.stringify(payload)]);
 }
 
