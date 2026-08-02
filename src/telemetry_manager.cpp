@@ -33,7 +33,12 @@ if (now - lastTelemetrySent < intervalMs)
     doc["device_id"] = MIA_DEVICE_ID;
     doc["firmware_version"] = MIA_FIRMWARE_VERSION;
     doc["platform_name"] = MIA_PLATFORM_NAME;
-    doc["current"] = deviceContext.state.current;
+    doc["current_sensor_connected"] = currentSensorConnected();
+    doc["current_sensor_valid"] = currentSensorHasValidReading();
+    if (currentSensorHasValidReading())
+    {
+        doc["current"] = deviceContext.state.current;
+    }
     doc["temperature"] = deviceContext.state.temperature;
     doc["temperature_sensor_connected"] = temperatureSensorConnected();
     doc["temperature_sensor_valid"] = temperatureSensorHasValidReading();

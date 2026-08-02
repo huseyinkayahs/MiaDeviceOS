@@ -43,7 +43,12 @@ namespace
         doc["mqtt_connected"] = deviceContext.state.mqttConnected;
         doc["wifi_rssi"] = deviceContext.state.wifiRSSI;
         doc["alarm_active"] = deviceContext.alarm.active;
-        doc["current"] = deviceContext.state.current;
+        doc["current_sensor_connected"] = currentSensorConnected();
+        doc["current_sensor_valid"] = currentSensorHasValidReading();
+        if (currentSensorHasValidReading())
+        {
+            doc["current"] = deviceContext.state.current;
+        }
         doc["temperature"] = deviceContext.state.temperature;
         doc["temperature_sensor_connected"] = temperatureSensorConnected();
         doc["temperature_sensor_valid"] = temperatureSensorHasValidReading();

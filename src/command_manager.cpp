@@ -464,8 +464,17 @@ namespace
         log["persistent"] = true;
 
         JsonObject sensor = doc["sensor"].to<JsonObject>();
-        sensor["current"] = deviceContext.state.current;
-        sensor["current_simulated"] = true;
+        sensor["current_sensor_connected"] = currentSensorConnected();
+        sensor["current_sensor_valid"] = currentSensorHasValidReading();
+        sensor["current_simulated"] = false;
+        if (currentSensorHasValidReading())
+        {
+            sensor["current"] = deviceContext.state.current;
+        }
+        else
+        {
+            sensor["current"] = nullptr;
+        }
         sensor["temperature"] = deviceContext.state.temperature;
         JsonObject temperatureSensor = sensor["temperature_sensor"].to<JsonObject>();
         fillTemperatureSensorStatus(temperatureSensor);

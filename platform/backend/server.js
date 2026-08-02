@@ -16191,7 +16191,15 @@ async function start() {
     httpServer = app.listen(PORT, '0.0.0.0', ()=> console.log(`HukaTech Central Mail Gateway v${APP_VERSION}: http://0.0.0.0:${PORT}`));
     return;
   }
-  await ensureEntities();
+  const bootstrapDefaultEntities = ['1','true','yes','on'].includes(
+    String(process.env.BOOTSTRAP_DEFAULT_ENTITIES || '').trim().toLowerCase()
+  );
+  if (bootstrapDefaultEntities) {
+    await ensureEntities();
+    console.log('Default entity bootstrap: enabled');
+  } else {
+    console.log('Default entity bootstrap: disabled');
+  }
   await ensureSaasFoundation();
   await ensureSecurityFoundation();
   await ensureOrganizationFoundation();

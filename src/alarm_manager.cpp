@@ -1,6 +1,7 @@
 #include "alarm_manager.h"
 
 #include "device_context.h"
+#include "sensor_manager.h"
 
 #include <Arduino.h>
 
@@ -34,7 +35,8 @@ void setupAlarm()
 
 void updateAlarm()
 {
-    bool overLimit =
+    const bool overLimit =
+        currentSensorHasValidReading() &&
         deviceContext.state.current > deviceContext.config.currentLimit;
 
     unsigned long now = millis();

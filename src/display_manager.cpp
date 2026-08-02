@@ -1,5 +1,6 @@
 #include "display_manager.h"
 #include "device_context.h"
+#include "sensor_manager.h"
 #include "app_version.h"
 
 #include <Arduino.h>
@@ -84,8 +85,15 @@ void updateDisplay()
 
     display.setCursor(0, 46);
     display.print("Current: ");
-    display.print(deviceContext.state.current, 1);
-    display.println(" A");
+    if (currentSensorHasValidReading())
+    {
+        display.print(deviceContext.state.current, 1);
+        display.println(" A");
+    }
+    else
+    {
+        display.println("N/A");
+    }
 
     display.setCursor(0, 56);
     display.print("Temp   : ");

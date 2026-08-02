@@ -5,6 +5,9 @@
 void setupSensors();
 void updateSensors();
 
+bool currentSensorConnected();
+bool currentSensorHasValidReading();
+
 bool temperatureSensorConnected();
 bool temperatureSensorHasValidReading();
 float temperatureSensorValueC();

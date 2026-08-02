@@ -50,11 +50,9 @@ void logTemperatureIfNeeded(unsigned long now, float temperatureC)
 }
 }
 
-float simulatedCurrent = 0.0f;
-
 void setupSensors()
 {
-    simulatedCurrent = 0.0f;
+    deviceContext.state.current = 0.0f;
 
     temperatureSensor.begin();
     temperatureSensor.setResolution(DS18B20_RESOLUTION_BITS);
@@ -78,8 +76,8 @@ void setupSensors()
 
 void updateSensors()
 {
-    // Akim sensoru henuz simulasyon.
-    deviceContext.state.current = 20.0f;
+    // Akim sensoru takili degil. Sahte olcum uretme.
+    deviceContext.state.current = 0.0f;
 
     const unsigned long now = millis();
 
@@ -168,4 +166,14 @@ unsigned int temperatureSensorReadCount()
 unsigned int temperatureSensorErrorCount()
 {
     return failedReadCount;
+}
+
+bool currentSensorConnected()
+{
+    return false;
+}
+
+bool currentSensorHasValidReading()
+{
+    return false;
 }
