@@ -1,8 +1,8 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8">
-  <title>FactoryBox v6.13.2 Admin Panel</title>
+  <meta charset="UTF-8">
+  <title>HukaTech v6.13.5 Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -948,106 +948,362 @@
     @media(max-width:1100px){.remote-layout-v670{grid-template-columns:1fr}.remote-grid-v670{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.remote-grid-v670,.remote-form-v670{grid-template-columns:1fr}.remote-form-v670 .wide{grid-column:auto}}
 
 </style>
+
+  <!-- HUKATECH_V6_13_5_ADMIN_SIMPLIFICATION -->
+  <style id="hukatechV6135AdminStyle">
+    #adminViewHeaderV58 { display:none !important; }
+
+    .admin-nav-title-v58 { display:none !important; }
+    .admin-nav-v58 { margin-top:18px; gap:7px; }
+    .admin-nav-group-v517 { border-bottom:1px solid rgba(255,255,255,.07); padding-bottom:6px; }
+    .admin-nav-group-v517:last-child { border-bottom:0; }
+    .admin-nav-group-toggle-v517 { min-height:44px; }
+    .admin-subnav-v517.open { max-height:720px; padding-top:4px; padding-bottom:5px; }
+    .admin-subnav-link-v517 { min-height:36px; padding-top:8px; padding-bottom:8px; }
+    .admin-sidebar-footer-v58 { margin-top:14px; }
+
+    .admin-topbar-v58 { padding-top:14px; padding-bottom:14px; }
+    .admin-topbar-actions-v58 { gap:9px; }
+    .admin-auto-refresh-v6135 {
+      min-height:40px;
+      box-sizing:border-box;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border:1px solid #cbd5dc;
+      border-radius:10px;
+      background:#fff;
+      color:#5c6871;
+      font-size:12.5px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .admin-auto-refresh-dot-v6135 {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#94a3b8;
+      box-shadow:0 0 0 4px rgba(148,163,184,.13);
+    }
+    .admin-auto-refresh-v6135.active .admin-auto-refresh-dot-v6135 {
+      background:#168267;
+      box-shadow:0 0 0 4px rgba(22,130,103,.13);
+    }
+    .admin-auto-refresh-v6135.error .admin-auto-refresh-dot-v6135 {
+      background:#b42336;
+      box-shadow:0 0 0 4px rgba(180,35,54,.12);
+    }
+    .admin-logout-v6135 {
+      border-color:#d8b28b !important;
+      color:#8c4a12 !important;
+      background:#fff8f1 !important;
+    }
+    .admin-logout-v6135:hover { background:#ffeddc !important; }
+
+    #refreshLiveMonitoringBtn,
+    #refreshOeeAnalyticsBtn,
+    #refreshAlarmCenterBtn,
+    #refreshAlarmAnalyticsBtn,
+    #refreshAlarmSlaBtn,
+    #refreshAlarmEscalationEventsBtn {
+      display:none !important;
+    }
+
+    label:has(#generalAutoRefresh) { display:none !important; }
+
+    @media(max-width:720px) {
+      .admin-auto-refresh-v6135 { width:100%; justify-content:center; }
+      .admin-logout-v6135 { width:100%; }
+    }
+  </style>
+
+  
+
+
+<style id="hukatechSidebarEmergencyV2Style">
+  #adminSidebarV58 {
+    background:
+      radial-gradient(700px 260px at 0% 0%, rgba(230,118,24,.20), transparent 48%),
+      linear-gradient(180deg, #17202a 0%, #101823 58%, #0d141d 100%) !important;
+    border-right:1px solid rgba(230,118,24,.14) !important;
+  }
+
+  #adminSidebarV58::after {
+    content:'';
+    position:absolute;
+    top:0;
+    right:0;
+    width:2px;
+    height:100%;
+    background:linear-gradient(180deg, #ea7a18 0%, rgba(234,122,24,.15) 38%, transparent 75%);
+    pointer-events:none;
+  }
+
+  .hukatech-sidebar-logo-v2 {
+    display:flex !important;
+    align-items:center !important;
+    gap:0 !important;
+    width:max-content;
+    margin-bottom:6px;
+    color:#fff !important;
+    font-size:24px !important;
+    line-height:1 !important;
+    font-weight:850 !important;
+    letter-spacing:-.65px !important;
+    text-shadow:0 4px 18px rgba(0,0,0,.34);
+  }
+
+  .hukatech-brand-huka-v2 {
+    color:#fff !important;
+  }
+
+  .hukatech-brand-tech-v2 {
+    color:#f28a2a !important;
+  }
+
+  .hukatech-sidebar-logo-v2::before {
+    content:'';
+    width:9px;
+    height:9px;
+    margin-right:9px;
+    border-radius:999px;
+    background:#f28a2a;
+    box-shadow:0 0 0 4px rgba(242,138,42,.16), 0 0 18px rgba(242,138,42,.42);
+  }
+
+  #adminSidebarV58 .admin-nav-group-toggle-v517 {
+    border-radius:13px !important;
+    transition:background .18s ease, box-shadow .18s ease, transform .18s ease !important;
+  }
+
+  #adminSidebarV58 .admin-nav-group-toggle-v517:hover {
+    background:linear-gradient(90deg, rgba(234,122,24,.16), rgba(234,122,24,.05)) !important;
+    transform:translateX(1px);
+  }
+
+  #adminSidebarV58 .admin-nav-group-v517:has(.admin-subnav-link-v517.active) > .admin-nav-group-toggle-v517,
+  #adminSidebarV58 .admin-nav-group-toggle-v517.active {
+    background:linear-gradient(90deg, rgba(234,122,24,.27), rgba(234,122,24,.08)) !important;
+    box-shadow:inset 3px 0 0 #ea7a18, 0 8px 20px rgba(0,0,0,.13) !important;
+    color:#fff !important;
+  }
+
+  #adminSidebarV58 .admin-subnav-link-v517 {
+    border-radius:10px !important;
+    transition:background .16s ease, color .16s ease, transform .16s ease !important;
+  }
+
+  #adminSidebarV58 .admin-subnav-link-v517:hover {
+    background:rgba(234,122,24,.09) !important;
+    color:#fff !important;
+    transform:translateX(1px);
+  }
+
+  #adminSidebarV58 .admin-subnav-link-v517.active {
+    background:linear-gradient(90deg, rgba(234,122,24,.24), rgba(234,122,24,.07)) !important;
+    box-shadow:inset 3px 0 0 #ea7a18 !important;
+    color:#fff !important;
+  }
+
+  #adminSidebarV58 .admin-nav-chevron-v517 {
+    color:#f2a45b !important;
+  }
+
+  #adminSidebarV58 .admin-sidebar-footer-v58 {
+    border:1px solid rgba(234,122,24,.10) !important;
+    background:rgba(255,255,255,.045) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  }
+</style>
+
+<style id="hukatechV6135FinalUiFixStyle">
+  .admin-brand-v58 .hukatech-sidebar-logo-v2 {
+    display:flex !important;
+    align-items:center !important;
+    gap:0 !important;
+    width:max-content;
+    margin:0 0 10px !important;
+    font-size:24px !important;
+    line-height:1 !important;
+    font-weight:850 !important;
+    letter-spacing:-.65px !important;
+  }
+  .admin-brand-v58 .hukatech-brand-huka-v2 { color:#fff !important; }
+  .admin-brand-v58 .hukatech-brand-tech-v2 { color:#f28a2a !important; }
+
+  .admin-topbar-actions-v58 {
+    display:flex !important;
+    align-items:center !important;
+    gap:10px !important;
+    flex-wrap:nowrap !important;
+  }
+  .admin-identity-v6135 {
+    min-height:46px;
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:flex-end;
+    gap:3px;
+    padding:7px 13px;
+    border:1px solid #d0dae1;
+    border-radius:12px;
+    background:rgba(255,255,255,.88);
+    box-shadow:0 5px 14px rgba(29,44,56,.06);
+    white-space:nowrap;
+  }
+  .admin-identity-v6135 strong {
+    max-width:230px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    color:#26343f;
+    font-size:13px;
+    line-height:1.1;
+  }
+  .admin-identity-v6135 span {
+    max-width:230px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    color:#72808b;
+    font-size:11.5px;
+    line-height:1.1;
+  }
+
+  #adminAutoRefreshStateV6135 { min-height:46px !important; }
+
+  #saveGeneralSettingsBtn.hukatech-save-general-v6135 {
+    min-height:46px !important;
+    padding:0 21px !important;
+    border:1px solid #ad550e !important;
+    border-radius:12px !important;
+    background:linear-gradient(180deg,#df7a22 0%,#c86514 100%) !important;
+    color:#fff !important;
+    font:750 14px/1 "Segoe UI Variable Text","Segoe UI",Roboto,Arial,sans-serif !important;
+    box-shadow:0 8px 18px rgba(157,79,16,.18) !important;
+    cursor:pointer !important;
+    appearance:none !important;
+  }
+  #saveGeneralSettingsBtn.hukatech-save-general-v6135:hover {
+    background:linear-gradient(180deg,#d4711b 0%,#b7580f 100%) !important;
+    transform:translateY(-1px);
+  }
+  #saveGeneralSettingsBtn.hukatech-save-general-v6135:active { transform:translateY(0); }
+  #saveGeneralSettingsBtn.hukatech-save-general-v6135:disabled {
+    opacity:.62 !important;
+    cursor:not-allowed !important;
+    transform:none !important;
+  }
+  #refreshGeneralSettingsBtn {
+    min-height:46px !important;
+    padding:0 19px !important;
+    border-radius:12px !important;
+  }
+
+  @media(max-width:1050px) {
+    .admin-identity-v6135 { display:none; }
+  }
+</style>
+
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
-      <h1>FactoryBox Admin</h1>
+      <h1 class="hukatech-sidebar-logo-v2" aria-label="HukaTech"><span class="hukatech-brand-huka-v2">Huka</span><span class="hukatech-brand-tech-v2">Tech</span></h1>
       <p id="adminVersionLabel">v6.13.2 &mdash; Cihaz yetkinlik aktar&#305;m durumu ve cihaz onay takibi aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
-    <nav class="admin-nav-v58" aria-label="Admin panel menüsü">
-      <button class="admin-nav-link-v58 active" data-admin-nav="dashboard"><span>Dashboard</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="live"><span>Canlı İzleme</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="oee"><span>OEE ve Duruş</span><span class="admin-nav-pill-v58">1</span></button>
-
-      <div class="admin-nav-group-v517" data-nav-group="alarm">
-        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="alarm" aria-expanded="false" aria-controls="alarmSubmenuV517">
-          <span>Alarm</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
+    <nav class="admin-nav-v58" aria-label="Admin panel menu">
+      <div class="admin-nav-group-v517" data-nav-group="overview">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="overview" aria-expanded="false" aria-controls="overviewSubmenuV6135">
+          <span>Ana Panel</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
         </button>
-        <div id="alarmSubmenuV517" class="admin-subnav-v517" data-admin-subnav="alarm">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="alarms"><span>Alarm Center</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="analytics"><span>Alarm Analytics</span></button>
+        <div id="overviewSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="overview">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="dashboard"><span>Genel Bak&#305;&#351;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="live"><span>Canl&#305; &#304;zleme</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="oee"><span>OEE ve Duru&#351;</span></button>
+        </div>
+      </div>
+
+      <div class="admin-nav-group-v517" data-nav-group="alarms">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="alarms" aria-expanded="false" aria-controls="alarmsSubmenuV6135">
+          <span>Alarmlar</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
+        </button>
+        <div id="alarmsSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="alarms">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="alarms"><span>Alarm Merkezi</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="analytics"><span>Alarm Analiti&#287;i</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="sla"><span>Alarm SLA</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Escalation Delivery</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Bildirim Teslimat&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporlar&#305;</span></button>
         </div>
       </div>
 
-      <div class="admin-nav-group-v517" data-nav-group="maintenance">
-        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="maintenance" aria-expanded="false" aria-controls="maintenanceSubmenuV522">
-          <span>Bakım</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
+      <div class="admin-nav-group-v517" data-nav-group="assets">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="assets" aria-expanded="false" aria-controls="assetsSubmenuV6135">
+          <span>Varl&#305;klar ve Bak&#305;m</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
         </button>
-        <div id="maintenanceSubmenuV522" class="admin-subnav-v517" data-admin-subnav="maintenance">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance"><span>Servis Talepleri</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance-plans"><span>Bakım Planları</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="work-orders"><span>İş Emirleri</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="inventory"><span>Yedek Parça ve Stok</span></button>
-        </div>
-      </div>
-
-      <div class="admin-nav-group-v517" data-nav-group="system">
-        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="system" aria-expanded="false" aria-controls="systemSubmenuV518">
-          <span>Sistem Ayarları</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">7</span><span class="admin-nav-chevron-v517">⌄</span></span>
-        </button>
-        <div id="systemSubmenuV518" class="admin-subnav-v517" data-admin-subnav="system">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="general"><span>Genel Ayarlar</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="health"><span>Sistem Sağlığı ve Yedekler</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="remote-access"><span>Uzak Erişim ve Domain</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="security-center"><span>Güvenlik ve Oturumlar</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Bildirimler</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Otomasyon Zamanlayıcı</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporları</span></button>
-        </div>
-      </div>
-      <div class="admin-nav-group-v517" data-nav-group="organization">
-        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="organization" aria-expanded="false" aria-controls="organizationSubmenuV640">
-          <span>Organizasyon</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">7</span><span class="admin-nav-chevron-v517">⌄</span></span>
-        </button>
-        <div id="organizationSubmenuV640" class="admin-subnav-v517" data-admin-subnav="organization">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="tenants"><span>Şirketler</span></button>
-          <button id="installationRegistryNav" class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="installations"><span>Müşteri Kurulumları</span></button>
+        <div id="assetsSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="assets">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="tenants"><span>&#350;irketler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="organization"><span>Fabrikalar ve Tesisler</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="production-lines"><span>Üretim Hatları</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="production-lines"><span>&#220;retim Hatlar&#305;</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="assets"><span>Makineler</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="site-access"><span>Lokasyon Erişimi</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="factory-comparison"><span>Fabrika Karşılaştırması</span></button>
-        </div>
-      </div>
-
-      <div class="admin-nav-group-v517" data-nav-group="smartai">
-        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="smartai" aria-expanded="false" aria-controls="smartAiSubmenuV650">
-          <span>SmartAI</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">4</span><span class="admin-nav-chevron-v517">⌄</span></span>
-        </button>
-        <div id="smartAiSubmenuV650" class="admin-subnav-v517" data-admin-subnav="smartai">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-reports"><span>AI Raporları</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-ask"><span>Analiz Sor</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-history"><span>Rapor Geçmişi</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-settings"><span>AI Ayarları</span></button>
-        </div>
-      </div>
-
-      <button class="admin-nav-link-v58" data-admin-nav="users"><span>Kullanıcılar ve Davetler</span><span class="admin-nav-pill-v58">3</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="permissions"><span>Roller ve Yetkiler</span><span class="admin-nav-pill-v58">1</span></button>
-      <button class="admin-nav-link-v58" data-admin-nav="subscriptions"><span>Abonelikler</span><span class="admin-nav-pill-v58">2</span></button>
-      <div class="admin-nav-group-v517" data-nav-group="devices">
-        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="devices" aria-expanded="false" aria-controls="devicesSubmenuV630">
-          <span>Cihazlar</span>
-          <span class="admin-nav-group-right-v517"><span class="admin-nav-pill-v58">3</span><span class="admin-nav-chevron-v517">⌄</span></span>
-        </button>
-        <div id="devicesSubmenuV630" class="admin-subnav-v517" data-admin-subnav="devices">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="devices"><span>Cihaz Kayıtları</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="onboarding"><span>Kurulum Sihirbazı</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="devices"><span>Cihaz Kay&#305;tlar&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="onboarding"><span>Kurulum Sihirbaz&#305;</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="capabilities"><span>Cihaz Yetkinlikleri</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance"><span>Servis Talepleri</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="maintenance-plans"><span>Bak&#305;m Planlar&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="work-orders"><span>&#304;&#351; Emirleri</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="inventory"><span>Yedek Par&#231;a ve Stok</span></button>
         </div>
       </div>
-      <button class="admin-nav-link-v58" data-admin-nav="security"><span>Güvenlik Aktiviteleri</span><span class="admin-nav-pill-v58">1</span></button>
+
+      <div class="admin-nav-group-v517" data-nav-group="users">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="users" aria-expanded="false" aria-controls="usersSubmenuV6135">
+          <span>Kullan&#305;c&#305;lar</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
+        </button>
+        <div id="usersSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="users">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="users"><span>Kullan&#305;c&#305;lar ve Davetler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="permissions"><span>Roller ve Yetkiler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="site-access"><span>Lokasyon Eri&#351;imi</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="subscriptions"><span>Abonelikler</span></button>
+        </div>
+      </div>
+
+      <div class="admin-nav-group-v517" data-nav-group="analysis">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="analysis" aria-expanded="false" aria-controls="analysisSubmenuV6135">
+          <span>Analizler</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
+        </button>
+        <div id="analysisSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="analysis">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-reports"><span>AI Raporlar&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-ask"><span>Analiz Sor</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-history"><span>Rapor Ge&#231;mi&#351;i</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="smartai-settings"><span>AI Ayarlar&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="factory-comparison"><span>Fabrika Kar&#351;&#305;la&#351;t&#305;rmas&#305;</span></button>
+        </div>
+      </div>
+
+      <div class="admin-nav-group-v517" data-nav-group="settings">
+        <button type="button" class="admin-nav-link-v58 admin-nav-group-toggle-v517" data-admin-group-toggle="settings" aria-expanded="false" aria-controls="settingsSubmenuV6135">
+          <span>Ayarlar</span>
+          <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
+        </button>
+        <div id="settingsSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="settings">
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="general"><span>Genel Ayarlar</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="notifications"><span>Bildirimler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="scheduler"><span>Otomasyon Zamanlay&#305;c&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="health"><span>Sistem Sa&#287;l&#305;&#287;&#305; ve Yedekler</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="remote-access"><span>Uzak Eri&#351;im ve Domain</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="security-center"><span>G&#252;venlik ve Oturumlar</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="security"><span>G&#252;venlik Aktiviteleri</span></button>
+        </div>
+      </div>
     </nav>
 
     <div class="admin-sidebar-footer-v58">
@@ -1063,10 +1319,15 @@
         <p id="adminViewDescV58">Sistem özeti, sürüm ve hızlı durum kartları.</p>
       </div>
       <div class="admin-topbar-actions-v58">
-        <button id="refreshAdmin" class="secondary-btn">Yenile</button>
-        <a class="secondary-btn link-btn" href="/admin.html">Dashboard</a>
-        <a class="secondary-btn link-btn" href="/operator.html">Operatör</a>
-        <a class="secondary-btn link-btn" href="/login.html">Giriş</a>
+        <div id="adminIdentityV6135" class="admin-identity-v6135" title="Aktif firma ve kullanıcı">
+          <strong id="adminIdentityCompanyV6135">Firma yükleniyor...</strong>
+          <span id="adminIdentityUserV6135">Kullanıcı yükleniyor...</span>
+        </div>
+        <span id="adminAutoRefreshStateV6135" class="admin-auto-refresh-v6135 paused">
+          <span class="admin-auto-refresh-dot-v6135"></span>
+          <span>Otomatik yenileme haz&#305;rlan&#305;yor</span>
+        </span>
+        <button id="adminLogoutV6135" class="secondary-btn admin-logout-v6135">&#199;&#305;k&#305;&#351; Yap</button>
       </div>
     </header>
 
@@ -1369,13 +1630,13 @@
       </div>
       <div class="button-row">
         <button id="refreshGeneralSettingsBtn" class="secondary-btn">Ayarları Yenile</button>
-        <button id="saveGeneralSettingsBtn">Ayarları Kaydet</button>
+        <button id="saveGeneralSettingsBtn" type="button" class="primary-btn hukatech-save-general-v6135">Ayarları Kaydet</button>
       </div>
     </div>
     <div id="generalSettingsStatus" class="mini-status">Genel ayarlar yükleniyor...</div>
     <div class="general-settings-grid-v600">
-      <label class="wide-setting-v600">Organization / Company Name<input id="generalOrganizationName" type="text" maxlength="160" placeholder="FactoryBox"></label>
-      <label>Factory / Site Name<input id="generalSiteName" type="text" maxlength="160" placeholder="Main Factory"></label>
+      <label class="wide-setting-v600">Müşteri / Organizasyon Adı<input id="generalOrganizationName" type="text" maxlength="160" placeholder="FactoryBox"></label>
+      <label>Fabrika / Tesis Adı<input id="generalSiteName" type="text" maxlength="160" placeholder="Main Factory"></label>
       <label>Panel Language<select id="generalLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
       <label>Time Zone<select id="generalTimezone"></select></label>
       <label>Date Format<select id="generalDateFormat"><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></label>
@@ -2599,7 +2860,7 @@
     ['Dosya boyutu, SHA256 doğrulaması, pg_restore ön kontrolü ve indirme işlemleri.','File size, SHA256 verification, pg_restore pre-check and download actions.'],
     ['Sağlık kontrolleri, yedekleme ve kritik bildirim olayları.','Health checks, backup and critical notification events.'],
     ['Uzak Erişim ve Domain','Remote Access & Domain'],['Uzak Erişim, Domain ve Cloudflare Tunnel','Remote Access, Domain & Cloudflare Tunnel'],['Durumu Yenile','Refresh Status'],['Uzak Adresi Test Et','Test Remote URL'],['Ayarları Kaydet','Save Settings'],['Uzak Erişim Ayarları','Remote Access Settings'],['Çalışma Modu','Operating Mode'],['Uzak Panel Adresi','Remote Panel URL'],['Cloudflare Access Koruması','Cloudflare Access Protection'],['İzin Verilen E-posta Domainleri','Allowed Email Domains'],['Uzaktan Teknik Servis','Remote Technical Service'],['Production Bilgisayarında Çalıştırılacak Komut','Command to Run on the Production Computer'],['Güvenlik Kontrol Listesi','Security Checklist'],['Bağlantı Bilgisi','Connection Information'],
-    ['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],['Güvenlik ve Oturumlar','Security & Sessions'],['Güvenlik ve Oturum Yönetimi','Security & Session Management'],['Aktif Oturum','Active Sessions'],['Kilitli Hesap','Locked Accounts'],['Hatalı Giriş / 24s','Failed Logins / 24h'],['Şifre Değişimi','Password Change'],['Güvenlik Politikası','Security Policy'],['Şifremi Değiştir','Change My Password'],['Mevcut Şifre','Current Password'],['Yeni Şifre','New Password'],['Aktif Oturumlar','Active Sessions'],['Hesap Güvenliği','Account Security'],['Son Güvenlik Olayları','Recent Security Events'],['Durumu Yenile','Refresh Status'],
+    ['Ana Panel','Overview'],['Genel Bak\u0131\u015f','Overview'],['Alarmlar','Alarms'],['Varl\u0131klar ve Bak\u0131m','Assets & Maintenance'],['Kullan\u0131c\u0131lar','Users'],['Analizler','Analytics'],['Ayarlar','Settings'],['\u00c7\u0131k\u0131\u015f Yap','Log out'],['Otomatik yenileme haz\u0131rlan\u0131yor','Preparing auto refresh'],['Ana Menü','Main Menu'],['Menü','Menu'],['Genel Ayarlar','General Settings'],['Sistem Ayarları','System Settings'],['Güvenlik ve Oturumlar','Security & Sessions'],['Güvenlik ve Oturum Yönetimi','Security & Session Management'],['Aktif Oturum','Active Sessions'],['Kilitli Hesap','Locked Accounts'],['Hatalı Giriş / 24s','Failed Logins / 24h'],['Şifre Değişimi','Password Change'],['Güvenlik Politikası','Security Policy'],['Şifremi Değiştir','Change My Password'],['Mevcut Şifre','Current Password'],['Yeni Şifre','New Password'],['Aktif Oturumlar','Active Sessions'],['Hesap Güvenliği','Account Security'],['Son Güvenlik Olayları','Recent Security Events'],['Durumu Yenile','Refresh Status'],
     ['Canlı İzleme','Live Monitoring'],['OEE ve Duruş','OEE & Downtime'],['Alarm Merkezi','Alarm Center'],
     ['Alarm Analitiği','Alarm Analytics'],['Alarm SLA','Alarm SLA'],['Bildirim Teslimatı','Escalation Delivery'],
     ['Bakım','Maintenance'],['Servis Talepleri','Service Tickets'],['Bakım Planları','Maintenance Plans'],
@@ -3288,35 +3549,46 @@
   }
 
   const ADMIN_VIEW_GROUPS = {
-    alarms:'alarm',
-    analytics:'alarm',
-    sla:'alarm',
-    escalations:'alarm',
-    general:'system',
-    health:'system',
-    'remote-access':'system',
-    'security-center':'system',
-    notifications:'system',
-    scheduler:'system',
-    reports:'system',
-    'smartai-reports':'smartai',
-    'smartai-ask':'smartai',
-    'smartai-history':'smartai',
-    'smartai-settings':'smartai',
-    maintenance:'maintenance',
-    'maintenance-plans':'maintenance',
-    'work-orders':'maintenance',
-    inventory:'maintenance',
-    tenants:'organization',
-    installations:'organization',
-    organization:'organization',
-    'production-lines':'organization',
-    assets:'organization',
-    'site-access':'organization',
-    'factory-comparison':'organization',
-    devices:'devices',
-    onboarding:'devices',
-    capabilities:'devices'
+    dashboard:'overview',
+    live:'overview',
+    oee:'overview',
+
+    alarms:'alarms',
+    analytics:'alarms',
+    sla:'alarms',
+    escalations:'alarms',
+    reports:'alarms',
+
+    tenants:'assets',
+    organization:'assets',
+    'production-lines':'assets',
+    assets:'assets',
+    devices:'assets',
+    onboarding:'assets',
+    capabilities:'assets',
+    maintenance:'assets',
+    'maintenance-plans':'assets',
+    'work-orders':'assets',
+    inventory:'assets',
+
+    users:'users',
+    permissions:'users',
+    'site-access':'users',
+    subscriptions:'users',
+
+    'smartai-reports':'analysis',
+    'smartai-ask':'analysis',
+    'smartai-history':'analysis',
+    'smartai-settings':'analysis',
+    'factory-comparison':'analysis',
+
+    general:'settings',
+    notifications:'settings',
+    scheduler:'settings',
+    health:'settings',
+    'remote-access':'settings',
+    'security-center':'settings',
+    security:'settings'
   };
 
   function setAdminNavGroupOpen(groupName, open, persist = true) {
@@ -3335,12 +3607,14 @@
   }
 
   function syncAdminNavGroups(activeView) {
+    const viewChanged = syncAdminNavGroups.lastActiveView !== activeView;
     document.querySelectorAll('[data-nav-group]').forEach(group => {
       const groupName = group.dataset.navGroup;
       const childActive = ADMIN_VIEW_GROUPS[activeView] === groupName;
       group.classList.toggle('child-active', childActive);
-      if (childActive) setAdminNavGroupOpen(groupName, true, false);
+      if (childActive && viewChanged) setAdminNavGroupOpen(groupName, true, false);
     });
+    syncAdminNavGroups.lastActiveView = activeView;
   }
 
   function setAdminView(view) {
@@ -3369,6 +3643,7 @@
     localStorage.setItem('factorybox_admin_view', key);
     history.replaceState(null, '', `#${key}`);
     document.body.classList.remove('admin-menu-open-v58');
+    restartAdminAutoRefresh();
   }
 
   function setupAdminNavigation() {
@@ -3548,6 +3823,7 @@
   function renderPermissions(data) {
     currentUser = data.user || null;
     currentPermissions = data.permissions || currentUser?.permissions || [];
+    updateAdminIdentity();
 
     const role = data.role || currentUser?.role || '-';
     const perms = currentPermissions;
@@ -5301,24 +5577,81 @@
   }
 
 
+  function updateAdminIdentity() {
+    const companyTarget=document.getElementById('adminIdentityCompanyV6135');
+    const userTarget=document.getElementById('adminIdentityUserV6135');
+    const company=generalSettings.organization_name||'Firma';
+    const userName=currentUser?.full_name||currentUser?.name||currentUser?.email||'Kullanıcı';
+    const role=currentUser?.role||'';
+    if(companyTarget) {
+      companyTarget.textContent=company;
+      companyTarget.title=company;
+    }
+    if(userTarget) {
+      userTarget.textContent=role?`${userName} · ${role}`:userName;
+      userTarget.title=currentUser?.email||userName;
+    }
+  }
+
   function applyGeneralSettings() {
     currentLanguage=generalSettings.language||currentLanguage||'tr';
     localStorage.setItem('factorybox_ui_language',currentLanguage);
     document.body.classList.toggle('fb-compact-ui',Boolean(generalSettings.compact_mode));
-    const brand=document.querySelector('.admin-brand-v58 h1');
-    if(brand) brand.textContent=generalSettings.organization_name||'FactoryBox';
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.site_name||'Main Factory'} · v6.13.2`;
+    if(footer) footer.textContent=`${generalSettings.organization_name||'Firma'} · ${generalSettings.site_name||'Main Factory'} · v6.13.5`;
+    updateAdminIdentity();
     applyTranslations(document);
-    const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav||localStorage.getItem('factorybox_admin_view')||generalSettings.default_view||'dashboard';
-    if(ADMIN_VIEWS[activeView]) setAdminView(activeView);
-    restartAdminAutoRefresh();
+  }
+
+  function adminAutoRefreshSecondsV6135(view) {
+    return ({
+      dashboard:30,
+      live:10,
+      oee:30,
+      alarms:10,
+      analytics:30,
+      sla:15,
+      escalations:15
+    })[view] || 0;
+  }
+
+  function adminAutoRefreshLabelV6135(seconds, state='ready') {
+    const target=document.getElementById('adminAutoRefreshStateV6135');
+    if(!target)return;
+    const en=currentLanguage==='en';
+    target.classList.toggle('active',state!=='error');
+    target.classList.remove('paused');
+    target.classList.toggle('error',state==='error');
+    const label=target.querySelector('span:last-child');
+    if(!label)return;
+    if(state==='error') {
+      label.textContent=en?'Update error':'Güncelleme hatası';
+      return;
+    }
+    const time=new Date().toLocaleTimeString(en?'en-US':'tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    label.textContent=(en?'Updated ':'Güncellendi ')+time;
   }
 
   function restartAdminAutoRefresh() {
     if(adminAutoRefreshTimer){clearInterval(adminAutoRefreshTimer);adminAutoRefreshTimer=null;}
-    const seconds=Number(generalSettings.auto_refresh_sec||0);
-    if(seconds>0) adminAutoRefreshTimer=setInterval(()=>loadAdmin(),seconds*1000);
+    const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav
+      || localStorage.getItem('factorybox_admin_view')
+      || generalSettings.default_view
+      || 'dashboard';
+    const seconds=adminAutoRefreshSecondsV6135(activeView);
+    adminAutoRefreshLabelV6135(seconds,'ready');
+    if(seconds<=0)return;
+
+    adminAutoRefreshTimer=setInterval(async()=>{
+      if(document.hidden)return;
+      try {
+        await loadAdmin();
+        adminAutoRefreshLabelV6135(seconds,'updated');
+      } catch(error) {
+        console.error('Admin auto refresh error:',error);
+        adminAutoRefreshLabelV6135(seconds,'error');
+      }
+    },seconds*1000);
   }
 
   function generalViewLabel(key) {
@@ -7100,8 +7433,45 @@
   });
 })();
 </script>
+
+  <script id="hukatechV6135LogoutScript">
+  (() => {
+    const setupLogout = () => {
+      const button = document.getElementById('adminLogoutV6135');
+      if (!button || button.dataset.bound === '1') return;
+      button.dataset.bound = '1';
+
+      button.addEventListener('click', async () => {
+        if (!window.confirm('Oturum kapat\u0131ls\u0131n m\u0131?')) return;
+
+        button.disabled = true;
+
+        try {
+          await fetch('/api/auth/logout', {
+            method:'POST',
+            credentials:'same-origin'
+          });
+        } catch (_) {
+          // Always return to login screen.
+        }
+
+        [
+          'factorybox_auth_token',
+          'factorybox_token',
+          'auth_token',
+          'access_token'
+        ].forEach(key => localStorage.removeItem(key));
+
+        window.location.replace('/login.html');
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupLogout, {once:true});
+    } else {
+      setupLogout();
+    }
+  })();
+  </script>
 </body>
 </html>
-
-
-
