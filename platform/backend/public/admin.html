@@ -2,7 +2,8 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>HukaTech v6.13.5 Admin Panel</title>
+  <title>HukaTech v6.13.6 Admin Panel</title>
+  <meta name="hukatech-dashboard-patch" content="v6.13.6-oee-visual-polish-v6.1">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/styles.css" rel="stylesheet">
 
@@ -348,6 +349,13 @@
 
     .live-grid-v511 { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin:14px 0 18px; }
     .live-card-v511 { border:1px solid var(--fb-border); border-radius:18px; background:#fff; padding:14px; box-shadow:0 10px 22px rgba(20,45,75,.05); }
+    .live-card-v511.is-not-live-v6136 {
+      background:#f5f7f9;
+      border-color:#d8e0e7;
+      box-shadow:none;
+    }
+    .live-card-v511.is-not-live-v6136 .live-metric-v511 { background:#eef2f5; }
+    .live-card-v511.is-not-live-v6136 .live-metric-v511 strong { color:#5f6c76; }
     .live-card-v511 h3 { margin:0 0 4px; font-size:17px; }
     .live-card-v511 p { margin:4px 0; color:var(--fb-muted); }
     .live-badge-v511 { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:900; text-transform:uppercase; }
@@ -359,6 +367,11 @@
     .live-metric-v511 { border:1px solid var(--fb-border); border-radius:14px; padding:9px; background:#f8fbff; }
     .live-metric-v511 span { display:block; color:var(--fb-muted); font-size:11px; font-weight:800; text-transform:uppercase; }
     .live-metric-v511 strong { display:block; margin-top:4px; font-size:16px; color:var(--fb-primary); }
+    .live-metric-v511 strong.live-last-value-v6136 {
+      font-size:13px;
+      color:#6b7280;
+      line-height:1.35;
+    }
     .live-toolbar-v511 { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:12px 0; }
     .live-updated-v511 { color:var(--fb-muted); font-size:13px; }
 
@@ -380,6 +393,315 @@
     .oee-health-v524.critical { background:#ffe8ec; color:#9f1d2d; }
     .oee-health-v524.no_production { background:#eef3f8; color:#46586f; }
     .oee-form-result-v524 { margin-top:10px; }
+
+    .oee-filter-card-v6136 {
+      margin-bottom:16px;
+      padding:16px;
+      border:1px solid var(--fb-border);
+      border-radius:18px;
+      background:#fff;
+    }
+    .oee-filter-grid-v6136 {
+      display:grid;
+      grid-template-columns:repeat(3,minmax(210px,1fr)) minmax(150px,auto);
+      gap:14px;
+      align-items:end;
+    }
+    .oee-filter-grid-v6136 label {
+      display:grid;
+      gap:7px;
+      min-width:0;
+      color:#485761;
+      font-size:12px;
+      font-weight:800;
+    }
+    .oee-filter-grid-v6136 input,
+    .oee-filter-grid-v6136 select {
+      width:100%;
+      min-width:0;
+      height:48px;
+      padding:0 14px;
+      border:1px solid #c8d3db;
+      border-radius:12px;
+      background:#fff;
+      color:#26323b;
+      font:inherit;
+      box-sizing:border-box;
+    }
+    .oee-filter-grid-v6136 input:focus,
+    .oee-filter-grid-v6136 select:focus {
+      outline:none;
+      border-color:#c06b19;
+      box-shadow:0 0 0 4px rgba(192,107,25,.12);
+    }
+    .oee-filter-grid-v6136 .admin-form-actions {
+      display:flex;
+      align-items:end;
+      margin:0;
+    }
+    .oee-filter-grid-v6136 .admin-form-actions button {
+      width:100%;
+      min-height:48px;
+      white-space:nowrap;
+    }
+    .oee-range-status-v6136 {
+      margin-top:12px;
+      padding:10px 12px;
+      border-left:4px solid #d46f16;
+      border-radius:10px;
+      background:#fffaf5;
+      color:#66737d;
+      font-size:12px;
+    }
+    .oee-kpi-grid-v6136 {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-bottom:16px;
+    }
+    .oee-kpi-v6136 {
+      min-height:104px;
+      padding:15px;
+      border:1px solid var(--fb-border);
+      border-radius:16px;
+      background:#fff;
+    }
+    .oee-kpi-v6136 span {
+      display:block;
+      color:#71808b;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .oee-kpi-v6136 strong {
+      display:block;
+      margin-top:8px;
+      color:#26323b;
+      font-size:27px;
+      line-height:1.1;
+    }
+    .oee-kpi-v6136 strong.no-data-v6136 {
+      color:#7b8790;
+      font-size:20px;
+    }
+    .oee-kpi-v6136 small {
+      display:block;
+      margin-top:7px;
+      color:#7b8790;
+      font-size:11px;
+    }
+    .oee-section-v6136 {
+      margin-top:16px;
+      padding:16px;
+      border:1px solid var(--fb-border);
+      border-radius:18px;
+      background:#fff;
+    }
+    .oee-section-v6136.compact-v6136 { margin-top:0; }
+    .oee-section-v6136 h3 { margin:0 0 12px; }
+    .oee-section-head-v6136 {
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .oee-section-head-v6136 h3 { margin:0; }
+    .oee-section-head-v6136 p {
+      margin:4px 0 0;
+      color:#7a8790;
+      font-size:12px;
+    }
+    .oee-empty-v6136 {
+      padding:24px 18px;
+      border:1px dashed #cfd9e1;
+      border-radius:14px;
+      background:#f8fafb;
+      color:#6d7a84;
+      text-align:center;
+    }
+    .oee-empty-v6136 strong {
+      display:block;
+      margin-bottom:5px;
+      color:#36434c;
+      font-size:15px;
+    }
+    .oee-machine-list-v6136 {
+      display:grid;
+      gap:10px;
+    }
+    .oee-machine-card-v6136 {
+      display:grid;
+      grid-template-columns:minmax(180px,1.25fr) repeat(4,minmax(95px,.65fr));
+      gap:10px;
+      align-items:stretch;
+      padding:12px;
+      border:1px solid #dfe6eb;
+      border-radius:14px;
+      background:#fbfcfd;
+    }
+    .oee-machine-card-v6136.no-data-v6136 {
+      grid-template-columns:minmax(200px,1fr) minmax(220px,1.2fr);
+      background:#f7f9fa;
+    }
+    .oee-machine-info-v6136 {
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      min-width:0;
+    }
+    .oee-machine-info-v6136 strong {
+      color:#26323b;
+      font-size:16px;
+    }
+    .oee-machine-info-v6136 small {
+      margin-top:4px;
+      color:#76838d;
+      font-size:11px;
+      overflow-wrap:anywhere;
+    }
+    .oee-machine-empty-v6136 {
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      padding:10px 12px;
+      border-radius:11px;
+      background:#eef2f5;
+      color:#6d7982;
+    }
+    .oee-machine-empty-v6136 strong {
+      color:#46545e;
+      font-size:13px;
+    }
+    .oee-machine-empty-v6136 small { margin-top:3px; }
+    .oee-mini-metric-v6136 {
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      padding:10px 11px;
+      border:1px solid #e1e7eb;
+      border-radius:11px;
+      background:#fff;
+    }
+    .oee-mini-metric-v6136 span {
+      color:#78858e;
+      font-size:10px;
+      font-weight:900;
+      text-transform:uppercase;
+    }
+    .oee-mini-metric-v6136 strong {
+      margin-top:5px;
+      color:#26323b;
+      font-size:18px;
+    }
+    .oee-mini-metric-v6136 strong.no-data-v6136 {
+      color:#87929a;
+      font-size:13px;
+    }
+    .oee-details-v6136 {
+      margin-top:16px;
+      border:1px solid var(--fb-border);
+      border-radius:18px;
+      background:#fff;
+      overflow:hidden;
+    }
+    .oee-details-v6136 > summary {
+      padding:16px 18px;
+      cursor:pointer;
+      color:#2a3740;
+      font-weight:900;
+      list-style:none;
+    }
+    .oee-details-v6136 > summary::-webkit-details-marker { display:none; }
+    .oee-details-v6136 > summary::after {
+      content:'⌄';
+      float:right;
+      color:#c76516;
+    }
+    .oee-details-v6136[open] > summary {
+      border-bottom:1px solid var(--fb-border);
+      background:#fbfcfd;
+    }
+    .oee-details-body-v6136 {
+      display:grid;
+      gap:14px;
+      padding:16px;
+    }
+    .oee-action-strip-v6136 {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:center;
+      gap:18px;
+      padding:14px 16px;
+      border:1px solid #e1e7eb;
+      border-radius:14px;
+      background:#f8fafb;
+    }
+    .oee-action-strip-v6136 strong,
+    .oee-action-strip-v6136 small { display:block; }
+    .oee-action-strip-v6136 strong {
+      color:#2a3740;
+      font-size:14px;
+      line-height:1.35;
+    }
+    .oee-action-strip-v6136 small {
+      margin-top:4px;
+      color:#74818b;
+      font-size:11px;
+      line-height:1.45;
+    }
+    .oee-sync-btn-v6136 {
+      display:inline-flex !important;
+      align-items:center;
+      justify-content:center;
+      min-width:220px;
+      min-height:44px;
+      visibility:visible !important;
+      opacity:1 !important;
+      white-space:nowrap;
+    }
+    .oee-entry-grid-v6136 {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+    .oee-entry-grid-v6136 > .oee-panel-v524 {
+      width:100%;
+      min-width:0;
+      box-sizing:border-box;
+    }
+    .oee-simple-table-v6136 {
+      width:100%;
+      border-collapse:collapse;
+    }
+    .oee-simple-table-v6136 th,
+    .oee-simple-table-v6136 td {
+      padding:11px 10px;
+      border-bottom:1px solid #e1e6ea;
+      text-align:left;
+      font-size:12px;
+    }
+    .oee-simple-table-v6136 th {
+      color:#5f6d77;
+      font-size:10px;
+      text-transform:uppercase;
+    }
+
+    @media (max-width:1100px) {
+      .oee-filter-grid-v6136 { grid-template-columns:1fr 1fr; }
+      .oee-filter-grid-v6136 .admin-form-actions { grid-column:1 / -1; }
+      .oee-filter-grid-v6136 .admin-form-actions button { width:auto; min-width:180px; }
+      .oee-kpi-grid-v6136 { grid-template-columns:1fr 1fr; }
+      .oee-machine-card-v6136 { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:680px) {
+      .oee-filter-grid-v6136,
+      .oee-kpi-grid-v6136,
+      .oee-machine-card-v6136,
+      .oee-machine-card-v6136.no-data-v6136 { grid-template-columns:1fr; }
+      .oee-action-strip-v6136 { grid-template-columns:1fr; align-items:stretch; }
+      .oee-sync-btn-v6136 { width:100%; min-width:0; }
+    }
 
     @media (max-width: 980px) {
       .admin-shell-v58 { grid-template-columns:1fr; }
@@ -949,6 +1271,288 @@
 
 </style>
 
+
+
+  <!-- HUKATECH_V6_13_6_OPERATIONS_DASHBOARD -->
+  <style id="hukatechV6136OperationsDashboardStyle">
+    .dashboard-operations-section-v6136 { overflow:hidden; }
+    .dashboard-title-v6136 {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .dashboard-live-pill-v6136 {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border:1px solid #c8ddd6;
+      border-radius:999px;
+      background:#effaf6;
+      color:#176c57;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .dashboard-live-pill-v6136 i {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#1c9879;
+      box-shadow:0 0 0 4px rgba(28,152,121,.12);
+    }
+    .dashboard-operations-v6136 { display:grid; gap:16px; }
+    .dashboard-kpi-grid-v6136 {
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:12px;
+    }
+    button.dashboard-kpi-card-v6136 {
+      min-width:0;
+      min-height:126px;
+      padding:16px !important;
+      border:1px solid #d2dbe1 !important;
+      border-radius:15px !important;
+      background:linear-gradient(145deg,#fff,#f7f9fa) !important;
+      color:#25313a !important;
+      text-align:left !important;
+      box-shadow:0 8px 20px rgba(28,39,47,.055) !important;
+      cursor:pointer;
+      transform:none !important;
+      transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease !important;
+    }
+    button.dashboard-kpi-card-v6136:hover {
+      transform:translateY(-2px) !important;
+      border-color:#b6c2ca !important;
+      box-shadow:0 12px 26px rgba(28,39,47,.09) !important;
+    }
+    .dashboard-kpi-card-v6136 span {
+      display:block;
+      color:#687681;
+      font-size:10.5px;
+      font-weight:850;
+      letter-spacing:.065em;
+      text-transform:uppercase;
+    }
+    .dashboard-kpi-card-v6136 strong {
+      display:block;
+      margin-top:10px;
+      color:#202b32;
+      font-size:27px;
+      line-height:1;
+      letter-spacing:-.03em;
+    }
+    .dashboard-kpi-card-v6136 small {
+      display:block;
+      margin-top:9px;
+      color:#71808b;
+      font-size:11.5px;
+      line-height:1.35;
+    }
+    .dashboard-kpi-card-v6136.ok { border-top:3px solid #279177 !important; }
+    .dashboard-kpi-card-v6136.warn { border-top:3px solid #d88627 !important; }
+    .dashboard-kpi-card-v6136.danger { border-top:3px solid #c94a59 !important; }
+    .dashboard-kpi-card-v6136.neutral { border-top:3px solid #8a98a3 !important; }
+
+    .dashboard-main-grid-v6136 {
+      display:grid;
+      grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);
+      gap:14px;
+      align-items:stretch;
+    }
+    .dashboard-panel-v6136 {
+      min-width:0;
+      padding:17px;
+      border:1px solid #d2dbe1;
+      border-radius:15px;
+      background:#fff;
+      box-shadow:0 8px 21px rgba(28,39,47,.05);
+    }
+    .dashboard-panel-head-v6136 {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .dashboard-panel-head-v6136 h3 { margin:0; font-size:17px; color:#202b32; }
+    .dashboard-panel-head-v6136 p { margin:4px 0 0; color:#72808a; font-size:12px; }
+    .dashboard-attention-list-v6136,
+    .dashboard-events-list-v6136 { display:grid; gap:8px; }
+    .dashboard-attention-item-v6136,
+    .dashboard-event-item-v6136 {
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr) auto;
+      gap:10px;
+      align-items:center;
+      padding:10px 11px;
+      border:1px solid #e0e6ea;
+      border-radius:11px;
+      background:#fafbfc;
+    }
+    .dashboard-row-link-v6136 {
+      width:100%;
+      margin:0;
+      font:inherit;
+      color:inherit !important;
+      text-align:left;
+      cursor:pointer;
+      appearance:none;
+      -webkit-appearance:none;
+      background:#fafbfc !important;
+      border:1px solid #e0e6ea !important;
+      box-shadow:none !important;
+      text-decoration:none;
+      transition:border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .dashboard-row-link-v6136:hover {
+      border-color:#d7b37a !important;
+      background:#ffffff !important;
+      box-shadow:0 6px 14px rgba(17,24,39,.06) !important;
+      transform:translateY(-1px);
+    }
+    .dashboard-row-link-v6136:focus-visible {
+      outline:3px solid rgba(245,158,11,.18);
+      outline-offset:2px;
+      background:#ffffff !important;
+    }
+    .dashboard-row-link-v6136:active {
+      transform:translateY(0);
+      background:#fffdf8 !important;
+    }
+    .dashboard-attention-item-v6136 b,
+    .dashboard-event-item-v6136 b { display:block; color:#26323b; font-size:12.5px; }
+    .dashboard-attention-item-v6136 small,
+    .dashboard-event-item-v6136 small { display:block; margin-top:3px; color:#74818b; font-size:11px; }
+    .dashboard-severity-v6136 {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:58px;
+      padding:5px 7px;
+      border-radius:999px;
+      font-size:9.5px;
+      font-weight:900;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+    .dashboard-severity-v6136.danger { color:#9d2535; background:#ffe7eb; }
+    .dashboard-severity-v6136.warn { color:#8d5508; background:#fff1d5; }
+    .dashboard-severity-v6136.info { color:#176c57; background:#e5f7f0; }
+    .dashboard-attention-time-v6136,
+    .dashboard-event-time-v6136 { color:#7b8892; font-size:10.5px; white-space:nowrap; }
+    .dashboard-empty-v6136 {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:72px;
+      padding:14px;
+      border:1px dashed #bcd9cf;
+      border-radius:12px;
+      background:#f3fbf8;
+      color:#176c57;
+      font-weight:750;
+    }
+    .dashboard-empty-v6136::before {
+      content:'✓';
+      display:grid;
+      place-items:center;
+      width:25px;
+      height:25px;
+      border-radius:999px;
+      background:#dff5ec;
+      font-weight:900;
+    }
+    .dashboard-today-grid-v6136 {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(150px,1fr));
+      gap:10px;
+    }
+    .dashboard-today-card-v6136 {
+      padding:13px;
+      border:1px solid #dde4e9;
+      border-radius:12px;
+      background:linear-gradient(145deg,#fff,#f8fafb);
+    }
+    .dashboard-today-card-v6136 span {
+      display:block;
+      color:#75828c;
+      font-size:9.5px;
+      font-weight:850;
+      letter-spacing:.055em;
+      text-transform:uppercase;
+    }
+    .dashboard-today-card-v6136 strong {
+      display:block;
+      margin-top:7px;
+      color:#26323b;
+      font-size:18px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .dashboard-machine-scope-v6136 {
+      color:#a85d16 !important;
+      font-weight:750;
+    }
+    .dashboard-lower-grid-v6136 {
+      display:grid;
+      grid-template-columns:minmax(280px,.7fr) minmax(0,1.3fr);
+      gap:14px;
+    }
+    .dashboard-state-grid-v6136 {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+    }
+    .dashboard-state-v6136 {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 11px;
+      border:1px solid #e0e6ea;
+      border-radius:11px;
+      background:#fafbfc;
+      color:#57656f;
+      font-size:11.5px;
+      font-weight:750;
+    }
+    .dashboard-state-v6136 strong { color:#202b32; font-size:17px; }
+    .dashboard-quick-actions-v6136 {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:9px;
+      margin-top:14px;
+    }
+    button.dashboard-quick-btn-v6136 {
+      min-height:42px;
+      border-radius:11px !important;
+      font-size:12px;
+    }
+    .dashboard-system-status-v6136 { display:none !important; }
+
+    @media(max-width:1320px) {
+      .dashboard-kpi-grid-v6136 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    }
+    @media(max-width:980px) {
+      .dashboard-main-grid-v6136,
+      .dashboard-lower-grid-v6136 { grid-template-columns:1fr; }
+      .dashboard-today-grid-v6136 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media(max-width:680px) {
+      .dashboard-title-v6136 { align-items:flex-start; flex-direction:column; }
+      .dashboard-kpi-grid-v6136,
+      .dashboard-today-grid-v6136,
+      .dashboard-quick-actions-v6136 { grid-template-columns:1fr; }
+      .dashboard-attention-item-v6136,
+      .dashboard-event-item-v6136 { grid-template-columns:auto minmax(0,1fr); }
+      .dashboard-attention-time-v6136,
+      .dashboard-event-time-v6136 { grid-column:2; }
+    }
+  </style>
+
   <!-- HUKATECH_V6_13_5_ADMIN_SIMPLIFICATION -->
   <style id="hukatechV6135AdminStyle">
     #adminViewHeaderV58 { display:none !important; }
@@ -1211,7 +1815,7 @@
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
       <h1 class="hukatech-sidebar-logo-v2" aria-label="HukaTech"><span class="hukatech-brand-huka-v2">Huka</span><span class="hukatech-brand-tech-v2">Tech</span></h1>
-      <p id="adminVersionLabel">v6.13.2 &mdash; Cihaz yetkinlik aktar&#305;m durumu ve cihaz onay takibi aktif.</p>
+      <p id="adminVersionLabel">v6.13.6 &mdash; Operasyon odakl&#305; genel bak&#305;&#351; aktif.</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -1338,25 +1942,26 @@
     </div>
 
     <main>
-  <section class="card wide admin-card admin-view-active" data-admin-view="dashboard">
-    <div class="section-title-row">
+  <section class="card wide admin-card admin-view-active dashboard-operations-section-v6136" data-admin-view="dashboard">
+    <div class="section-title-row dashboard-title-v6136">
       <div>
-        <h2>Yönetim Özeti</h2>
-        <p id="adminOverviewVersionLabel" class="muted">v6.13.2 &mdash; Cihaz yetkinlik aktar&#305;m durumu ve cihaz onay takibi aktif.</p>
+        <h2>Operasyon Özeti</h2>
+        <p class="muted">Makineler, alarmlar, bakım ve günlük üretim için tek bakışta işletme durumu.</p>
       </div>
+      <span class="dashboard-live-pill-v6136"><i></i> Canlı operasyon</span>
     </div>
 
-    <div id="adminDashboardSummary" class="dashboard-kpi-v59">KPI özeti yükleniyor...</div>
-    <div id="adminStatus" class="mini-status">Yükleniyor...</div>
-    <div id="adminCounts" class="admin-count-grid"></div>
+    <div id="adminDashboardSummary" class="dashboard-operations-v6136">Operasyon özeti yükleniyor...</div>
+    <div id="dashboardTodayOeeShadowV6136" hidden></div>
+    <div id="adminStatus" class="dashboard-system-status-v6136" aria-live="polite"></div>
   </section>
 
 
   <section id="liveMonitoringSection" class="card wide admin-card" data-admin-view="live">
     <div class="section-title-row">
       <div>
-        <h2>Live Monitoring / Telemetry Snapshot</h2>
-        <p class="muted">v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.</p>
+        <h2>Canlı İzleme / Telemetri Özeti</h2>
+        <p class="muted">Makinelerin bağlantı sağlığı, çalışma durumu, son telemetri değerleri ve aktif alarm özeti.</p>
       </div>
       <button id="refreshLiveMonitoringBtn" class="secondary-btn">Canlı Durumu Yenile</button>
     </div>
@@ -1367,71 +1972,134 @@
   </section>
 
   <section id="oeeAnalyticsSection" class="card wide admin-card" data-admin-view="oee">
-    <div class="section-title-row">
-      <div><h2>Machine Downtime & OEE Analytics</h2><p class="muted">Makine duruşlarını, üretim adetlerini ve Availability × Performance × Quality üzerinden OEE değerlerini izle.</p></div>
-      <button id="refreshOeeAnalyticsBtn" class="secondary-btn">OEE Verilerini Yenile</button>
-    </div>
-
-    <div class="admin-form-grid">
-      <label>Başlangıç<input id="oeeFromFilter" type="date"></label>
-      <label>Bitiş<input id="oeeToFilter" type="date"></label>
-      <label>Makine<select id="oeeMachineFilter"><option value="all">Tüm makineler</option></select></label>
-      <div class="admin-form-actions"><button id="applyOeeFiltersBtn" class="primary-btn">Analizi Uygula</button></div>
-      <div class="admin-form-actions"><button id="syncOeeMachineStatesBtn" class="secondary-btn">STOPPED Sinyallerini Aktar</button></div>
-      <div class="admin-form-actions"><button id="cleanupOeeManualRecordsBtn" class="secondary-btn">Seçili Manuel Test Kayıtlarını Temizle</button></div>
-    </div>
-    <div id="oeeAnalyticsResult" class="mini-status">OEE verileri yükleniyor...</div>
-    <div class="mini-status">OEE hesabı seçili tarih aralığındaki bütün üretim ve duruş kayıtlarını toplar. Aynı test kaydını tekrar eklemek sonucu değiştirir.</div>
-    <div id="oeeSummary">OEE KPI özeti yükleniyor...</div>
-    <div class="oee-flow-v524"><span>Planlı Üretim Süresi</span><b>−</b><span>Duruş</span><b>=</b><span>Availability</span><b>×</b><span>Performance</span><b>×</b><span>Quality</span><b>=</b><span>OEE</span></div>
-
-    <div class="oee-panel-v524">
-      <h3>Makine OEE Ayarları</h3>
-      <div class="admin-form-grid">
-        <label>Makine<select id="oeeSettingsMachine"><option value="">Makine seç...</option></select></label>
-        <label>Günlük Planlı Süre (dk)<input id="oeePlannedMinutes" type="number" min="1" max="1440" value="480"></label>
-        <label>İdeal Çevrim (sn/adet)<input id="oeeIdealCycleSec" type="number" min="0.001" step="0.001" value="60"></label>
-        <label>Hedef OEE (%)<input id="oeeTargetPct" type="number" min="1" max="100" step="0.1" value="85"></label>
-        <label>OEE Takibi<select id="oeeEnabled"><option value="true">true</option><option value="false">false</option></select></label>
-        <div class="admin-form-actions"><button id="saveOeeSettingsBtn" class="primary-btn">OEE Ayarlarını Kaydet</button></div>
+    <div class="oee-filter-card-v6136">
+      <div class="oee-filter-grid-v6136">
+        <label>Başlangıç<input id="oeeFromFilter" type="date"></label>
+        <label>Bitiş<input id="oeeToFilter" type="date"></label>
+        <label>Makine<select id="oeeMachineFilter"><option value="all">Tüm makineler</option></select></label>
+        <div class="admin-form-actions"><button id="applyOeeFiltersBtn" class="primary-btn">Analizi Uygula</button></div>
       </div>
-      <div id="oeeSettingsResult" class="mini-status oee-form-result-v524">Makine ayarı bekleniyor.</div>
+      <div id="oeeAnalyticsResult" class="oee-range-status-v6136">OEE verileri yükleniyor...</div>
     </div>
 
-    <div class="oee-panel-v524">
-      <h3>Üretim Kaydı</h3>
-      <div class="admin-form-grid">
-        <label>Makine<select id="oeeProductionMachine"><option value="">Makine seç...</option></select></label>
-        <label>Tarih<input id="oeeProductionDate" type="date"></label>
-        <label>Vardiya<input id="oeeProductionShift" type="text" value="general" placeholder="A / B / general"></label>
-        <label>Toplam Adet<input id="oeeProductionTotal" type="number" min="0" value="100"></label>
-        <label>Sağlam Adet<input id="oeeProductionGood" type="number" min="0" value="95"></label>
-        <label>Hatalı Adet<input id="oeeProductionReject" type="number" min="0" value="5"></label>
-        <label class="maintenance-wide-v521">Not<textarea id="oeeProductionNote" placeholder="Üretim emri veya vardiya açıklaması"></textarea></label>
-        <div class="admin-form-actions"><button id="createOeeProductionBtn" class="primary-btn">Üretim Kaydı Ekle</button></div>
+    <div id="oeeSummary">OEE özeti yükleniyor...</div>
+
+    <div class="oee-section-v6136">
+      <div class="oee-section-head-v6136">
+        <div>
+          <h3>Makine Bazlı OEE</h3>
+          <p>Üretim veya duruş verisi bulunan makinelerin performans özeti.</p>
+        </div>
       </div>
-      <div id="oeeProductionResult" class="mini-status oee-form-result-v524">Üretim kaydı bekleniyor.</div>
+      <div id="oeeMachinesTable">Makine OEE özeti yükleniyor...</div>
     </div>
 
-    <div class="oee-panel-v524">
-      <h3>Duruş Kaydı</h3>
-      <div class="admin-form-grid">
-        <label>Makine<select id="oeeDowntimeMachine"><option value="">Makine seç...</option></select></label>
-        <label>Kategori<select id="oeeDowntimeCategory"><option value="unplanned">unplanned</option><option value="planned">planned</option></select></label>
-        <label>Neden<select id="oeeDowntimeReason"><option value="breakdown">breakdown</option><option value="material_wait">material_wait</option><option value="operator_wait">operator_wait</option><option value="setup">setup</option><option value="changeover">changeover</option><option value="planned_maintenance">planned_maintenance</option><option value="quality_stop">quality_stop</option><option value="power">power</option><option value="safety">safety</option><option value="other">other</option></select></label>
-        <label>Başlangıç<input id="oeeDowntimeStart" type="datetime-local"></label>
-        <label>Bitiş<input id="oeeDowntimeEnd" type="datetime-local"></label>
-        <label>Neden Açıklaması<input id="oeeDowntimeReasonText" type="text" placeholder="Örn: Egzoz fanı arızası"></label>
-        <label class="maintenance-wide-v521">Not<textarea id="oeeDowntimeNote" placeholder="Duruşta yapılan işlem ve açıklama"></textarea></label>
-        <div class="admin-form-actions"><button id="createOeeDowntimeBtn" class="primary-btn">Duruş Kaydı Ekle</button></div>
+    <div class="oee-section-v6136">
+      <div class="oee-section-head-v6136">
+        <div>
+          <h3>Günlük OEE Trendi</h3>
+          <p>Yalnızca veri bulunan günler gösterilir.</p>
+        </div>
       </div>
-      <div id="oeeDowntimeResult" class="mini-status oee-form-result-v524">Duruş kaydı bekleniyor.</div>
+      <div id="oeeDailyTrendTable">Günlük trend yükleniyor...</div>
     </div>
 
-    <div class="kpi-panel-v59"><h3>Makine Bazlı OEE</h3><div id="oeeMachinesTable">Makine OEE tablosu yükleniyor...</div></div>
-    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Günlük OEE Trendi</h3><div id="oeeDailyTrendTable">Günlük trend yükleniyor...</div></div>
-    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Son Üretim Kayıtları</h3><div id="oeeProductionTable">Üretim kayıtları yükleniyor...</div></div>
-    <div class="kpi-panel-v59" style="margin-top:16px"><h3>Son Duruş Kayıtları</h3><div id="oeeDowntimeTable">Duruş kayıtları yükleniyor...</div></div>
+    <details class="oee-details-v6136">
+      <summary>Veri Girişi ve OEE Ayarları</summary>
+      <div class="oee-details-body-v6136">
+        <div class="oee-action-strip-v6136">
+          <div>
+            <strong>Makine durumlarından duruş kaydı oluştur</strong>
+            <small>Seçilen tarih aralığındaki duruş sinyallerini kayıt altına alır.</small>
+          </div>
+          <button id="syncOeeMachineStatesBtn" class="primary-btn oee-sync-btn-v6136">Duruş Sinyallerini Aktar</button>
+        </div>
+
+        <div class="oee-panel-v524">
+          <h3>Makine OEE Ayarları</h3>
+          <div class="admin-form-grid">
+            <label>Makine<select id="oeeSettingsMachine"><option value="">Makine seç...</option></select></label>
+            <label>Günlük Planlı Süre (dk)<input id="oeePlannedMinutes" type="number" min="1" max="1440" value="480"></label>
+            <label>İdeal Çevrim (sn/adet)<input id="oeeIdealCycleSec" type="number" min="0.001" step="0.001" value="60"></label>
+            <label>Hedef OEE (%)<input id="oeeTargetPct" type="number" min="1" max="100" step="0.1" value="85"></label>
+            <label>OEE Takibi<select id="oeeEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+            <div class="admin-form-actions"><button id="saveOeeSettingsBtn" class="primary-btn">Ayarları Kaydet</button></div>
+          </div>
+          <div id="oeeSettingsResult" class="mini-status oee-form-result-v524">Makine ayarı bekleniyor.</div>
+        </div>
+
+        <div class="oee-entry-grid-v6136">
+          <div class="oee-panel-v524">
+            <h3>Üretim Kaydı</h3>
+            <div class="admin-form-grid">
+              <label>Makine<select id="oeeProductionMachine"><option value="">Makine seç...</option></select></label>
+              <label>Tarih<input id="oeeProductionDate" type="date"></label>
+              <label>Vardiya
+                <select id="oeeProductionShift">
+                  <option value="general">Genel</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                </select>
+              </label>
+              <label>Toplam Adet<input id="oeeProductionTotal" type="number" min="0" value="0"></label>
+              <label>Sağlam Adet<input id="oeeProductionGood" type="number" min="0" value="0"></label>
+              <label>Hatalı Adet<input id="oeeProductionReject" type="number" min="0" value="0"></label>
+              <label class="maintenance-wide-v521">Not<textarea id="oeeProductionNote" placeholder="Üretim emri veya vardiya açıklaması"></textarea></label>
+              <div class="admin-form-actions"><button id="createOeeProductionBtn" class="primary-btn">Üretim Kaydı Ekle</button></div>
+            </div>
+            <div id="oeeProductionResult" class="mini-status oee-form-result-v524">Üretim kaydı bekleniyor.</div>
+          </div>
+
+          <div class="oee-panel-v524">
+            <h3>Duruş Kaydı</h3>
+            <div class="admin-form-grid">
+              <label>Makine<select id="oeeDowntimeMachine"><option value="">Makine seç...</option></select></label>
+              <label>Kategori
+                <select id="oeeDowntimeCategory">
+                  <option value="unplanned">Plansız</option>
+                  <option value="planned">Planlı</option>
+                </select>
+              </label>
+              <label>Neden
+                <select id="oeeDowntimeReason">
+                  <option value="breakdown">Arıza</option>
+                  <option value="material_wait">Malzeme Bekleme</option>
+                  <option value="operator_wait">Operatör Bekleme</option>
+                  <option value="setup">Kurulum</option>
+                  <option value="changeover">Ürün Değişimi</option>
+                  <option value="planned_maintenance">Planlı Bakım</option>
+                  <option value="quality_stop">Kalite Duruşu</option>
+                  <option value="power">Enerji</option>
+                  <option value="safety">Güvenlik</option>
+                  <option value="other">Diğer</option>
+                </select>
+              </label>
+              <label>Başlangıç<input id="oeeDowntimeStart" type="datetime-local"></label>
+              <label>Bitiş<input id="oeeDowntimeEnd" type="datetime-local"></label>
+              <label>Neden Açıklaması<input id="oeeDowntimeReasonText" type="text" placeholder="Örn: Egzoz fanı arızası"></label>
+              <label class="maintenance-wide-v521">Not<textarea id="oeeDowntimeNote" placeholder="Duruşta yapılan işlem ve açıklama"></textarea></label>
+              <div class="admin-form-actions"><button id="createOeeDowntimeBtn" class="primary-btn">Duruş Kaydı Ekle</button></div>
+            </div>
+            <div id="oeeDowntimeResult" class="mini-status oee-form-result-v524">Duruş kaydı bekleniyor.</div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="oee-details-v6136">
+      <summary>Son Üretim ve Duruş Kayıtları</summary>
+      <div class="oee-details-body-v6136">
+        <div class="oee-section-v6136 compact-v6136">
+          <h3>Son Üretim Kayıtları</h3>
+          <div id="oeeProductionTable">Üretim kayıtları yükleniyor...</div>
+        </div>
+        <div class="oee-section-v6136 compact-v6136">
+          <h3>Son Duruş Kayıtları</h3>
+          <div id="oeeDowntimeTable">Duruş kayıtları yükleniyor...</div>
+        </div>
+      </div>
+    </details>
   </section>
 
   
@@ -2815,6 +3483,16 @@
   let latestDeviceOnboardingProvision = null;
   let deviceCapabilityAdminState = {devices:[],catalog:[],profiles:[],selectedUid:'',profileKey:'custom',capabilities:[],configuration:null,permanentQr:null,transferStatus:null,transferPollId:0};
   let organizationAdminState={customers:[],hierarchy:null,access:null,comparison:null};
+  let operationsDashboardV6136 = {
+    base:null,
+    live:null,
+    todayOee:null,
+    alarms:null,
+    maintenanceTickets:null,
+    maintenanceWorkOrders:null,
+    inventory:null
+  };
+
   let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
   const I18N_PAIRS = [
@@ -2928,12 +3606,12 @@
     ['Admin panel çalışıyor.','Admin panel is running.'],['Permission required','Permission required'],['Login required','Login required'],
     ['v6.8.1 — Central Mail Gateway, Cloud Access ve Remote Management aktif.','v6.8.1 — Central Mail Gateway, Cloud Access and Remote Management are active.'],
     ['v6.8.1: Central Mail Gateway, Cloud Access ve Remote Management aktif.','v6.8.1: Central Mail Gateway, Cloud Access and Remote Management are active.'],
-    ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Snapshot'],
-    ['v5.11: Makinelerin canlı sağlık durumu, son telemetri değeri, cihaz bağlantısı ve aktif alarm özeti.','v5.11: Live machine health, latest telemetry, device connectivity and active alarm summary.'],
+    ['Canlı İzleme / Telemetri Özeti','Live Monitoring / Telemetry Summary'],
+    ['Makinelerin bağlantı sağlığı, çalışma durumu, son telemetri değerleri ve aktif alarm özeti.','Machine connection health, operating state, latest telemetry values and active alarm summary.'],
     ['Canlı Durumu Yenile','Refresh Live Status'],['Canlı izleme özeti yükleniyor...','Loading live monitoring summary...'],
     ['Makine kartları yükleniyor...','Loading machine cards...'],['Makine telemetri tablosu yükleniyor...','Loading machine telemetry table...'],
     ['Makine duruşlarını, üretim adetlerini ve Availability × Performance × Quality üzerinden OEE değerlerini izle.','Monitor machine downtime, production counts and OEE through Availability × Performance × Quality.'],
-    ['OEE Verilerini Yenile','Refresh OEE Data'],['STOPPED Sinyallerini Aktar','Import STOPPED Signals'],
+    ['OEE Verilerini Yenile','Refresh OEE Data'],['Duruş Sinyallerini Aktar','Import Downtime Signals'],
     ['Seçili Manuel Test Kayıtlarını Temizle','Clean Selected Manual Test Records'],['OEE verileri yükleniyor...','Loading OEE data...'],
     ['OEE hesabı seçili tarih aralığındaki bütün üretim ve duruş kayıtlarını toplar. Aynı test kaydını tekrar eklemek sonucu değiştirir.','The OEE calculation aggregates all production and downtime records in the selected date range. Adding the same test record again changes the result.'],
     ['OEE KPI özeti yükleniyor...','Loading OEE KPI summary...'],['Makine seç...','Select machine...'],
@@ -3372,12 +4050,12 @@
   };
 
   function applyBackendVersion(version) {
-    const safeVersion = String(version || '6.3.0').replace(/^v/i, '');
+    const safeVersion = '6.13.6';
     const brand = document.getElementById('adminVersionLabel');
     const overview = document.getElementById('adminOverviewVersionLabel');
-    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Security hardening and session management are active.` : `v${safeVersion} — Güvenlik sertleştirme ve oturum yönetimi aktif.`;
-    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Security Center, session management and login protection are active.` : `v${safeVersion}: Güvenlik merkezi, oturum yönetimi ve giriş koruması aktif.`;
-    document.title = `FactoryBox v${safeVersion} SaaS Admin Panel`;
+    if (brand) brand.textContent = currentLanguage==='en' ? `v${safeVersion} — Operations monitoring platform.` : `v${safeVersion} — Operasyon izleme platformu.`;
+    if (overview) overview.textContent = currentLanguage==='en' ? `v${safeVersion}: Operations overview is active.` : `v${safeVersion}: Operasyon genel bakışı aktif.`;
+    document.title = `HukaTech v${safeVersion} Admin Panel`;
   }
 
   function permissionsForRole(role) {
@@ -3464,7 +4142,19 @@
   }
 
   function liveHealthLabel(health) {
-    const labels = {
+    const key=String(health||'').toLowerCase();
+    const labelsTr = {
+      running:'çalışıyor',
+      stopped:'durdu',
+      online:'çevrimiçi',
+      offline:'çevrimdışı',
+      stale:'veri eski',
+      alarm:'alarm',
+      maintenance:'bakımda',
+      no_device:'cihaz yok',
+      archived:'arşivlendi'
+    };
+    const labelsEn = {
       running:'running',
       stopped:'stopped',
       online:'online',
@@ -3475,7 +4165,30 @@
       no_device:'no device',
       archived:'archived'
     };
-    return labels[health] || health || '-';
+    return (currentLanguage==='en'?labelsEn:labelsTr)[key] || health || '-';
+  }
+
+  function liveRowConnectionHealth(row) {
+    return String(row?.connection_health || row?.health || '').toLowerCase();
+  }
+
+  function liveRowHasCurrentSignal(row) {
+    return !['offline','stale','no_device','archived'].includes(liveRowConnectionHealth(row));
+  }
+
+  function liveRowStateText(row) {
+    if (!liveRowHasCurrentSignal(row)) {
+      return currentLanguage==='en'?'Unknown':'Bilinmiyor';
+    }
+    return row?.latest_state || '-';
+  }
+
+  function liveMetricValue(row,value,suffix='') {
+    const formatted=fmtMetric(value,suffix);
+    if (formatted==='-') return {html:'-',last:false};
+    if (liveRowHasCurrentSignal(row)) return {html:esc(formatted),last:false};
+    const prefix=currentLanguage==='en'?'Last value':'Son değer';
+    return {html:`${esc(prefix)}: ${esc(formatted)}`,last:true};
   }
 
   function liveConnectionIssueCount(summary) {
@@ -3487,10 +4200,14 @@
     const visible = Number(row.visible_active_alarm_count ?? active);
 
     if (row.has_stale_alarm) {
-      return `Last alarm: ${fmtDate(row.latest_alarm_at)} · bağlantı eski`;
+      return currentLanguage==='en'
+        ? `Last alarm: ${fmtDate(row.latest_alarm_at)} · connection data is stale`
+        : `Son alarm: ${fmtDate(row.latest_alarm_at)} · bağlantı verisi eski`;
     }
 
-    return `Active alarms: ${visible}`;
+    return currentLanguage==='en'
+      ? `Active alarms: ${visible}`
+      : `Aktif alarmlar: ${visible}`;
   }
 
   function compactJson(v) {
@@ -3504,7 +4221,7 @@
 
 
   const ADMIN_VIEWS = {
-    dashboard:{title_tr:'Kontrol Paneli',title_en:'Dashboard',desc_tr:'Sistem özeti, sürüm bilgisi ve hızlı durum kartları.',desc_en:'System summary, version information and quick status cards.'},
+    dashboard:{title_tr:'Genel Bakış',title_en:'Overview',desc_tr:'İşletmenin canlı operasyon, alarm, bakım ve üretim özeti.',desc_en:'Live operations, alarms, maintenance and production summary.'},
     live:{title_tr:'Canlı İzleme',title_en:'Live Monitoring',desc_tr:'Makinelerin canlı durumları, son telemetri değerleri ve bağlantı sağlığı.',desc_en:'Live machine states, latest telemetry values and connection health.'},
     oee:{title_tr:'Makine Duruşu ve OEE Analitiği',title_en:'Machine Downtime & OEE Analytics',desc_tr:'Kullanılabilirlik, performans, kalite, OEE, üretim adetleri ve duruş nedenleri.',desc_en:'Availability, performance, quality, OEE, production counts and downtime reasons.'},
     alarms:{title_tr:'Alarm Merkezi',title_en:'Alarm Center',desc_tr:'Aktif alarm listesi, alarm geçmişi, onaylama ve kapatma işlemleri.',desc_en:'Active alarm list, alarm history, acknowledgement and clearing operations.'},
@@ -3892,122 +4609,358 @@
     return `<span class="kpi-alert-v59 ${type}">${esc(text)}</span>`;
   }
 
-  function renderDashboardSummary(data) {
-    const target = document.getElementById('adminDashboardSummary');
-    if (!target) return;
+  function dashboardTextV6136(tr,en) {
+    return currentLanguage==='en' ? en : tr;
+  }
 
-    const counts = data.counts || {};
-    const alerts = data.alerts || {};
-    const latest = data.latest_audit || [];
-    const generated = fmtDate(data.generated_at);
+  function dashboardNumberV6136(value) {
+    const number=Number(value);
+    return Number.isFinite(number) ? number : 0;
+  }
 
-    target.innerHTML = `
-      <div class="kpi-grid-v59">
-        <div class="kpi-card-v59"><span>Tenant</span><strong>${esc(counts.customers ?? 0)}</strong><small>${esc(counts.sites ?? 0)} site · ${esc(counts.machines ?? 0)} makine</small></div>
-        <div class="kpi-card-v59"><span>Cihaz</span><strong>${esc(counts.devices ?? 0)}</strong><small>${esc(counts.online_devices ?? 0)} online · ${esc(counts.offline_devices ?? 0)} offline</small></div>
-        <div class="kpi-card-v59"><span>Kullanıcı</span><strong>${esc(counts.users ?? 0)}</strong><small>${esc(counts.active_users ?? 0)} aktif · ${esc(counts.pending_invites ?? 0)} bekleyen davet</small></div>
-        <div class="kpi-card-v59"><span>Abonelik</span><strong>${esc((counts.active_subscriptions ?? 0) + (counts.trialing_subscriptions ?? 0))}</strong><small>${esc(counts.blocked_subscriptions ?? 0)} blocked</small></div>
-        <div class="kpi-card-v59"><span>Güvenlik</span><strong>${esc(counts.audit_logs_24h ?? 0)}</strong><small>24 saatte ${esc(counts.failed_logins_24h ?? 0)} failed login</small></div>
-        <div class="kpi-card-v59"><span>Alarm</span><strong>${esc(counts.active_alarms ?? 0)}</strong><small>Aktif alarm sayısı</small></div>
+  function dashboardTodayIsoV6136() {
+    const now=new Date();
+    const pad=value=>String(value).padStart(2,'0');
+    return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  }
+
+  function dashboardTimeV6136(value) {
+    if(!value)return '-';
+    const date=new Date(value);
+    if(Number.isNaN(date.getTime()))return '-';
+    return date.toLocaleTimeString(currentLanguage==='en'?'en-US':'tr-TR',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  function dashboardKpiV6136({label,value,detail,state='neutral',view}) {
+    return `<button type="button" class="secondary-btn dashboard-kpi-card-v6136 ${esc(state)}" data-dashboard-view="${esc(view)}">
+      <span>${esc(label)}</span>
+      <strong>${esc(value)}</strong>
+      <small>${esc(detail)}</small>
+    </button>`;
+  }
+
+  function dashboardMachineScopeV6136(row) {
+    const company=row.customer_name||row.organization_name||row.customer_code||'';
+    const site=row.site_name||row.factory_name||row.site_code||'';
+    return [company,site].filter(Boolean).join(' · ');
+  }
+
+  function dashboardIssueV6136(issue) {
+    const tag=issue.view?'button':'div';
+    const attrs=issue.view?` type="button" data-dashboard-view="${esc(issue.view)}"`:'';
+    const linkClass=issue.view?' dashboard-row-link-v6136':'';
+    return `<${tag}${attrs} class="dashboard-attention-item-v6136${linkClass}">
+      <span class="dashboard-severity-v6136 ${esc(issue.level)}">${esc(issue.badge)}</span>
+      <div>
+        <b>${esc(issue.title)}</b>
+        ${issue.scope?`<small class="dashboard-machine-scope-v6136">${esc(issue.scope)}</small>`:''}
+        <small>${esc(issue.detail)}</small>
+      </div>
+      <span class="dashboard-attention-time-v6136">${esc(issue.time||'')}</span>
+    </${tag}>`;
+  }
+
+  function dashboardEventV6136(event) {
+    const tag=event.view?'button':'div';
+    const attrs=event.view?` type="button" data-dashboard-view="${esc(event.view)}"`:'';
+    const linkClass=event.view?' dashboard-row-link-v6136':'';
+    return `<${tag}${attrs} class="dashboard-event-item-v6136${linkClass}">
+      <span class="dashboard-severity-v6136 ${esc(event.level||'info')}">${esc(event.badge)}</span>
+      <div>
+        <b>${esc(event.title)}</b>
+        ${event.scope?`<small class="dashboard-machine-scope-v6136">${esc(event.scope)}</small>`:''}
+        <small>${esc(event.detail)}</small>
+      </div>
+      <span class="dashboard-event-time-v6136">${esc(dashboardTimeV6136(event.at))}</span>
+    </${tag}>`;
+  }
+
+  function renderOperationsDashboardV6136() {
+    const target=document.getElementById('adminDashboardSummary');
+    if(!target)return;
+
+    const state=operationsDashboardV6136;
+    const live=state.live||{};
+    const liveSummary=live.summary||{};
+    const machines=live.machines||[];
+    const alarmData=state.alarms||{};
+    const alarmSummary=alarmData.summary||{};
+    const alarms=alarmData.alarms||[];
+    const oee=state.todayOee||{};
+    const oeeSummary=oee.summary||{};
+    const maintenanceTickets=state.maintenanceTickets||{};
+    const maintenanceWorkOrders=state.maintenanceWorkOrders||{};
+    const maintenanceSummary=maintenanceWorkOrders.summary||maintenanceTickets.summary||{};
+    const inventory=state.inventory||{};
+    const inventorySummary=inventory.summary||{};
+
+    const total=dashboardNumberV6136(liveSummary.total);
+    const running=dashboardNumberV6136(liveSummary.running);
+    const offline=dashboardNumberV6136(liveSummary.offline);
+    const stale=dashboardNumberV6136(liveSummary.stale);
+    const stopped=dashboardNumberV6136(liveSummary.stopped);
+    const machineAlarm=dashboardNumberV6136(liveSummary.alarm);
+    const noDevice=dashboardNumberV6136(liveSummary.no_device);
+    const connectionIssues=offline+stale;
+    const activeAlarms=dashboardNumberV6136(alarmSummary.active);
+    const criticalAlarms=dashboardNumberV6136(alarmSummary.critical);
+    const openMaintenance=dashboardNumberV6136(maintenanceSummary.active);
+    const overdueMaintenance=dashboardNumberV6136(maintenanceSummary.overdue);
+    const lowStock=dashboardNumberV6136(inventorySummary.low_stock)+dashboardNumberV6136(inventorySummary.out_of_stock);
+    const hasOeeData=dashboardNumberV6136(oeeSummary.total_count)>0 || dashboardNumberV6136(oeeSummary.signal_run_sec)>0;
+    const oeeValue=hasOeeData ? `%${fmtMetric(oeeSummary.oee_pct||0)}` : dashboardTextV6136('Veri yok','No data');
+
+    const issues=[];
+
+    alarms.filter(row=>String(row.status||'active').toLowerCase()==='active').forEach(row=>{
+      const critical=String(row.severity||'').toLowerCase()==='critical';
+      issues.push({
+        level:critical?'danger':'warn',
+        badge:critical?dashboardTextV6136('Kritik','Critical'):dashboardTextV6136('Alarm','Alarm'),
+        title:`${row.machine_name||row.machine_code||dashboardTextV6136('Makine','Machine')} — ${row.alarm_type||dashboardTextV6136('Aktif alarm','Active alarm')}`,
+        detail:row.message||dashboardTextV6136('Müdahale bekliyor','Action required'),
+        time:dashboardTimeV6136(row.started_at),
+        rank:critical?100:90,
+        view:'alarms'
+      });
+    });
+
+    machines.forEach(row=>{
+      const health=String(row.health||'').toLowerCase();
+      if(!['alarm','offline','stale','no_device'].includes(health))return;
+      const labels={
+        alarm:[dashboardTextV6136('Kritik','Critical'),dashboardTextV6136('Makine alarm durumunda','Machine is in alarm state'),'danger',95],
+        offline:[dashboardTextV6136('Offline','Offline'),dashboardTextV6136('Cihaz bağlantısı kesildi','Device connection is offline'),'warn',80],
+        stale:[dashboardTextV6136('Stale','Stale'),`${dashboardTextV6136('Son sinyal','Last signal')}: ${fmtDuration(row.signal_age_sec)}`,'warn',75],
+        no_device:[dashboardTextV6136('Cihaz yok','No device'),dashboardTextV6136('Makineye cihaz bağlanmamış','No device is assigned to the machine'),'warn',70]
+      };
+      const item=labels[health];
+      issues.push({
+        level:item[2],badge:item[0],title:row.machine_name||row.machine_code||'-',
+        scope:dashboardMachineScopeV6136(row),detail:item[1],
+        time:dashboardTimeV6136(row.last_seen_at||row.latest_telemetry_at),rank:item[3],
+        view:'live'
+      });
+    });
+
+    (maintenanceWorkOrders.work_orders||[]).forEach(row=>{
+      const active=!['completed','cancelled'].includes(String(row.status||'').toLowerCase());
+      if(!active || (!row.overdue && String(row.priority||'').toLowerCase()!=='critical'))return;
+      issues.push({
+        level:row.overdue?'danger':'warn',
+        badge:row.overdue?dashboardTextV6136('Gecikmiş','Overdue'):dashboardTextV6136('Bakım','Maintenance'),
+        title:row.title||row.work_order_no||dashboardTextV6136('Bakım işi','Maintenance job'),
+        detail:`${row.machine_name||row.machine_code||'-'} · ${row.assignee||dashboardTextV6136('Atanmamış','Unassigned')}`,
+        time:dashboardTimeV6136(row.due_at),rank:row.overdue?85:68,
+        view:'work-orders'
+      });
+    });
+
+    (inventory.parts||[]).filter(row=>row.out_of_stock||row.low_stock).forEach(row=>{
+      issues.push({
+        level:row.out_of_stock?'danger':'warn',
+        badge:row.out_of_stock?dashboardTextV6136('Tükendi','Out'):dashboardTextV6136('Stok','Stock'),
+        title:row.name||row.part_no||dashboardTextV6136('Yedek parça','Spare part'),
+        detail:`${fmtMetric(row.current_stock)} ${row.unit||''} · Min: ${fmtMetric(row.min_stock)}`,
+        time:'',rank:row.out_of_stock?82:65,
+        view:'inventory'
+      });
+    });
+
+    issues.sort((a,b)=>b.rank-a.rank);
+
+    const todayRunSec=dashboardNumberV6136(oeeSummary.signal_run_sec);
+    const todayStopSec=dashboardNumberV6136(oeeSummary.unplanned_downtime_sec)+dashboardNumberV6136(oeeSummary.planned_downtime_sec);
+    const todayProduction=dashboardNumberV6136(oeeSummary.total_count);
+    const longestStop=(oee.machines||[]).slice().sort((a,b)=>dashboardNumberV6136(b.unplanned_downtime_sec)-dashboardNumberV6136(a.unplanned_downtime_sec))[0];
+    const hasTodayData=hasOeeData || todayStopSec>0 || todayProduction>0;
+
+    const events=[];
+    alarms.forEach(row=>events.push({
+      at:row.started_at,
+      badge:dashboardTextV6136('Alarm','Alarm'),
+      level:String(row.severity||'').toLowerCase()==='critical'?'danger':'warn',
+      title:`${row.machine_name||row.machine_code||'-'} — ${row.alarm_type||'-'}`,
+      detail:row.message||dashboardTextV6136('Alarm kaydı','Alarm record'),
+      view:'alarms'
+    }));
+    machines.filter(row=>['offline','stale','no_device'].includes(String(row.health||'').toLowerCase())).forEach(row=>events.push({
+      at:row.last_seen_at||row.latest_telemetry_at,
+      badge:dashboardTextV6136('Cihaz','Device'),
+      level:'warn',
+      title:row.machine_name||row.machine_code||'-',
+      scope:dashboardMachineScopeV6136(row),
+      detail:dashboardTextV6136(`Bağlantı durumu: ${liveHealthLabel(row.health)}`,`Connection status: ${liveHealthLabel(row.health)}`),
+      view:'live'
+    }));
+    (maintenanceWorkOrders.work_orders||[]).slice(0,10).forEach(row=>events.push({
+      at:row.updated_at||row.created_at||row.due_at,
+      badge:dashboardTextV6136('Bakım','Maintenance'),
+      level:row.overdue?'warn':'info',
+      title:row.title||row.work_order_no||'-',
+      detail:`${row.status||'-'} · ${row.machine_name||row.machine_code||'-'}`,
+      view:'work-orders'
+    }));
+    (inventory.recent_movements||[]).slice(0,10).forEach(row=>events.push({
+      at:row.created_at,
+      badge:dashboardTextV6136('Stok','Stock'),
+      level:'info',
+      title:row.part_name||row.part_no||'-',
+      detail:`${row.movement_type||'-'} · ${Number(row.quantity_change)>0?'+':''}${fmtMetric(row.quantity_change)} ${row.unit||''}`,
+      view:'inventory'
+    }));
+    events.sort((a,b)=>new Date(b.at||0)-new Date(a.at||0));
+
+    target.innerHTML=`
+      <div class="dashboard-kpi-grid-v6136">
+        ${dashboardKpiV6136({label:dashboardTextV6136('Çalışan Makineler','Running Machines'),value:`${running} / ${total}`,detail:dashboardTextV6136('Canlı bağlantı ve RUNNING durumu','Live connection and RUNNING state'),state:running>0?'ok':'neutral',view:'live'})}
+        ${dashboardKpiV6136({label:dashboardTextV6136('Bağlantı Sorunu','Connection Issues'),value:connectionIssues,detail:`${offline} offline · ${stale} stale`,state:connectionIssues>0?'warn':'ok',view:'live'})}
+        ${dashboardKpiV6136({label:dashboardTextV6136('Aktif Alarmlar','Active Alarms'),value:activeAlarms,detail:`${criticalAlarms} ${dashboardTextV6136('kritik','critical')}`,state:criticalAlarms>0?'danger':activeAlarms>0?'warn':'ok',view:'alarms'})}
+        ${dashboardKpiV6136({label:dashboardTextV6136('Bugünkü OEE','Today OEE'),value:oeeValue,detail:hasOeeData?`${todayProduction} ${dashboardTextV6136('toplam üretim','total production')}`:dashboardTextV6136('Bugün üretim verisi yok','No production data today'),state:hasOeeData?(dashboardNumberV6136(oeeSummary.oee_pct)>=85?'ok':'warn'):'neutral',view:'oee'})}
+        ${dashboardKpiV6136({label:dashboardTextV6136('Açık Bakım','Open Maintenance'),value:openMaintenance,detail:`${overdueMaintenance} ${dashboardTextV6136('geciken iş','overdue jobs')}`,state:overdueMaintenance>0?'danger':openMaintenance>0?'warn':'ok',view:'work-orders'})}
+        ${dashboardKpiV6136({label:dashboardTextV6136('Cihazsız Makine','Machines Without Device'),value:noDevice,detail:lowStock>0?`${lowStock} ${dashboardTextV6136('kritik stok','critical stock')}`:dashboardTextV6136('Cihaz eşleşme durumu','Device assignment status'),state:noDevice>0?'warn':'ok',view:'devices'})}
       </div>
 
-      <div class="kpi-alerts-v59">
-        ${kpiAlert('Blocked subscription', alerts.blocked_subscriptions, 'danger')}
-        ${kpiAlert('Offline device', alerts.offline_devices, 'warn')}
-        ${kpiAlert('Failed login 24h', alerts.failed_logins_24h, 'warn')}
-        ${kpiAlert('Active alarm', alerts.active_alarms, 'danger')}
+      <div class="dashboard-main-grid-v6136">
+        <section class="dashboard-panel-v6136">
+          <div class="dashboard-panel-head-v6136"><div><h3>${dashboardTextV6136('Dikkat Gerektirenler','Needs Attention')}</h3><p>${dashboardTextV6136('Öncelikli alarm, bağlantı, bakım ve stok uyarıları','Priority alarm, connection, maintenance and stock warnings')}</p></div></div>
+          ${issues.length?`<div class="dashboard-attention-list-v6136">${issues.slice(0,6).map(dashboardIssueV6136).join('')}</div>`:`<div class="dashboard-empty-v6136">${dashboardTextV6136('Şu anda dikkat gerektiren kritik bir durum bulunmuyor.','There is currently no critical item requiring attention.')}</div>`}
+        </section>
+
+        <section class="dashboard-panel-v6136">
+          <div class="dashboard-panel-head-v6136"><div><h3>${dashboardTextV6136('Bugünün Özeti','Today Summary')}</h3><p>${dashboardTextV6136('Günlük üretim ve duruş görünümü','Daily production and downtime view')}</p></div></div>
+          <div class="dashboard-today-grid-v6136">
+            <div class="dashboard-today-card-v6136"><span>${dashboardTextV6136('Çalışma Süresi','Run Time')}</span><strong>${hasTodayData?fmtDuration(todayRunSec):dashboardTextV6136('Veri yok','No data')}</strong></div>
+            <div class="dashboard-today-card-v6136"><span>${dashboardTextV6136('Duruş Süresi','Downtime')}</span><strong>${hasTodayData?fmtDuration(todayStopSec):dashboardTextV6136('Veri yok','No data')}</strong></div>
+            <div class="dashboard-today-card-v6136"><span>${dashboardTextV6136('Üretim Adedi','Production Count')}</span><strong>${hasTodayData?todayProduction:dashboardTextV6136('Veri yok','No data')}</strong></div>
+            <div class="dashboard-today-card-v6136"><span>${dashboardTextV6136('En Uzun Duruş','Longest Downtime')}</span><strong>${hasTodayData&&longestStop&&dashboardNumberV6136(longestStop.unplanned_downtime_sec)>0?`${longestStop.machine_name||longestStop.machine_code} · ${fmtDuration(longestStop.unplanned_downtime_sec)}`:dashboardTextV6136('Veri yok','No data')}</strong></div>
+          </div>
+        </section>
       </div>
 
-      <div class="kpi-two-col-v59">
-        <div class="kpi-panel-v59">
-          <h3>Dağılımlar</h3>
-          <strong>Subscription Status</strong>
-          ${distributionRows(data.subscriptions_by_status)}
-          <br>
-          <strong>Device Status</strong>
-          ${distributionRows(data.devices_by_status)}
-          <br>
-          <strong>User Roles</strong>
-          ${distributionRows(data.users_by_role, 'role')}
-        </div>
-        <div class="kpi-panel-v59">
-          <h3>Son Güvenlik Aktiviteleri</h3>
-          ${latest.length ? latest.map(row => `
-            <div class="kpi-row-v59">
-              <span>${esc(fmtDate(row.created_at))}<br><small>${esc(row.actor_email || '-')} · ${esc(row.entity_type || '-')}:${esc(row.entity_id || '-')}</small></span>
-              <strong>${esc(row.action || '-')}</strong>
-            </div>
-          `).join('') : '<span class="muted">Henüz audit kaydı yok.</span>'}
-          <p class="muted" style="margin:12px 0 0;">Son güncelleme: ${esc(generated)}</p>
-        </div>
+      <div class="dashboard-lower-grid-v6136">
+        <section class="dashboard-panel-v6136">
+          <div class="dashboard-panel-head-v6136"><div><h3>${dashboardTextV6136('Makine Durumları','Machine Status')}</h3><p>${dashboardTextV6136('Canlı bağlantı dağılımı','Live connection distribution')}</p></div></div>
+          <div class="dashboard-state-grid-v6136">
+            <div class="dashboard-state-v6136"><span>${dashboardTextV6136('Çalışıyor','Running')}</span><strong>${running}</strong></div>
+            <div class="dashboard-state-v6136"><span>${dashboardTextV6136('Durdu','Stopped')}</span><strong>${stopped}</strong></div>
+            <div class="dashboard-state-v6136"><span>${dashboardTextV6136('Alarm','Alarm')}</span><strong>${machineAlarm}</strong></div>
+            <div class="dashboard-state-v6136"><span>Offline</span><strong>${offline}</strong></div>
+            <div class="dashboard-state-v6136"><span>Stale</span><strong>${stale}</strong></div>
+            <div class="dashboard-state-v6136"><span>${dashboardTextV6136('Cihaz Yok','No Device')}</span><strong>${noDevice}</strong></div>
+          </div>
+          <div class="dashboard-quick-actions-v6136">
+            <button type="button" class="secondary-btn dashboard-quick-btn-v6136" data-dashboard-view="live">${dashboardTextV6136('Canlı İzleme','Live Monitoring')}</button>
+            <button type="button" class="secondary-btn dashboard-quick-btn-v6136" data-dashboard-view="alarms">${dashboardTextV6136('Alarm Merkezi','Alarm Center')}</button>
+            <button type="button" class="secondary-btn dashboard-quick-btn-v6136" data-dashboard-view="work-orders">${dashboardTextV6136('Bakım İşleri','Maintenance')}</button>
+            <button type="button" class="secondary-btn dashboard-quick-btn-v6136" data-dashboard-view="devices">${dashboardTextV6136('Cihazlar','Devices')}</button>
+          </div>
+        </section>
+
+        <section class="dashboard-panel-v6136">
+          <div class="dashboard-panel-head-v6136"><div><h3>${dashboardTextV6136('Son Operasyon Olayları','Recent Operational Events')}</h3><p>${dashboardTextV6136('Alarm, bağlantı, bakım ve stok hareketleri','Alarm, connection, maintenance and stock activity')}</p></div></div>
+          ${events.length?`<div class="dashboard-events-list-v6136">${events.slice(0,6).map(dashboardEventV6136).join('')}</div>`:`<div class="dashboard-empty-v6136">${dashboardTextV6136('Henüz operasyon olayı bulunmuyor.','No operational events yet.')}</div>`}
+        </section>
       </div>
     `;
   }
 
+  function renderDashboardSummary(data) {
+    operationsDashboardV6136.base=data||{};
+    renderOperationsDashboardV6136();
+  }
+
+  function renderDashboardTodayOeeV6136(data) {
+    operationsDashboardV6136.todayOee=data||{};
+    renderOperationsDashboardV6136();
+  }
+
 
   function renderLiveMonitoring(data) {
+    operationsDashboardV6136.live=data||{};
+    renderOperationsDashboardV6136();
     const summaryTarget = document.getElementById('liveMonitoringSummary');
     const cardsTarget = document.getElementById('liveMachineCards');
     const tableTarget = document.getElementById('liveMachineTable');
     if (!summaryTarget || !cardsTarget || !tableTarget) return;
 
+    const en=currentLanguage==='en';
     const summary = data.summary || {};
     const machines = data.machines || [];
     const generated = fmtDate(data.generated_at);
+    const liveState=data.live_monitoring_enabled
+      ? (en?'ON':'AÇIK')
+      : (en?'OFF':'KAPALI');
 
     summaryTarget.innerHTML = `
-      Live monitoring: <strong>${data.live_monitoring_enabled ? 'ON' : 'OFF'}</strong> —
-      Toplam: <strong>${esc(summary.total ?? 0)}</strong> ·
-      Running: <strong>${esc(summary.running ?? 0)}</strong> ·
-      Stopped: <strong>${esc(summary.stopped ?? 0)}</strong> ·
-      Alarm: <strong>${esc(summary.alarm ?? 0)}</strong> ·
-      Offline: <strong>${esc(summary.offline || 0)}</strong> ·
-      Stale: <strong>${esc(summary.stale || 0)}</strong> ·
-      No Device: <strong>${esc(summary.no_device || 0)}</strong>
-      <span class="live-updated-v511">Son güncelleme: ${esc(generated)}</span>
+      ${en?'Live monitoring':'Canlı izleme'}: <strong>${liveState}</strong> —
+      ${en?'Total':'Toplam'}: <strong>${esc(summary.total ?? 0)}</strong> ·
+      ${en?'Running':'Çalışıyor'}: <strong>${esc(summary.running ?? 0)}</strong> ·
+      ${en?'Stopped':'Durdu'}: <strong>${esc(summary.stopped ?? 0)}</strong> ·
+      ${en?'Alarm':'Alarm'}: <strong>${esc(summary.alarm ?? 0)}</strong> ·
+      ${en?'Offline':'Çevrimdışı'}: <strong>${esc(summary.offline || 0)}</strong> ·
+      ${en?'Stale':'Veri eski'}: <strong>${esc(summary.stale || 0)}</strong> ·
+      ${en?'No Device':'Cihaz yok'}: <strong>${esc(summary.no_device || 0)}</strong>
+      <span class="live-updated-v511">${en?'Last update':'Son güncelleme'}: ${esc(generated)}</span>
     `;
 
     if (!machines.length) {
-      cardsTarget.innerHTML = '<span class="muted">Makine kaydı yok.</span>';
+      cardsTarget.innerHTML = `<span class="muted">${en?'No machine records.':'Makine kaydı yok.'}</span>`;
       tableTarget.innerHTML = '';
       return;
     }
 
-    cardsTarget.innerHTML = machines.map(row => `
-      <div class="live-card-v511">
-        <div class="live-toolbar-v511">
-          <div>
-            <h3>${esc(row.machine_name || row.machine_code)}</h3>
-            <p>${esc(row.customer_code)}/${esc(row.site_code)}/${esc(row.machine_code)} · ${esc(row.machine_type || '-')}</p>
+    cardsTarget.innerHTML = machines.map(row => {
+      const current=liveMetricValue(row,row.current_amp,' A');
+      const temperature=liveMetricValue(row,row.temperature_c,' °C');
+      const rssi=liveMetricValue(row,row.wifi_rssi,' dBm');
+      const isLive=liveRowHasCurrentSignal(row);
+
+      return `
+        <div class="live-card-v511${isLive?'':' is-not-live-v6136'}">
+          <div class="live-toolbar-v511">
+            <div>
+              <h3>${esc(row.machine_name || row.machine_code)}</h3>
+              <p>${esc(row.customer_code)}/${esc(row.site_code)}/${esc(row.machine_code)} · ${esc(row.machine_type || '-')}</p>
+            </div>
+            <span class="live-badge-v511 ${esc(row.health)}">${esc(liveHealthLabel(row.health))}</span>
           </div>
-          <span class="live-badge-v511 ${esc(row.health)}">${esc(liveHealthLabel(row.health))}</span>
+          <div class="live-metrics-v511">
+            <div class="live-metric-v511"><span>${en?'Connection Status':'Bağlantı Durumu'}</span><strong>${esc(liveHealthLabel(row.connection_health || row.health))}</strong></div>
+            <div class="live-metric-v511"><span>${en?'Signal Age':'Sinyal Yaşı'}</span><strong>${esc(fmtDuration(row.signal_age_sec))}</strong></div>
+            <div class="live-metric-v511"><span>${en?'Operating State':'Çalışma Durumu'}</span><strong>${esc(liveRowStateText(row))}</strong></div>
+            <div class="live-metric-v511"><span>${en?'Current':'Akım'}</span><strong class="${current.last?'live-last-value-v6136':''}">${current.html}</strong></div>
+            <div class="live-metric-v511"><span>${en?'Temperature':'Sıcaklık'}</span><strong class="${temperature.last?'live-last-value-v6136':''}">${temperature.html}</strong></div>
+            <div class="live-metric-v511"><span>Wi-Fi RSSI</span><strong class="${rssi.last?'live-last-value-v6136':''}">${rssi.html}</strong></div>
+            <div class="live-metric-v511"><span>${en?'Devices':'Cihazlar'}</span><strong>${esc(row.online_device_count || 0)}/${esc(row.device_count || 0)}</strong></div>
+            <div class="live-metric-v511"><span>${en?'Active Alarms':'Aktif Alarmlar'}</span><strong>${esc(Number(row.visible_active_alarm_count ?? row.active_alarm_count ?? 0))}</strong></div>
+          </div>
+          <p class="muted">${en?'Last seen':'Son görülme'}: ${esc(fmtDate(row.last_seen_at || row.latest_telemetry_at))}</p>
         </div>
-        <div class="live-metrics-v511">
-          <div class="live-metric-v511"><span>Connection</span><strong>${esc(liveHealthLabel(row.connection_health || row.health))}</strong></div>
-          <div class="live-metric-v511"><span>Signal Age</span><strong>${esc(fmtDuration(row.signal_age_sec))}</strong></div>
-          <div class="live-metric-v511"><span>Machine State</span><strong>${esc(row.latest_state || '-')}</strong></div>
-          <div class="live-metric-v511"><span>Machine Status</span><strong>${esc(row.machine_status || '-')}</strong></div>
-          <div class="live-metric-v511"><span>Current</span><strong>${fmtMetric(row.current_amp, ' A')}</strong></div>
-          <div class="live-metric-v511"><span>Temp</span><strong>${fmtMetric(row.temperature_c, ' °C')}</strong></div>
-          <div class="live-metric-v511"><span>WiFi RSSI</span><strong>${fmtMetric(row.wifi_rssi, ' dBm')}</strong></div>
-          <div class="live-metric-v511"><span>Devices</span><strong>${esc(row.online_device_count || 0)}/${esc(row.device_count || 0)}</strong></div>
-        </div>
-        <p class="muted">Last seen: ${esc(fmtDate(row.last_seen_at || row.latest_telemetry_at))} · ${esc(liveAlarmText(row))}</p>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     tableTarget.innerHTML = table([
-      {label:'Health', html:true, value:r=>`<span class="live-badge-v511 ${esc(r.health)}">${esc(liveHealthLabel(r.health))}</span>`},
-      {label:'Machine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
-      {label:'Customer / Site', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
-      {label:'Machine State', value:r=>r.latest_state || '-'},
-      {label:'Machine Status', value:r=>r.machine_status || '-'},
-      {label:'Current', html:true, value:r=>fmtMetric(r.current_amp, ' A')},
-      {label:'Temp', html:true, value:r=>fmtMetric(r.temperature_c, ' °C')},
-      {label:'RSSI', html:true, value:r=>fmtMetric(r.wifi_rssi, ' dBm')},
-      {label:'Devices', value:r=>`${r.online_device_count || 0}/${r.device_count || 0}`},
-      {label:'Alarms', value:r=>liveAlarmText(r)},
-      {label:'Last Seen', value:r=>fmtDate(r.last_seen_at || r.latest_telemetry_at)}
+      {label:en?'Health':'Sağlık', html:true, value:r=>`<span class="live-badge-v511 ${esc(r.health)}">${esc(liveHealthLabel(r.health))}</span>`},
+      {label:en?'Machine':'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
+      {label:en?'Customer / Site':'Müşteri / Tesis', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
+      {label:en?'Connection Status':'Bağlantı Durumu', value:r=>liveHealthLabel(r.connection_health || r.health)},
+      {label:en?'Operating State':'Çalışma Durumu', value:r=>liveRowStateText(r)},
+      {label:en?'Current':'Akım', html:true, value:r=>{
+        const metric=liveMetricValue(r,r.current_amp,' A');
+        return `<span class="${metric.last?'live-last-value-v6136':''}">${metric.html}</span>`;
+      }},
+      {label:en?'Temperature':'Sıcaklık', html:true, value:r=>{
+        const metric=liveMetricValue(r,r.temperature_c,' °C');
+        return `<span class="${metric.last?'live-last-value-v6136':''}">${metric.html}</span>`;
+      }},
+      {label:'RSSI', html:true, value:r=>{
+        const metric=liveMetricValue(r,r.wifi_rssi,' dBm');
+        return `<span class="${metric.last?'live-last-value-v6136':''}">${metric.html}</span>`;
+      }},
+      {label:en?'Devices':'Cihazlar', value:r=>`${r.online_device_count || 0}/${r.device_count || 0}`},
+      {label:en?'Active Alarms':'Aktif Alarmlar', value:r=>Number(r.visible_active_alarm_count ?? r.active_alarm_count ?? 0)},
+      {label:en?'Last Seen':'Son Görülme', value:r=>fmtDate(r.last_seen_at || r.latest_telemetry_at)}
     ], machines);
   }
 
@@ -4063,6 +5016,8 @@
   }
 
   function renderMaintenanceTickets(data) {
+    operationsDashboardV6136.maintenanceTickets=data||{};
+    renderOperationsDashboardV6136();
     const summaryTarget = document.getElementById('maintenanceTicketSummary');
     const tableTarget = document.getElementById('maintenanceTicketsTable');
     const machineSelect = document.getElementById('maintenanceTicketMachine');
@@ -4178,6 +5133,8 @@
   }
 
   function renderMaintenanceWorkOrders(data) {
+    operationsDashboardV6136.maintenanceWorkOrders=data||{};
+    renderOperationsDashboardV6136();
     const summary=document.getElementById('maintenanceWorkOrderSummary');const target=document.getElementById('maintenanceWorkOrdersTable');if(!summary||!target)return;const x=data.summary||{};
     summary.innerHTML=`<div class="kpi-grid-v59"><div class="kpi-card-v59"><span>Aktif</span><strong>${esc(x.active||0)}</strong><small>Devam eden iş emirleri</small></div><div class="kpi-card-v59"><span>İşlemde</span><strong>${esc(x.in_progress||0)}</strong><small>Teknisyen çalışıyor</small></div><div class="kpi-card-v59"><span>Geciken</span><strong>${esc(x.overdue||0)}</strong><small>Termin aşılmış</small></div><div class="kpi-card-v59"><span>30 Gün Tamamlanan</span><strong>${esc(x.completed_30d||0)}</strong><small>Kapanan planlı bakım</small></div></div>`;
     const statuses=data.options?.statuses||['scheduled','open','in_progress','waiting','completed','cancelled'];const priorities=data.options?.priorities||['low','medium','high','critical'];
@@ -4222,6 +5179,8 @@
   }
 
   function renderInventory(data) {
+    operationsDashboardV6136.inventory=data||{};
+    renderOperationsDashboardV6136();
     const summary=document.getElementById('inventorySummary');const partsTarget=document.getElementById('inventoryPartsTable');const movesTarget=document.getElementById('inventoryMovementsTable');if(!summary||!partsTarget||!movesTarget)return;
     const x=data.summary||{};
     summary.innerHTML=`<div class="kpi-grid-v59">
@@ -4274,10 +5233,106 @@
     oeeDefaultDates();const params=new URLSearchParams();params.set('from',document.getElementById('oeeFromFilter')?.value||'');params.set('to',document.getElementById('oeeToFilter')?.value||'');params.set('machine_id',document.getElementById('oeeMachineFilter')?.value||'all');return params.toString();
   }
 
-  function oeeHealthBadge(value) { return `<span class="oee-health-v524 ${esc(value||'no_production')}">${esc(String(value||'no_production').replaceAll('_',' '))}</span>`; }
+  function oeeHealthBadge(value) {
+    const key=String(value||'no_production').toLowerCase();
+    const labels={
+      on_target:'Hedefte',
+      watch:'Takipte',
+      critical:'Kritik',
+      no_production:'Üretim verisi yok'
+    };
+    return `<span class="oee-health-v524 ${esc(key)}">${esc(labels[key]||key.replaceAll('_',' '))}</span>`;
+  }
 
-  function oeeProgress(label,value) {
-    const pct=Math.min(Math.max(Number(value||0),0),100);return `<div class="oee-progress-v524"><header><span>${esc(label)}</span><strong>%${fmtMetric(pct)}</strong></header><div><i style="width:${pct}%"></i></div></div>`;
+  function oeeNumber(value) {
+    const number=Number(value);
+    return Number.isFinite(number)?number:0;
+  }
+
+  function oeeHasTimeData(row) {
+    return oeeNumber(row?.signal_run_sec)>0 ||
+      oeeNumber(row?.signal_stop_sec)>0 ||
+      oeeNumber(row?.unplanned_downtime_sec)>0 ||
+      oeeNumber(row?.planned_downtime_sec)>0;
+  }
+
+  function oeeHasProductionData(row) {
+    return oeeNumber(row?.total_count)>0;
+  }
+
+  function oeeHasAnyData(row) {
+    return oeeHasTimeData(row) || oeeHasProductionData(row);
+  }
+
+  function oeeMetricValue(row,key) {
+    const hasTime=oeeHasTimeData(row);
+    const hasProduction=oeeHasProductionData(row);
+    const available={
+      availability_pct:hasTime,
+      performance_pct:hasTime&&hasProduction,
+      quality_pct:hasProduction,
+      oee_pct:hasTime&&hasProduction
+    }[key];
+
+    if(!available) return null;
+    return Math.min(Math.max(oeeNumber(row?.[key]),0),100);
+  }
+
+  function oeePercent(value) {
+    return value===null?'Veri yok':`%${fmtMetric(value)}`;
+  }
+
+  function oeeKpiCard(label,value,detail) {
+    const noData=value===null;
+    return `<article class="oee-kpi-v6136">
+      <span>${esc(label)}</span>
+      <strong class="${noData?'no-data-v6136':''}">${esc(oeePercent(value))}</strong>
+      <small>${esc(detail)}</small>
+    </article>`;
+  }
+
+  function oeeMiniMetric(label,value) {
+    const noData=value===null;
+    return `<div class="oee-mini-metric-v6136">
+      <span>${esc(label)}</span>
+      <strong class="${noData?'no-data-v6136':''}">${esc(oeePercent(value))}</strong>
+    </div>`;
+  }
+
+  function oeeShiftLabel(value) {
+    return String(value||'').toLowerCase()==='general'?'Genel':(value||'-');
+  }
+
+  function oeeCategoryLabel(value) {
+    return {
+      planned:'Planlı',
+      unplanned:'Plansız'
+    }[String(value||'').toLowerCase()] || value || '-';
+  }
+
+  function oeeReasonLabel(value) {
+    return {
+      breakdown:'Arıza',
+      material_wait:'Malzeme Bekleme',
+      operator_wait:'Operatör Bekleme',
+      setup:'Kurulum',
+      changeover:'Ürün Değişimi',
+      planned_maintenance:'Planlı Bakım',
+      quality_stop:'Kalite Duruşu',
+      power:'Enerji',
+      safety:'Güvenlik',
+      other:'Diğer'
+    }[String(value||'').toLowerCase()] || value || '-';
+  }
+
+  function oeeSimpleTable(headers,rows) {
+    if(!rows?.length) {
+      return `<div class="oee-empty-v6136"><strong>Kayıt bulunamadı</strong><span>Seçilen aralıkta gösterilecek veri yok.</span></div>`;
+    }
+    return `<div class="admin-table-wrap"><table class="oee-simple-table-v6136">
+      <thead><tr>${headers.map(h=>`<th>${esc(h.label)}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(row=>`<tr>${headers.map(h=>`<td>${h.html?h.value(row):esc(h.value(row))}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
   }
 
   function syncOeeSettingInputs(machineId) {
@@ -4287,33 +5342,144 @@
   }
 
   function renderOeeAnalytics(data) {
-    const summary=document.getElementById('oeeSummary');const machinesTarget=document.getElementById('oeeMachinesTable');if(!summary||!machinesTarget)return;const x=data.summary||{};
-    summary.innerHTML=`<div class="kpi-grid-v59"><div class="kpi-card-v59"><span>Availability</span><strong>%${fmtMetric(x.availability_pct||0)}</strong><small>Planlı süre içinde çalışabilirlik</small></div><div class="kpi-card-v59"><span>Performance</span><strong>%${fmtMetric(x.performance_pct||0)}</strong><small>İdeal çevrime göre hız</small></div><div class="kpi-card-v59"><span>Quality</span><strong>%${fmtMetric(x.quality_pct||0)}</strong><small>${esc(x.good_count||0)} sağlam / ${esc(x.total_count||0)} toplam</small></div><div class="kpi-card-v59"><span>OEE</span><strong>%${fmtMetric(x.oee_pct||0)}</strong><small>A × P × Q</small></div></div>`;
-    const range=document.getElementById('oeeAnalyticsResult');if(range)range.innerHTML=`Analiz aralığı: <strong>${esc(data.range?.from||'-')} → ${esc(data.range?.to||'-')}</strong> · Makine: <strong>${esc(x.machine_count||0)}</strong> · Plansız duruş: <strong>${fmtDuration(x.unplanned_downtime_sec||0)}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}`;
+    const summary=document.getElementById('oeeSummary');
+    const machinesTarget=document.getElementById('oeeMachinesTable');
+    if(!summary||!machinesTarget)return;
+
+    const x=data.summary||{};
+    const summaryAvailability=oeeMetricValue(x,'availability_pct');
+    const summaryPerformance=oeeMetricValue(x,'performance_pct');
+    const summaryQuality=oeeMetricValue(x,'quality_pct');
+    const summaryOee=oeeMetricValue(x,'oee_pct');
+
+    summary.innerHTML=`<div class="oee-kpi-grid-v6136">
+      ${oeeKpiCard('Kullanılabilirlik',summaryAvailability,summaryAvailability===null?'Çalışma veya duruş verisi yok':'Planlı süre içindeki çalışma oranı')}
+      ${oeeKpiCard('Performans',summaryPerformance,summaryPerformance===null?'Üretim verisi yok':'İdeal çevrime göre üretim hızı')}
+      ${oeeKpiCard('Kalite',summaryQuality,summaryQuality===null?'Üretim verisi yok':`${esc(x.good_count||0)} sağlam / ${esc(x.total_count||0)} toplam`)}
+      ${oeeKpiCard('OEE',summaryOee,summaryOee===null?'Hesaplanamadı':'Kullanılabilirlik × Performans × Kalite')}
+    </div>`;
+
+    const range=document.getElementById('oeeAnalyticsResult');
+    if(range) {
+      const hasAny=oeeHasAnyData(x);
+      range.innerHTML=hasAny
+        ? `Analiz aralığı: <strong>${esc(data.range?.from||'-')} → ${esc(data.range?.to||'-')}</strong> · Makine: <strong>${esc(x.machine_count||0)}</strong> · Plansız duruş: <strong>${fmtDuration(x.unplanned_downtime_sec||0)}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}`
+        : `Seçilen tarih aralığında üretim veya duruş kaydı bulunamadı.`;
+    }
+
     oeeMachineRows=new Map((data.machines||[]).map(row=>[String(row.machine_id),row]));
     const machineOptions=(data.machines||[]).map(m=>`<option value="${esc(m.machine_id)}">${esc(`${m.machine_name||m.machine_code} (${m.machine_code})`)}</option>`).join('');
-    ['oeeSettingsMachine','oeeProductionMachine','oeeDowntimeMachine'].forEach(id=>{const el=document.getElementById(id);if(!el||document.activeElement===el)return;const current=el.value;el.innerHTML=`<option value="">Makine seç...</option>${machineOptions}`;if([...el.options].some(o=>o.value===current))el.value=current;else if(el.options.length>1)el.selectedIndex=1;});
-    const filter=document.getElementById('oeeMachineFilter');if(filter&&document.activeElement!==filter&&filter.options.length<=1){const current=filter.value||'all';filter.innerHTML=`<option value="all">Tüm makineler</option>${machineOptions}`;if([...filter.options].some(o=>o.value===current))filter.value=current;}
-    const settingSelect=document.getElementById('oeeSettingsMachine');if(settingSelect?.value)syncOeeSettingInputs(settingSelect.value);
-    machinesTarget.innerHTML=table([
-      {label:'Makine',html:true,value:r=>`<div class="maintenance-ticket-title-v521"><strong>${esc(r.machine_name||r.machine_code)}</strong><small>${esc(r.customer_code||'-')}/${esc(r.site_code||'-')} · ${esc(r.machine_code)}</small></div>`},
-      {label:'Durum',html:true,value:r=>oeeHealthBadge(r.health)},
-      {label:'Availability',html:true,value:r=>oeeProgress('A',r.availability_pct)},
-      {label:'Performance',html:true,value:r=>oeeProgress('P',r.performance_pct)},
-      {label:'Quality',html:true,value:r=>oeeProgress('Q',r.quality_pct)},
-      {label:'OEE',html:true,value:r=>oeeProgress('OEE',r.oee_pct)},
-      {label:'Üretim',value:r=>`${r.good_count}/${r.total_count} sağlam · ${r.reject_count} hata`},
-      {label:'Duruş',value:r=>`Plansız ${fmtDuration(r.unplanned_downtime_sec)} · Planlı ${fmtDuration(r.planned_downtime_sec)}`},
-      {label:'Sinyal',value:r=>`RUN ${fmtDuration(r.signal_run_sec)} · STOP ${fmtDuration(r.signal_stop_sec)}`},
-      {label:'Hedef',value:r=>`%${fmtMetric(r.target_oee_pct)} · ${fmtMetric(r.ideal_cycle_sec)} sn/adet`}
-    ],data.machines||[]);
-    const trend=document.getElementById('oeeDailyTrendTable');if(trend)trend.innerHTML=table([{label:'Tarih',value:r=>r.date},{label:'Availability',value:r=>`%${fmtMetric(r.availability_pct)}`},{label:'Performance',value:r=>`%${fmtMetric(r.performance_pct)}`},{label:'Quality',value:r=>`%${fmtMetric(r.quality_pct)}`},{label:'OEE',html:true,value:r=>oeeProgress('OEE',r.oee_pct)},{label:'Üretim',value:r=>`${r.good_count}/${r.total_count}`},{label:'Plansız Duruş',value:r=>fmtDuration(r.unplanned_downtime_sec)}],data.daily_trend||[]);
-    const machineName=id=>{const row=oeeMachineRows.get(String(id));return row?`${row.machine_name||row.machine_code} (${row.machine_code})`:'-';};
-    const production=document.getElementById('oeeProductionTable');if(production)production.innerHTML=table([{label:'Tarih',value:r=>r.production_date},{label:'Makine',value:r=>machineName(r.machine_id)},{label:'Vardiya',value:r=>r.shift_code},{label:'Toplam',value:r=>r.total_count},{label:'Sağlam',value:r=>r.good_count},{label:'Hatalı',value:r=>r.reject_count},{label:'Quality',value:r=>r.total_count?`%${fmtMetric(Number(r.good_count)/Number(r.total_count)*100)}`:'%0'},{label:'Kaynak',value:r=>r.source},{label:'Actor',value:r=>r.recorded_by||'-'},{label:'Not',value:r=>r.note||'-'},{label:'Aksiyon',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="delete-oee-production" data-id="${esc(r.id)}">Sil</button>`:'-'}],data.production_records||[]);
-    const downtime=document.getElementById('oeeDowntimeTable');if(downtime)downtime.innerHTML=table([{label:'Başlangıç',value:r=>fmtDate(r.started_at)},{label:'Bitiş',value:r=>fmtDate(r.ended_at)},{label:'Makine',value:r=>machineName(r.machine_id)},{label:'Kategori',html:true,value:r=>maintenanceBadge(r.category)},{label:'Neden',value:r=>`${r.reason_code}${r.reason_text?' · '+r.reason_text:''}`},{label:'Süre',value:r=>fmtDuration(r.duration_sec)},{label:'Kaynak',value:r=>r.source},{label:'Actor',value:r=>r.recorded_by||'-'},{label:'Not',value:r=>r.note||'-'},{label:'Aksiyon',html:true,value:r=>{if(!data.can_manage)return '-';const close=!r.ended_at?`<button class="primary-btn mini-btn" data-action="close-oee-downtime" data-id="${esc(r.id)}">Şimdi Bitir</button> `:'';return `${close}<button class="secondary-btn mini-btn" data-action="delete-oee-downtime" data-id="${esc(r.id)}">Sil</button>`;}}],data.downtime_records||[]);
+
+    ['oeeSettingsMachine','oeeProductionMachine','oeeDowntimeMachine'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el||document.activeElement===el)return;
+      const current=el.value;
+      el.innerHTML=`<option value="">Makine seç...</option>${machineOptions}`;
+      if([...el.options].some(o=>o.value===current))el.value=current;
+      else el.selectedIndex=0;
+    });
+
+    const filter=document.getElementById('oeeMachineFilter');
+    if(filter&&document.activeElement!==filter&&filter.options.length<=1){
+      const current=filter.value||'all';
+      filter.innerHTML=`<option value="all">Tüm makineler</option>${machineOptions}`;
+      if([...filter.options].some(o=>o.value===current))filter.value=current;
+    }
+
+    const settingSelect=document.getElementById('oeeSettingsMachine');
+    if(settingSelect?.value)syncOeeSettingInputs(settingSelect.value);
+
+    const machineRows=data.machines||[];
+    machinesTarget.innerHTML=machineRows.length
+      ? `<div class="oee-machine-list-v6136">${machineRows.map(row=>{
+          const hasData=oeeHasAnyData(row);
+          const title=esc(row.machine_name||row.machine_code||'-');
+          const scope=esc(`${row.customer_code||'-'}/${row.site_code||'-'} · ${row.machine_code||'-'}`);
+
+          if(!hasData) {
+            return `<article class="oee-machine-card-v6136 no-data-v6136">
+              <div class="oee-machine-info-v6136">
+                <strong>${title}</strong>
+                <small>${scope}</small>
+              </div>
+              <div class="oee-machine-empty-v6136">
+                <strong>Üretim veya duruş kaydı yok</strong>
+                <small>OEE hesaplanamadı.</small>
+              </div>
+            </article>`;
+          }
+
+          return `<article class="oee-machine-card-v6136">
+            <div class="oee-machine-info-v6136">
+              <strong>${title}</strong>
+              <small>${scope}</small>
+              <small>${oeeHealthBadge(row.health)}</small>
+            </div>
+            ${oeeMiniMetric('Kullanılabilirlik',oeeMetricValue(row,'availability_pct'))}
+            ${oeeMiniMetric('Performans',oeeMetricValue(row,'performance_pct'))}
+            ${oeeMiniMetric('Kalite',oeeMetricValue(row,'quality_pct'))}
+            ${oeeMiniMetric('OEE',oeeMetricValue(row,'oee_pct'))}
+          </article>`;
+        }).join('')}</div>`
+      : `<div class="oee-empty-v6136"><strong>Makine bulunamadı</strong><span>Seçilen filtreye uygun makine kaydı yok.</span></div>`;
+
+    const meaningfulTrend=(data.daily_trend||[]).filter(oeeHasAnyData);
+    const trend=document.getElementById('oeeDailyTrendTable');
+    if(trend) {
+      trend.innerHTML=meaningfulTrend.length
+        ? oeeSimpleTable([
+            {label:'Tarih',value:r=>r.date},
+            {label:'Kullanılabilirlik',value:r=>oeePercent(oeeMetricValue(r,'availability_pct'))},
+            {label:'Performans',value:r=>oeePercent(oeeMetricValue(r,'performance_pct'))},
+            {label:'Kalite',value:r=>oeePercent(oeeMetricValue(r,'quality_pct'))},
+            {label:'OEE',value:r=>oeePercent(oeeMetricValue(r,'oee_pct'))},
+            {label:'Üretim',value:r=>`${r.good_count||0}/${r.total_count||0}`},
+            {label:'Plansız Duruş',value:r=>fmtDuration(r.unplanned_downtime_sec||0)}
+          ],meaningfulTrend)
+        : `<div class="oee-empty-v6136"><strong>Trend verisi yok</strong><span>Seçilen tarih aralığında üretim veya duruş kaydı bulunamadı.</span></div>`;
+    }
+
+    const machineName=id=>{
+      const row=oeeMachineRows.get(String(id));
+      return row?`${row.machine_name||row.machine_code} (${row.machine_code})`:'-';
+    };
+
+    const production=document.getElementById('oeeProductionTable');
+    if(production) {
+      production.innerHTML=oeeSimpleTable([
+        {label:'Tarih',value:r=>r.production_date},
+        {label:'Makine',value:r=>machineName(r.machine_id)},
+        {label:'Vardiya',value:r=>oeeShiftLabel(r.shift_code)},
+        {label:'Toplam',value:r=>String(r.total_count||0)},
+        {label:'Sağlam',value:r=>String(r.good_count||0)},
+        {label:'Hatalı',value:r=>String(r.reject_count||0)},
+        {label:'Not',value:r=>r.note||'-'},
+        {label:'İşlem',html:true,value:r=>data.can_manage?`<button class="secondary-btn mini-btn" data-action="delete-oee-production" data-id="${esc(r.id)}">Sil</button>`:'-'}
+      ],data.production_records||[]);
+    }
+
+    const downtime=document.getElementById('oeeDowntimeTable');
+    if(downtime) {
+      downtime.innerHTML=oeeSimpleTable([
+        {label:'Başlangıç',value:r=>fmtDate(r.started_at)},
+        {label:'Bitiş',value:r=>fmtDate(r.ended_at)},
+        {label:'Makine',value:r=>machineName(r.machine_id)},
+        {label:'Kategori',value:r=>oeeCategoryLabel(r.category)},
+        {label:'Neden',value:r=>`${oeeReasonLabel(r.reason_code)}${r.reason_text?' · '+r.reason_text:''}`},
+        {label:'Süre',value:r=>fmtDuration(r.duration_sec)},
+        {label:'Not',value:r=>r.note||'-'},
+        {label:'İşlem',html:true,value:r=>{
+          if(!data.can_manage)return '-';
+          const close=!r.ended_at?`<button class="primary-btn mini-btn" data-action="close-oee-downtime" data-id="${esc(r.id)}">Şimdi Bitir</button> `:'';
+          return `${close}<button class="secondary-btn mini-btn" data-action="delete-oee-downtime" data-id="${esc(r.id)}">Sil</button>`;
+        }}
+      ],data.downtime_records||[]);
+    }
   }
 
   function renderAlarmCenter(data) {
+    operationsDashboardV6136.alarms=data||{};
+    renderOperationsDashboardV6136();
     const summaryTarget = document.getElementById('alarmCenterSummary');
     const tableTarget = document.getElementById('alarmCenterTable');
     if (!summaryTarget || !tableTarget) return;
@@ -5581,7 +6747,7 @@
     const companyTarget=document.getElementById('adminIdentityCompanyV6135');
     const userTarget=document.getElementById('adminIdentityUserV6135');
     const company=generalSettings.organization_name||'Firma';
-    const userName=currentUser?.full_name||currentUser?.name||currentUser?.email||'Kullanıcı';
+    const userName=currentUser?.email||currentUser?.full_name||currentUser?.name||'Kullanıcı';
     const role=currentUser?.role||'';
     if(companyTarget) {
       companyTarget.textContent=company;
@@ -5598,9 +6764,10 @@
     localStorage.setItem('factorybox_ui_language',currentLanguage);
     document.body.classList.toggle('fb-compact-ui',Boolean(generalSettings.compact_mode));
     const footer=document.querySelector('.admin-sidebar-footer-v58');
-    if(footer) footer.textContent=`${generalSettings.organization_name||'Firma'} · ${generalSettings.site_name||'Main Factory'} · v6.13.5`;
+    if(footer) footer.textContent=`${generalSettings.organization_name||'Firma'} · ${generalSettings.site_name||'Main Factory'} · v6.13.6`;
     updateAdminIdentity();
     applyTranslations(document);
+    renderOperationsDashboardV6136();
   }
 
   function adminAutoRefreshSecondsV6135(view) {
@@ -6008,6 +7175,7 @@
 
     const tasks = [
       ['dashboard-summary', '/api/admin/dashboard-summary', renderDashboardSummary, 'adminDashboardSummary'],
+      ['dashboard-today-oee', `/api/admin/oee-analytics?from=${dashboardTodayIsoV6136()}&to=${dashboardTodayIsoV6136()}&machine_id=all`, renderDashboardTodayOeeV6136, 'dashboardTodayOeeShadowV6136'],
       ['live-monitoring', '/api/admin/live-monitoring?limit=120', renderLiveMonitoring, 'liveMachineCards'],
       ['oee-analytics', `/api/admin/oee-analytics?${oeeQueryString()}`, renderOeeAnalytics, 'oeeMachinesTable'],
       ['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable'],
@@ -7009,7 +8177,7 @@
     if (saveOeeSettingsBtn) saveOeeSettingsBtn.addEventListener('click',async()=>{saveOeeSettingsBtn.disabled=true;document.getElementById('oeeSettingsResult').textContent='OEE ayarları kaydediliyor...';try{const result=await saveOeeSettings();await loadAdmin();document.getElementById('oeeSettingsResult').textContent=`OEE ayarları kaydedildi: ${fmtMetric(result.setting?.planned_minutes_per_day)} dk · ${fmtMetric(result.setting?.ideal_cycle_sec)} sn/adet · hedef %${fmtMetric(result.setting?.target_oee_pct)}`;}catch(e){document.getElementById('oeeSettingsResult').textContent=e.message;}finally{saveOeeSettingsBtn.disabled=false;}});
     if (createOeeProductionBtn) createOeeProductionBtn.addEventListener('click',async()=>{createOeeProductionBtn.disabled=true;document.getElementById('oeeProductionResult').textContent='Üretim kaydı oluşturuluyor...';try{const result=await createOeeProduction();await loadAdmin();document.getElementById('oeeProductionResult').textContent=`Üretim kaydı eklendi: ${result.record?.good_count||0} sağlam / ${result.record?.total_count||0} toplam`;}catch(e){document.getElementById('oeeProductionResult').textContent=e.message;}finally{createOeeProductionBtn.disabled=false;}});
     if (createOeeDowntimeBtn) createOeeDowntimeBtn.addEventListener('click',async()=>{createOeeDowntimeBtn.disabled=true;document.getElementById('oeeDowntimeResult').textContent='Duruş kaydı oluşturuluyor...';try{const result=await createOeeDowntime();await loadAdmin();document.getElementById('oeeDowntimeResult').textContent=`Duruş kaydı eklendi: ${result.record?.reason_code||'-'} · ${fmtDuration(result.record?.duration_sec||0)}`;}catch(e){document.getElementById('oeeDowntimeResult').textContent=e.message;}finally{createOeeDowntimeBtn.disabled=false;}});
-    if (syncOeeMachineStatesBtn) syncOeeMachineStatesBtn.addEventListener('click',async()=>{syncOeeMachineStatesBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='STOPPED durum sinyalleri duruş kayıtlarına aktarılıyor...';try{const result=await syncOeeMachineStates();await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Aktarım tamamlandı: ${result.result?.created_count||0} yeni duruş kaydı.`;}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{syncOeeMachineStatesBtn.disabled=false;}});
+    if (syncOeeMachineStatesBtn) syncOeeMachineStatesBtn.addEventListener('click',async()=>{syncOeeMachineStatesBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='Duruş sinyalleri kayıtlara aktarılıyor...';try{const result=await syncOeeMachineStates();await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Aktarım tamamlandı: ${result.result?.created_count||0} yeni duruş kaydı.`;}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{syncOeeMachineStatesBtn.disabled=false;}});
     if (cleanupOeeManualRecordsBtn) cleanupOeeManualRecordsBtn.addEventListener('click',async()=>{cleanupOeeManualRecordsBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='Seçili manuel OEE test kayıtları temizleniyor...';try{const result=await cleanupOeeManualRecords();if(result){await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Temizlik tamamlandı: ${result.result?.production_deleted||0} üretim, ${result.result?.downtime_deleted||0} duruş kaydı silindi.`;}else document.getElementById('oeeAnalyticsResult').textContent='Temizlik iptal edildi.';}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{cleanupOeeManualRecordsBtn.disabled=false;}});
     if (refreshAlarmCenterBtn) refreshAlarmCenterBtn.addEventListener('click', loadAdmin);
     if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click', loadAdmin);
@@ -7421,6 +8589,12 @@
     ['locationAccessScopeType','locationAccessFactory','locationAccessSite'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',syncLocationAccessScopeSelectors);});
     ['organizationSectionV640','productionLinesSectionV640','siteAccessSectionV640'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',async event=>{const btn=event.target.closest('[data-org-action]');if(!btn)return;try{await handleOrganizationActionV640(btn);}catch(e){document.getElementById('adminStatus').textContent=e.message;}});});
 
+    document.body.addEventListener('click', event=>{
+      const jump=event.target.closest('[data-dashboard-view]');
+      if(!jump)return;
+      event.preventDefault();
+      setAdminView(jump.dataset.dashboardView);
+    });
     document.body.addEventListener('click', handleAction);
     document.body.addEventListener('change', (e) => {
       if (e.target && e.target.classList && e.target.classList.contains('user-role-select')) {
