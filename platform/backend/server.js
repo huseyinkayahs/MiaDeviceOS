@@ -251,6 +251,7 @@ let inviteSchemaReady = false;
 let deviceOnboardingFoundationReady = false;
 let deviceCapabilityFoundationReady = false;
 let organizationFoundationReady = false;
+let assetCatalogFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
@@ -3107,6 +3108,7 @@ function adminRequired(req, res, next) {
 
 
 
+// HUKATECH_MACHINE_DEVICE_RECORD_EDIT_ARCHIVE_UX_V1
 const ASSET_CUSTOMER_STATUSES = ['trial','pilot','active','inactive','suspended','passive','archived'];
 const ASSET_SITE_STATUSES = ['trial','pilot','active','inactive','suspended','passive','archived'];
 const ASSET_MACHINE_STATUSES = ['active','passive','maintenance','archived'];
@@ -3124,6 +3126,7 @@ async function ensureAssetManagementFoundation() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_customers_code_status ON customers(code, status)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_sites_customer_status ON sites(customer_id, status)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_machines_site_status ON machines(site_id, status)`);
+  await ensureAssetCatalogFoundation();
 }
 
 function normalizeAssetCode(value, label) {
@@ -3156,7 +3159,217 @@ function cleanOptionalText(value, maxLen=200) {
   return v ? v.slice(0, maxLen) : null;
 }
 
-async function machineAssetRows(limit=300) {
+
+const ASSET_CATALOG_STATUSES = ['active','passive'];
+
+function catalogStatus(value, fallback='active') {
+  return validateChoice(value || fallback, ASSET_CATALOG_STATUSES, 'catalog status');
+}
+
+function humanizeCatalogCode(value) {
+  return String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase())
+    .trim();
+}
+
+async function ensureAssetCatalogFoundation() {
+  if (assetCatalogFoundationReady) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS machine_type_catalog (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      code text NOT NULL UNIQUE,
+      name_tr text NOT NULL,
+      name_en text,
+      category text,
+      description_tr text,
+      description_en text,
+      status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','passive')),
+      system_defined boolean NOT NULL DEFAULT false,
+      sort_order integer NOT NULL DEFAULT 100,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS device_model_catalog (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      code text NOT NULL UNIQUE,
+      name text NOT NULL,
+      device_family text,
+      manufacturer text,
+      firmware_family text,
+      connection_summary text,
+      default_profile text,
+      description text,
+      status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','passive')),
+      system_defined boolean NOT NULL DEFAULT false,
+      sort_order integer NOT NULL DEFAULT 100,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_machine_type_catalog_status_sort ON machine_type_catalog(status,sort_order,name_tr)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_model_catalog_status_sort ON device_model_catalog(status,sort_order,name)`);
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS model_code text`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS asset_catalog_seed_state (
+      seed_key text PRIMARY KEY,
+      seeded_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  const defaultCatalogSeed=await one(`
+    SELECT seed_key
+    FROM asset_catalog_seed_state
+    WHERE seed_key='asset-catalog-defaults-v1'
+    LIMIT 1
+  `);
+
+  if(!defaultCatalogSeed){
+    await pool.query(`
+      INSERT INTO machine_type_catalog(code,name_tr,name_en,category,description_tr,status,system_defined,sort_order)
+      VALUES
+        ('general','Genel','General','Genel','Genel amaçlı makine tipi.','active',true,10),
+        ('laser_cutting','Lazer Kesim','Laser Cutting','Üretim','CO₂ veya fiber lazer kesim makineleri.','active',true,20),
+        ('cnc','CNC','CNC','Üretim','CNC işleme ve kesim makineleri.','active',true,30),
+        ('plastic_injection','Plastik Enjeksiyon','Plastic Injection','Üretim','Plastik enjeksiyon makineleri.','active',true,40),
+        ('furniture','Mobilya Üretimi','Furniture Production','Üretim','Mobilya üretim ve işleme makineleri.','active',true,50),
+        ('unknown','Diğer / Bilinmiyor','Other / Unknown','Diğer','Henüz sınıflandırılmamış makine tipi.','active',true,999)
+      ON CONFLICT(code) DO NOTHING
+    `);
+
+    await pool.query(`
+      INSERT INTO device_model_catalog(code,name,device_family,manufacturer,firmware_family,connection_summary,default_profile,description,status,system_defined,sort_order)
+      VALUES(
+        'factorybox-one','FactoryBox One','Endüstriyel İzleme Cihazı','HukaTech','factorybox',
+        'Ethernet / Wi-Fi / MQTT','general_monitoring','HukaTech endüstriyel makine izleme ve veri toplama cihazı.',
+        'active',true,10
+      )
+      ON CONFLICT(code) DO NOTHING
+    `);
+
+    await pool.query(`
+      INSERT INTO asset_catalog_seed_state(seed_key)
+      VALUES('asset-catalog-defaults-v1')
+      ON CONFLICT(seed_key) DO NOTHING
+    `);
+  }
+
+  await pool.query(`
+    INSERT INTO machine_type_catalog(code,name_tr,name_en,category,status,system_defined,sort_order)
+    SELECT DISTINCT lower(m.machine_type), initcap(replace(replace(lower(m.machine_type),'_',' '),'-',' ')), initcap(replace(replace(lower(m.machine_type),'_',' '),'-',' ')), 'Aktarılan', 'active', false, 500
+    FROM machines m
+    WHERE m.machine_type IS NOT NULL
+      AND m.machine_type ~ '^[A-Za-z0-9_-]{2,64}$'
+    ON CONFLICT(code) DO NOTHING
+  `);
+
+  await pool.query(`
+    INSERT INTO device_model_catalog(code,name,device_family,manufacturer,status,system_defined,sort_order)
+    SELECT DISTINCT
+      trim(both '-' from regexp_replace(lower(d.model),'[^a-z0-9]+','-','g')) AS code,
+      d.model,
+      'Aktarılan Model',
+      NULL,
+      'active',
+      false,
+      500
+    FROM devices d
+    WHERE NULLIF(trim(d.model),'') IS NOT NULL
+      AND trim(both '-' from regexp_replace(lower(d.model),'[^a-z0-9]+','-','g')) <> ''
+    ON CONFLICT(code) DO NOTHING
+  `);
+
+  await pool.query(`
+    UPDATE devices d
+    SET model_code = catalog.code
+    FROM device_model_catalog catalog
+    WHERE NULLIF(d.model_code,'') IS NULL
+      AND lower(catalog.name)=lower(d.model)
+  `);
+  await pool.query(`UPDATE devices SET model_code='factorybox-one' WHERE NULLIF(model_code,'') IS NULL AND lower(model)=lower('FactoryBox One')`);
+
+  assetCatalogFoundationReady = true;
+}
+
+async function machineTypeCatalogRow(code, {activeOnly=false}={}) {
+  await ensureAssetCatalogFoundation();
+  const normalized=normalizeAssetCode(code,'machine type code');
+  const row=await one(`
+    SELECT *,
+      (SELECT count(*)::int FROM machines m WHERE lower(m.machine_type)=lower(machine_type_catalog.code)) AS usage_count
+    FROM machine_type_catalog
+    WHERE code=$1 ${activeOnly?"AND status='active'":''}
+    LIMIT 1
+  `,[normalized]);
+  return row;
+}
+
+async function requireMachineTypeCatalog(code, {activeOnly=true}={}) {
+  const row=await machineTypeCatalogRow(code,{activeOnly});
+  if(!row){
+    const error=new Error(activeOnly?'Active machine type not found':'Machine type not found');
+    error.statusCode=409;
+    error.resource='machine_type_catalog';
+    throw error;
+  }
+  return row;
+}
+
+async function deviceModelCatalogRow(codeOrName, {activeOnly=false}={}) {
+  await ensureAssetCatalogFoundation();
+  const raw=String(codeOrName||'').trim();
+  if(!raw)return null;
+  const row=await one(`
+    SELECT *,
+      (SELECT count(*)::int FROM devices d WHERE lower(COALESCE(d.model_code,''))=lower(device_model_catalog.code) OR lower(d.model)=lower(device_model_catalog.name)) AS usage_count
+    FROM device_model_catalog
+    WHERE (lower(code)=lower($1) OR lower(name)=lower($1)) ${activeOnly?"AND status='active'":''}
+    ORDER BY CASE WHEN lower(code)=lower($1) THEN 0 ELSE 1 END
+    LIMIT 1
+  `,[raw]);
+  return row;
+}
+
+async function requireDeviceModelCatalog(codeOrName, {activeOnly=true}={}) {
+  const row=await deviceModelCatalogRow(codeOrName,{activeOnly});
+  if(!row){
+    const error=new Error(activeOnly?'Active device model not found':'Device model not found');
+    error.statusCode=409;
+    error.resource='device_model_catalog';
+    throw error;
+  }
+  return row;
+}
+
+async function assetCatalogPayload({includePassive=true}={}) {
+  await ensureAssetCatalogFoundation();
+  const statusClause=includePassive?'':"WHERE status='active'";
+  const [machineTypes,deviceModels]=await Promise.all([
+    pool.query(`
+      SELECT mt.*,
+        (SELECT count(*)::int FROM machines m WHERE lower(m.machine_type)=lower(mt.code)) AS usage_count
+      FROM machine_type_catalog mt
+      ${statusClause}
+      ORDER BY mt.sort_order,mt.name_tr,mt.code
+    `),
+    pool.query(`
+      SELECT dm.*,
+        (SELECT count(*)::int FROM devices d WHERE lower(COALESCE(d.model_code,''))=lower(dm.code) OR lower(d.model)=lower(dm.name)) AS usage_count
+      FROM device_model_catalog dm
+      ${statusClause}
+      ORDER BY dm.sort_order,dm.name,dm.code
+    `)
+  ]);
+  return {machine_types:machineTypes.rows,device_models:deviceModels.rows};
+}
+
+async function machineAssetRows(limit=300,{includeArchived=false}={}) {
   const safeLimit = Math.min(Math.max(Number(limit || 300), 1), 500);
   const result = await pool.query(`
     SELECT
@@ -3178,10 +3391,11 @@ async function machineAssetRows(limit=300) {
     JOIN customers c ON c.id=s.customer_id
     LEFT JOIN devices d ON d.machine_id=m.id
     LEFT JOIN alarms a ON a.machine_id=m.id
+    WHERE ($2::boolean OR m.status<>'archived')
     GROUP BY m.id, m.code, m.name, m.machine_type, m.status, s.code, s.name, c.code, c.name, m.created_at, m.updated_at
     ORDER BY c.code, s.code, m.code
     LIMIT $1
-  `, [safeLimit]);
+  `, [safeLimit,Boolean(includeArchived)]);
   return result.rows;
 }
 
@@ -8861,10 +9075,161 @@ app.get('/api/admin/sites', adminRequired, async (req,res)=>{
 });
 
 
+
+
+app.get('/api/admin/asset-catalogs', adminRequired, async (req,res)=>{
+  try{
+    if(authConfig().enabled&&!hasPermission(req.user,'MANAGE_SITES')&&!hasPermission(req.user,'MANAGE_DEVICES')){
+      return res.status(403).json({status:'forbidden',version:APP_VERSION,message:'Catalog access requires machine or device management permission'});
+    }
+    const includePassive=String(req.query.include_passive||'true').toLowerCase()!=='false';
+    const payload=await assetCatalogPayload({includePassive});
+    res.json({status:'ok',version:APP_VERSION,...payload});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message,resource:e.resource||null});}
+});
+
+app.post('/api/admin/asset-catalogs/machine-types',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{
+    await ensureAssetCatalogFoundation();
+    const code=normalizeAssetCode(req.body?.code,'machine type code');
+    const nameTr=cleanAssetName(req.body?.name_tr||req.body?.name,'machine type name',120);
+    const nameEn=cleanOptionalText(req.body?.name_en,120);
+    const category=cleanOptionalText(req.body?.category,100);
+    const descriptionTr=cleanOptionalText(req.body?.description_tr||req.body?.description,500);
+    const descriptionEn=cleanOptionalText(req.body?.description_en,500);
+    const status=catalogStatus(req.body?.status,'active');
+    const sortOrder=Math.min(Math.max(Number(req.body?.sort_order||100),0),10000);
+    const created=await one(`
+      INSERT INTO machine_type_catalog(code,name_tr,name_en,category,description_tr,description_en,status,system_defined,sort_order)
+      VALUES($1,$2,$3,$4,$5,$6,$7,false,$8)
+      RETURNING *
+    `,[code,nameTr,nameEn,category,descriptionTr,descriptionEn,status,sortOrder]);
+    await writeAuditLog(req,{action:'create_machine_type',entity_type:'machine_type_catalog',entity_id:created.id,old_values:null,new_values:created,metadata:{code}});
+    res.status(201).json({status:'ok',version:APP_VERSION,machine_type:created});
+  }catch(e){const status=e.code==='23505'?409:(e.statusCode||500);res.status(status).json({status:'error',version:APP_VERSION,message:e.code==='23505'?'Machine type code already exists':e.message});}
+});
+
+app.patch('/api/admin/asset-catalogs/machine-types/:code',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{
+    await ensureAssetCatalogFoundation();
+    const code=normalizeAssetCode(req.params.code,'machine type code');
+    const old=await machineTypeCatalogRow(code,{activeOnly:false});
+    if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Machine type not found'});
+    const nameTr=req.body?.name_tr!==undefined?cleanAssetName(req.body.name_tr,'machine type name',120):old.name_tr;
+    const nameEn=req.body?.name_en!==undefined?cleanOptionalText(req.body.name_en,120):old.name_en;
+    const category=req.body?.category!==undefined?cleanOptionalText(req.body.category,100):old.category;
+    const descriptionTr=req.body?.description_tr!==undefined?cleanOptionalText(req.body.description_tr,500):old.description_tr;
+    const descriptionEn=req.body?.description_en!==undefined?cleanOptionalText(req.body.description_en,500):old.description_en;
+    const status=req.body?.status!==undefined?catalogStatus(req.body.status,old.status):old.status;
+    const sortOrder=req.body?.sort_order!==undefined?Math.min(Math.max(Number(req.body.sort_order||0),0),10000):old.sort_order;
+    const updated=await one(`UPDATE machine_type_catalog SET name_tr=$2,name_en=$3,category=$4,description_tr=$5,description_en=$6,status=$7,sort_order=$8,updated_at=now() WHERE code=$1 RETURNING *`,[code,nameTr,nameEn,category,descriptionTr,descriptionEn,status,sortOrder]);
+    await writeAuditLog(req,{action:'update_machine_type',entity_type:'machine_type_catalog',entity_id:updated.id,old_values:old,new_values:updated,metadata:{code,usage_count:old.usage_count}});
+    res.json({status:'ok',version:APP_VERSION,machine_type:updated});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+app.post('/api/admin/asset-catalogs/device-models',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try{
+    await ensureAssetCatalogFoundation();
+    const code=normalizeAssetCode(req.body?.code,'device model code');
+    const name=cleanAssetName(req.body?.name,'device model name',160);
+    const deviceFamily=cleanOptionalText(req.body?.device_family,120);
+    const manufacturer=cleanOptionalText(req.body?.manufacturer,120);
+    const firmwareFamily=cleanOptionalText(req.body?.firmware_family,120);
+    const connectionSummary=cleanOptionalText(req.body?.connection_summary,220);
+    const defaultProfile=cleanOptionalText(req.body?.default_profile,120);
+    const description=cleanOptionalText(req.body?.description,600);
+    const status=catalogStatus(req.body?.status,'active');
+    const sortOrder=Math.min(Math.max(Number(req.body?.sort_order||100),0),10000);
+    const created=await one(`
+      INSERT INTO device_model_catalog(code,name,device_family,manufacturer,firmware_family,connection_summary,default_profile,description,status,system_defined,sort_order)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10)
+      RETURNING *
+    `,[code,name,deviceFamily,manufacturer,firmwareFamily,connectionSummary,defaultProfile,description,status,sortOrder]);
+    await writeAuditLog(req,{action:'create_device_model',entity_type:'device_model_catalog',entity_id:created.id,old_values:null,new_values:created,metadata:{code}});
+    res.status(201).json({status:'ok',version:APP_VERSION,device_model:created});
+  }catch(e){const status=e.code==='23505'?409:(e.statusCode||500);res.status(status).json({status:'error',version:APP_VERSION,message:e.code==='23505'?'Device model code already exists':e.message});}
+});
+
+app.patch('/api/admin/asset-catalogs/device-models/:code',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try{
+    await ensureAssetCatalogFoundation();
+    const code=normalizeAssetCode(req.params.code,'device model code');
+    const old=await deviceModelCatalogRow(code,{activeOnly:false});
+    if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Device model not found'});
+    const name=req.body?.name!==undefined?cleanAssetName(req.body.name,'device model name',160):old.name;
+    const deviceFamily=req.body?.device_family!==undefined?cleanOptionalText(req.body.device_family,120):old.device_family;
+    const manufacturer=req.body?.manufacturer!==undefined?cleanOptionalText(req.body.manufacturer,120):old.manufacturer;
+    const firmwareFamily=req.body?.firmware_family!==undefined?cleanOptionalText(req.body.firmware_family,120):old.firmware_family;
+    const connectionSummary=req.body?.connection_summary!==undefined?cleanOptionalText(req.body.connection_summary,220):old.connection_summary;
+    const defaultProfile=req.body?.default_profile!==undefined?cleanOptionalText(req.body.default_profile,120):old.default_profile;
+    const description=req.body?.description!==undefined?cleanOptionalText(req.body.description,600):old.description;
+    const status=req.body?.status!==undefined?catalogStatus(req.body.status,old.status):old.status;
+    const sortOrder=req.body?.sort_order!==undefined?Math.min(Math.max(Number(req.body.sort_order||0),0),10000):old.sort_order;
+    const updated=await one(`UPDATE device_model_catalog SET name=$2,device_family=$3,manufacturer=$4,firmware_family=$5,connection_summary=$6,default_profile=$7,description=$8,status=$9,sort_order=$10,updated_at=now() WHERE code=$1 RETURNING *`,[code,name,deviceFamily,manufacturer,firmwareFamily,connectionSummary,defaultProfile,description,status,sortOrder]);
+    await pool.query(`UPDATE devices SET model=$2,updated_at=now() WHERE model_code=$1`,[code,name]);
+    await pool.query(`UPDATE device_onboarding_sessions SET model=$2,updated_at=now() WHERE model_code=$1`,[code,name]).catch(()=>{});
+    await writeAuditLog(req,{action:'update_device_model',entity_type:'device_model_catalog',entity_id:updated.id,old_values:old,new_values:updated,metadata:{code,usage_count:old.usage_count}});
+    res.json({status:'ok',version:APP_VERSION,device_model:updated});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
+});
+
+
+
+app.delete('/api/admin/asset-catalogs/machine-types/:code',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{
+    await ensureAssetCatalogFoundation();
+    const code=normalizeAssetCode(req.params.code,'machine type code');
+    const old=await machineTypeCatalogRow(code,{activeOnly:false});
+    if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Machine type not found'});
+    await ensureDeviceOnboardingFoundation();
+    const usage=await one(`
+      SELECT
+        (SELECT count(*)::int FROM machines m WHERE lower(m.machine_type)=lower($1)) AS machine_count,
+        (SELECT count(*)::int FROM device_onboarding_sessions o WHERE lower(COALESCE(o.machine_type,''))=lower($1)) AS onboarding_count
+    `,[code]);
+    const usageCount=Number(usage?.machine_count||0)+Number(usage?.onboarding_count||0);
+    if(usageCount>0)return res.status(409).json({
+      status:'catalog_in_use',version:APP_VERSION,
+      message:'This machine type is in use and cannot be deleted. Set it to passive instead.',
+      usage:{machines:Number(usage?.machine_count||0),onboarding_sessions:Number(usage?.onboarding_count||0),total:usageCount}
+    });
+    const deleted=await one(`DELETE FROM machine_type_catalog WHERE code=$1 RETURNING *`,[code]);
+    if(!deleted)return res.status(409).json({status:'delete_blocked',version:APP_VERSION,message:'Machine type could not be deleted'});
+    await writeAuditLog(req,{action:'delete_machine_type',entity_type:'machine_type_catalog',entity_id:deleted.id,old_values:old,new_values:null,metadata:{code,usage_count:0,system_defined:Boolean(old.system_defined)}});
+    res.json({status:'ok',version:APP_VERSION,deleted:{code:deleted.code,name:deleted.name_tr}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message,resource:e.resource||null});}
+});
+
+app.delete('/api/admin/asset-catalogs/device-models/:code',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  try{
+    await ensureAssetCatalogFoundation();
+    const code=normalizeAssetCode(req.params.code,'device model code');
+    const old=await deviceModelCatalogRow(code,{activeOnly:false});
+    if(!old)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Device model not found'});
+    await ensureDeviceOnboardingFoundation();
+    const usage=await one(`
+      SELECT
+        (SELECT count(*)::int FROM devices d WHERE lower(COALESCE(d.model_code,''))=lower($1) OR lower(COALESCE(d.model,''))=lower($2)) AS device_count,
+        (SELECT count(*)::int FROM device_onboarding_sessions o WHERE lower(COALESCE(o.model_code,''))=lower($1) OR lower(COALESCE(o.model,''))=lower($2)) AS onboarding_count
+    `,[code,old.name]);
+    const usageCount=Number(usage?.device_count||0)+Number(usage?.onboarding_count||0);
+    if(usageCount>0)return res.status(409).json({
+      status:'catalog_in_use',version:APP_VERSION,
+      message:'This device model is in use and cannot be deleted. Set it to passive instead.',
+      usage:{devices:Number(usage?.device_count||0),onboarding_sessions:Number(usage?.onboarding_count||0),total:usageCount}
+    });
+    const deleted=await one(`DELETE FROM device_model_catalog WHERE code=$1 RETURNING *`,[code]);
+    if(!deleted)return res.status(409).json({status:'delete_blocked',version:APP_VERSION,message:'Device model could not be deleted'});
+    await writeAuditLog(req,{action:'delete_device_model',entity_type:'device_model_catalog',entity_id:deleted.id,old_values:old,new_values:null,metadata:{code,usage_count:0,system_defined:Boolean(old.system_defined)}});
+    res.json({status:'ok',version:APP_VERSION,deleted:{code:deleted.code,name:deleted.name}});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message,resource:e.resource||null});}
+});
+
 app.get('/api/admin/machines', adminRequired, permissionRequired('MANAGE_SITES'), async (req,res)=>{
   try {
     await ensureAssetManagementFoundation();
-    const machines = await machineAssetRows(req.query.limit || 300);
+    const machines = await machineAssetRows(req.query.limit || 300,{includeArchived:String(req.query.include_archived||'').toLowerCase()==='true'});
     res.json({
       status:'ok',
       version:APP_VERSION,
@@ -9043,7 +9408,8 @@ app.post('/api/admin/machines', adminRequired, permissionRequired('MANAGE_SITES'
     const siteCode = normalizeAssetCode(req.body?.site_code, 'site code');
     const code = normalizeAssetCode(req.body?.code, 'machine code');
     const name = cleanAssetName(req.body?.name, 'machine name');
-    const machineType = cleanOptionalText(req.body?.machine_type, 80) || 'unknown';
+    const machineType = normalizeAssetCode(req.body?.machine_type || 'unknown', 'machine type code');
+    await requireMachineTypeCatalog(machineType,{activeOnly:true});
     const status = validateChoice(req.body?.status || 'active', ASSET_MACHINE_STATUSES, 'status');
 
     await assertSubscriptionAccessForCustomer(customerCode);
@@ -9095,7 +9461,8 @@ app.patch('/api/admin/machines/:customerCode/:siteCode/:machineCode', adminRequi
     if (!oldRow) return res.status(404).json({status:'not_found', version:APP_VERSION, message:'Machine not found'});
 
     const name = req.body?.name !== undefined ? cleanAssetName(req.body.name, 'machine name') : oldRow.name;
-    const machineType = req.body?.machine_type !== undefined ? (cleanOptionalText(req.body.machine_type, 80) || 'unknown') : oldRow.machine_type;
+    const machineType = req.body?.machine_type !== undefined ? normalizeAssetCode(req.body.machine_type || 'unknown', 'machine type code') : oldRow.machine_type;
+    if(machineType!==oldRow.machine_type)await requireMachineTypeCatalog(machineType,{activeOnly:true});
     const status = req.body?.status !== undefined ? validateChoice(req.body.status, ASSET_MACHINE_STATUSES, 'status') : oldRow.status;
 
     const updated = await one(`
@@ -9119,6 +9486,37 @@ app.patch('/api/admin/machines/:customerCode/:siteCode/:machineCode', adminRequi
   } catch(e) {
     res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
   }
+});
+
+
+app.post('/api/admin/machines/:customerCode/:siteCode/:machineCode/archive',adminRequired,permissionRequired('MANAGE_SITES'),async(req,res)=>{
+  try{
+    await ensureAssetManagementFoundation();
+    const customerCode=normalizeAssetCode(req.params.customerCode,'customer code');
+    const siteCode=normalizeAssetCode(req.params.siteCode,'site code');
+    const machineCode=normalizeAssetCode(req.params.machineCode,'machine code');
+    const oldRow=await one(`
+      SELECT m.id::text,m.code,m.name,m.machine_type,m.status,s.code AS site_code,c.code AS customer_code,
+        (SELECT count(*)::int FROM devices d WHERE d.machine_id=m.id AND COALESCE(d.status,'unknown')<>'archived') AS active_device_count
+      FROM machines m JOIN sites s ON s.id=m.site_id JOIN customers c ON c.id=s.customer_id
+      WHERE c.code=$1 AND s.code=$2 AND m.code=$3 LIMIT 1
+    `,[customerCode,siteCode,machineCode]);
+    if(!oldRow)return res.status(404).json({status:'not_found',version:APP_VERSION,message:'Machine not found'});
+    if(oldRow.status==='archived')return res.json({status:'ok',version:APP_VERSION,already_archived:true,machine:oldRow});
+    if(Number(oldRow.active_device_count||0)>0)return res.status(409).json({
+      status:'machine_has_active_devices',version:APP_VERSION,
+      message:'Makine arşivlenmeden önce bağlı aktif cihazları arşivleyin.',
+      usage:{active_devices:Number(oldRow.active_device_count||0)}
+    });
+    const updated=await one(`
+      UPDATE machines m SET status='archived',updated_at=now()
+      FROM sites s,customers c
+      WHERE m.site_id=s.id AND s.customer_id=c.id AND c.code=$1 AND s.code=$2 AND m.code=$3
+      RETURNING m.id::text,m.code,m.name,m.machine_type,m.status,m.created_at,m.updated_at
+    `,[customerCode,siteCode,machineCode]);
+    await writeAuditLog(req,{action:'archive_machine',entity_type:'machine',entity_id:updated.id,old_values:oldRow,new_values:updated,metadata:{customer_code:customerCode,site_code:siteCode,machine_code:machineCode,history_preserved:true}});
+    res.json({status:'ok',version:APP_VERSION,action:'archive_machine',machine:updated});
+  }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message,usage:e.usage||null});}
 });
 
 app.get('/api/admin/tenant-access', adminRequired, async (req,res)=>{
@@ -9534,6 +9932,7 @@ async function deviceTenantRowByUid(uid) {
       d.id::text AS id,
       d.device_uid,
       d.model,
+      d.model_code,
       d.firmware_version,
       d.hardware_revision,
       d.mqtt_base_topic,
@@ -9566,6 +9965,8 @@ async function deviceTenantRowByUid(uid) {
 }
 
 async function resolveDeviceTarget(customerCode, siteCode, machineCode, machineName, machineType) {
+  const normalizedMachineType=normalizeAssetCode(machineType||'unknown','machine type code');
+  await requireMachineTypeCatalog(normalizedMachineType,{activeOnly:true});
   const customer = await one(`SELECT id, code, name FROM customers WHERE code=$1 LIMIT 1`, [customerCode]);
   if (!customer) {
     const err = new Error(`Customer not found: ${customerCode}`);
@@ -9588,7 +9989,7 @@ async function resolveDeviceTarget(customerCode, siteCode, machineCode, machineN
       machine_type=COALESCE(NULLIF(EXCLUDED.machine_type,''), machines.machine_type),
       updated_at=now()
     RETURNING id, code, name, machine_type, status
-  `, [site.id, machineCode, machineName || machineCode, machineType || 'unknown']);
+  `, [site.id, machineCode, machineName || machineCode, normalizedMachineType]);
 
   return {customer, site, machine};
 }
@@ -9603,6 +10004,7 @@ app.get('/api/admin/devices', adminRequired, permissionRequired('MANAGE_DEVICES'
         d.id::text,
         d.device_uid,
         d.model,
+        d.model_code,
         d.firmware_version,
         d.hardware_revision,
         d.mqtt_base_topic,
@@ -9627,9 +10029,10 @@ app.get('/api/admin/devices', adminRequired, permissionRequired('MANAGE_DEVICES'
       LEFT JOIN machines m ON m.id=d.machine_id
       LEFT JOIN sites s ON s.id=m.site_id
       LEFT JOIN customers c ON c.id=s.customer_id
+      WHERE ($2::boolean OR d.status<>'archived')
       ORDER BY d.updated_at DESC, d.created_at DESC
       LIMIT $1
-    `, [limit]);
+    `, [limit,String(req.query.include_archived||'').toLowerCase()==='true']);
 
     res.json({
       status:'ok',
@@ -9658,7 +10061,10 @@ app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired
     const machineName = cleanCode(req.body?.machine_name || req.body?.machineName || machineCode);
     const machineType = cleanCode(req.body?.machine_type || req.body?.machineType || CFG.machineType);
     const deviceUid = cleanCode(req.body?.device_uid || req.body?.deviceUid);
-    const model = cleanCode(req.body?.model || CFG.deviceModel);
+    const modelInput = cleanCode(req.body?.model_code || req.body?.model || CFG.deviceModel);
+    const modelCatalog=await requireDeviceModelCatalog(modelInput,{activeOnly:true});
+    const modelCode=modelCatalog.code;
+    const model=modelCatalog.name;
     const serialNo = cleanCode(req.body?.serial_no || req.body?.serialNo);
     const mqttBaseTopic = cleanCode(req.body?.mqtt_base_topic || req.body?.mqttBaseTopic || `${customerCode}/${siteCode}/${machineCode}`);
     const notes = cleanCode(req.body?.device_notes || req.body?.notes);
@@ -9691,6 +10097,7 @@ app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired
         machine_id,
         device_uid,
         model,
+        model_code,
         serial_no,
         mqtt_base_topic,
         status,
@@ -9700,10 +10107,11 @@ app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired
         provisioned_at,
         device_notes
       )
-      VALUES($1,$2,$3,$4,$5,'offline','pending',$6,now() + make_interval(mins => $7),NULL,$8)
+      VALUES($1,$2,$3,$4,$5,$6,'offline','pending',$7,now() + make_interval(mins => $8),NULL,$9)
       ON CONFLICT(device_uid) DO UPDATE SET
         machine_id=EXCLUDED.machine_id,
         model=EXCLUDED.model,
+        model_code=EXCLUDED.model_code,
         serial_no=COALESCE(NULLIF(EXCLUDED.serial_no,''), devices.serial_no),
         mqtt_base_topic=EXCLUDED.mqtt_base_topic,
         status=CASE WHEN devices.status='archived' THEN 'offline' ELSE devices.status END,
@@ -9713,7 +10121,7 @@ app.post('/api/admin/devices/provision-token', adminRequired, permissionRequired
         device_notes=COALESCE(NULLIF(EXCLUDED.device_notes,''), devices.device_notes),
         updated_at=now()
       RETURNING id::text, device_uid, model, serial_no, mqtt_base_topic, status, provisioning_status, provisioning_token_expires_at, provisioned_at, device_notes, created_at, updated_at
-    `, [machine.id, deviceUid, model, serialNo || null, mqttBaseTopic, tokenHash, minutes, notes || null]);
+    `, [machine.id, deviceUid, model, modelCode, serialNo || null, mqttBaseTopic, tokenHash, minutes, notes || null]);
 
     const deviceWithTenant = await deviceTenantRowByUid(deviceUid);
 
@@ -9787,6 +10195,33 @@ app.patch('/api/admin/devices/:uid/status', adminRequired, permissionRequired('M
   } catch(e) {
     res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
   }
+});
+
+
+app.post('/api/admin/devices/:uid/archive',adminRequired,permissionRequired('MANAGE_DEVICES'),async(req,res)=>{
+  let client;
+  try{
+    await ensureDeviceRegistrySchema();
+    await ensureAssetManagementFoundation();
+    await ensureDeviceOnboardingFoundation();
+    const uid=String(req.params.uid||'').trim();
+    if(!uid)return res.status(400).json({status:'error',version:APP_VERSION,message:'device uid is required'});
+    const oldDevice=await deviceTenantRowByUid(uid);
+    if(!oldDevice)return res.status(404).json({status:'not_found',version:APP_VERSION,device_uid:uid});
+    if(oldDevice.status==='archived')return res.json({status:'ok',version:APP_VERSION,already_archived:true,device:oldDevice});
+    client=await pool.connect();await client.query('BEGIN');
+    const updatedResult=await client.query(`
+      UPDATE devices SET status='archived',provisioning_status='revoked',deactivated_at=now(),
+        provisioning_token_hash=NULL,provisioning_token_expires_at=NULL,updated_at=now()
+      WHERE device_uid=$1
+      RETURNING id::text,device_uid,model,model_code,firmware_version,hardware_revision,mqtt_base_topic,status,last_seen_at,serial_no,provisioning_status,provisioning_token_expires_at,provisioned_at,deactivated_at,device_notes,created_at,updated_at
+    `,[uid]);
+    await client.query(`UPDATE device_onboarding_sessions SET status='deactivated',deactivated_at=COALESCE(deactivated_at,now()),last_error=NULL,updated_at=now() WHERE device_uid=$1 AND status<>'deactivated'`,[uid]);
+    await client.query('COMMIT');client.release();client=null;
+    const updated=await deviceTenantRowByUid(uid)||updatedResult.rows[0];
+    await writeAuditLog(req,{action:'archive_device',entity_type:'device',entity_id:uid,old_values:oldDevice,new_values:updated,metadata:{history_preserved:true,provisioning_revoked:true,onboarding_deactivated:true}});
+    res.json({status:'ok',version:APP_VERSION,action:'archive_device',device:updated});
+  }catch(e){if(client){try{await client.query('ROLLBACK');}catch(_e){}client.release();}res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}
 });
 
 app.post('/api/device/provision/claim', async (req,res)=>{
@@ -10437,6 +10872,7 @@ async function ensureDeviceOnboardingFoundation() {
       device_uid text NOT NULL UNIQUE,
       serial_no text,
       model text NOT NULL DEFAULT 'FactoryBox One',
+      model_code text,
       expected_firmware text,
       customer_code text NOT NULL,
       site_code text NOT NULL,
@@ -10468,6 +10904,7 @@ async function ensureDeviceOnboardingFoundation() {
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS model_code text`);
   await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS expected_firmware text`);
   await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS firmware_test text NOT NULL DEFAULT 'pending'`);
   await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS firmware_test_at timestamptz`);
@@ -10478,6 +10915,9 @@ async function ensureDeviceOnboardingFoundation() {
   await pool.query(`ALTER TABLE device_onboarding_sessions ADD COLUMN IF NOT EXISTS last_error text`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_onboarding_status_updated ON device_onboarding_sessions(status,updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_onboarding_customer_site ON device_onboarding_sessions(customer_code,site_code,updated_at DESC)`);
+  await ensureAssetCatalogFoundation();
+  await pool.query(`UPDATE device_onboarding_sessions o SET model_code=dm.code FROM device_model_catalog dm WHERE NULLIF(o.model_code,'') IS NULL AND lower(dm.name)=lower(o.model)`);
+  await pool.query(`UPDATE device_onboarding_sessions SET model_code='factorybox-one' WHERE NULLIF(model_code,'') IS NULL AND lower(model)=lower('FactoryBox One')`);
   deviceOnboardingFoundationReady = true;
 }
 
@@ -10497,20 +10937,25 @@ function onboardingTokenMinutes(raw) {
 }
 
 async function deviceOnboardingOptions() {
-  const [customers,sites,machines]=await Promise.all([
+  await ensureAssetCatalogFoundation();
+  const [customers,sites,machines,catalogs]=await Promise.all([
     pool.query(`SELECT code,name,status FROM customers ORDER BY name,code`),
     pool.query(`SELECT s.code,s.name,s.status,c.code AS customer_code FROM sites s JOIN customers c ON c.id=s.customer_id ORDER BY c.name,s.name`),
-    pool.query(`SELECT m.id::text,m.code,m.name,m.machine_type,m.status,s.code AS site_code,c.code AS customer_code FROM machines m JOIN sites s ON s.id=m.site_id JOIN customers c ON c.id=s.customer_id ORDER BY c.name,s.name,m.name`)
+    pool.query(`SELECT m.id::text,m.code,m.name,m.machine_type,m.status,s.code AS site_code,c.code AS customer_code FROM machines m JOIN sites s ON s.id=m.site_id JOIN customers c ON c.id=s.customer_id ORDER BY c.name,s.name,m.name`),
+    assetCatalogPayload({includePassive:false})
   ]);
   return {
     customers:customers.rows,
     sites:sites.rows,
     machines:machines.rows,
+    machine_types:catalogs.machine_types,
+    device_models:catalogs.device_models,
     defaults:{
       customer_code:CFG.customerCode,
       site_code:CFG.siteCode,
       machine_code:CFG.machineCode,
       machine_type:CFG.machineType,
+      model_code:(await deviceModelCatalogRow(CFG.deviceModel,{activeOnly:false}))?.code||'factorybox-one',
       model:CFG.deviceModel,
       mqtt_url:CFG.mqttUrl,
       mqtt_base_topic:CFG.baseTopic
@@ -10746,7 +11191,10 @@ app.post('/api/admin/device-onboarding', adminRequired, permissionRequired('MANA
     const machineType=cleanCode(req.body?.machine_type||CFG.machineType);
     const deviceUid=cleanCode(req.body?.device_uid);
     const serialNo=cleanCode(req.body?.serial_no);
-    const model=cleanCode(req.body?.model||CFG.deviceModel);
+    const modelInput=cleanCode(req.body?.model_code||req.body?.model||CFG.deviceModel);
+    const modelCatalog=await requireDeviceModelCatalog(modelInput,{activeOnly:true});
+    const modelCode=modelCatalog.code;
+    const model=modelCatalog.name;
     const expectedFirmware=cleanCode(req.body?.expected_firmware);
     const networkMode=onboardingChoice(req.body?.network_mode,['wifi','ethernet'],'ethernet');
     const wifiSsid=networkMode==='wifi'?cleanCode(req.body?.wifi_ssid):'';
@@ -10761,29 +11209,29 @@ app.post('/api/admin/device-onboarding', adminRequired, permissionRequired('MANA
     await assertSubscriptionCapacity(customerCode,'devices',additionalDevice,false);
     const {machine}=await resolveDeviceTarget(customerCode,siteCode,machineCode,machineName,machineType);
     await pool.query(`
-      INSERT INTO devices(machine_id,device_uid,model,serial_no,mqtt_base_topic,status,provisioning_status,device_notes)
-      VALUES($1,$2,$3,$4,$5,'offline','pending',$6)
-      ON CONFLICT(device_uid) DO UPDATE SET machine_id=EXCLUDED.machine_id,model=EXCLUDED.model,
+      INSERT INTO devices(machine_id,device_uid,model,model_code,serial_no,mqtt_base_topic,status,provisioning_status,device_notes)
+      VALUES($1,$2,$3,$4,$5,$6,'offline','pending',$7)
+      ON CONFLICT(device_uid) DO UPDATE SET machine_id=EXCLUDED.machine_id,model=EXCLUDED.model,model_code=EXCLUDED.model_code,
         serial_no=COALESCE(NULLIF(EXCLUDED.serial_no,''),devices.serial_no),mqtt_base_topic=EXCLUDED.mqtt_base_topic,
         status=CASE WHEN devices.status='archived' THEN 'offline' ELSE devices.status END,
         provisioning_status=CASE WHEN devices.provisioning_status='paired' THEN devices.provisioning_status ELSE 'pending' END,
         deactivated_at=NULL,updated_at=now()
-    `,[machine.id,deviceUid,model,serialNo||null,mqttBaseTopic,`Onboarding network=${networkMode}`]);
+    `,[machine.id,deviceUid,model,modelCode,serialNo||null,mqttBaseTopic,`Onboarding network=${networkMode}`]);
     const id=activeExisting?.id||crypto.randomUUID();
     const session=await one(`
       INSERT INTO device_onboarding_sessions(
-        id,device_uid,serial_no,model,expected_firmware,customer_code,site_code,machine_code,machine_name,machine_type,
+        id,device_uid,serial_no,model,model_code,expected_firmware,customer_code,site_code,machine_code,machine_name,machine_type,
         network_mode,wifi_ssid,mqtt_url,mqtt_base_topic,status,current_step,created_by_email
-      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'draft',1,$15)
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'draft',1,$16)
       ON CONFLICT(device_uid) DO UPDATE SET
-        serial_no=EXCLUDED.serial_no,model=EXCLUDED.model,expected_firmware=EXCLUDED.expected_firmware,customer_code=EXCLUDED.customer_code,site_code=EXCLUDED.site_code,
+        serial_no=EXCLUDED.serial_no,model=EXCLUDED.model,model_code=EXCLUDED.model_code,expected_firmware=EXCLUDED.expected_firmware,customer_code=EXCLUDED.customer_code,site_code=EXCLUDED.site_code,
         machine_code=EXCLUDED.machine_code,machine_name=EXCLUDED.machine_name,machine_type=EXCLUDED.machine_type,
         network_mode=EXCLUDED.network_mode,wifi_ssid=EXCLUDED.wifi_ssid,mqtt_url=EXCLUDED.mqtt_url,mqtt_base_topic=EXCLUDED.mqtt_base_topic,
         status='draft',current_step=1,connection_test='pending',heartbeat_test='pending',telemetry_test='pending',firmware_test='pending',alarm_test='pending',
         connection_test_at=NULL,heartbeat_test_at=NULL,telemetry_test_at=NULL,firmware_test_at=NULL,alarm_test_at=NULL,activation_report='{}'::jsonb,
         last_error=NULL,activated_at=NULL,deactivated_at=NULL,updated_at=now()
       RETURNING *
-    `,[id,deviceUid,serialNo||null,model,expectedFirmware||null,customerCode,siteCode,machineCode,machineName,machineType,networkMode,wifiSsid||null,mqttUrl,mqttBaseTopic,req.user?.email||'local-admin']);
+    `,[id,deviceUid,serialNo||null,model,modelCode,expectedFirmware||null,customerCode,siteCode,machineCode,machineName,machineType,networkMode,wifiSsid||null,mqttUrl,mqttBaseTopic,req.user?.email||'local-admin']);
     await writeAuditLog(req,{action:'create_device_onboarding',entity_type:'device_onboarding',entity_id:session.id,old_values:activeExisting,new_values:session,metadata:{device_uid:deviceUid,customer_code:customerCode,site_code:siteCode,machine_code:machineCode}});
     res.json({status:'ok',version:APP_VERSION,session:await deviceOnboardingRow(session.id)});
   }catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message,resource:e.resource||null,usage:e.usage||null});}
