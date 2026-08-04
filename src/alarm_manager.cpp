@@ -5,18 +5,107 @@
 
 #include <Arduino.h>
 
-enum AlarmEngineState
+namespace
 {
-    ALARM_ENGINE_NORMAL,
-    ALARM_ENGINE_WAITING,
-    ALARM_ENGINE_ACTIVE
-};
+    enum AlarmEngineState
+    {
+        ALARM_ENGINE_NORMAL,
+        ALARM_ENGINE_WAITING,
+        ALARM_ENGINE_ACTIVE
+    };
 
-AlarmEngineState overCurrentState = ALARM_ENGINE_NORMAL;
+    constexpr unsigned long TEMPERATURE_ALARM_DELAY_MS = 5000UL;
+
+    AlarmEngineState overCurrentState = ALARM_ENGINE_NORMAL;
+    AlarmEngineState overTemperatureState = ALARM_ENGINE_NORMAL;
+
+    unsigned long overCurrentDetectedAtMs = 0;
+    unsigned long overTemperatureDetectedAtMs = 0;
+
+    void resetAlarmEngines()
+    {
+        overCurrentState = ALARM_ENGINE_NORMAL;
+        overTemperatureState = ALARM_ENGINE_NORMAL;
+
+        overCurrentDetectedAtMs = 0;
+        overTemperatureDetectedAtMs = 0;
+    }
+
+    bool updateAlarmEngine(
+        AlarmEngineState& state,
+        unsigned long& firstDetectedAtMs,
+        bool overLimit,
+        unsigned long activationDelayMs,
+        unsigned long now,
+        const char* label)
+    {
+        switch (state)
+        {
+            case ALARM_ENGINE_NORMAL:
+                if (overLimit)
+                {
+                    state = ALARM_ENGINE_WAITING;
+                    firstDetectedAtMs = now;
+
+                    Serial.print("Alarm izleme basladi: ");
+                    Serial.println(label);
+                }
+                break;
+
+            case ALARM_ENGINE_WAITING:
+                if (!overLimit)
+                {
+                    state = ALARM_ENGINE_NORMAL;
+                    firstDetectedAtMs = 0;
+
+                    Serial.print("Alarm iptal: ");
+                    Serial.print(label);
+                    Serial.println(" normale dondu");
+                }
+                else if (now - firstDetectedAtMs >= activationDelayMs)
+                {
+                    state = ALARM_ENGINE_ACTIVE;
+
+                    Serial.print("ALARM AKTIF: ");
+                    Serial.println(label);
+                }
+                break;
+
+            case ALARM_ENGINE_ACTIVE:
+                if (!overLimit)
+                {
+                    state = ALARM_ENGINE_NORMAL;
+                    firstDetectedAtMs = 0;
+
+                    Serial.print("ALARM KAPANDI: ");
+                    Serial.print(label);
+                    Serial.println(" normale dondu");
+                }
+                break;
+        }
+
+        return state == ALARM_ENGINE_ACTIVE;
+    }
+
+    unsigned long firstDetectedAtFor(AlarmType type)
+    {
+        switch (type)
+        {
+            case AlarmType::OverTemperature:
+                return overTemperatureDetectedAtMs;
+
+            case AlarmType::OverCurrent:
+                return overCurrentDetectedAtMs;
+
+            default:
+                return 0;
+        }
+    }
+}
 
 void resetAlarmContext()
 {
-    overCurrentState = ALARM_ENGINE_NORMAL;
+    resetAlarmEngines();
 
     deviceContext.alarm.active = false;
     deviceContext.alarm.activeAlarm = AlarmType::None;
@@ -35,11 +124,15 @@ void setupAlarm()
 
 void updateAlarm()
 {
-    const bool overLimit =
+    const bool overCurrentLimit =
         currentSensorHasValidReading() &&
         deviceContext.state.current > deviceContext.config.currentLimit;
 
-    unsigned long now = millis();
+    const bool overTemperatureLimit =
+        temperatureSensorHasValidReading() &&
+        temperatureSensorValueC() > deviceContext.config.temperatureLimit;
+
+    const unsigned long now = millis();
 
     if (deviceContext.command.resetAlarmRequested)
     {
@@ -49,65 +142,49 @@ void updateAlarm()
         Serial.println("Alarm reset komutu uygulandi.");
     }
 
-    switch (overCurrentState)
+    const unsigned long overCurrentDelayMs =
+        deviceContext.config.overCurrentDelaySec * 1000UL;
+
+    const bool overCurrentActive = updateAlarmEngine(
+        overCurrentState,
+        overCurrentDetectedAtMs,
+        overCurrentLimit,
+        overCurrentDelayMs,
+        now,
+        "OverCurrent");
+
+    const bool overTemperatureActive = updateAlarmEngine(
+        overTemperatureState,
+        overTemperatureDetectedAtMs,
+        overTemperatureLimit,
+        TEMPERATURE_ALARM_DELAY_MS,
+        now,
+        "OverTemperature");
+
+    // Tek alarm baglami kullanildigi icin ayni anda iki alarm varsa
+    // daha kritik saha riski olan sicaklik alarmi onceliklidir.
+    AlarmType selectedAlarm = AlarmType::None;
+
+    if (overTemperatureActive)
     {
-        case ALARM_ENGINE_NORMAL:
-            deviceContext.alarm.active = false;
-            deviceContext.alarm.activeAlarm = AlarmType::None;
+        selectedAlarm = AlarmType::OverTemperature;
+    }
+    else if (overCurrentActive)
+    {
+        selectedAlarm = AlarmType::OverCurrent;
+    }
 
-            if (overLimit)
-            {
-                overCurrentState = ALARM_ENGINE_WAITING;
-                deviceContext.alarm.firstDetectedMs = now;
+    const bool wasActive = deviceContext.alarm.active;
+    const AlarmType previousAlarm = deviceContext.alarm.activeAlarm;
 
-                Serial.println("Alarm izleme basladi: OverCurrent");
-            }
-            break;
+    deviceContext.alarm.active = selectedAlarm != AlarmType::None;
+    deviceContext.alarm.activeAlarm = selectedAlarm;
+    deviceContext.alarm.firstDetectedMs = firstDetectedAtFor(selectedAlarm);
 
-        case ALARM_ENGINE_WAITING:
-        {
-            unsigned long overCurrentDelayMs =
-                deviceContext.config.overCurrentDelaySec * 1000UL;
-
-            if (!overLimit)
-            {
-                overCurrentState = ALARM_ENGINE_NORMAL;
-
-                deviceContext.alarm.active = false;
-                deviceContext.alarm.activeAlarm = AlarmType::None;
-                deviceContext.alarm.firstDetectedMs = 0;
-
-                Serial.println("Alarm iptal: current normale dondu");
-            }
-            else if (now - deviceContext.alarm.firstDetectedMs >= overCurrentDelayMs)
-            {
-                overCurrentState = ALARM_ENGINE_ACTIVE;
-
-                deviceContext.alarm.active = true;
-                deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
-                deviceContext.alarm.lastNotificationMs = now;
-                deviceContext.alarm.notificationCount++;
-
-                Serial.println("ALARM AKTIF: OverCurrent");
-            }
-
-            break;
-        }
-
-        case ALARM_ENGINE_ACTIVE:
-            deviceContext.alarm.active = true;
-            deviceContext.alarm.activeAlarm = AlarmType::OverCurrent;
-
-            if (!overLimit)
-            {
-                overCurrentState = ALARM_ENGINE_NORMAL;
-
-                deviceContext.alarm.active = false;
-                deviceContext.alarm.activeAlarm = AlarmType::None;
-                deviceContext.alarm.firstDetectedMs = 0;
-
-                Serial.println("ALARM KAPANDI: current normale dondu");
-            }
-            break;
+    if (deviceContext.alarm.active &&
+        (!wasActive || previousAlarm != selectedAlarm))
+    {
+        deviceContext.alarm.published = false;
+        deviceContext.alarm.acknowledged = false;
     }
 }

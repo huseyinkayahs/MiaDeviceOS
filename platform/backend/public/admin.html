@@ -1809,6 +1809,48 @@
   }
 </style>
 
+
+<style id="alarmSuiteTabsStyleV6136">
+  .alarm-suite-tabs-card-v6136 {
+    padding: 12px !important;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 14px;
+    background: #f8fafc !important;
+    backdrop-filter: none;
+  }
+  .alarm-suite-tabs-v6136 { display:flex; gap:8px; flex-wrap:wrap; }
+  .alarm-suite-tab-v6136 {
+    border:1px solid var(--fb-border) !important;
+    background:#fff !important;
+    color:var(--fb-text) !important;
+    border-radius:12px;
+    padding:10px 16px;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+    transition:.18s ease;
+    box-shadow:none !important;
+  }
+  .alarm-suite-tab-v6136:not(.active):hover {
+    border-color:rgba(194,101,16,.45) !important;
+    background:#fff7ed !important;
+    color:#8a470c !important;
+    transform:translateY(-1px);
+  }
+  .alarm-suite-tab-v6136.active {
+    background:var(--fb-primary) !important;
+    border-color:var(--fb-primary) !important;
+    color:#fff !important;
+    box-shadow:0 8px 22px rgba(194,101,16,.18) !important;
+  }
+  [data-alarm-suite-panel][hidden] { display:none !important; }
+  @media (max-width:720px) {
+    .alarm-suite-tabs-v6136 { display:grid; grid-template-columns:1fr; }
+    .alarm-suite-tab-v6136 { width:100%; text-align:left; }
+  }
+</style>
+
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
@@ -1838,11 +1880,9 @@
           <span class="admin-nav-group-right-v517"><span class="admin-nav-chevron-v517">&#9662;</span></span>
         </button>
         <div id="alarmsSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="alarms">
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="alarms"><span>Alarm Merkezi</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="analytics"><span>Alarm Analiti&#287;i</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="sla"><span>Alarm SLA</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Bildirim Teslimat&#305;</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="reports"><span>Alarm Raporlar&#305;</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="alarms"><span>Alarm Takibi</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="analytics"><span>Analiz ve Raporlar</span></button>
+          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="escalations"><span>Bildirimler</span></button>
         </div>
       </div>
 
@@ -2106,8 +2146,8 @@
   <section id="alarmCenterSection" class="card wide admin-card" data-admin-view="alarms">
     <div class="section-title-row">
       <div>
-        <h2>Alarm Center</h2>
-        <p class="muted">v5.12: Aktif alarm, alarm geçmişi, acknowledge ve clear işlemleri.</p>
+        <h2>Alarm Listesi</h2>
+        <p class="muted">Filtreleri kullanarak aktif veya geçmiş alarm kayıtlarını inceleyin.</p>
       </div>
       <button id="refreshAlarmCenterBtn" class="secondary-btn">Alarmları Yenile</button>
     </div>
@@ -2132,7 +2172,7 @@
       </label>
       <label>
         Machine Code
-        <input id="alarmMachineFilter" type="text" placeholder="örn: laser01">
+        <select id="alarmMachineFilter"><option value="">Tüm makineler</option></select>
       </label>
       <label>
         Başlangıç
@@ -2155,11 +2195,20 @@
     <div id="alarmCenterTable">Alarmlar yükleniyor...</div>
   </section>
 
-  <section id="alarmAnalyticsSection" class="card wide admin-card" data-admin-view="analytics">
+
+  <section id="alarmSuiteTabsV6136" class="card wide admin-card alarm-suite-tabs-card-v6136" data-admin-view="analytics">
+    <div class="alarm-suite-tabs-v6136" role="tablist" aria-label="Alarm analiz bölümleri">
+      <button type="button" class="alarm-suite-tab-v6136 active" data-alarm-suite-tab="analytics" role="tab" aria-selected="true">Alarm Analizi</button>
+      <button type="button" class="alarm-suite-tab-v6136" data-alarm-suite-tab="sla" role="tab" aria-selected="false">SLA Kuralları</button>
+      <button type="button" class="alarm-suite-tab-v6136" data-alarm-suite-tab="reports" role="tab" aria-selected="false">Raporlama</button>
+    </div>
+  </section>
+
+  <section id="alarmAnalyticsSection" class="card wide admin-card" data-admin-view="analytics" data-alarm-suite-panel="analytics">
     <div class="section-title-row">
       <div>
-        <h2>Alarm Analytics / Response KPI</h2>
-        <p class="muted">v5.13: Alarm yoğunluğu, acknowledge süresi, çözüm süresi ve en çok alarm üreten makineler.</p>
+        <h2>Alarm Analizi</h2>
+        <p class="muted">Alarm yoğunluğunu, müdahale sürelerini ve en çok alarm üreten makineleri inceleyin.</p>
       </div>
       <button id="refreshAlarmAnalyticsBtn" class="secondary-btn">Analitiği Yenile</button>
     </div>
@@ -2202,11 +2251,11 @@
     </div>
   </section>
 
-  <section id="alarmSlaSection" class="card wide admin-card" data-admin-view="sla">
+  <section id="alarmSlaSection" class="card wide admin-card" data-admin-view="analytics" data-alarm-suite-panel="sla" hidden>
     <div class="section-title-row">
       <div>
-        <h2>Alarm SLA / Escalation Rules</h2>
-        <p class="muted">v5.14: Müdahale ve çözüm SLA süreleri, geciken aktif alarmlar ve kural öncelikleri.</p>
+        <h2>SLA Kuralları</h2>
+        <p class="muted">Müdahale ve çözüm sürelerini, geciken alarmları ve kural önceliklerini yönetin.</p>
       </div>
       <button id="refreshAlarmSlaBtn" class="secondary-btn">SLA Durumunu Yenile</button>
     </div>
@@ -2218,7 +2267,7 @@
       <label>Kural Adı<input id="newAlarmRuleName" type="text" placeholder="örn: Lazer kritik alarm"></label>
       <label>Severity<select id="newAlarmRuleSeverity"><option value="all">all</option><option value="critical">critical</option><option value="warning">warning</option><option value="info">info</option></select></label>
       <label>Alarm Type<input id="newAlarmRuleType" type="text" placeholder="boş = tüm tipler"></label>
-      <label>Makine Kodu<input id="newAlarmRuleMachine" type="text" placeholder="boş = tüm makineler"></label>
+      <label>Makine Kodu<select id="newAlarmRuleMachine"><option value="">Tüm makineler</option></select></label>
       <label>Acknowledge SLA (dk)<input id="newAlarmRuleAck" type="number" min="1" max="10080" value="15"></label>
       <label>Resolve SLA (dk)<input id="newAlarmRuleResolve" type="number" min="1" max="43200" value="120"></label>
       <label>Kanal<select id="newAlarmRuleChannel"><option value="dashboard">dashboard</option><option value="email">email</option><option value="telegram">telegram</option><option value="dashboard+email">dashboard+email</option><option value="dashboard+telegram">dashboard+telegram</option></select></label>
@@ -2243,8 +2292,8 @@
   <section id="alarmEscalationQueueSection" class="card wide admin-card" data-admin-view="escalations">
     <div class="section-title-row">
       <div>
-        <h2>Alarm Escalation Queue / Notification History</h2>
-        <p class="muted">v5.16: SLA dışı alarm kuyruğu, gerçek Email/Telegram teslimatı ve gönderim geçmişi.</p>
+        <h2>Bildirim Kuyruğu ve Geçmişi</h2>
+        <p class="muted">Bekleyen E-posta ve Telegram bildirimlerini ve gönderim geçmişini izleyin.</p>
       </div>
       <div class="admin-form-actions">
         <button id="scanAlarmEscalationsBtn" class="primary-btn">SLA Tara ve Kuyruğa Al</button>
@@ -2640,11 +2689,11 @@
     </div>
   </section>
 
-  <section id="alarmReportsSection" class="card wide admin-card" data-admin-view="reports">
+  <section id="alarmReportsSection" class="card wide admin-card" data-admin-view="analytics" data-alarm-suite-panel="reports" hidden>
     <div class="section-title-row">
       <div>
-        <h2>Daily / Weekly Alarm Reports</h2>
-        <p class="muted">v5.20: Alarm özetlerini günlük veya haftalık hazırlayıp Telegram ve Email üzerinden teslim eder.</p>
+        <h2>Alarm Raporları</h2>
+        <p class="muted">Günlük ve haftalık alarm özetlerini hazırlayın ve belirlenen kanallara gönderin.</p>
       </div>
       <div class="admin-topbar-actions-v58">
         <button id="refreshAlarmReportsBtn" class="secondary-btn">Durumu Yenile</button>
@@ -3476,6 +3525,7 @@
   let currentLanguage = localStorage.getItem('factorybox_ui_language') || 'tr';
   let generalSettingsOptions = {};
   let adminAutoRefreshTimer = null;
+  let adminAutoRefreshInFlightV6136 = false;
   let translationObserver = null;
   let deviceOnboardingRowsMap = new Map();
   let deviceOnboardingOptionsCache = {customers:[],sites:[],machines:[],defaults:{}};
@@ -3620,16 +3670,16 @@
     ['Duruş Kaydı Ekle','Add Downtime Record'],['Duruş kaydı bekleniyor.','Waiting for downtime record.'],
     ['Makine OEE tablosu yükleniyor...','Loading machine OEE table...'],['Günlük trend yükleniyor...','Loading daily trend...'],
     ['Üretim kayıtları yükleniyor...','Loading production records...'],['Duruş kayıtları yükleniyor...','Loading downtime records...'],
-    ['v5.12: Aktif alarm, alarm geçmişi, acknowledge ve clear işlemleri.','v5.12: Active alarms, alarm history, acknowledge and clear operations.'],
+    ['Aktif ve geçmiş alarmları görüntüleyin, onaylayın veya kapatın.','View, acknowledge and clear active or historical alarms.'],
     ['Alarmları Yenile','Refresh Alarms'],['Arama','Search'],['Alarm Analitiği / Müdahale KPI','Alarm Analytics / Response KPI'],
-    ['v5.13: Alarm yoğunluğu, acknowledge süresi, çözüm süresi ve en çok alarm üreten makineler.','v5.13: Alarm volume, acknowledge time, resolution time and machines generating the most alarms.'],
+    ['Alarm yoğunluğunu, müdahale sürelerini ve en çok alarm üreten makineleri inceleyin.','Review alarm volume, response times and the machines generating the most alarms.'],
     ['Analitiği Yenile','Refresh Analytics'],['Alarm analitiği yükleniyor...','Loading alarm analytics...'],
     ['Alarm SLA / Escalation Kuralları','Alarm SLA / Escalation Rules'],
-    ['v5.14: Müdahale ve çözüm SLA süreleri, geciken aktif alarmlar ve kural öncelikleri.','v5.14: Response and resolution SLA times, overdue active alarms and rule priorities.'],
+    ['Müdahale ve çözüm sürelerini, geciken alarmları ve kural önceliklerini yönetin.','Manage response and resolution times, overdue alarms and rule priorities.'],
     ['SLA Durumunu Yenile','Refresh SLA Status'],['Alarm SLA özeti yükleniyor...','Loading alarm SLA summary...'],
     ['Alarm Tipi','Alarm Type'],['Kurallar yükleniyor...','Loading rules...'],['Aktif alarmlar yükleniyor...','Loading active alarms...'],
     ['Alarm Escalation Kuyruğu / Bildirim Geçmişi','Alarm Escalation Queue / Notification History'],
-    ['v5.16: SLA dışı alarm kuyruğu, gerçek Email/Telegram teslimatı ve gönderim geçmişi.','v5.16: Overdue alarm queue, real Email/Telegram delivery and delivery history.'],
+    ['Bekleyen E-posta ve Telegram bildirimlerini ve gönderim geçmişini izleyin.','Monitor pending Email and Telegram notifications and delivery history.'],
     ['Delivery Worker durumu yükleniyor...','Loading Delivery Worker status...'],['Escalation Queue özeti yükleniyor...','Loading Escalation Queue summary...'],
     ['Escalation Olay Geçmişi','Escalation Event History'],['Escalation olayları yükleniyor...','Loading escalation events...'],
     ['Bildirim Ayarları / Kanal Testleri','Notification Settings / Channel Tests'],
@@ -3645,7 +3695,7 @@
     ['Otomatik Retry','Automatic Retry'],['Ayar değişikliği veya manuel çalışma bekleniyor.','Waiting for a settings change or manual run.'],
     ['Scheduler Çalışma Geçmişi','Scheduler Run History'],['Çalışma geçmişi yükleniyor...','Loading run history...'],
     ['Günlük / Haftalık Alarm Raporları','Daily / Weekly Alarm Reports'],
-    ['v5.20: Alarm özetlerini günlük veya haftalık hazırlayıp Telegram ve Email üzerinden teslim eder.','v5.20: Creates daily or weekly alarm summaries and delivers them through Telegram and Email.'],
+    ['Günlük ve haftalık alarm özetlerini hazırlayın ve belirlenen kanallara gönderin.','Create daily and weekly alarm summaries and deliver them through the selected channels.'],
     ['Rapor ayarları yükleniyor...','Loading report settings...'],['Alarm kayıtları','Alarm records'],['Günlük / haftalık özet','Daily / weekly summary'],
     ['Teslimat geçmişi','Delivery history'],['Rapor Scheduler','Report Scheduler'],['Telegram Chat ID\'leri','Telegram Chat IDs'],
     ['Email Alıcıları','Email Recipients'],['Günlük Gönderim Saati','Daily Delivery Hour'],['Haftalık Gönderim Günü','Weekly Delivery Day'],
@@ -4224,10 +4274,10 @@
     dashboard:{title_tr:'Genel Bakış',title_en:'Overview',desc_tr:'İşletmenin canlı operasyon, alarm, bakım ve üretim özeti.',desc_en:'Live operations, alarms, maintenance and production summary.'},
     live:{title_tr:'Canlı İzleme',title_en:'Live Monitoring',desc_tr:'Makinelerin canlı durumları, son telemetri değerleri ve bağlantı sağlığı.',desc_en:'Live machine states, latest telemetry values and connection health.'},
     oee:{title_tr:'Makine Duruşu ve OEE Analitiği',title_en:'Machine Downtime & OEE Analytics',desc_tr:'Kullanılabilirlik, performans, kalite, OEE, üretim adetleri ve duruş nedenleri.',desc_en:'Availability, performance, quality, OEE, production counts and downtime reasons.'},
-    alarms:{title_tr:'Alarm Merkezi',title_en:'Alarm Center',desc_tr:'Aktif alarm listesi, alarm geçmişi, onaylama ve kapatma işlemleri.',desc_en:'Active alarm list, alarm history, acknowledgement and clearing operations.'},
-    analytics:{title_tr:'Alarm Analitiği',title_en:'Alarm Analytics',desc_tr:'Alarm trendleri, onaylama ve çözüm süreleri ile makine bazlı alarm yoğunluğu.',desc_en:'Alarm trends, acknowledgement and resolution times, and machine-level alarm density.'},
+    alarms:{title_tr:'Alarm Takibi',title_en:'Alarm Monitoring',desc_tr:'Aktif ve geçmiş alarmları görüntüleyin, onaylayın veya kapatın.',desc_en:'View, acknowledge and clear active or historical alarms.'},
+    analytics:{title_tr:'Analiz ve Raporlar',title_en:'Analytics and Reports',desc_tr:'Alarm eğilimleri, müdahale süreleri, SLA sonuçları ve dönemsel raporlar.',desc_en:'Alarm trends, response times, SLA results and periodic reports.'},
     sla:{title_tr:'Alarm SLA',title_en:'Alarm SLA',desc_tr:'Müdahale ve çözüm süreleri, bildirim kuralları ve SLA dışı aktif alarmlar.',desc_en:'Response and resolution times, escalation rules and active alarms outside SLA.'},
-    escalations:{title_tr:'Bildirim Teslimatı',title_en:'Escalation Delivery',desc_tr:'SLA dışı alarm kuyruğu, E-posta/Telegram teslimatı ve gönderim geçmişi.',desc_en:'Out-of-SLA alarm queue, Email/Telegram delivery and delivery history.'},
+    escalations:{title_tr:'Bildirimler',title_en:'Notifications',desc_tr:'E-posta ve Telegram bildirim kuyruğu ile gönderim geçmişi.',desc_en:'Email and Telegram notification queue and delivery history.'},
     general:{title_tr:'Genel Ayarlar',title_en:'General Settings',desc_tr:'Panel dili, saat dilimi, tarih/saat biçimi ve genel çalışma tercihleri.',desc_en:'Panel language, time zone, date/time format and general operating preferences.'},
     health:{title_tr:'Sistem Sağlığı ve Yedekler',title_en:'System Health & Backups',desc_tr:'Backend, veritabanı, MQTT, servisler, disk, loglar ve otomatik yedekleme merkezi.',desc_en:'Central health center for backend, database, MQTT, services, disk, logs and automatic backups.'},
     'remote-access':{title_tr:'Uzak Erişim ve Domain',title_en:'Remote Access & Domain',desc_tr:'Cloudflare Tunnel, public domain, uzaktan erişim sağlığı ve güvenlik kontrolleri.',desc_en:'Cloudflare Tunnel, public domain, remote-access health and security checks.'},
@@ -4334,8 +4384,50 @@
     syncAdminNavGroups.lastActiveView = activeView;
   }
 
+
+  let currentAlarmSuiteTabV6136 = localStorage.getItem('hukatech_alarm_suite_tab') || 'analytics';
+
+  function setAlarmSuiteTabV6136(tab, persist = true) {
+    const allowed = ['analytics', 'sla', 'reports'];
+    const key = allowed.includes(tab) ? tab : 'analytics';
+    currentAlarmSuiteTabV6136 = key;
+
+    document.querySelectorAll('[data-alarm-suite-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.alarmSuitePanel !== key;
+    });
+
+    document.querySelectorAll('[data-alarm-suite-tab]').forEach(button => {
+      const active = button.dataset.alarmSuiteTab === key;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+
+      const labels = {
+        analytics: currentLanguage === 'en' ? 'Alarm Analytics' : 'Alarm Analizi',
+        sla: currentLanguage === 'en' ? 'SLA Rules' : 'SLA Kuralları',
+        reports: currentLanguage === 'en' ? 'Reporting' : 'Raporlama'
+      };
+      button.textContent = labels[button.dataset.alarmSuiteTab] || button.textContent;
+    });
+
+    if (persist) localStorage.setItem('hukatech_alarm_suite_tab', key);
+  }
+
+  function syncAlarmSuiteTabsV6136() {
+    const section = document.getElementById('alarmAnalyticsSection');
+    if (!section || !section.classList.contains('admin-view-active')) return;
+    setAlarmSuiteTabV6136(currentAlarmSuiteTabV6136, false);
+  }
+
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-alarm-suite-tab]');
+    if (!button) return;
+    setAlarmSuiteTabV6136(button.dataset.alarmSuiteTab);
+    document.getElementById('alarmSuiteTabsV6136')?.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
   function setAdminView(view) {
-    const key = ADMIN_VIEWS[view] ? view : 'dashboard';
+    const requestedKey = ADMIN_VIEWS[view] ? view : 'dashboard';
+    const key = ['sla','reports'].includes(requestedKey) ? 'analytics' : requestedKey;
     const meta = getAdminViewMeta(key);
 
     document.querySelectorAll('[data-admin-view]').forEach(section => {
@@ -4347,6 +4439,7 @@
     });
 
     syncAdminNavGroups(key);
+    if (key === 'analytics') syncAlarmSuiteTabsV6136();
 
     const title = document.getElementById('adminViewTitleV58');
     const desc = document.getElementById('adminViewDescV58');
@@ -5488,7 +5581,7 @@
     const alarms = data.alarms || [];
 
     summaryTarget.innerHTML = `
-      Alarm center: <strong>${data.alarm_center_enabled ? 'ON' : 'OFF'}</strong> —
+      ${currentLanguage==='en'?'Alarm center':'Alarm merkezi'}: <strong>${currentLanguage==='en'?(data.alarm_center_enabled?'ON':'OFF'):(data.alarm_center_enabled?'Açık':'Kapalı')}</strong> —
       Active: <strong>${esc(s.active || 0)}</strong> ·
       Acknowledged: <strong>${esc(s.acknowledged || 0)}</strong> ·
       Cleared: <strong>${esc(s.cleared || 0)}</strong> ·
@@ -5505,7 +5598,7 @@
       {label:'Message', value:r=>r.message || '-'},
       {label:'Started', value:r=>fmtDate(r.started_at)},
       {label:'Ack', value:r=>r.acknowledged_at ? `${fmtDate(r.acknowledged_at)} / ${r.acknowledged_by || '-'}` : '-'},
-      {label:'Cleared', value:r=>r.cleared_at ? `${fmtDate(r.cleared_at)} / ${r.cleared_by || '-'}` : '-'},
+      {label:currentLanguage==='en'?'Cleared':'Kapatıldı', value:r=>r.cleared_at ? `${fmtDate(r.cleared_at)} / ${r.cleared_by || '-'}` : '-'},
       {label:'Aksiyon', html:true, value:r=>`
         <button class="secondary-btn mini-btn" data-action="ack-alarm" data-id="${esc(r.id)}">Acknowledge</button>
         <button class="secondary-btn mini-btn" data-action="clear-alarm" data-id="${esc(r.id)}">Clear</button>
@@ -5583,7 +5676,7 @@
       {label:'Toplam', value:r=>r.total || 0},
       {label:'Kritik', value:r=>r.critical || 0},
       {label:'Warning', value:r=>r.warning || 0},
-      {label:'Cleared', value:r=>r.cleared || 0}
+      {label:currentLanguage==='en'?'Cleared':'Kapatıldı', value:r=>r.cleared || 0}
     ], data.daily || []);
 
     bucketsTarget.innerHTML = `
@@ -5701,11 +5794,11 @@
     target.innerHTML = `
       <div class="kpi-grid-v59">
         <div class="kpi-card-v59"><span>Delivery Worker</span><strong>${data.delivery_enabled ? 'ON' : 'OFF'}</strong><small>Otomatik: ${data.auto_delivery_enabled ? 'ON' : 'OFF'} · ${esc(data.interval_sec || 0)} sn</small></div>
-        <div class="kpi-card-v59"><span>Email</span><strong>${emailReady ? 'READY' : 'NOT READY'}</strong><small>SMTP ve varsayılan alıcı kontrolü</small></div>
-        <div class="kpi-card-v59"><span>Telegram</span><strong>${telegramReady ? 'READY' : 'NOT READY'}</strong><small>Bot token ve chat ID kontrolü</small></div>
-        <div class="kpi-card-v59"><span>Aktif İş</span><strong>${esc(q.processing || 0)}</strong><small>${esc(q.pending || 0)} bekliyor · ${esc(q.failed || 0)} başarısız · ${esc(q.dead_letter || 0)} dead letter</small></div>
+        <div class="kpi-card-v59"><span>Email</span><strong>${currentLanguage==='en'?(emailReady?'READY':'NOT READY'):(emailReady?'HAZIR':'HAZIR DEĞİL')}</strong><small>SMTP ve varsayılan alıcı kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Telegram</span><strong>${currentLanguage==='en'?(telegramReady?'READY':'NOT READY'):(telegramReady?'HAZIR':'HAZIR DEĞİL')}</strong><small>Bot token ve chat ID kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Aktif İş</span><strong>${esc(q.processing || 0)}</strong><small>${esc(q.pending || 0)} bekliyor · ${esc(q.failed || 0)} başarısız · ${esc(q.dead_letter || 0)} ${currentLanguage==='en'?'dead letter':'hata kuyruğu'}</small></div>
       </div>
-      <p class="mini-status">Batch: <strong>${esc(data.batch_size || 0)}</strong> · Manuel gönderim: <strong>${data.can_deliver ? 'Açık' : 'Yetki yok'}</strong></p>
+      <p class="mini-status">${currentLanguage==='en'?'Batch size':'Paket boyutu'}: <strong>${esc(data.batch_size || 0)}</strong> · Manuel gönderim: <strong>${data.can_deliver ? 'Açık' : 'Yetki yok'}</strong></p>
     `;
     if (button) button.disabled = !data.can_deliver || !data.delivery_enabled;
   }
@@ -5933,8 +6026,8 @@
         <div class="kpi-card-v59"><span>Rapor Zamanlayıcısı</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${esc(scheduler.timezone || '-')} · ${esc((scheduler.channels || []).join(' + '))}</small></div>
         <div class="kpi-card-v59"><span>Günlük Sonraki</span><strong>${daily.enabled ? esc(fmtDate(daily.next_run_at)) : '-'}</strong><small>${daily.enabled ? `Her gün ${String(daily.hour ?? 8).padStart(2,'0')}:00` : 'Günlük rapor kapalı'}</small></div>
         <div class="kpi-card-v59"><span>Haftalık Sonraki</span><strong>${weekly.enabled ? esc(fmtDate(weekly.next_run_at)) : '-'}</strong><small>${weekly.enabled ? `${esc(weekly.day_name || '-')} ${String(weekly.hour ?? 8).padStart(2,'0')}:00` : 'Haftalık rapor kapalı'}</small></div>
-        <div class="kpi-card-v59"><span>Telegram</span><strong>${readiness.telegram?.configured && readiness.telegram?.target_configured ? 'READY' : 'NOT READY'}</strong><small>Bot ve hedef kontrolü</small></div>
-        <div class="kpi-card-v59"><span>Email</span><strong>${readiness.email?.configured && readiness.email?.target_configured ? 'READY' : 'NOT READY'}</strong><small>SMTP ve hedef kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Telegram</span><strong>${currentLanguage==='en'?(readiness.telegram?.configured&&readiness.telegram?.target_configured?'READY':'NOT READY'):(readiness.telegram?.configured&&readiness.telegram?.target_configured?'HAZIR':'HAZIR DEĞİL')}</strong><small>Bot ve hedef kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Email</span><strong>${currentLanguage==='en'?(readiness.email?.configured&&readiness.email?.target_configured?'READY':'NOT READY'):(readiness.email?.configured&&readiness.email?.target_configured?'HAZIR':'HAZIR DEĞİL')}</strong><small>SMTP ve hedef kontrolü</small></div>
         <div class="kpi-card-v59"><span>Teslimat</span><strong>${esc(summary.delivered || 0)}</strong><small>${esc(summary.failed || 0)} başarısız · ${esc(summary.partial || 0)} kısmi</small></div>
       </div>`;
 
@@ -6254,7 +6347,46 @@
     ], rows);
   }
 
+
+  function renderAlarmMachineSelectsV6136(rows) {
+    const unique = new Map();
+
+    (rows || []).forEach(row => {
+      const code = String(row?.code || row?.machine_code || '').trim();
+      if (!code || unique.has(code)) return;
+
+      unique.set(code, {
+        code,
+        name: String(row?.name || row?.machine_name || code).trim()
+      });
+    });
+
+    const machines = [...unique.values()].sort((a, b) =>
+      (a.name || a.code).localeCompare(b.name || b.code, currentLanguage === 'en' ? 'en' : 'tr')
+    );
+
+    const firstLabel = currentLanguage === 'en' ? 'All machines' : 'Tüm makineler';
+    const options = machines
+      .map(machine => `<option value="${esc(machine.code)}">${esc(machine.name)} — ${esc(machine.code)}</option>`)
+      .join('');
+
+    ['alarmMachineFilter', 'newAlarmRuleMachine'].forEach(id => {
+      const select = document.getElementById(id);
+      if (!select) return;
+
+      const current = select.value;
+      select.innerHTML = `<option value="">${firstLabel}</option>${options}`;
+
+      if ([...select.options].some(option => option.value === current)) {
+        select.value = current;
+      } else {
+        select.value = '';
+      }
+    });
+  }
+
   function renderMachines(data) {
+    renderAlarmMachineSelectsV6136(data.machines || []);
     const target = document.getElementById('machinesTable');
     if (!target) return;
 
@@ -6799,6 +6931,79 @@
     label.textContent=(en?'Updated ':'Güncellendi ')+time;
   }
 
+
+  async function refreshActiveAdminViewV6136(view) {
+    const tasks = [];
+
+    if (view === 'dashboard') {
+      tasks.push(
+        ['dashboard-summary', '/api/admin/dashboard-summary', renderDashboardSummary, 'adminDashboardSummary'],
+        ['dashboard-today-oee', `/api/admin/oee-analytics?from=${dashboardTodayIsoV6136()}&to=${dashboardTodayIsoV6136()}&machine_id=all`, renderDashboardTodayOeeV6136, 'dashboardTodayOeeShadowV6136']
+      );
+    } else if (view === 'live') {
+      tasks.push(['live-monitoring', '/api/admin/live-monitoring?limit=120', renderLiveMonitoring, 'liveMachineCards']);
+    } else if (view === 'oee') {
+      tasks.push(['oee-analytics', `/api/admin/oee-analytics?${oeeQueryString()}`, renderOeeAnalytics, 'oeeMachinesTable']);
+    } else if (view === 'alarms') {
+      tasks.push(['alarm-center', `/api/admin/alarm-center?${alarmQueryString()}`, renderAlarmCenter, 'alarmCenterTable']);
+    } else if (view === 'analytics') {
+      tasks.push(
+        ['alarm-analytics', `/api/admin/alarm-analytics?${alarmAnalyticsQueryString()}`, renderAlarmAnalytics, 'alarmAnalyticsSummary'],
+        ['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary'],
+        ['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus']
+      );
+    } else if (view === 'sla') {
+      tasks.push(['alarm-escalation', '/api/admin/alarm-escalation', renderAlarmSla, 'alarmSlaSummary']);
+    } else if (view === 'reports') {
+      tasks.push(['alarm-reports', '/api/admin/alarm-reports', renderAlarmReports, 'alarmReportsStatus']);
+    } else if (view === 'escalations') {
+      tasks.push(
+        ['alarm-escalation-delivery-status', '/api/admin/alarm-escalation/delivery-status', renderAlarmEscalationDeliveryStatus, 'alarmEscalationDeliveryStatus'],
+        ['alarm-escalation-events', `/api/admin/alarm-escalation/events?${alarmEscalationEventsQueryString()}`, renderAlarmEscalationEvents, 'alarmEscalationEventsSummary']
+      );
+    }
+
+    if (!tasks.length) return;
+
+    const errors = [];
+    for (const [name, url, renderer, targetId] of tasks) {
+      try {
+        const data = await getJson(url);
+        renderer(data);
+      } catch (error) {
+        errors.push(`${name}: ${error.message}`);
+        setError(targetId, error.message);
+      }
+    }
+
+    applyTranslations(document);
+
+    if (errors.length) {
+      throw new Error(errors.join(' | '));
+    }
+  }
+
+  async function runScopedAlarmRefreshV6136(button, view) {
+    if (!button || button.disabled) return;
+
+    button.disabled = true;
+    try {
+      await refreshActiveAdminViewV6136(view);
+      const seconds = adminAutoRefreshSecondsV6135(view);
+      adminAutoRefreshLabelV6135(seconds, 'updated');
+
+      const status = document.getElementById('adminStatus');
+      if (status) status.textContent = 'Admin panel çalışıyor.';
+    } catch (error) {
+      console.error('Alarm scoped refresh error:', error);
+      const status = document.getElementById('adminStatus');
+      if (status) status.textContent = `Kısmi hata: ${error.message}`;
+      throw error;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function restartAdminAutoRefresh() {
     if(adminAutoRefreshTimer){clearInterval(adminAutoRefreshTimer);adminAutoRefreshTimer=null;}
     const activeView=document.querySelector('[data-admin-nav].active')?.dataset.adminNav
@@ -6810,13 +7015,16 @@
     if(seconds<=0)return;
 
     adminAutoRefreshTimer=setInterval(async()=>{
-      if(document.hidden)return;
+      if(document.hidden || adminAutoRefreshInFlightV6136)return;
+      adminAutoRefreshInFlightV6136=true;
       try {
-        await loadAdmin();
+        await refreshActiveAdminViewV6136(activeView);
         adminAutoRefreshLabelV6135(seconds,'updated');
       } catch(error) {
         console.error('Admin auto refresh error:',error);
         adminAutoRefreshLabelV6135(seconds,'error');
+      } finally {
+        adminAutoRefreshInFlightV6136=false;
       }
     },seconds*1000);
   }
@@ -8179,17 +8387,17 @@
     if (createOeeDowntimeBtn) createOeeDowntimeBtn.addEventListener('click',async()=>{createOeeDowntimeBtn.disabled=true;document.getElementById('oeeDowntimeResult').textContent='Duruş kaydı oluşturuluyor...';try{const result=await createOeeDowntime();await loadAdmin();document.getElementById('oeeDowntimeResult').textContent=`Duruş kaydı eklendi: ${result.record?.reason_code||'-'} · ${fmtDuration(result.record?.duration_sec||0)}`;}catch(e){document.getElementById('oeeDowntimeResult').textContent=e.message;}finally{createOeeDowntimeBtn.disabled=false;}});
     if (syncOeeMachineStatesBtn) syncOeeMachineStatesBtn.addEventListener('click',async()=>{syncOeeMachineStatesBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='Duruş sinyalleri kayıtlara aktarılıyor...';try{const result=await syncOeeMachineStates();await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Aktarım tamamlandı: ${result.result?.created_count||0} yeni duruş kaydı.`;}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{syncOeeMachineStatesBtn.disabled=false;}});
     if (cleanupOeeManualRecordsBtn) cleanupOeeManualRecordsBtn.addEventListener('click',async()=>{cleanupOeeManualRecordsBtn.disabled=true;document.getElementById('oeeAnalyticsResult').textContent='Seçili manuel OEE test kayıtları temizleniyor...';try{const result=await cleanupOeeManualRecords();if(result){await loadAdmin();document.getElementById('oeeAnalyticsResult').textContent=`Temizlik tamamlandı: ${result.result?.production_deleted||0} üretim, ${result.result?.downtime_deleted||0} duruş kaydı silindi.`;}else document.getElementById('oeeAnalyticsResult').textContent='Temizlik iptal edildi.';}catch(e){document.getElementById('oeeAnalyticsResult').textContent=e.message;}finally{cleanupOeeManualRecordsBtn.disabled=false;}});
-    if (refreshAlarmCenterBtn) refreshAlarmCenterBtn.addEventListener('click', loadAdmin);
-    if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click', loadAdmin);
-    if (refreshAlarmAnalyticsBtn) refreshAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
-    if (applyAlarmAnalyticsBtn) applyAlarmAnalyticsBtn.addEventListener('click', loadAdmin);
-    if (refreshAlarmSlaBtn) refreshAlarmSlaBtn.addEventListener('click', loadAdmin);
-    if (refreshAlarmEscalationEventsBtn) refreshAlarmEscalationEventsBtn.addEventListener('click', loadAdmin);
-    if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click', loadAdmin);
+    if (refreshAlarmCenterBtn) refreshAlarmCenterBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(refreshAlarmCenterBtn,'alarms').catch(()=>{}));
+    if (applyAlarmFiltersBtn) applyAlarmFiltersBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(applyAlarmFiltersBtn,'alarms').catch(()=>{}));
+    if (refreshAlarmAnalyticsBtn) refreshAlarmAnalyticsBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(refreshAlarmAnalyticsBtn,'analytics').catch(()=>{}));
+    if (applyAlarmAnalyticsBtn) applyAlarmAnalyticsBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(applyAlarmAnalyticsBtn,'analytics').catch(()=>{}));
+    if (refreshAlarmSlaBtn) refreshAlarmSlaBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(refreshAlarmSlaBtn,'sla').catch(()=>{}));
+    if (refreshAlarmEscalationEventsBtn) refreshAlarmEscalationEventsBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(refreshAlarmEscalationEventsBtn,'escalations').catch(()=>{}));
+    if (applyAlarmEscalationFiltersBtn) applyAlarmEscalationFiltersBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(applyAlarmEscalationFiltersBtn,'escalations').catch(()=>{}));
     if (refreshNotificationSettingsBtn) refreshNotificationSettingsBtn.addEventListener('click', loadAdmin);
     document.getElementById('notificationEmailMode')?.addEventListener('change', syncNotificationEmailModeFields);
     if (refreshAutomationSchedulerBtn) refreshAutomationSchedulerBtn.addEventListener('click', loadAdmin);
-    if (refreshAlarmReportsBtn) refreshAlarmReportsBtn.addEventListener('click', loadAdmin);
+    if (refreshAlarmReportsBtn) refreshAlarmReportsBtn.addEventListener('click',()=>runScopedAlarmRefreshV6136(refreshAlarmReportsBtn,'reports').catch(()=>{}));
     if (refreshMaintenanceTicketsBtn) refreshMaintenanceTicketsBtn.addEventListener('click', loadAdmin);
     if (applyMaintenanceFiltersBtn) applyMaintenanceFiltersBtn.addEventListener('click', loadAdmin);
     if (refreshMaintenancePlansBtn) refreshMaintenancePlansBtn.addEventListener('click', loadAdmin);
