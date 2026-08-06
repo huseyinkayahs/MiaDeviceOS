@@ -5418,6 +5418,94 @@
     URL.revokeObjectURL(url);
   }
 
+  /* HUKATECH_AUTOMATIC_SESSION_LOGOUT_V1 */
+  let hukatechAuthRedirectingV1 = false;
+
+  function clearStoredAuthenticationV1() {
+    const authKeys = [
+      'factorybox_auth_token',
+      'factorybox_token',
+      'auth_token',
+      'access_token'
+    ];
+
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      try { authKeys.forEach(key => storage.removeItem(key)); } catch {}
+    }
+  }
+
+  function redirectToLoginV1(reason = 'session_expired') {
+    if (hukatechAuthRedirectingV1) return;
+    hukatechAuthRedirectingV1 = true;
+    clearStoredAuthenticationV1();
+
+    try {
+      document.documentElement.dataset.authRedirecting = '1';
+      document.body?.setAttribute('aria-busy', 'true');
+      document.body?.style.setProperty('pointer-events', 'none');
+    } catch {}
+
+    const loginUrl = `/login.html?reason=${encodeURIComponent(reason)}`;
+    window.setTimeout(() => window.location.replace(loginUrl), 0);
+  }
+
+  window.hukatechForceLoginV1 = redirectToLoginV1;
+
+  /* HUKATECH_CROSS_TAB_LOGOUT_SYNC_V2 */
+  const HUKATECH_AUTH_SYNC_KEY_V2 = 'hukatech_auth_sync_v2';
+  const hukatechAuthChannelV2 =
+    typeof window.BroadcastChannel === 'function'
+      ? new BroadcastChannel('hukatech_auth_v2')
+      : null;
+
+  function handleCrossTabAuthEventV2(payload) {
+    if (!payload || payload.type !== 'logout') return;
+    redirectToLoginV1(payload.reason || 'user_logout');
+  }
+
+  function broadcastLogoutV2(reason = 'user_logout') {
+    const payload = {
+      type: 'logout',
+      reason,
+      at: Date.now(),
+      nonce: Math.random().toString(36).slice(2)
+    };
+
+    try {
+      localStorage.setItem(HUKATECH_AUTH_SYNC_KEY_V2, JSON.stringify(payload));
+    } catch {}
+
+    try {
+      hukatechAuthChannelV2?.postMessage(payload);
+    } catch {}
+  }
+
+  window.hukatechBroadcastLogoutV2 = broadcastLogoutV2;
+
+  window.addEventListener('storage', event => {
+    if (
+      event.key === 'factorybox_auth_token' &&
+      event.oldValue &&
+      !event.newValue
+    ) {
+      redirectToLoginV1('user_logout');
+      return;
+    }
+
+    if (event.key !== HUKATECH_AUTH_SYNC_KEY_V2 || !event.newValue) return;
+
+    try {
+      handleCrossTabAuthEventV2(JSON.parse(event.newValue));
+    } catch {}
+  });
+
+  hukatechAuthChannelV2?.addEventListener(
+    'message',
+    event => handleCrossTabAuthEventV2(event.data)
+  );
+
+  window.addEventListener('offline', () => redirectToLoginV1('connection_lost'));
+
   async function apiJson(url, options = {}) {
     const token = authToken();
     const headers = {
@@ -5429,15 +5517,29 @@
       headers['Content-Type'] = 'application/json';
     }
 
-    const res = await fetch(url, {...options, headers});
+    let res;
+    try {
+      res = await fetch(url, {...options, headers});
+    } catch (error) {
+      redirectToLoginV1('connection_lost');
+      throw new Error(currentLanguage === 'en' ? 'Connection lost. Sign in again.' : 'Bağlantı kesildi. Yeniden giriş yapın.');
+    }
 
     let body = null;
-    try {
-      body = await res.json();
-    } catch {}
+    try { body = await res.json(); } catch {}
+
+    const loginRequired =
+      res.status === 401 &&
+      body?.status === 'unauthorized' &&
+      (body?.message === 'Login required' || body?.login_url === '/login.html');
+
+    if (loginRequired) {
+      redirectToLoginV1('session_expired');
+      throw new Error(currentLanguage === 'en' ? 'Session ended. Sign in again.' : 'Oturum sona erdi. Yeniden giriş yapın.');
+    }
 
     if (res.status === 401) {
-      throw new Error('Login gerekli. Önce login ekranından giriş yap.');
+      throw new Error(body?.message || 'Yetkilendirme başarısız.');
     }
 
     if (res.status === 403) {
@@ -9929,23 +10031,42 @@
 
         button.disabled = true;
 
+        const logoutToken =
+          localStorage.getItem('factorybox_auth_token') || '';
+
         try {
           await fetch('/api/auth/logout', {
             method:'POST',
-            credentials:'same-origin'
+            credentials:'same-origin',
+            headers: logoutToken
+              ? {Authorization: `Bearer ${logoutToken}`}
+              : {}
           });
         } catch (_) {
-          // Always return to login screen.
+          // Local and cross-tab logout must still continue.
         }
 
-        [
-          'factorybox_auth_token',
-          'factorybox_token',
-          'auth_token',
-          'access_token'
-        ].forEach(key => localStorage.removeItem(key));
+        window.hukatechBroadcastLogoutV2?.('user_logout');
 
-        window.location.replace('/login.html');
+        if (typeof clearStoredAuthenticationV1 === 'function') {
+          clearStoredAuthenticationV1();
+        } else {
+          [
+            'factorybox_auth_token',
+            'factorybox_token',
+            'auth_token',
+            'access_token'
+          ].forEach(key => {
+            localStorage.removeItem(key);
+            sessionStorage.removeItem(key);
+          });
+        }
+
+        if (typeof window.hukatechForceLoginV1 === 'function') {
+          window.hukatechForceLoginV1('user_logout');
+        } else {
+          window.location.replace('/login.html?reason=user_logout');
+        }
       });
     };
 
