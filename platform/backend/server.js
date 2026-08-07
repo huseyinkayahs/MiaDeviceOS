@@ -1236,13 +1236,78 @@ function getRolePermissions(role) {
   return ROLE_PERMISSIONS[String(role || 'viewer')] || ROLE_PERMISSIONS.viewer;
 }
 
+function permissionArray(value) {
+  if (Array.isArray(value)) return [...new Set(value.map(item=>String(item||'').trim()).filter(Boolean))];
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return [...new Set(parsed.map(item=>String(item||'').trim()).filter(Boolean))];
+    } catch {}
+  }
+  return null;
+}
+
+function effectivePermissions(userOrRole) {
+  if (typeof userOrRole === 'string') return [...getRolePermissions(userOrRole)];
+
+  const role = String(userOrRole?.role || 'viewer');
+  const defaults = [...getRolePermissions(role)];
+
+  if (['owner','system_admin'].includes(role)) return defaults;
+
+  const selected = permissionArray(userOrRole?.custom_permissions);
+  if (selected === null) return defaults;
+
+  const selectedSet = new Set(selected);
+  return defaults.filter(permission=>selectedSet.has(permission));
+}
+
+function validateCustomPermissions(role, requested) {
+  const normalizedRole = String(role || 'viewer');
+  const allowed = [...getRolePermissions(normalizedRole)];
+
+  if (requested === undefined || requested === null) return null;
+
+  const selected = permissionArray(requested);
+  if (!selected) {
+    const err = new Error('permissions must be an array');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const invalid = selected.filter(permission=>!allowed.includes(permission));
+  if (invalid.length) {
+    const err = new Error(`Role dışı yetki seçilemez: ${invalid.join(', ')}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (['owner','system_admin'].includes(normalizedRole)) {
+    const complete = allowed.length === selected.length && allowed.every(permission=>selected.includes(permission));
+    if (!complete) {
+      const err = new Error('Bu kritik rolün yetkileri güvenlik nedeniyle değiştirilemez');
+      err.statusCode = 400;
+      throw err;
+    }
+    return null;
+  }
+
+  if (normalizedRole === 'admin' && !selected.includes('ADMIN_VIEW')) {
+    const err = new Error('Yönetici rolünde Yönetim paneline erişim yetkisi zorunludur');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const selectedSet = new Set(selected);
+  return allowed.filter(permission=>selectedSet.has(permission));
+}
+
 function hasPermission(userOrRole, permission) {
-  const role = typeof userOrRole === 'string' ? userOrRole : userOrRole?.role;
-  return getRolePermissions(role).includes(permission);
+  return effectivePermissions(userOrRole).includes(permission);
 }
 
 function publicPermissions(user) {
-  return getRolePermissions(user?.role || 'viewer');
+  return effectivePermissions(user);
 }
 
 function permissionRequired(permission) {
@@ -1298,6 +1363,7 @@ function publicUser(row) {
     full_name:row.full_name,
     role:row.role,
     status:row.status,
+    custom_permissions:permissionArray(row.custom_permissions),
     permissions:publicPermissions(row),
     default_customer_code:row.default_customer_code,
     default_site_code:row.default_site_code,
@@ -1817,6 +1883,8 @@ async function ensureSaasFoundation() {
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+
+  await pool.query(`ALTER TABLE app_users ADD COLUMN IF NOT EXISTS custom_permissions jsonb`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_user_tenant_access (
@@ -3092,7 +3160,7 @@ function adminRequired(req, res, next) {
   }
 
   const role = session.user?.role || '';
-  if (!['owner', 'admin', 'system_admin'].includes(role)) {
+  if (!['owner', 'admin', 'system_admin'].includes(role) || !hasPermission(session.user, 'ADMIN_VIEW')) {
     return res.status(403).json({
       status:'forbidden',
       message:'Admin access required'
@@ -8975,7 +9043,7 @@ app.patch('/api/admin/subscriptions/:customerCode', adminRequired, permissionReq
   }
 });
 
-app.get('/api/admin/users', adminRequired, async (req,res)=>{
+app.get('/api/admin/users', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
   try {
     const result = await pool.query(`
       SELECT
@@ -8984,6 +9052,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
         full_name,
         role,
         status,
+        custom_permissions,
         default_customer_code,
         default_site_code,
         last_login_at,
@@ -8998,7 +9067,7 @@ app.get('/api/admin/users', adminRequired, async (req,res)=>{
       status:'ok',
       version:APP_VERSION,
       count:result.rows.length,
-      users:result.rows
+      users:result.rows.map(user=>({...user,custom_permissions:permissionArray(user.custom_permissions),permissions:publicPermissions(user)}))
     });
   } catch(e) {
     res.status(500).json({status:'error', message:e.message});
@@ -11505,6 +11574,7 @@ async function ensureInviteSchema() {
       email text NOT NULL,
       full_name text,
       role text NOT NULL DEFAULT 'viewer',
+      custom_permissions jsonb,
       customer_code text NOT NULL,
       site_code text,
       status text NOT NULL DEFAULT 'pending',
@@ -11520,6 +11590,7 @@ async function ensureInviteSchema() {
   await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS email_sent_at timestamptz`);
   await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS email_message_id text`);
   await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS email_last_error text`);
+  await pool.query(`ALTER TABLE user_invites ADD COLUMN IF NOT EXISTS custom_permissions jsonb`);
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_user_invites_email
@@ -11619,6 +11690,7 @@ function inviteReturnFieldsSql() {
     email,
     full_name,
     role,
+    custom_permissions,
     customer_code,
     site_code,
     status,
@@ -11637,6 +11709,8 @@ function inviteReturnFieldsSql() {
 function publicInvite(invite, req) {
   return {
     ...invite,
+    custom_permissions:permissionArray(invite?.custom_permissions),
+    permissions:publicPermissions(invite),
     invite_url:publicInviteUrl(req, invite.invite_token)
   };
 }
@@ -11770,6 +11844,8 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
     const email = normalizeEmail(req.body?.email);
     const fullName = String(req.body?.full_name || '').trim();
     const role = validateChoice(req.body?.role, ['viewer','operator','admin','owner'], 'role');
+    assertRoleChangeAllowed(req.user, role);
+    const customPermissions = validateCustomPermissions(role, req.body?.permissions);
     const customerCode = String(req.body?.customer_code || '').trim();
     const siteCodeRaw = String(req.body?.site_code || '').trim();
     const siteCode = siteCodeRaw || null;
@@ -11852,19 +11928,21 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
         email,
         full_name,
         role,
+        custom_permissions,
         customer_code,
         site_code,
         status,
         invited_by_email,
         expires_at
       )
-      VALUES($1,$2,$3,$4,$5,$6,'pending',$7,now() + interval '7 days')
+      VALUES($1,$2,$3,$4,$5::jsonb,$6,$7,'pending',$8,now() + interval '7 days')
       RETURNING
         id::text,
         invite_token,
         email,
         full_name,
         role,
+        custom_permissions,
         customer_code,
         site_code,
         status,
@@ -11878,7 +11956,7 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
         created_at,
         updated_at
       `,
-      [token, email, fullName || null, role, customerCode, siteCode, actor?.email || null]
+      [token, email, fullName || null, role, customPermissions === null ? null : JSON.stringify(customPermissions), customerCode, siteCode, actor?.email || null]
     );
 
     await writeAuditLog(req, {
@@ -11887,7 +11965,7 @@ app.post('/api/admin/invites', adminRequired, permissionRequired('MANAGE_INVITES
       entity_id:invite.id,
       old_values:null,
       new_values:invite,
-      metadata:{email, role, customer_code:customerCode, site_code:siteCode}
+      metadata:{email, role, permissions:publicPermissions({role,custom_permissions:customPermissions}), customer_code:customerCode, site_code:siteCode}
     });
 
     let inviteEmailDelivery = null;
@@ -12016,6 +12094,7 @@ app.get('/api/invites/:token', async (req,res)=>{
         email,
         full_name,
         role,
+        custom_permissions,
         customer_code,
         site_code,
         status,
@@ -12039,6 +12118,8 @@ app.get('/api/invites/:token', async (req,res)=>{
       version:APP_VERSION,
       invite:{
         ...invite,
+        custom_permissions:permissionArray(invite.custom_permissions),
+        permissions:publicPermissions(invite),
         expired
       }
     });
@@ -12066,6 +12147,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
         email,
         full_name,
         role,
+        custom_permissions,
         customer_code,
         site_code,
         status,
@@ -12123,23 +12205,24 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
           password_hash=$3,
           password_salt=$4,
           role=$5,
+          custom_permissions=$8::jsonb,
           status='active',
           default_customer_code=$6,
           default_site_code=$7,
           updated_at=now()
         WHERE id=$1
-        RETURNING id::text, email, full_name, role, status, default_customer_code, default_site_code, created_at, updated_at
+        RETURNING id::text, email, full_name, role, status, custom_permissions, default_customer_code, default_site_code, created_at, updated_at
         `,
-        [user.id, fullName, passwordHash, salt, invite.role, invite.customer_code, invite.site_code]
+        [user.id, fullName, passwordHash, salt, invite.role, invite.customer_code, invite.site_code, invite.custom_permissions === null ? null : JSON.stringify(permissionArray(invite.custom_permissions) || [])]
       );
     } else {
       user = await one(
         `
-        INSERT INTO app_users(id, email, full_name, password_hash, password_salt, role, status, default_customer_code, default_site_code)
-        VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8)
-        RETURNING id::text, email, full_name, role, status, default_customer_code, default_site_code, created_at, updated_at
+        INSERT INTO app_users(id, email, full_name, password_hash, password_salt, role, custom_permissions, status, default_customer_code, default_site_code)
+        VALUES($1,$2,$3,$4,$5,$6,$9::jsonb,'active',$7,$8)
+        RETURNING id::text, email, full_name, role, status, custom_permissions, default_customer_code, default_site_code, created_at, updated_at
         `,
-        [makeUserId(), invite.email, fullName, passwordHash, salt, invite.role, invite.customer_code, invite.site_code]
+        [makeUserId(), invite.email, fullName, passwordHash, salt, invite.role, invite.customer_code, invite.site_code, invite.custom_permissions === null ? null : JSON.stringify(permissionArray(invite.custom_permissions) || [])]
       );
     }
 
@@ -12158,7 +12241,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
       UPDATE user_invites
       SET status='accepted', accepted_user_id=$2, accepted_at=now(), updated_at=now()
       WHERE id=$1
-      RETURNING id::text, email, full_name, role, customer_code, site_code, status, accepted_user_id, accepted_at, expires_at, created_at, updated_at
+      RETURNING id::text, email, full_name, role, custom_permissions, customer_code, site_code, status, accepted_user_id, accepted_at, expires_at, created_at, updated_at
       `,
       [invite.id, user.id]
     );
@@ -12169,7 +12252,7 @@ app.post('/api/invites/:token/accept', async (req,res)=>{
       entity_id:acceptedInvite.id,
       old_values:invite,
       new_values:{invite:acceptedInvite, user},
-      metadata:{email:invite.email, role:invite.role, customer_code:invite.customer_code, site_code:invite.site_code}
+      metadata:{email:invite.email, role:invite.role, permissions:publicPermissions(invite), customer_code:invite.customer_code, site_code:invite.site_code}
     });
 
     const tenant = await getTenantContextForUser(user);
@@ -12444,6 +12527,64 @@ app.get('/api/admin/audit-logs/export.csv', adminRequired, permissionRequired('A
 });
 
 
+
+// HUKATECH_GRANULAR_USER_PERMISSIONS_V1
+app.patch('/api/admin/users/:id/permissions', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
+  try {
+    const oldUser = await one(
+      `SELECT id,email,full_name,role,status,custom_permissions,default_customer_code,default_site_code
+       FROM app_users WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
+    if (!oldUser) {
+      return res.status(404).json({status:'not_found', message:'User not found'});
+    }
+
+    if (String(oldUser.id) === String(req.user?.id || '')) {
+      return res.status(400).json({
+        status:'self_change_blocked',
+        message:'Kendi yetkilerinizi bu ekrandan değiştiremezsiniz'
+      });
+    }
+
+    assertRoleChangeAllowed(req.user, oldUser.role);
+    const customPermissions = validateCustomPermissions(oldUser.role, req.body?.permissions);
+
+    const updated = await one(
+      `UPDATE app_users
+       SET custom_permissions=$2::jsonb, updated_at=now()
+       WHERE id=$1
+       RETURNING id,email,full_name,role,status,custom_permissions,default_customer_code,default_site_code,last_login_at,created_at,updated_at`,
+      [oldUser.id, customPermissions === null ? null : JSON.stringify(customPermissions)]
+    );
+
+    const revokedSessions = await revokeSessionsForUser(updated.id, {
+      actorEmail:req.user?.email || 'admin',
+      reason:'permissions_changed'
+    });
+
+    await writeAuditLog(req, {
+      action:'update_user_permissions',
+      entity_type:'user',
+      entity_id:updated.id,
+      old_values:{role:oldUser.role,custom_permissions:permissionArray(oldUser.custom_permissions),permissions:publicPermissions(oldUser)},
+      new_values:{role:updated.role,custom_permissions:permissionArray(updated.custom_permissions),permissions:publicPermissions(updated),revoked_sessions:revokedSessions},
+      metadata:{email:updated.email}
+    });
+
+    res.json({
+      status:'ok',
+      version:APP_VERSION,
+      user:publicUser(updated),
+      revoked_sessions:revokedSessions
+    });
+  } catch(e) {
+    res.status(e.statusCode || 500).json({status:'error', version:APP_VERSION, message:e.message});
+  }
+});
+
+
 app.patch('/api/admin/users/:id/status', adminRequired, permissionRequired('MANAGE_USERS'), async (req,res)=>{
   try {
     const status = validateChoice(req.body?.status, ['active','inactive','suspended'], 'status');
@@ -12504,16 +12645,16 @@ app.patch('/api/admin/users/:id/role', adminRequired, permissionRequired('MANAGE
     assertRoleChangeAllowed(req.user, role);
 
     const oldUser = await one(
-      `SELECT id,email,full_name,role,status,default_customer_code,default_site_code FROM app_users WHERE id=$1 LIMIT 1`,
+      `SELECT id,email,full_name,role,status,custom_permissions,default_customer_code,default_site_code FROM app_users WHERE id=$1 LIMIT 1`,
       [req.params.id]
     );
 
     const user = await one(
       `
       UPDATE app_users
-      SET role=$1, updated_at=now()
+      SET role=$1, custom_permissions=NULL, updated_at=now()
       WHERE id=$2
-      RETURNING id,email,full_name,role,status,default_customer_code,default_site_code,last_login_at,created_at,updated_at
+      RETURNING id,email,full_name,role,status,custom_permissions,default_customer_code,default_site_code,last_login_at,created_at,updated_at
       `,
       [role, req.params.id]
     );
@@ -16333,27 +16474,223 @@ async function smartAiCollectContext(req,options={}){
 }
 
 function smartAiTr(language,tr,en){return language==='en'?en:tr;}
+// HUKATECH_AI_SCORE_DATA_SUFFICIENCY_HOTFIX_V1_1
+// HUKATECH_AI_SCORE_PRODUCTION_EVIDENCE_HOTFIX_V1
+function smartAiHasOperationalEvidence(context){
+  const rows=[
+    ...(Array.isArray(context?.oee_rows)?context.oee_rows:[]),
+    ...(Array.isArray(context?.factories)?context.factories:[]),
+    ...(Array.isArray(context?.top_downtime)?context.top_downtime:[])
+  ];
+
+  // Çalışma süresi, planlı süre veya kullanılabilirlik tek başına OEE/operasyon
+  // puanını doğrulamaz. Üretim adedi ya da gerçek üretim çevrimi kanıtı gerekir.
+  const productionEvidenceKeys=[
+    'total_count',
+    'production_count',
+    'good_count',
+    'reject_count',
+    'ideal_production_sec'
+  ];
+
+  const hasPositiveEvidence=row=>
+    productionEvidenceKeys.some(key=>{
+      const value=Number(row?.[key]);
+      return Number.isFinite(value)&&value>0;
+    });
+
+  const rowHasProductionEvidence=rows.some(hasPositiveEvidence);
+  const metricHasProductionEvidence=hasPositiveEvidence(context?.metrics?.oee||{});
+
+  return rowHasProductionEvidence||metricHasProductionEvidence;
+}
+
 function smartAiBuildRuleNarrative(context,{language='tr',audience='executive'}={}){
-  const tr=language!=='en';const m=context.metrics;const topStop=context.top_downtime[0];const low=context.lowest_oee[0];const repeated=context.alarm_types.filter(x=>Number(x.count)>=2).slice(0,5);const risks=[];const actions=[];const findings=[];
-  if(Number(m.alarms.critical||0)>0)risks.push(smartAiTr(language,`${m.alarms.critical} kritik alarm incelenmeli.`,`${m.alarms.critical} critical alarms require review.`));
-  if(topStop&&topStop.downtime_sec>0)findings.push(smartAiTr(language,`${topStop.name||topStop.code} ${smartAiMinutes(topStop.downtime_sec)} dakika ile en fazla plansız duruş yaşayan makine.`,`${topStop.name||topStop.code} has the highest unplanned downtime at ${smartAiMinutes(topStop.downtime_sec)} minutes.`));
-  if(low)findings.push(smartAiTr(language,`${low.machine_name||low.machine_code} en düşük OEE değerine sahip: %${smartAiSafePct(low.oee_pct)}.`,`${low.machine_name||low.machine_code} has the lowest OEE at ${smartAiSafePct(low.oee_pct)}%.`));
-  if(repeated.length)findings.push(smartAiTr(language,`Tekrarlayan alarm tipleri: ${repeated.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`,`Repeated alarm types: ${repeated.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`));
-  if(m.overdue_tickets)risks.push(smartAiTr(language,`${m.overdue_tickets} bakım talebi gecikmiş durumda.`,`${m.overdue_tickets} maintenance tickets are overdue.`));
-  if(m.overdue_plans)risks.push(smartAiTr(language,`${m.overdue_plans} önleyici bakım planının tarihi geçmiş.`,`${m.overdue_plans} preventive-maintenance plans are overdue.`));
-  if(m.low_stock)risks.push(smartAiTr(language,`${m.low_stock} yedek parça minimum stok seviyesinde veya altında.`,`${m.low_stock} spare parts are at or below minimum stock.`));
-  if(topStop&&topStop.downtime_sec>0)actions.push(smartAiTr(language,`${topStop.name||topStop.code} duruş nedenlerini ve bağlı bakım kayıtlarını kontrol et.`,`Review downtime reasons and linked maintenance records for ${topStop.name||topStop.code}.`));
-  if(low)actions.push(smartAiTr(language,`${low.machine_name||low.machine_code} için Availability, Performance ve Quality bileşenlerini ayrı ayrı doğrula.`,`Validate Availability, Performance and Quality separately for ${low.machine_name||low.machine_code}.`));
-  if(repeated.length)actions.push(smartAiTr(language,`En sık tekrarlayan ${repeated[0].alarm_type} alarmı için kök neden analizi başlat.`,`Start a root-cause analysis for the most frequent ${repeated[0].alarm_type} alarm.`));
-  if(m.low_stock)actions.push(smartAiTr(language,`Kritik stoklar için satın alma veya yeniden sipariş sürecini başlat.`,`Start purchasing or replenishment for critical stock items.`));
-  if(!findings.length)findings.push(smartAiTr(language,'Seçilen dönemde belirgin bir operasyonel anomali tespit edilmedi.','No significant operational anomaly was detected in the selected period.'));
-  if(!actions.length)actions.push(smartAiTr(language,'Mevcut performansı korumak için günlük kontrol rutini sürdürülmeli.','Continue the daily review routine to preserve current performance.'));
-  const score=Math.max(0,Math.min(100,Math.round(100-Number(m.alarms.critical||0)*5-Number(m.alarms.active||0)*2-smartAiMinutes(context.top_downtime.reduce((n,x)=>n+x.downtime_sec,0))/60-Number(m.overdue_tickets||0)*3-Number(m.low_stock||0)*2)));
+  const m=context.metrics||{};
+  const alarms=m.alarms||{};
+  const findings=[];
+  const risks=[];
+  const actions=[];
+  const low=context.lowest_oee?.[0];
+  const topStop=context.top_downtime?.[0];
+  const repeated=(context.alarm_types||[]).filter(x=>Number(x.count)>=2);
+  const hasOperationalEvidence=smartAiHasOperationalEvidence(context);
+  const downtimeMinutes=smartAiMinutes(
+    (context.top_downtime||[]).reduce((n,x)=>n+Number(x.downtime_sec||0),0)
+  );
+
+  if(Number(alarms.critical||0)>0){
+    findings.push(smartAiTr(
+      language,
+      `${alarms.critical} kritik alarm kaydı bulunuyor.`,
+      `${alarms.critical} critical alarm record(s) were found.`
+    ));
+    risks.push(smartAiTr(
+      language,
+      'Kritik alarmlar operasyon güvenliğini ve sürekliliğini etkileyebilir.',
+      'Critical alarms may affect operational safety and continuity.'
+    ));
+  }
+
+  if(Number(alarms.active||0)>0){
+    findings.push(smartAiTr(
+      language,
+      `${alarms.active} aktif alarm halen açık durumda.`,
+      `${alarms.active} active alarm(s) are still open.`
+    ));
+  }
+
+  if(repeated.length){
+    findings.push(smartAiTr(
+      language,
+      `Tekrarlayan alarm tipleri: ${repeated.slice(0,3).map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`,
+      `Repeated alarm types: ${repeated.slice(0,3).map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`
+    ));
+  }
+
+  if(Number(m.overdue_tickets||0)>0){
+    findings.push(smartAiTr(
+      language,
+      `${m.overdue_tickets} gecikmiş bakım talebi bulunuyor.`,
+      `${m.overdue_tickets} overdue maintenance ticket(s) were found.`
+    ));
+    risks.push(smartAiTr(
+      language,
+      'Gecikmiş bakım kayıtları plansız duruş riskini artırabilir.',
+      'Overdue maintenance records may increase unplanned downtime risk.'
+    ));
+  }
+
+  if(Number(m.low_stock||0)>0){
+    risks.push(smartAiTr(
+      language,
+      `${m.low_stock} yedek parça minimum stok seviyesinde veya altında.`,
+      `${m.low_stock} spare part(s) are at or below minimum stock.`
+    ));
+  }
+
+  if(topStop&&Number(topStop.downtime_sec||0)>0){
+    actions.push(smartAiTr(
+      language,
+      `${topStop.name||topStop.machine_name||topStop.code||topStop.machine_code} duruş nedenlerini ve bağlı bakım kayıtlarını kontrol et.`,
+      `Review downtime reasons and linked maintenance records for ${topStop.name||topStop.machine_name||topStop.code||topStop.machine_code}.`
+    ));
+  }
+
+  if(low&&hasOperationalEvidence){
+    actions.push(smartAiTr(
+      language,
+      `${low.machine_name||low.machine_code} için kullanılabilirlik, performans ve kalite bileşenlerini ayrı ayrı doğrula.`,
+      `Validate availability, performance and quality separately for ${low.machine_name||low.machine_code}.`
+    ));
+  }
+
+  if(repeated.length){
+    actions.push(smartAiTr(
+      language,
+      `En sık tekrarlayan ${repeated[0].alarm_type} alarmı için kök neden analizi başlat.`,
+      `Start a root-cause analysis for the most frequent ${repeated[0].alarm_type} alarm.`
+    ));
+  }
+
+  if(Number(m.low_stock||0)>0){
+    actions.push(smartAiTr(
+      language,
+      'Kritik stoklar için satın alma veya yeniden sipariş sürecini başlat.',
+      'Start purchasing or replenishment for critical stock items.'
+    ));
+  }
+
+  if(!hasOperationalEvidence){
+    findings.unshift(smartAiTr(
+      language,
+      'Seçilen dönemde operasyon skoru için yeterli üretim/OEE verisi bulunamadı.',
+      'Insufficient production/OEE data was found to calculate an operational score for the selected period.'
+    ));
+
+    risks.unshift(smartAiTr(
+      language,
+      'Eksik üretim/OEE verisi performans değerlendirmesini sınırlar.',
+      'Missing production/OEE data limits performance evaluation.'
+    ));
+
+    actions.unshift(smartAiTr(
+      language,
+      'Üretim, çalışma ve duruş kayıtlarını doğruladıktan sonra raporu yeniden oluştur.',
+      'Verify production, runtime and downtime records, then generate the report again.'
+    ));
+  }else{
+    if(!findings.length){
+      findings.push(smartAiTr(
+        language,
+        'Seçilen dönemde belirgin bir operasyonel anomali tespit edilmedi.',
+        'No significant operational anomaly was detected in the selected period.'
+      ));
+    }
+
+    if(!actions.length){
+      actions.push(smartAiTr(
+        language,
+        'Mevcut performansı korumak için günlük kontrol rutini sürdürülmeli.',
+        'Continue the daily review routine to preserve current performance.'
+      ));
+    }
+  }
+
+  const score=hasOperationalEvidence
+    ? Math.max(0,Math.min(100,Math.round(
+        100
+        -Number(alarms.critical||0)*5
+        -Number(alarms.active||0)*2
+        -downtimeMinutes/60
+        -Number(m.overdue_tickets||0)*3
+        -Number(m.low_stock||0)*2
+      )))
+    : null;
+
   let summary;
-  if(audience==='technical')summary=smartAiTr(language,`Dönemde ${m.alarms.total||0} alarm ve ${smartAiMinutes(context.top_downtime.reduce((n,x)=>n+x.downtime_sec,0))} dakika öne çıkan plansız duruş kaydedildi. Teknik öncelik alarm tekrarları, düşük OEE bileşenleri ve gecikmiş bakımlardır.`,`The period contains ${m.alarms.total||0} alarms and ${smartAiMinutes(context.top_downtime.reduce((n,x)=>n+x.downtime_sec,0))} minutes of notable unplanned downtime. Technical priorities are repeated alarms, weak OEE components and overdue maintenance.`);
-  else if(audience==='operator')summary=smartAiTr(language,`Operatör odağı: aktif alarmları kontrol et, duruş nedenlerini doğru seç ve geciken iş emirlerini güncelle. Sistem skoru ${score}/100.`,`Operator focus: review active alarms, select downtime reasons accurately and update overdue work orders. System score is ${score}/100.`);
-  else summary=smartAiTr(language,`Seçilen dönemin genel operasyon skoru ${score}/100. Toplam ${m.alarms.total||0} alarm, ${m.overdue_tickets||0} gecikmiş bakım talebi ve ${m.low_stock||0} kritik stok kaydı bulunuyor.`,`The overall operational score for the selected period is ${score}/100. There are ${m.alarms.total||0} alarms, ${m.overdue_tickets||0} overdue maintenance tickets and ${m.low_stock||0} critical stock items.`);
-  return {score,summary,executive_comment:findings[0],findings:findings.slice(0,8),risks:risks.slice(0,8),recommendations:actions.slice(0,8),action_items:actions.slice(0,8)};
+
+  if(!hasOperationalEvidence){
+    summary=smartAiTr(
+      language,
+      `Seçilen dönemde toplam ${alarms.total||0} alarm, ${m.overdue_tickets||0} gecikmiş bakım talebi ve ${m.low_stock||0} kritik stok kaydı bulunuyor. Operasyon skoru, yeterli üretim/OEE verisi olmadığı için hesaplanamadı.`,
+      `The selected period contains ${alarms.total||0} alarm(s), ${m.overdue_tickets||0} overdue maintenance ticket(s), and ${m.low_stock||0} critical stock item(s). The operational score could not be calculated because production/OEE data is insufficient.`
+    );
+  }else if(audience==='technical'){
+    summary=smartAiTr(
+      language,
+      `Dönemde ${alarms.total||0} alarm ve ${downtimeMinutes} dakika öne çıkan plansız duruş kaydedildi. Teknik öncelik alarm tekrarları, düşük OEE bileşenleri ve gecikmiş bakımlardır.`,
+      `The period contains ${alarms.total||0} alarm(s) and ${downtimeMinutes} minutes of notable unplanned downtime. Technical priorities are repeated alarms, weak OEE components and overdue maintenance.`
+    );
+  }else if(audience==='operator'){
+    summary=smartAiTr(
+      language,
+      `Operatör odağı: aktif alarmları kontrol et, duruş nedenlerini doğru seç ve geciken iş emirlerini güncelle. Sistem skoru ${score}/100.`,
+      `Operator focus: review active alarms, select downtime reasons accurately and update overdue work orders. System score is ${score}/100.`
+    );
+  }else{
+    summary=smartAiTr(
+      language,
+      `Seçilen dönemin genel operasyon skoru ${score}/100. Toplam ${alarms.total||0} alarm, ${m.overdue_tickets||0} gecikmiş bakım talebi ve ${m.low_stock||0} kritik stok kaydı bulunuyor.`,
+      `The overall operational score for the selected period is ${score}/100. There are ${alarms.total||0} alarm(s), ${m.overdue_tickets||0} overdue maintenance ticket(s), and ${m.low_stock||0} critical stock item(s).`
+    );
+  }
+
+  return {
+    score,
+    score_status:hasOperationalEvidence?'calculated':'insufficient_data',
+    data_sufficiency:{
+      operational_data:hasOperationalEvidence,
+      score_calculable:hasOperationalEvidence,
+      reason:hasOperationalEvidence?null:'insufficient_production_oee_data'
+    },
+    summary,
+    executive_comment:findings[0],
+    findings:findings.slice(0,8),
+    risks:risks.slice(0,8),
+    recommendations:actions.slice(0,8),
+    action_items:actions.slice(0,8)
+  };
 }
 
 async function smartAiGenericOpenAi(prompt){
@@ -16364,7 +16701,7 @@ function smartAiReportPrompt(context,rule,{language,audience}){const compact={ra
 async function smartAiBuildReport(req,options={}){
   const language=smartAiChoice(options.language,SMARTAI_LANGUAGES,'language','tr');const audience=smartAiChoice(options.audience,SMARTAI_AUDIENCES,'audience','executive');const engine=smartAiChoice(options.engine,SMARTAI_ENGINES,'engine','rules');const context=await smartAiCollectContext(req,options);const rule=smartAiBuildRuleNarrative(context,{language,audience});let narrative=rule,engineUsed='rules',openai={configured:openAiConfig().configured,enabled:openAiConfig().enabled,model:openAiConfig().model,status:'not_used'};
   if(engine==='openai'){const ai=await smartAiGenericOpenAi(smartAiReportPrompt(context,rule,{language,audience}));openai={...openai,status:ai.ok?'ok':'fallback',reason:ai.reason||null,response_id:ai.response_id||null};if(ai.ok){narrative={...rule,...ai.parsed,findings:normalizeAiArray(ai.parsed.findings,rule.findings),risks:normalizeAiArray(ai.parsed.risks,rule.risks),recommendations:normalizeAiArray(ai.parsed.recommendations,rule.recommendations),action_items:normalizeAiArray(ai.parsed.action_items,rule.action_items)};engineUsed='openai';}}
-  return {schema:'factorybox-smartai-report-v1',report_type:`smartai_${context.range.period}`,report_kind:'operations',language,audience,ai_engine:engineUsed,openai,generated_at:new Date().toISOString(),period:context.range,scope:{customer:context.scope.customer,factories:context.scope.factories.map(x=>({id:x.id,code:x.code,name:x.name})),sites:context.scope.sites.map(x=>({id:x.id,code:x.code,name:x.name})),machine_count:context.scope.machines.length,scope_restricted:context.scope.scope_restricted},health_score:Number(narrative.score??rule.score),summary:String(narrative.summary||rule.summary),executive_comment:String(narrative.executive_comment||rule.executive_comment||''),findings:normalizeAiArray(narrative.findings,rule.findings),risks:normalizeAiArray(narrative.risks,rule.risks),recommendations:normalizeAiArray(narrative.recommendations,rule.recommendations),action_items:normalizeAiArray(narrative.action_items,rule.action_items),metrics:context.metrics,evidence:{top_downtime:context.top_downtime,lowest_oee:context.lowest_oee,repeated_alarms:context.alarm_types,alarm_machines:context.alarm_machines,overdue_tickets:context.overdue_tickets,overdue_plans:context.overdue_plans,low_stock:context.low_stock,factories:context.factories}};
+  return {schema:'factorybox-smartai-report-v1',report_type:`smartai_${context.range.period}`,report_kind:'operations',language,audience,ai_engine:engineUsed,openai,generated_at:new Date().toISOString(),period:context.range,scope:{customer:context.scope.customer,factories:context.scope.factories.map(x=>({id:x.id,code:x.code,name:x.name})),sites:context.scope.sites.map(x=>({id:x.id,code:x.code,name:x.name})),machine_count:context.scope.machines.length,scope_restricted:context.scope.scope_restricted},health_score:(()=>{const value=narrative.score??rule.score;if(value===null||value===undefined)return null;const numeric=Number(value);return Number.isFinite(numeric)?numeric:null;})(),score_status:String(narrative.score_status||rule.score_status||'calculated'),data_sufficiency:narrative.data_sufficiency||rule.data_sufficiency||null,summary:String(narrative.summary||rule.summary),executive_comment:String(narrative.executive_comment||rule.executive_comment||''),findings:normalizeAiArray(narrative.findings,rule.findings),risks:normalizeAiArray(narrative.risks,rule.risks),recommendations:normalizeAiArray(narrative.recommendations,rule.recommendations),action_items:normalizeAiArray(narrative.action_items,rule.action_items),metrics:context.metrics,evidence:{top_downtime:context.top_downtime,lowest_oee:context.lowest_oee,repeated_alarms:context.alarm_types,alarm_machines:context.alarm_machines,overdue_tickets:context.overdue_tickets,overdue_plans:context.overdue_plans,low_stock:context.low_stock,factories:context.factories}};
 }
 async function smartAiSaveReport(req, report) {
   const customerId = report.scope.customer.id;
@@ -16429,14 +16766,127 @@ async function smartAiSaveReport(req, report) {
 
   return saved;
 }
-function smartAiReportText(report){const en=report.language==='en';const lines=[`FactoryBox SmartAI ${en?'Operations Report':'Operasyon Raporu'}`,`${en?'Period':'Dönem'}: ${report.period.from} — ${report.period.to}`,`${en?'Scope':'Kapsam'}: ${report.scope.customer.name}`,`${en?'Audience':'Hedef Kitle'}: ${report.audience}`,`${en?'Engine':'Motor'}: ${report.ai_engine}`,`${en?'Score':'Skor'}: ${report.health_score}/100`,'',en?'SUMMARY':'ÖZET',report.summary,'',en?'FINDINGS':'BULGULAR',...report.findings.map(x=>`• ${x}`),'',en?'RISKS':'RİSKLER',...report.risks.map(x=>`• ${x}`),'',en?'RECOMMENDATIONS':'ÖNERİLER',...report.recommendations.map(x=>`• ${x}`),'',`${en?'Generated':'Oluşturulma'}: ${new Date(report.generated_at).toLocaleString(en?'en-US':'tr-TR')}`];return lines.join('\n');}
-function smartAiReportHtml(report){const en=report.language==='en';const list=x=>(x||[]).map(v=>`<li>${h(v)}</li>`).join('')||`<li>${en?'No item':'Kayıt yok'}</li>`;return `<!doctype html><html lang="${en?'en':'tr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>FactoryBox SmartAI</title><style>body{font-family:Arial,sans-serif;background:#eef1f3;color:#202832;margin:0}.page{max-width:980px;margin:24px auto;background:#fff;padding:32px;border-radius:18px}.top{display:flex;justify-content:space-between;border-bottom:3px solid #c67723;padding-bottom:16px}.score{font-size:38px;font-weight:900;color:#c67723}.meta{color:#65717c}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #dbe1e6;border-radius:13px;padding:13px;background:#f8fafb}.summary{font-size:18px;line-height:1.55;border-left:5px solid #c67723;padding:14px;background:#fff8ef}li{margin:8px 0}h2{margin-top:28px}@media print{body{background:#fff}.page{margin:0;max-width:none;border-radius:0}}</style></head><body><main class="page"><div class="top"><div><h1>FactoryBox SmartAI</h1><div class="meta">${h(report.period.from)} — ${h(report.period.to)} · ${h(report.scope.customer.name)} · ${h(report.audience)}</div></div><div class="score">${h(report.health_score)}/100</div></div><h2>${en?'Executive Summary':'Yönetici Özeti'}</h2><div class="summary">${h(report.summary)}</div><div class="grid"><div class="card"><b>${en?'Alarms':'Alarmlar'}</b><br>${h(report.metrics.alarms.total||0)}</div><div class="card"><b>OEE</b><br>${h(smartAiSafePct(report.metrics.oee.oee_pct))}%</div><div class="card"><b>${en?'Overdue Maintenance':'Gecikmiş Bakım'}</b><br>${h((report.metrics.overdue_tickets||0)+(report.metrics.overdue_plans||0))}</div><div class="card"><b>${en?'Critical Stock':'Kritik Stok'}</b><br>${h(report.metrics.low_stock||0)}</div></div><h2>${en?'Findings':'Bulgular'}</h2><ul>${list(report.findings)}</ul><h2>${en?'Risks':'Riskler'}</h2><ul>${list(report.risks)}</ul><h2>${en?'Recommendations':'Öneriler'}</h2><ul>${list(report.recommendations)}</ul></main></body></html>`;}
+function smartAiScoreText(report){
+  const en=report?.language==='en';
+  const unavailable=
+    report?.score_status==='insufficient_data' ||
+    report?.health_score===null ||
+    report?.health_score===undefined ||
+    !Number.isFinite(Number(report?.health_score));
+
+  return unavailable
+    ? (en?'Not calculated':'Hesaplanamadı')
+    : `${Number(report.health_score)}/100`;
+}
+
+function smartAiReportText(report){
+  const en=report.language==='en';
+  const lines=[
+    `HukaTech AI ${en?'Operations Report':'Operasyon Raporu'}`,
+    `${en?'Period':'Dönem'}: ${report.period.from} — ${report.period.to}`,
+    `${en?'Scope':'Kapsam'}: ${report.scope.customer.name}`,
+    `${en?'Audience':'Hedef Kitle'}: ${report.audience}`,
+    `${en?'Engine':'Motor'}: ${report.ai_engine}`,
+    `${en?'Score':'Skor'}: ${smartAiScoreText(report)}`,
+    '',
+    en?'SUMMARY':'ÖZET',
+    report.summary,
+    '',
+    en?'FINDINGS':'BULGULAR',
+    ...report.findings.map(x=>`• ${x}`),
+    '',
+    en?'RISKS':'RİSKLER',
+    ...report.risks.map(x=>`• ${x}`),
+    '',
+    en?'RECOMMENDATIONS':'ÖNERİLER',
+    ...report.recommendations.map(x=>`• ${x}`),
+    '',
+    `${en?'Generated':'Oluşturulma'}: ${new Date(report.generated_at).toLocaleString(en?'en-US':'tr-TR')}`
+  ];
+  return lines.join('\n');
+}
+
+function smartAiReportHtml(report){
+  const en=report.language==='en';
+  const list=x=>(x||[]).map(v=>`<li>${h(v)}</li>`).join('')||`<li>${en?'No item':'Kayıt yok'}</li>`;
+  const insufficient=report.score_status==='insufficient_data'||report.health_score===null||report.health_score===undefined;
+  const oeeText=insufficient?'—':`${smartAiSafePct(report.metrics?.oee?.oee_pct)}%`;
+
+  return `<!doctype html>
+<html lang="${en?'en':'tr'}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>HukaTech AI</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#eef1f3;color:#202832;margin:0}
+    .page{max-width:980px;margin:24px auto;background:#fff;padding:32px;border-radius:18px}
+    .top{display:flex;justify-content:space-between;gap:18px;border-bottom:3px solid #c67723;padding-bottom:16px}
+    .score{max-width:260px;font-size:30px;font-weight:900;color:${insufficient?'#687681':'#c67723'};text-align:right}
+    .meta{color:#65717c}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .card{border:1px solid #dbe1e6;border-radius:13px;padding:13px;background:#f8fafb}
+    .summary{font-size:18px;line-height:1.55;border-left:5px solid #c67723;padding:14px;background:#fff8ef}
+    li{margin:8px 0}
+    h2{margin-top:28px}
+    @media(max-width:760px){.top{display:block}.score{text-align:left;margin-top:14px}.grid{grid-template-columns:1fr 1fr}}
+    @media print{body{background:#fff}.page{margin:0;max-width:none;border-radius:0}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="top">
+      <div>
+        <h1>HukaTech AI</h1>
+        <div class="meta">${h(report.period.from)} — ${h(report.period.to)} · ${h(report.scope.customer.name)} · ${h(report.audience)}</div>
+      </div>
+      <div class="score">${h(smartAiScoreText(report))}</div>
+    </div>
+    <h2>${en?'Executive Summary':'Yönetici Özeti'}</h2>
+    <div class="summary">${h(report.summary)}</div>
+    <div class="grid">
+      <div class="card"><b>${en?'Alarms':'Alarmlar'}</b><br>${h(report.metrics?.alarms?.total||0)}</div>
+      <div class="card"><b>OEE</b><br>${h(oeeText)}</div>
+      <div class="card"><b>${en?'Overdue Maintenance':'Gecikmiş Bakım'}</b><br>${h(Number(report.metrics?.overdue_tickets||0)+Number(report.metrics?.overdue_plans||0))}</div>
+      <div class="card"><b>${en?'Critical Stock':'Kritik Stok'}</b><br>${h(report.metrics?.low_stock||0)}</div>
+    </div>
+    <h2>${en?'Findings':'Bulgular'}</h2><ul>${list(report.findings)}</ul>
+    <h2>${en?'Risks':'Riskler'}</h2><ul>${list(report.risks)}</ul>
+    <h2>${en?'Recommendations':'Öneriler'}</h2><ul>${list(report.recommendations)}</ul>
+  </main>
+</body>
+</html>`;
+}
+
 async function smartAiDeliver(report,options={}){const channels=smartAiChannels(options.channels);const results=[],errors=[];for(const channel of channels){try{if(channel==='telegram'){const cfg=telegramEscalationConfig();if(!cfg.enabled||!cfg.token)throw new Error('Telegram not configured');const chats=splitRecipientValues(options.telegram_chat_ids||cfg.defaultChatId);if(!chats.length)throw new Error('Telegram chat ID missing');for(const chat of chats){const response=await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:chat,text:smartAiReportText(report).slice(0,4000),disable_web_page_preview:true})});const p=await response.json().catch(()=>({}));if(!response.ok||p.ok===false)throw new Error(p.description||`Telegram HTTP ${response.status}`);results.push({channel,chat_id:chat,message_id:p.result?.message_id||null});}}else if(channel==='email'){const sent=await sendReportEmail({to:options.email_recipients,subject:`FactoryBox SmartAI - ${report.scope.customer.name} - ${report.period.from}/${report.period.to}`,html:smartAiReportHtml(report),text:smartAiReportText(report)});if(!sent.sent)throw new Error(sent.reason||'Email not sent');results.push({channel,message_id:sent.message_id,to:sent.to});}}catch(e){errors.push({channel,message:String(e.message||e)});}}return {status:errors.length?(results.length?'partial':'failed'):'delivered',results,errors};}
 
 function smartAiNormalizeQuestion(q){return String(q||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-function smartAiQuestionIntent(q){const s=smartAiNormalizeQuestion(q);if(/en fazla.*dur|most.*downtime|duruş.*fazla/.test(s))return 'top_downtime';if(/neden.*oee|oee.*neden|low.*oee|dusuk.*oee/.test(s))return 'low_oee_reason';if(/tekrar.*alarm|repeated.*alarm|hangi alarm/.test(s))return 'repeated_alarms';if(/bakım.*gecik|maintenance.*overdue|gecikmiş.*bakım/.test(s))return 'overdue_maintenance';if(/stok.*kritik|critical.*stock|parça.*stok/.test(s))return 'critical_stock';if(/fabrika.*karsilastir|compare.*factor|tesis.*karsilastir/.test(s))return 'factory_comparison';return 'operations_summary';}
+function smartAiQuestionIntent(q){
+  const s=smartAiNormalizeQuestion(q);
+  if(/kac.*alarm|alarm.*kac|how many.*alarm|alarm count/.test(s))return 'alarm_count';
+  if(/en fazla.*dur|most.*downtime|duruş.*fazla/.test(s))return 'top_downtime';
+  if(/neden.*oee|oee.*neden|low.*oee|dusuk.*oee/.test(s))return 'low_oee_reason';
+  if(/tekrar.*alarm|repeated.*alarm|hangi alarm/.test(s))return 'repeated_alarms';
+  if(/bakım.*gecik|maintenance.*overdue|gecikmiş.*bakım/.test(s))return 'overdue_maintenance';
+  if(/stok.*kritik|critical.*stock|parça.*stok/.test(s))return 'critical_stock';
+  if(/fabrika.*karsilastir|compare.*factor|tesis.*karsilastir/.test(s))return 'factory_comparison';
+  return 'operations_summary';
+}
 function smartAiFindMachine(question,context){const q=smartAiNormalizeQuestion(question);return context.scope.machines.find(m=>q.includes(smartAiNormalizeQuestion(m.code))||q.includes(smartAiNormalizeQuestion(m.name)));}
-function smartAiAnswerRule(question,context,language){const intent=smartAiQuestionIntent(question),en=language==='en';let answer,findings=[],recommendations=[];if(intent==='top_downtime'){const x=context.top_downtime[0];answer=x?(en?`${x.name||x.code} has the highest unplanned downtime with ${smartAiMinutes(x.downtime_sec)} minutes.`:`${x.name||x.code}, ${smartAiMinutes(x.downtime_sec)} dakika ile en fazla plansız duruş yaşayan makinedir.`):(en?'No downtime record was found.':'Duruş kaydı bulunamadı.');if(x){findings=[`OEE: ${smartAiSafePct(x.oee_pct)}%`,`Availability: ${smartAiSafePct(x.availability_pct)}%`];recommendations=[en?'Review downtime reason records and related alarms.':'Duruş nedenleri ve ilişkili alarmlar incelenmeli.'];}}
+function smartAiAnswerRule(question,context,language){const intent=smartAiQuestionIntent(question),en=language==='en';let answer,findings=[],recommendations=[];if(intent==='alarm_count'){
+    const total=Number(context.metrics?.alarms?.total||0);
+    const critical=Number(context.metrics?.alarms?.critical||0);
+    const active=Number(context.metrics?.alarms?.active||0);
+    answer=smartAiTr(language,`Seçilen dönemde ${total} alarm oluştu.`,`${total} alarm(s) occurred in the selected period.`);
+    findings=[
+      smartAiTr(language,`Kritik alarm: ${critical}.`,`Critical alarms: ${critical}.`),
+      smartAiTr(language,`Aktif alarm: ${active}.`,`Active alarms: ${active}.`)
+    ];
+    recommendations=total>0
+      ? [smartAiTr(language,'Alarm türleri ve tekrar sayıları incelenmeli.','Review alarm types and repetition counts.')]
+      : [];
+  }
+  else if(intent==='top_downtime'){const x=context.top_downtime[0];answer=x?(en?`${x.name||x.code} has the highest unplanned downtime with ${smartAiMinutes(x.downtime_sec)} minutes.`:`${x.name||x.code}, ${smartAiMinutes(x.downtime_sec)} dakika ile en fazla plansız duruş yaşayan makinedir.`):(en?'No downtime record was found.':'Duruş kaydı bulunamadı.');if(x){findings=[`OEE: ${smartAiSafePct(x.oee_pct)}%`,`Availability: ${smartAiSafePct(x.availability_pct)}%`];recommendations=[en?'Review downtime reason records and related alarms.':'Duruş nedenleri ve ilişkili alarmlar incelenmeli.'];}}
   else if(intent==='low_oee_reason'){const machine=smartAiFindMachine(question,context);const row=machine?context.oee_rows.find(x=>String(x.machine_id)===String(machine.id)):context.lowest_oee[0];if(row){const comps=[['Availability',Number(row.availability_pct||0)],['Performance',Number(row.performance_pct||0)],['Quality',Number(row.quality_pct||0)]].sort((a,b)=>a[1]-b[1]);answer=en?`${row.machine_name||row.machine_code} has OEE ${smartAiSafePct(row.oee_pct)}%. The weakest component is ${comps[0][0]} at ${smartAiSafePct(comps[0][1])}%.`:`${row.machine_name||row.machine_code} OEE değeri %${smartAiSafePct(row.oee_pct)}. En zayıf bileşen %${smartAiSafePct(comps[0][1])} ile ${comps[0][0]}.`;findings=[`Availability ${smartAiSafePct(row.availability_pct)}%`,`Performance ${smartAiSafePct(row.performance_pct)}%`,`Quality ${smartAiSafePct(row.quality_pct)}%`,`${en?'Unplanned downtime':'Plansız duruş'} ${smartAiMinutes(row.unplanned_downtime_sec)} ${en?'min':'dk'}`];recommendations=[comps[0][0]==='Availability'?(en?'Investigate downtime and availability losses.':'Duruş ve kullanılabilirlik kayıpları incelenmeli.'):comps[0][0]==='Performance'?(en?'Validate ideal cycle time and speed losses.':'İdeal çevrim süresi ve hız kayıpları doğrulanmalı.'):(en?'Review reject reasons and quality records.':'Hata nedenleri ve kalite kayıtları incelenmeli.')];}else answer=en?'No production/OEE data was found.':'Üretim/OEE verisi bulunamadı.';}
   else if(intent==='repeated_alarms'){const rows=context.alarm_types.filter(x=>Number(x.count)>=2).slice(0,8);answer=rows.length?(en?`Repeated alarms: ${rows.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`:`Tekrarlayan alarmlar: ${rows.map(x=>`${x.alarm_type} (${x.count})`).join(', ')}.`):(en?'No repeated alarm was found.':'Tekrarlayan alarm bulunamadı.');findings=rows.map(x=>`${x.alarm_type}: ${x.count}`);recommendations=rows.length?[en?'Start root-cause analysis with the most frequent alarm.':'En sık alarmdan başlayarak kök neden analizi yapılmalı.']:[];}
   else if(intent==='overdue_maintenance'){const rows=[...context.overdue_tickets,...context.overdue_plans];answer=en?`${rows.length} overdue maintenance item(s) were found.`:`${rows.length} gecikmiş bakım kaydı bulundu.`;findings=rows.slice(0,8).map(x=>`${x.machine_name||x.machine_code}: ${x.title}`);recommendations=rows.length?[en?'Assign owners and update due dates or completion status.':'Sorumlular atanmalı; termin veya tamamlanma durumu güncellenmeli.']:[];}
@@ -16452,7 +16902,7 @@ app.get('/api/admin/smartai/settings',adminRequired,permissionRequired('VIEW_DAS
 app.patch('/api/admin/smartai/settings',adminRequired,permissionRequired('SEND_REPORTS'),async(req,res)=>{try{const scope=await smartAiScope(req,{customer_code:req.body?.customer_code});const b=req.body||{};const old=await smartAiSettingsRow(scope.customer.id);const row=await one(`UPDATE smartai_settings SET enabled=$2,engine=$3,language=$4,default_audience=$5,timezone=$6,daily_enabled=$7,daily_hour=$8,weekly_enabled=$9,weekly_day=$10,weekly_hour=$11,monthly_enabled=$12,monthly_day=$13,monthly_hour=$14,delivery_channels=$15::text[],telegram_chat_ids=$16,email_recipients=$17,history_limit=$18,updated_by=$19,updated_at=now() WHERE customer_id=$1 RETURNING customer_id::text,enabled,engine,language,default_audience,timezone,daily_enabled,daily_hour,weekly_enabled,weekly_day,weekly_hour,monthly_enabled,monthly_day,monthly_hour,delivery_channels,telegram_chat_ids,email_recipients,history_limit,updated_by,updated_at`,[scope.customer.id,smartAiBool(b.enabled,old.enabled),smartAiChoice(b.engine,SMARTAI_ENGINES,'engine',old.engine),smartAiChoice(b.language,SMARTAI_LANGUAGES,'language',old.language),smartAiChoice(b.default_audience,SMARTAI_AUDIENCES,'default audience',old.default_audience),smartAiText(b.timezone,100)||old.timezone,smartAiBool(b.daily_enabled,old.daily_enabled),smartAiInt(b.daily_hour,old.daily_hour,0,23,'daily hour'),smartAiBool(b.weekly_enabled,old.weekly_enabled),smartAiInt(b.weekly_day,old.weekly_day,0,6,'weekly day'),smartAiInt(b.weekly_hour,old.weekly_hour,0,23,'weekly hour'),smartAiBool(b.monthly_enabled,old.monthly_enabled),smartAiInt(b.monthly_day,old.monthly_day,1,28,'monthly day'),smartAiInt(b.monthly_hour,old.monthly_hour,0,23,'monthly hour'),smartAiChannels(b.delivery_channels),smartAiText(b.telegram_chat_ids,1000),smartAiText(b.email_recipients,2000),smartAiInt(b.history_limit,old.history_limit,10,1000,'history limit'),req.user?.email||'admin']);await writeAuditLog(req,{action:'update_smartai_settings',entity_type:'smartai_settings',entity_id:scope.customer.id,old_values:old,new_values:row,metadata:{customer_code:scope.customer.code}});res.json({status:'ok',version:APP_VERSION,settings:row});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
 app.post('/api/admin/smartai/reports/generate',adminRequired,permissionRequired('SEND_REPORTS'),async(req,res)=>{try{const report=await smartAiBuildReport(req,req.body||{});const saved=await smartAiSaveReport(req,report);await writeAuditLog(req,{action:'generate_smartai_report',entity_type:'ai_report',entity_id:saved.id,new_values:{report_type:report.report_type,period:report.period,audience:report.audience,language:report.language,ai_engine:report.ai_engine},metadata:{customer_code:report.scope.customer.code,read_only:true}});res.status(201).json({status:'ok',version:APP_VERSION,report_id:saved.id,created_at:saved.created_at,report});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
 app.post('/api/admin/smartai/reports/:id/deliver',adminRequired,permissionRequired('SEND_REPORTS'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const row=await one(`SELECT id::text,customer_id::text,report_json FROM ai_reports WHERE id::text=$1 LIMIT 1`,[req.params.id]);if(!row)return res.status(404).json({status:'not_found',message:'Report not found'});await organizationAssertCustomer(req,(await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]))?.code);const result=await smartAiDeliver(row.report_json,{channels:req.body?.channels,telegram_chat_ids:req.body?.telegram_chat_ids,email_recipients:req.body?.email_recipients});await pool.query(`UPDATE ai_reports SET delivery_status=$2::jsonb WHERE id=$1`,[row.id,JSON.stringify(result)]);await writeAuditLog(req,{action:'deliver_smartai_report',entity_type:'ai_report',entity_id:row.id,new_values:result});res.json({status:result.status==='failed'?'not_sent':'ok',version:APP_VERSION,delivery:result});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
-app.get('/api/admin/smartai/reports',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const scope=await smartAiScope(req,{customer_code:req.query.customer_code});const limit=Math.min(Math.max(Number(req.query.limit||100),1),500);const params=[scope.customer.id,limit];let where=`customer_id=$1 AND report_type LIKE 'smartai_%'`;if(req.query.period){params.push(`smartai_${smartAiChoice(req.query.period,SMARTAI_PERIODS,'period','daily')}`);where+=` AND report_type=$${params.length}`;}const rows=(await pool.query(`SELECT id::text,report_type,report_kind,report_date,period_start,period_end,health_score,summary,audience,language,ai_engine,status,delivery_status,created_by,created_at FROM ai_reports WHERE ${where} ORDER BY created_at DESC LIMIT $2`,params)).rows;res.json({status:'ok',version:APP_VERSION,customer:scope.customer,count:rows.length,reports:rows});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
+app.get('/api/admin/smartai/reports',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const scope=await smartAiScope(req,{customer_code:req.query.customer_code});const limit=Math.min(Math.max(Number(req.query.limit||100),1),500);const params=[scope.customer.id,limit];let where=`customer_id=$1 AND report_type LIKE 'smartai_%'`;if(req.query.period){params.push(`smartai_${smartAiChoice(req.query.period,SMARTAI_PERIODS,'period','daily')}`);where+=` AND report_type=$${params.length}`;}const rows=(await pool.query(`SELECT id::text,report_type,report_kind,report_date,period_start,period_end,health_score,report_json->>'score_status' AS score_status,summary,audience,language,ai_engine,status,delivery_status,created_by,created_at FROM ai_reports WHERE ${where} ORDER BY created_at DESC LIMIT $2`,params)).rows;res.json({status:'ok',version:APP_VERSION,customer:scope.customer,count:rows.length,reports:rows});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
 app.get('/api/admin/smartai/reports/:id',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{await ensureSmartAiCenterFoundation();const row=await one(`SELECT id::text,customer_id::text,report_type,report_date,period_start,period_end,health_score,summary,audience,language,ai_engine,status,delivery_status,report_json,created_by,created_at FROM ai_reports WHERE id::text=$1 AND report_type LIKE 'smartai_%'`,[req.params.id]);if(!row)return res.status(404).json({status:'not_found'});const customer=await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]);await organizationAssertCustomer(req,customer?.code);res.json({status:'ok',version:APP_VERSION,report:row});}catch(e){res.status(e.statusCode||500).json({status:'error',version:APP_VERSION,message:e.message});}});
 app.get('/api/admin/smartai/reports/:id/text',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const row=await one(`SELECT customer_id::text,report_json FROM ai_reports WHERE id::text=$1 AND report_type LIKE 'smartai_%'`,[req.params.id]);if(!row)return res.status(404).send('Report not found');const customer=await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]);await organizationAssertCustomer(req,customer?.code);res.setHeader('Content-Type','text/plain; charset=utf-8');res.setHeader('Content-Disposition',`attachment; filename="FactoryBox_SmartAI_${req.params.id}.txt"`);res.send(smartAiReportText(row.report_json));}catch(e){res.status(e.statusCode||500).send(e.message);}});
 app.get('/api/admin/smartai/reports/:id/print',adminRequired,permissionRequired('VIEW_DASHBOARD'),async(req,res)=>{try{const row=await one(`SELECT customer_id::text,report_json FROM ai_reports WHERE id::text=$1 AND report_type LIKE 'smartai_%'`,[req.params.id]);if(!row)return res.status(404).send('Report not found');const customer=await one(`SELECT code FROM customers WHERE id=$1`,[row.customer_id]);await organizationAssertCustomer(req,customer?.code);res.setHeader('Content-Type','text/html; charset=utf-8');res.send(smartAiReportHtml(row.report_json));}catch(e){res.status(e.statusCode||500).send(h(e.message));}});

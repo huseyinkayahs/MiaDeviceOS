@@ -2,45 +2,456 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox Davet Kabul</title>
+  <title>HukaTech Davet Kabul</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="/styles.css" rel="stylesheet">
+  <meta name="color-scheme" content="light">
+  <style>
+    :root{
+      --bg:#f3f6fb;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#dbe3ef;
+      --brand:#d07a1f;
+      --brand-dark:#a95f12;
+      --navy:#0f172a;
+      --success:#1f9d55;
+      --danger:#c0392b;
+      --shadow:0 18px 50px rgba(15,23,42,.10);
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(208,122,31,.10), transparent 28%),
+        linear-gradient(180deg,#eef3f9 0%,#f7f9fc 100%);
+      min-height:100vh;
+    }
+
+    .page{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px 18px;
+    }
+
+    .shell{
+      width:100%;
+      max-width:1080px;
+      display:grid;
+      grid-template-columns:1.02fr .98fr;
+      background:var(--card);
+      border:1px solid #e6ecf4;
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .hero{
+      background:
+        linear-gradient(180deg, rgba(15,23,42,.97), rgba(11,20,38,.99)),
+        linear-gradient(135deg, rgba(208,122,31,.22), transparent 45%);
+      color:#fff;
+      padding:42px 36px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .hero::before{
+      content:"";
+      position:absolute;
+      width:260px;
+      height:260px;
+      right:-90px;
+      bottom:-90px;
+      border-radius:50%;
+      background:rgba(208,122,31,.12);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .brand{
+      position:relative;
+      z-index:1;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:.2px;
+      margin-bottom:34px;
+    }
+
+    .brand-dot{
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      background:var(--brand);
+      box-shadow:0 0 0 4px rgba(208,122,31,.16);
+      flex:0 0 auto;
+    }
+
+    .brand .tech{color:#ff9a2f}
+
+    .hero h1{
+      position:relative;
+      z-index:1;
+      margin:0 0 14px;
+      font-size:40px;
+      line-height:1.08;
+      font-weight:800;
+    }
+
+    .hero p{
+      position:relative;
+      z-index:1;
+      margin:0;
+      color:rgba(255,255,255,.78);
+      font-size:16px;
+      line-height:1.7;
+      max-width:450px;
+    }
+
+    .hero-list{
+      position:relative;
+      z-index:1;
+      list-style:none;
+      padding:0;
+      margin:30px 0 0;
+      display:grid;
+      gap:13px;
+    }
+
+    .hero-list li{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color:rgba(255,255,255,.88);
+      font-size:15px;
+    }
+
+    .hero-list li::before{
+      content:"✓";
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      background:rgba(255,255,255,.10);
+      color:#ffd29f;
+      font-weight:700;
+      flex:0 0 auto;
+    }
+
+    .panel{
+      padding:36px 34px;
+      background:#fcfdff;
+    }
+
+    .eyebrow{
+      color:var(--brand);
+      font-weight:800;
+      letter-spacing:.3px;
+      font-size:12px;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+
+    .card-title{
+      margin:0 0 8px;
+      font-size:28px;
+      font-weight:800;
+      color:#18212f;
+    }
+
+    .card-subtitle{
+      margin:0 0 20px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.6;
+    }
+
+    .info-box{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:18px;
+      padding:16px;
+      margin-bottom:18px;
+      min-height:74px;
+    }
+
+    .invite-summary{
+      display:grid;
+      gap:12px;
+    }
+
+    .invite-email{
+      font-size:18px;
+      font-weight:800;
+      color:#18212f;
+      word-break:break-word;
+    }
+
+    .meta-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+
+    .meta-item{
+      border:1px solid #e8edf5;
+      background:#f9fbfe;
+      border-radius:14px;
+      padding:10px 12px;
+    }
+
+    .meta-label{
+      display:block;
+      font-size:11px;
+      color:var(--muted);
+      margin-bottom:4px;
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+
+    .meta-value{
+      display:block;
+      font-size:14px;
+      font-weight:700;
+      color:#17212d;
+      word-break:break-word;
+    }
+
+    #inviteForm{display:none}
+
+    .form-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:7px;
+    }
+
+    .field label{
+      font-size:13px;
+      font-weight:700;
+      color:#425066;
+    }
+
+    .field input{
+      width:100%;
+      height:52px;
+      border:1px solid #d6dfeb;
+      background:#fff;
+      border-radius:14px;
+      padding:0 15px;
+      font-size:15px;
+      color:#17212d;
+      outline:none;
+      transition:.15s ease;
+    }
+
+    .field input:focus{
+      border-color:rgba(208,122,31,.75);
+      box-shadow:0 0 0 4px rgba(208,122,31,.12);
+    }
+
+    .field input[disabled]{
+      background:#f4f7fb;
+      color:#627086;
+      cursor:not-allowed;
+    }
+
+    .password-wrap{position:relative}
+
+    .password-wrap input{padding-right:100px}
+
+    .toggle-password{
+      position:absolute;
+      right:9px;
+      top:50%;
+      transform:translateY(-50%);
+      border:1px solid #d8e0eb;
+      background:#fff;
+      color:#49566a;
+      border-radius:10px;
+      padding:8px 12px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .hint{
+      margin-top:1px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    .actions{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-top:20px;
+      flex-wrap:wrap;
+    }
+
+    .primary-btn{
+      appearance:none;
+      border:none;
+      background:linear-gradient(180deg,#da8328,#b86818);
+      color:#fff;
+      height:50px;
+      padding:0 22px;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(208,122,31,.20);
+    }
+
+    .primary-btn:hover{filter:brightness(.98)}
+
+    .primary-btn:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+
+    .ghost-link{
+      color:#324256;
+      font-size:14px;
+      font-weight:700;
+      text-decoration:none;
+    }
+
+    .ghost-link:hover{color:var(--brand-dark)}
+
+    .status{
+      margin-top:16px;
+      min-height:24px;
+      font-size:14px;
+      font-weight:700;
+      line-height:1.5;
+    }
+
+    .status.ok{color:var(--success)}
+    .status.error{color:var(--danger)}
+    .status.info{color:#4b5563}
+
+    @media (max-width:940px){
+      .shell{grid-template-columns:1fr}
+      .hero{padding:30px 24px}
+      .hero h1{font-size:32px}
+      .panel{padding:28px 22px}
+    }
+
+    @media (max-width:640px){
+      .page{padding:16px 10px}
+      .shell{border-radius:20px}
+      .hero{padding:24px 20px}
+      .hero h1{font-size:28px}
+      .panel{padding:24px 18px}
+      .card-title{font-size:24px}
+      .meta-grid{grid-template-columns:1fr}
+      .actions{align-items:stretch}
+      .primary-btn{width:100%}
+      .ghost-link{text-align:center}
+    }
+  </style>
 </head>
-<body class="auth-page">
-  <main class="auth-card">
-    <h1>FactoryBox Davet Kabul</h1>
-    <p id="inviteInfo" class="muted">Davet kontrol ediliyor...</p>
+<body>
+  <div class="page">
+    <div class="shell">
+      <section class="hero">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <span>Huka<span class="tech">Tech</span></span>
+        </div>
 
-    <form id="inviteForm" style="display:none;">
-      <label>
-        Email
-        <input id="email" type="email" disabled>
-      </label>
+        <h1>Davetiniz hazır</h1>
+        <p>
+          HukaTech operasyon izleme platformuna katılmak için davetinizi güvenli şekilde kabul edin.
+          Bilgilerinizi tamamladıktan sonra hesabınız otomatik olarak etkinleştirilecektir.
+        </p>
 
-      <label>
-        Ad Soyad
-        <input id="fullName" type="text" placeholder="Ad Soyad">
-      </label>
+        <ul class="hero-list">
+          <li>Tek ekrandan operasyon görünürlüğü</li>
+          <li>Güvenli kullanıcı ve erişim yönetimi</li>
+          <li>Makine, cihaz ve lokasyon tabanlı yetkilendirme</li>
+        </ul>
+      </section>
 
-      <label>
-        Şifre
-        <input id="password" type="password" placeholder="En az 6 karakter" required>
-      </label>
+      <section class="panel">
+        <div class="eyebrow">HukaTech Davet Akışı</div>
+        <h2 class="card-title">Davet Kabul</h2>
+        <p class="card-subtitle">
+          Davet detaylarınızı kontrol edin, ad soyad ve şifrenizi girerek hesabınızı oluşturun.
+        </p>
 
-      <button type="submit" class="primary-btn">Daveti Kabul Et</button>
-    </form>
+        <div id="inviteInfo" class="info-box">Davet kontrol ediliyor...</div>
 
-    <p id="inviteMessage" class="mini-status"></p>
+        <form id="inviteForm">
+          <div class="form-grid">
+            <div class="field">
+              <label for="email">E-posta</label>
+              <input id="email" type="email" disabled>
+            </div>
 
-    <p class="auth-links">
-      <a href="/login.html">Login ekranına dön</a>
-    </p>
-  </main>
+            <div class="field">
+              <label for="fullName">Ad Soyad</label>
+              <input id="fullName" type="text" placeholder="Ad Soyad" autocomplete="name">
+            </div>
+
+            <div class="field">
+              <label for="password">Şifre</label>
+              <div class="password-wrap">
+                <input id="password" type="password" placeholder="En az 6 karakter" required autocomplete="new-password">
+                <button type="button" id="togglePassword" class="toggle-password">Göster</button>
+              </div>
+              <div class="hint">Şifreniz en az 6 karakter olmalıdır.</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="submitBtn" type="submit" class="primary-btn">Daveti Kabul Et</button>
+            <a class="ghost-link" href="/login.html">Giriş ekranına dön</a>
+          </div>
+        </form>
+
+        <div id="inviteMessage" class="status"></div>
+      </section>
+    </div>
+  </div>
 
 <script>
 (function () {
   const params = new URLSearchParams(location.search);
   const token = params.get('token') || '';
+
+  const roleMap = {
+    system_admin: 'Sistem Yöneticisi',
+    owner: 'Firma Sahibi',
+    admin: 'Yönetici',
+    operator: 'Operatör',
+    viewer: 'Görüntüleyici'
+  };
+
+  const statusMap = {
+    pending: 'Bekleyen Davet',
+    accepted: 'Kabul Edildi',
+    cancelled: 'İptal Edildi',
+    expired: 'Süresi Doldu'
+  };
 
   function esc(v) {
     return String(v ?? '')
@@ -51,13 +462,52 @@
       .replaceAll("'", '&#039;');
   }
 
+  function setMessage(text, type) {
+    const el = document.getElementById('inviteMessage');
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.textContent = text || '';
+  }
+
   async function apiJson(url, options = {}) {
     const headers = options.body ? {'Content-Type':'application/json'} : {};
     const res = await fetch(url, {...options, headers});
     let body = null;
     try { body = await res.json(); } catch {}
-    if (!res.ok) throw new Error(body?.message || `${url} ${res.status}`);
+    if (!res.ok) {
+      throw new Error(body?.message || (res.status ? `${url} ${res.status}` : 'İstek başarısız.'));
+    }
     return body;
+  }
+
+  function renderInviteSummary(invite) {
+    const roleLabel = roleMap[invite.role] || invite.role || '-';
+    const customer = invite.customer_code || '-';
+    const site = invite.site_code || 'Tüm şirket erişimi';
+    const status = statusMap[invite.status] || invite.status || '-';
+
+    return `
+      <div class="invite-summary">
+        <div class="invite-email">${esc(invite.email)} için davet hazır</div>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Rol</span>
+            <span class="meta-value">${esc(roleLabel)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Şirket</span>
+            <span class="meta-value">${esc(customer)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Bölüm / Alan</span>
+            <span class="meta-value">${esc(site)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Durum</span>
+            <span class="meta-value">${esc(status)}</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   async function loadInvite() {
@@ -65,7 +515,7 @@
     const form = document.getElementById('inviteForm');
 
     if (!token) {
-      info.textContent = 'Davet token bulunamadı.';
+      info.textContent = 'Davet bağlantısı eksik veya geçersiz.';
       return;
     }
 
@@ -79,45 +529,61 @@
       }
 
       if (invite.status !== 'pending') {
-        info.textContent = `Bu davet ${invite.status} durumunda.`;
+        info.textContent = `Bu davet artık kullanılamaz. Mevcut durum: ${statusMap[invite.status] || invite.status}`;
         return;
       }
 
-      info.innerHTML = `
-        <strong>${esc(invite.email)}</strong> için davet hazır.<br>
-        Role: <strong>${esc(invite.role)}</strong><br>
-        Customer: <strong>${esc(invite.customer_code)}</strong><br>
-        Site: <strong>${esc(invite.site_code || '*')}</strong>
-      `;
-
-      document.getElementById('email').value = invite.email;
+      info.innerHTML = renderInviteSummary(invite);
+      document.getElementById('email').value = invite.email || '';
       document.getElementById('fullName').value = invite.full_name || '';
       form.style.display = 'block';
-    } catch(e) {
-      info.textContent = e.message;
+      setMessage('', '');
+    } catch (error) {
+      info.textContent = error.message || 'Davet yüklenemedi.';
     }
   }
 
-  document.getElementById('inviteForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  document.getElementById('togglePassword').addEventListener('click', function () {
+    const input = document.getElementById('password');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    this.textContent = show ? 'Gizle' : 'Göster';
+  });
 
-    const message = document.getElementById('inviteMessage');
-    message.textContent = 'Davet kabul ediliyor...';
+  document.getElementById('inviteForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const fullName = document.getElementById('fullName').value.trim();
+    const password = document.getElementById('password').value;
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (!fullName) {
+      setMessage('Ad Soyad alanı zorunludur.', 'error');
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setMessage('Şifre en az 6 karakter olmalıdır.', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Davet Kabul Ediliyor...';
+    setMessage('Davetiniz işleniyor...', 'info');
 
     try {
-      const full_name = document.getElementById('fullName').value.trim();
-      const password = document.getElementById('password').value;
-
       const data = await apiJson(`/api/invites/${encodeURIComponent(token)}/accept`, {
         method:'POST',
-        body:JSON.stringify({full_name, password})
+        body:JSON.stringify({full_name: fullName, password})
       });
 
       localStorage.setItem('factorybox_auth_token', data.token);
-      message.textContent = 'Davet kabul edildi. Dashboard açılıyor...';
-      setTimeout(() => location.href = '/', 800);
-    } catch(err) {
-      message.textContent = err.message;
+      setMessage('Davet kabul edildi. Panele yönlendiriliyorsunuz...', 'ok');
+      setTimeout(() => { location.href = '/'; }, 900);
+    } catch (error) {
+      setMessage(error.message || 'Davet kabul edilemedi.', 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Daveti Kabul Et';
     }
   });
 

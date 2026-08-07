@@ -2133,6 +2133,237 @@
   /* HUKATECH_ASSET_CATALOGS_V1_CSS_END */
 
 </style>
+
+  <style id="hukatechUserTableCompactLocalizedV1Style">
+    /* HUKATECH_USER_TABLE_COMPACT_LOCALIZED_V1 */
+    #usersTable {
+      min-width:0;
+      width:100%;
+    }
+    #usersTable .admin-table-wrap {
+      width:100%;
+      max-width:100%;
+      overflow-x:hidden;
+    }
+    #usersTable .admin-table {
+      width:100%;
+      min-width:0;
+      table-layout:fixed;
+      font-size:12.5px;
+    }
+    #usersTable .admin-table th,
+    #usersTable .admin-table td {
+      padding:10px 8px;
+      vertical-align:middle;
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+    #usersTable .admin-table th:nth-child(1),
+    #usersTable .admin-table td:nth-child(1) { width:18%; }
+    #usersTable .admin-table th:nth-child(2),
+    #usersTable .admin-table td:nth-child(2) { width:11%; }
+    #usersTable .admin-table th:nth-child(3),
+    #usersTable .admin-table td:nth-child(3) { width:10%; }
+    #usersTable .admin-table th:nth-child(4),
+    #usersTable .admin-table td:nth-child(4) { width:8%; }
+    #usersTable .admin-table th:nth-child(5),
+    #usersTable .admin-table td:nth-child(5) { width:24%; }
+    #usersTable .admin-table th:nth-child(6),
+    #usersTable .admin-table td:nth-child(6) { width:12%; }
+    #usersTable .admin-table th:nth-child(7),
+    #usersTable .admin-table td:nth-child(7) { width:11%; }
+    #usersTable .admin-table th:nth-child(8),
+    #usersTable .admin-table td:nth-child(8) { width:6%; }
+    #usersTable .user-permission-summary-v1 {
+      max-width:none;
+      gap:4px;
+      align-items:flex-start;
+    }
+    #usersTable .permission-badge.user-permission-label-v2 {
+      display:inline-flex;
+      align-items:center;
+      min-height:22px;
+      padding:2px 7px;
+      border:1px solid #dce4ea;
+      border-radius:999px;
+      background:#f6f8fa;
+      color:#46535e;
+      font-size:10.5px;
+      font-family:inherit;
+      font-weight:700;
+      line-height:1.2;
+      white-space:normal;
+    }
+    #usersTable .user-permission-more-v1 {
+      min-height:22px;
+      padding:2px 7px;
+      font-size:10.5px;
+    }
+    #usersTable .user-access-summary-v2 {
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+      min-width:0;
+    }
+    #usersTable .user-access-summary-v2 strong {
+      color:#334155;
+      font-size:12px;
+      line-height:1.3;
+    }
+    #usersTable .user-access-summary-v2 small {
+      color:#77838d;
+      font-size:10.5px;
+      line-height:1.3;
+    }
+    #usersTable .user-action-group-v1 {
+      gap:5px;
+      justify-content:flex-start;
+    }
+    #usersTable .mini-btn {
+      padding:6px 8px;
+      font-size:11px;
+      white-space:nowrap;
+    }
+    #usersTable .user-editonly-v1 select {
+      width:100%;
+      min-width:0;
+      height:38px;
+      padding:0 8px;
+      font-size:11.5px;
+    }
+    @media (max-width:1150px) {
+      #usersTable .admin-table-wrap {
+        overflow-x:auto;
+      }
+      #usersTable .admin-table {
+        min-width:900px;
+      }
+    }
+  </style>
+
+  <style id="hukatechInviteLinkPrivacyUxV1Style">
+    /* HUKATECH_INVITE_LINK_PRIVACY_UX_V1 */
+    #inviteResult {
+      margin-top:14px;
+      min-height:0;
+      padding:0;
+      border:0;
+      background:transparent;
+      color:#66727d;
+      font-size:13px;
+      line-height:1.5;
+    }
+    #inviteResult:empty {
+      display:none;
+    }
+  </style>
+
+  <style id="hukatechInviteEmailOptionPolishV1Style">
+    /* HUKATECH_INVITE_EMAIL_OPTION_POLISH_V1 */
+    .invite-email-option-v1 {
+      display:flex !important;
+      align-items:center !important;
+      justify-content:space-between !important;
+      gap:14px !important;
+      min-height:46px !important;
+      padding:9px 14px !important;
+      border:1px solid #d8e1e8 !important;
+      border-radius:12px !important;
+      background:#fff !important;
+      cursor:pointer;
+    }
+    .invite-email-option-v1 > span {
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .invite-email-option-v1 strong {
+      font-size:13px;
+      color:#33424f;
+    }
+    .invite-email-option-v1 small {
+      font-size:11px;
+      line-height:1.25;
+      color:#7a8793;
+      font-weight:400;
+    }
+    .invite-email-option-v1 input[type="checkbox"] {
+      appearance:auto !important;
+      -webkit-appearance:checkbox !important;
+      width:18px !important;
+      height:18px !important;
+      min-width:18px !important;
+      min-height:18px !important;
+      max-width:18px !important;
+      max-height:18px !important;
+      margin:0 !important;
+      padding:0 !important;
+      border:0 !important;
+      box-shadow:none !important;
+      accent-color:#c96b17;
+      cursor:pointer;
+    }
+  </style>
+
+  <style id="hukatechUserManagementUxV1Style">
+    /* HUKATECH_USER_MANAGEMENT_UX_V1 */
+    .user-editonly-v1 { display:none !important; }
+    tr.user-row-editing-v1 { background:#fff8f1; }
+    tr.user-row-editing-v1 .user-readonly-v1 { display:none !important; }
+    tr.user-row-editing-v1 .user-editonly-v1 {
+      display:inline-flex !important;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .user-role-badge-v1,
+    .user-status-badge-v1 {
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+      background:#eef3f8;
+      color:#263747;
+    }
+    .user-status-active-v1 { background:#e7f8f0; color:#08765a; }
+    .user-status-inactive-v1 { background:#f1f3f5; color:#606c76; }
+    .user-status-suspended-v1 { background:#fff0ef; color:#b42318; }
+    .user-permission-summary-v1 {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+      max-width:360px;
+    }
+    .user-permission-more-v1 {
+      display:inline-flex;
+      align-items:center;
+      min-height:24px;
+      padding:2px 8px;
+      border-radius:999px;
+      background:#f3f5f7;
+      color:#5c6874;
+      font-size:11px;
+      font-weight:700;
+    }
+    .user-action-group-v1 {
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      flex-wrap:wrap;
+    }
+    #inviteCustomerCode,
+    #inviteSiteCode {
+      min-height:46px;
+      width:100%;
+    }
+  </style>
+
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
@@ -2188,7 +2419,6 @@
         </button>
         <div id="usersSubmenuV6135" class="admin-subnav-v517" data-admin-subnav="users">
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="users"><span>Kullan&#305;c&#305;lar ve Davetler</span></button>
-          <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="permissions"><span>Roller ve Yetkiler</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="site-access"><span>Lokasyon Eri&#351;imi</span></button>
           <button class="admin-nav-link-v58 admin-subnav-link-v517" data-admin-nav="subscriptions"><span>Abonelikler</span></button>
         </div>
@@ -2573,7 +2803,7 @@
       <div class="admin-form-actions">
         <button id="scanAlarmEscalationsBtn" class="primary-btn">SLA Tara ve Kuyruğa Al</button>
         <button id="deliverAlarmEscalationsBtn" class="primary-btn">Bekleyenleri Gönder</button>
-        <button id="refreshAlarmEscalationEventsBtn" class="secondary-btn">Geçmişi Yenile</button>
+        <button id="refreshAlarmEscalationEventsBtn" class="secondary-btn">Yenile</button>
       </div>
     </div>
 
@@ -2621,7 +2851,7 @@
         <p class="muted">Panel dili, saat dilimi, tarih/saat biçimi, marka bilgileri ve varsayılan çalışma tercihleri.</p>
       </div>
       <div class="button-row">
-        <button id="refreshGeneralSettingsBtn" class="secondary-btn">Ayarları Yenile</button>
+        <button id="refreshGeneralSettingsBtn" class="secondary-btn">Yenile</button>
         <button id="saveGeneralSettingsBtn" type="button" class="primary-btn hukatech-save-general-v6135">Ayarları Kaydet</button>
       </div>
     </div>
@@ -2839,7 +3069,7 @@
         <p class="muted">v6.8.1: Telegram, HukaTech Central Mail Gateway, Brevo API ve Delivery Worker ayarlarını tek ekrandan yönet.</p>
       </div>
       <div class="admin-topbar-actions-v58">
-        <button id="refreshNotificationSettingsBtn" class="secondary-btn">Ayarları Yenile</button>
+        <button id="refreshNotificationSettingsBtn" class="secondary-btn">Yenile</button>
         <button id="saveNotificationSettingsBtn" class="primary-btn">Ayarları Kaydet</button>
       </div>
     </div>
@@ -3204,26 +3434,26 @@
   </section>
 
   <section id="factoryComparisonSectionV640" class="card wide admin-card" data-admin-view="factory-comparison">
-    <div class="section-title-row"><div><h2>Fabrika Karşılaştırması</h2><p class="muted">Fabrikaları cihaz bağlantısı, aktif alarm, üretim, plansız duruş ve OEE değerleriyle karşılaştır.</p></div><button id="refreshFactoryComparisonBtn" class="secondary-btn">Karşılaştırmayı Yenile</button></div>
+    <div class="section-title-row"><div><h2>Karşılaştırma Özeti</h2><p class="muted">Fabrikaları cihaz bağlantısı, aktif alarm, üretim, plansız duruş ve OEE değerleriyle karşılaştır.</p></div><button id="refreshFactoryComparisonBtn" class="secondary-btn">Yenile</button></div>
     <div class="org-toolbar-v640" style="grid-template-columns:repeat(3,minmax(180px,1fr)) auto"><label>Başlangıç<input id="factoryComparisonFrom" type="date"></label><label>Bitiş<input id="factoryComparisonTo" type="date"></label><label>Şirket<select id="factoryComparisonCustomer"><option value="">Şirket seç...</option></select></label><div class="admin-form-actions"><button id="applyFactoryComparisonBtn" class="primary-btn">Uygula</button></div></div>
     <div id="factoryComparisonSummary" class="org-summary-v640">Karşılaştırma özeti yükleniyor...</div><div id="factoryComparisonCards" class="org-comparison-grid-v640">Fabrikalar yükleniyor...</div><div class="org-panel-v640"><h3>Karşılaştırma Tablosu</h3><div id="factoryComparisonTable">Karşılaştırma yükleniyor...</div></div>
   </section>
 
 
   <section id="smartAiReportsSection" class="card wide admin-card" data-admin-view="smartai-reports">
-    <div class="section-title-row"><div><h2>SmartAI Raporları</h2><p class="muted">Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.</p></div><button id="refreshSmartAiBtn" class="secondary-btn">SmartAI Yenile</button></div>
-    <div id="smartAiStatusCards" class="smartai-grid-v650">SmartAI durumu yükleniyor...</div>
+    <div class="section-title-row"><div><h2>Rapor Merkezi</h2><p class="muted">Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.</p></div><button id="refreshSmartAiBtn" class="secondary-btn">Yenile</button></div>
+    <div id="smartAiStatusCards" class="smartai-grid-v650">HukaTech AI durumu yükleniyor...</div>
     <div class="smartai-panel-v650">
       <h3>Yeni Rapor Oluştur</h3><p>Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.</p>
       <div class="smartai-form-v650">
         <label>Şirket<select id="smartAiCustomerSelect"><option value="">Şirket seç...</option></select></label>
         <label>Fabrika<select id="smartAiFactorySelect"><option value="">Tüm fabrikalar</option></select></label>
-        <label>Tesis<select id="smartAiSiteSelect"><option value="">Tüm tesisler</option></select></label>
+        <label>Bölüm / Alan<select id="smartAiSiteSelect"><option value="">Tüm bölümler / alanlar</option></select></label>
         <label>Dönem<select id="smartAiPeriod"><option value="daily">Günlük</option><option value="weekly">Haftalık</option><option value="monthly">Aylık</option><option value="custom">Özel Tarih</option></select></label>
         <label>Başlangıç<input id="smartAiFrom" type="date"></label><label>Bitiş<input id="smartAiTo" type="date"></label>
         <label>Hedef Kitle<select id="smartAiAudience"><option value="executive">Yönetici</option><option value="technical">Teknik Ekip</option><option value="operator">Operatör</option></select></label>
         <label>Rapor Dili<select id="smartAiLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
-        <label>Analiz Motoru<select id="smartAiEngine"><option value="rules">FactoryBox Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
+        <label>Analiz Motoru<select id="smartAiEngine"><option value="rules">HukaTech Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
         <div class="admin-form-actions wide"><button id="generateSmartAiReportBtn" class="primary-btn">Rapor Oluştur ve Kaydet</button></div>
       </div>
       <div id="smartAiReportStatus" class="mini-status">Rapor işlemi bekleniyor.</div>
@@ -3232,7 +3462,7 @@
   </section>
 
   <section id="smartAiAskSection" class="card wide admin-card" data-admin-view="smartai-ask">
-    <div class="section-title-row"><div><h2>SmartAI Analiz Sor</h2><p class="muted">Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.</p></div><span class="smartai-badge-v650 ok">SALT OKUNUR</span></div>
+    <div class="section-title-row"><div><h2>Operasyon Analizi</h2><p class="muted">Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.</p></div><span class="smartai-badge-v650 ok">SALT OKUNUR</span></div>
     <div class="smartai-layout-v650">
       <div class="smartai-panel-v650">
         <h3>Sorunu Yaz</h3>
@@ -3248,30 +3478,30 @@
           <label>Dönem<select id="smartAiAskPeriod"><option value="daily">Günlük</option><option value="weekly" selected>Haftalık</option><option value="monthly">Aylık</option><option value="custom">Özel Tarih</option></select></label>
           <label>Başlangıç<input id="smartAiAskFrom" type="date"></label><label>Bitiş<input id="smartAiAskTo" type="date"></label>
           <label>Dil<select id="smartAiAskLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
-          <label>Motor<select id="smartAiAskEngine"><option value="rules">FactoryBox Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
+          <label>Motor<select id="smartAiAskEngine"><option value="rules">HukaTech Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
           <div class="admin-form-actions"><button id="askSmartAiBtn" class="primary-btn">Analiz Et</button></div>
         </div>
         <div id="smartAiAskStatus" class="mini-status">Soru bekleniyor.</div>
       </div>
-      <div id="smartAiAnswer" class="smartai-answer-v650"><span class="muted">SmartAI cevabı burada görünecek.</span></div>
+      <div id="smartAiAnswer" class="smartai-answer-v650"><span class="muted">HukaTech AI cevabı burada görünecek.</span></div>
     </div>
     <div class="smartai-panel-v650"><h3>Son Sorular</h3><div id="smartAiQuestionsTable">Soru geçmişi yükleniyor...</div></div>
   </section>
 
   <section id="smartAiHistorySection" class="card wide admin-card" data-admin-view="smartai-history">
-    <div class="section-title-row"><div><h2>SmartAI Rapor Geçmişi</h2><p class="muted">Kaydedilen günlük, haftalık, aylık ve özel raporları görüntüle, metin olarak indir veya PDF için yazdır.</p></div><button id="refreshSmartAiHistoryBtn" class="secondary-btn">Geçmişi Yenile</button></div>
+    <div class="section-title-row"><div><h2>Kaydedilen Raporlar</h2><p class="muted">Kaydedilen günlük, haftalık, aylık ve özel raporları görüntüle, metin olarak indir veya PDF için yazdır.</p></div><button id="refreshSmartAiHistoryBtn" class="secondary-btn">Yenile</button></div>
     <div class="smartai-form-v650" style="margin-bottom:12px"><label>Dönem<select id="smartAiHistoryPeriod"><option value="">Tümü</option><option value="daily">Günlük</option><option value="weekly">Haftalık</option><option value="monthly">Aylık</option><option value="custom">Özel Tarih</option></select></label><label>Limit<select id="smartAiHistoryLimit"><option>25</option><option selected>100</option><option>250</option></select></label><div class="admin-form-actions"><button id="applySmartAiHistoryBtn" class="primary-btn">Filtrele</button></div></div>
     <div id="smartAiHistoryTable">Rapor geçmişi yükleniyor...</div>
     <div id="smartAiHistoryDetail" class="smartai-panel-v650" style="margin-top:15px"><span class="muted">Detayını görmek için bir rapor seç.</span></div>
   </section>
 
   <section id="smartAiSettingsSection" class="card wide admin-card" data-admin-view="smartai-settings">
-    <div class="section-title-row"><div><h2>SmartAI Ayarları</h2><p class="muted">Varsayılan analiz motoru, dil, hedef kitle, otomatik rapor zamanları ve teslimat kanalları.</p></div><button id="refreshSmartAiSettingsBtn" class="secondary-btn">Ayarları Yenile</button></div>
+    <div class="section-title-row"><div><h2>Yapılandırma</h2><p class="muted">Varsayılan analiz motoru, dil, hedef kitle, otomatik rapor zamanları ve teslimat kanalları.</p></div><button id="refreshSmartAiSettingsBtn" class="secondary-btn">Yenile</button></div>
     <div id="smartAiSettingsStatusCards" class="smartai-grid-v650">AI ayarları yükleniyor...</div>
     <div class="smartai-layout-v650">
       <div class="smartai-panel-v650"><h3>Genel AI Ayarları</h3><div class="smartai-form-v650">
-        <label>SmartAI<select id="smartAiEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
-        <label>Varsayılan Motor<select id="smartAiSettingsEngine"><option value="rules">FactoryBox Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
+        <label>HukaTech AI<select id="smartAiEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+        <label>Varsayılan Motor<select id="smartAiSettingsEngine"><option value="rules">HukaTech Kural Motoru</option><option value="openai">OpenAI + Kural Motoru</option></select></label>
         <label>Varsayılan Dil<select id="smartAiSettingsLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
         <label>Varsayılan Hedef Kitle<select id="smartAiDefaultAudience"><option value="executive">Yönetici</option><option value="technical">Teknik Ekip</option><option value="operator">Operatör</option></select></label>
         <label>Saat Dilimi<input id="smartAiTimezone" value="Europe/Istanbul"></label><label>Geçmiş Limiti<input id="smartAiHistoryLimitSetting" type="number" min="10" max="1000" value="100"></label>
@@ -3292,7 +3522,7 @@
   </section>
 
   <section id="inviteSection" class="card wide admin-card" data-admin-view="users">
-    <h2>Invite User / Tenant Access</h2>
+    <h2>Invite User / Company & Location Access</h2>
     <p class="muted">Yeni kullanıcıya müşteri/tesis erişimi ver ve davet e-postası gönder.</p>
 
     <div class="admin-form-grid">
@@ -3305,28 +3535,36 @@
         <input id="inviteFullName" type="text" placeholder="Ad Soyad">
       </label>
       <label>
-        Role
+        Rol
         <select id="inviteRole">
-          <option value="viewer">viewer</option>
-          <option value="operator">operator</option>
-          <option value="admin">admin</option>
-          <option value="owner">owner</option>
+          <option value="viewer">Görüntüleyici</option>
+          <option value="operator">Operatör</option>
+          <option value="admin">Yönetici</option>
+          <option value="owner">Firma Sahibi</option>
+        </select>
+      </label>
+      <div id="invitePermissionChooserV1" class="invite-permission-chooser-v1"></div>
+      <label>
+        Şirket
+        <select id="inviteCustomerCode">
+          <option value="">Şirket seç...</option>
         </select>
       </label>
       <label>
-        Customer Code
-        <input id="inviteCustomerCode" type="text" placeholder="örn: mia-demo">
+        Bölüm / Alan
+        <select id="inviteSiteCode" disabled>
+          <option value="">Tüm şirket erişimi</option>
+        </select>
       </label>
-      <label>
-        Site Code
-        <input id="inviteSiteCode" type="text" placeholder="boş bırakılırsa tüm customer">
-      </label>
-      <label class="checkbox-label">
-        Mail Gönder
-        <input id="inviteSendEmail" type="checkbox" checked>
+      <label class="invite-email-option-v1">
+        <span>
+          <strong>Davet e-postasını gönder</strong>
+          <small>Kapalıysa yalnızca davet bağlantısı oluşturulur.</small>
+        </span>
+        <input id="inviteSendEmail" type="checkbox" checked aria-label="Davet e-postasını gönder">
       </label>
       <div class="admin-form-actions">
-        <button id="createInviteBtn" class="primary-btn">Davet Oluştur + Mail</button>
+        <button id="createInviteBtn" class="primary-btn">Davet Oluştur</button>
       </div>
     </div>
 
@@ -3777,7 +4015,7 @@
   </section>
 
   <section class="card wide admin-card" data-admin-view="users">
-    <h2>Tenant Access</h2>
+    <h2>Company & Location Access</h2>
     <div id="tenantAccessTable">Yükleniyor...</div>
   </section>
 
@@ -3883,19 +4121,21 @@
   let smartAiState={status:null,settings:null,hierarchy:null,reports:[],questions:[],latestReport:null};
 
   const I18N_PAIRS = [
+    ['Rapor Merkezi','Report Center'],['Operasyon Analizi','Operational Analysis'],['Kaydedilen Raporlar','Saved Reports'],['Yapılandırma','Configuration'],['Karşılaştırma Özeti','Comparison Summary'],
+    ['Yeterli veri yok','Insufficient data'],['Veri bekleniyor','Waiting for data'],['Karşılaştırma Durumu','Comparison Status'],['En az 2 fabrika gerekli','At least 2 factories required'],['Karşılaştırma için en az iki fabrika gerekir.','At least two factories are required for comparison.'],
     ['Müşteri Kurulumları','Customer Installations'],['Müşteri Kurulum Kayıtları','Customer Installation Registry'],['Kayıtları Yenile','Refresh Installations'],['Kurulum Kimliği Oluştur','Create Installation Identity'],['Tüneli Hazırla','Prepare Tunnel'],['Otomatik Kurulum Paketi','Automated Deployment Package'],['Geçmiş','History'],['Provisioning','Provisioning'],['Tek kullanımlık kurulum paketi indirildi','One-time provisioning package downloaded'],
-    ['SmartAI Raporları','SmartAI Reports'],['AI Raporları','AI Reports'],['Analiz Sor','Ask Analysis'],['Rapor Geçmişi','Report History'],['AI Ayarları','AI Settings'],
-    ['Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.','Combine alarm, OEE, downtime, maintenance, inventory and factory data into one management report.'],['SmartAI Yenile','Refresh SmartAI'],['Yeni Rapor Oluştur','Create New Report'],['Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.','The report only reads data; it sends no device commands and changes no operational records.'],['Dönem','Period'],['Günlük','Daily'],['Haftalık','Weekly'],['Aylık','Monthly'],['Özel Tarih','Custom Date'],['Hedef Kitle','Audience'],['Yönetici','Executive'],['Teknik Ekip','Technical Team'],['Rapor Dili','Report Language'],['Analiz Motoru','Analysis Engine'],['FactoryBox Kural Motoru','FactoryBox Rule Engine'],['OpenAI + Kural Motoru','OpenAI + Rule Engine'],['Rapor Oluştur ve Kaydet','Generate and Save Report'],['Rapor işlemi bekleniyor.','Waiting for report action.'],['Henüz rapor oluşturulmadı.','No report has been generated yet.'],
-    ['SmartAI Analiz Sor','Ask SmartAI'],['Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.','Ask operational-data questions in natural language. Answers are based on the selected dates and access scope.'],['SALT OKUNUR','READ ONLY'],['Sorunu Yaz','Write Your Question'],['En fazla duran makine','Machine with most downtime'],['Tekrarlayan alarmlar','Repeated alarms'],['Gecikmiş bakımlar','Overdue maintenance'],['Kritik stok','Critical stock'],['Fabrikaları karşılaştır','Compare factories'],['Analiz Et','Analyze'],['Soru bekleniyor.','Waiting for a question.'],['SmartAI cevabı burada görünecek.','The SmartAI answer will appear here.'],['Son Sorular','Recent Questions'],
-    ['SmartAI Rapor Geçmişi','SmartAI Report History'],['Kaydedilen günlük, haftalık, aylık ve özel raporları görüntüle, metin olarak indir veya PDF için yazdır.','View saved daily, weekly, monthly and custom reports, download as text or print to PDF.'],['Geçmişi Yenile','Refresh History'],['Tümü','All'],['Filtrele','Filter'],['Rapor geçmişi yükleniyor...','Loading report history...'],['Detayını görmek için bir rapor seç.','Select a report to view details.'],
-    ['SmartAI Ayarları','SmartAI Settings'],['Varsayılan analiz motoru, dil, hedef kitle, otomatik rapor zamanları ve teslimat kanalları.','Default analysis engine, language, audience, automated report schedules and delivery channels.'],['Ayarları Yenile','Refresh Settings'],['AI ayarları yükleniyor...','Loading AI settings...'],['Genel AI Ayarları','General AI Settings'],['Varsayılan Motor','Default Engine'],['Varsayılan Dil','Default Language'],['Varsayılan Hedef Kitle','Default Audience'],['Geçmiş Limiti','History Limit'],['Otomatik Raporlar','Automated Reports'],['Günlük Rapor','Daily Report'],['Haftalık Rapor','Weekly Report'],['Aylık Rapor','Monthly Report'],['Ayın Günü','Day of Month'],['Rapor Teslimatı','Report Delivery'],["Telegram Chat ID'leri",'Telegram Chat IDs'],['E-posta Alıcıları','Email Recipients'],['AI Ayarlarını Kaydet','Save AI Settings'],['Ayar işlemi bekleniyor.','Waiting for settings action.'],
+    ['HukaTech AI Raporları','HukaTech AI Reports'],['AI Raporları','AI Reports'],['Analiz Sor','Ask Analysis'],['Rapor Geçmişi','Report History'],['AI Ayarları','AI Settings'],
+    ['Alarm, OEE, duruş, bakım, stok ve fabrika verilerini tek bir yönetici raporunda birleştir.','Combine alarm, OEE, downtime, maintenance, inventory and factory data into one management report.'],['Yenile','Refresh HukaTech AI'],['Yeni Rapor Oluştur','Create New Report'],['Rapor yalnızca veri okur; cihazlara komut göndermez ve operasyon kayıtlarını değiştirmez.','The report only reads data; it sends no device commands and changes no operational records.'],['Dönem','Period'],['Günlük','Daily'],['Haftalık','Weekly'],['Aylık','Monthly'],['Özel Tarih','Custom Date'],['Hedef Kitle','Audience'],['Yönetici','Executive'],['Teknik Ekip','Technical Team'],['Rapor Dili','Report Language'],['Analiz Motoru','Analysis Engine'],['HukaTech Kural Motoru','HukaTech Rule Engine'],['OpenAI + Kural Motoru','OpenAI + Rule Engine'],['Rapor Oluştur ve Kaydet','Generate and Save Report'],['Rapor işlemi bekleniyor.','Waiting for report action.'],['Henüz rapor oluşturulmadı.','No report has been generated yet.'],
+    ['HukaTech AI’ya Sor','Ask HukaTech AI'],['Operasyon verilerine doğal dille soru sor. Cevaplar seçilen tarih ve erişim kapsamındaki kayıtlara dayanır.','Ask operational-data questions in natural language. Answers are based on the selected dates and access scope.'],['SALT OKUNUR','READ ONLY'],['Sorunu Yaz','Write Your Question'],['En fazla duran makine','Machine with most downtime'],['Tekrarlayan alarmlar','Repeated alarms'],['Gecikmiş bakımlar','Overdue maintenance'],['Kritik stok','Critical stock'],['Fabrikaları karşılaştır','Compare factories'],['Analiz Et','Analyze'],['Soru bekleniyor.','Waiting for a question.'],['HukaTech AI cevabı burada görünecek.','The HukaTech AI answer will appear here.'],['Son Sorular','Recent Questions'],
+    ['HukaTech AI Rapor Geçmişi','HukaTech AI Report History'],['Kaydedilen günlük, haftalık, aylık ve özel raporları görüntüle, metin olarak indir veya PDF için yazdır.','View saved daily, weekly, monthly and custom reports, download as text or print to PDF.'],['Yenile','Refresh History'],['Tümü','All'],['Filtrele','Filter'],['Rapor geçmişi yükleniyor...','Loading report history...'],['Detayını görmek için bir rapor seç.','Select a report to view details.'],
+    ['HukaTech AI Ayarları','HukaTech AI Settings'],['Varsayılan analiz motoru, dil, hedef kitle, otomatik rapor zamanları ve teslimat kanalları.','Default analysis engine, language, audience, automated report schedules and delivery channels.'],['Yenile','Refresh Settings'],['AI ayarları yükleniyor...','Loading AI settings...'],['Genel AI Ayarları','General AI Settings'],['Varsayılan Motor','Default Engine'],['Varsayılan Dil','Default Language'],['Varsayılan Hedef Kitle','Default Audience'],['Geçmiş Limiti','History Limit'],['Otomatik Raporlar','Automated Reports'],['Günlük Rapor','Daily Report'],['Haftalık Rapor','Weekly Report'],['Aylık Rapor','Monthly Report'],['Ayın Günü','Day of Month'],['Rapor Teslimatı','Report Delivery'],["Telegram Chat ID'leri",'Telegram Chat IDs'],['E-posta Alıcıları','Email Recipients'],['AI Ayarlarını Kaydet','Save AI Settings'],['Ayar işlemi bekleniyor.','Waiting for settings action.'],
 
     ['Makine Listesi','Machine List'],['Makine Tipleri','Machine Types'],['Cihaz Modelleri','Device Models'],['Katalogları Yenile','Refresh Catalogs'],['Yeni Makine Tipi','New Machine Type'],['Tip Kodu','Type Code'],['Görünen Ad','Display Name'],['İngilizce Ad','English Name'],['Kategori','Category'],['Sıralama','Sort Order'],['Makine Tipi Oluştur','Create Machine Type'],['Makine Tipi Listesi','Machine Type List'],['Yeni makine tipi bekleniyor.','Waiting for a new machine type.'],['Yeni Cihaz Modeli','New Device Model'],['Model Kodu','Model Code'],['Model Adı','Model Name'],['Cihaz Ailesi','Device Family'],['Üretici','Manufacturer'],['Firmware Ailesi','Firmware Family'],['Varsayılan Profil','Default Profile'],['Bağlantılar','Connections'],['Cihaz Modeli Oluştur','Create Device Model'],['Cihaz Modeli Listesi','Device Model List'],['Yeni cihaz modeli bekleniyor.','Waiting for a new device model.'],['Kullanım','Usage'],['Sistem tipi','System Type'],['Sistem modeli','System Model'],['Organizasyon','Organization'],['Şirketler','Companies'],['Fabrikalar ve Bölümler','Factories & Departments'],['Üretim Hatları','Production Lines'],['Makineler','Machines'],['Lokasyon Erişimi','Location Access'],['Fabrika Karşılaştırması','Factory Comparison'],
     ['Şirket, fabrika, tesis, üretim hattı ve makine hiyerarşisini tek ekrandan yönet.','Manage the company, factory, site, production-line and machine hierarchy from one screen.'],['Organizasyonu Yenile','Refresh Organization'],['Şirket seç...','Select company...'],['Tüm lokasyonlar','All locations'],['Organizasyon özeti yükleniyor...','Loading organization summary...'],['Organizasyon Ağacı','Organization Tree'],['Fabrikadan makineye kadar mevcut yapıyı ve bağlı cihazları gösterir.','Shows the current structure and connected devices from factory down to machine.'],['Hiyerarşi yükleniyor...','Loading hierarchy...'],['Fabrika ve Tesis Kayıtları','Factory and Site Records'],['Fabrikalar yükleniyor...','Loading factories...'],['Tesisler yükleniyor...','Loading sites...'],
     ['Yeni Fabrika','New Factory'],['Seçili şirket altında fabrika oluşturur.','Creates a factory under the selected company.'],['Fabrika Oluştur','Create Factory'],['Fabrika işlemi bekleniyor.','Waiting for a factory action.'],['Yeni Tesis / Bölüm','New Site / Department'],['Fabrika altında tesis veya üretim bölümünü oluşturur.','Creates a site or production department under a factory.'],['Fabrika seç...','Select factory...'],['Hafta Başlangıcı','Week Start'],['Pazartesi','Monday'],['Pazar','Sunday'],['Tesis Oluştur','Create Site'],['Tesis işlemi bekleniyor.','Waiting for a site action.'],
     ['Tesislerin üretim hatlarını oluştur, vardiya bilgisini tanımla ve makineleri hatlara ata.','Create production lines for sites, define shift information and assign machines to lines.'],['Hatları Yenile','Refresh Lines'],['Yeni Üretim Hattı','New Production Line'],['Hat Kodu','Line Code'],['Hat Adı','Line Name'],['Vardiya Sayısı','Shift Count'],['Üretim Hattı Oluştur','Create Production Line'],['Üretim hattı işlemi bekleniyor.','Waiting for a production-line action.'],['Hatlar ve Makine Atamaları','Lines and Machine Assignments'],['Hatlar yükleniyor...','Loading lines...'],['Makine atamaları yükleniyor...','Loading machine assignments...'],
     ['Kullanıcıları şirket, fabrika, tesis veya üretim hattı ile sınırlandır. Yetki değişince açık oturumlar güvenlik amacıyla kapatılır.','Restrict users to a company, factory, site or production line. Open sessions are closed when access changes.'],['Erişimleri Yenile','Refresh Access'],['Yeni Erişim Kaydı','New Access Record'],['Kullanıcı seç...','Select user...'],['Kapsam','Scope'],['Tüm Şirket','Entire Company'],['Erişim Ver / Güncelle','Grant / Update Access'],['Erişim işlemi bekleniyor.','Waiting for an access action.'],['Aktif Lokasyon Erişimleri','Active Location Access'],['Erişim kayıtları yükleniyor...','Loading access records...'],
-    ['Fabrikaları cihaz bağlantısı, aktif alarm, üretim, plansız duruş ve OEE değerleriyle karşılaştır.','Compare factories by device connectivity, active alarms, production, unplanned downtime and OEE.'],['Karşılaştırmayı Yenile','Refresh Comparison'],['Karşılaştırma özeti yükleniyor...','Loading comparison summary...'],['Fabrikalar yükleniyor...','Loading factories...'],['Karşılaştırma Tablosu','Comparison Table'],['Karşılaştırma yükleniyor...','Loading comparison...'],
+    ['Fabrikaları cihaz bağlantısı, aktif alarm, üretim, plansız duruş ve OEE değerleriyle karşılaştır.','Compare factories by device connectivity, active alarms, production, unplanned downtime and OEE.'],['Yenile','Refresh Comparison'],['Karşılaştırma özeti yükleniyor...','Loading comparison summary...'],['Fabrikalar yükleniyor...','Loading factories...'],['Karşılaştırma Tablosu','Comparison Table'],['Karşılaştırma yükleniyor...','Loading comparison...'],
 
     ['Sistem Sağlığı ve Yedekler','System Health & Backups'],['Durumu Yenile','Refresh Status'],
     ['Aktif oturumlar, giriş koruması, hesap kilitleri, şifre politikası ve güvenlik olaylarını tek merkezden yönet.','Manage active sessions, login protection, account locks, password policy and security events from one center.'],
@@ -3934,7 +4174,7 @@
     ['Otomasyon Zamanlayıcı','Automation Scheduler'],['Alarm Raporları','Alarm Reports'],['Müşteriler / Tenantlar','Customers / Tenants'],
     ['Kullanıcılar ve Davetler','Users & Invites'],['Roller ve Yetkiler','Roles & Permissions'],['Abonelikler','Subscriptions'],
     ['Varlıklar / Makineler','Assets / Machines'],['Cihazlar','Devices'],['Cihaz Kayıtları','Device Registry'],['Kurulum Sihirbazı','Installation Wizard'],['Cihaz Yetkinlikleri','Device Capabilities'],['Cihaz Yetkinlikleri ve Sensör Yapılandırması','Device Capabilities & Sensor Configuration'],['Yetkinlikleri Kaydet','Save Capabilities'],['Yetkinlik Ekle','Add Capability'],['Hazır Cihaz Profili','Device Profile Template'],['Profili Uygula','Apply Profile'],['Kalıcı Cihaz QR Etiketi','Permanent Device QR Label'],['Kalıcı QR Oluştur / Yenile','Create / Rotate Permanent QR'],['Mobil Paneli Aç','Open Mobile Installer'],['QR Etiketini İndir','Download QR Label'],['Konfigürasyonu Cihaza Gönder','Send Configuration to Device'],['Konfigürasyonu İndir','Download Configuration'],['Son Aktarım Durumu','Last Transfer Status'],['Cihaz yanıtı bekleniyor.','Waiting for device response.'],['Yeni FactoryBox cihazını müşteri, tesis ve makineye bağla; provisioning token/QR üret, canlı bağlantı testlerini tamamla ve cihazı aktive et.','Assign a new FactoryBox device to a customer, site and machine; create a provisioning token/QR, complete live connectivity tests and activate the device.'],['Wi-Fi şifresi sunucuya kaydedilmez. Yalnızca tarayıcıda oluşturulan kurulum JSON dosyasına eklenebilir.','The Wi-Fi password is not stored on the server. It can only be added to the installation JSON file created in the browser.'],['Bir kurulum kaydı oluştur veya aşağıdaki listeden Aç düğmesine bas.','Create an installation record or click Open in the list below.'],['Yeni kurulum bilgileri bekleniyor.','Waiting for new installation information.'],['Kurulum özeti yükleniyor...','Loading installation summary...'],['Kurulum kayıtları yükleniyor...','Loading installation records...'],['Toplam','Total'],['Taslak','Draft'],['Cihaz Bekleniyor','Waiting for Device'],['Bağlı / Test','Connected / Tested'],['Bağlantı','Connection'],['Telemetri','Telemetry'],['Son Görülme','Last Seen'],['Alarm kaydı yok','No alarm record'],['Telemetri yok','No telemetry'],['Cihaz görülmedi','Device not seen'],['Sunucuya kaydedilmez','Not stored on the server'],['Aç','Open'],['draft','draft'],['token_issued','token issued'],['waiting_device','waiting for device'],['connected','connected'],['tested','tested'],['passed','passed'],['skipped','skipped'],['deactivated','deactivated'],['Cihaz Kurulum ve Onboarding Sihirbazı','Device Installation & Onboarding Wizard'],['Yeni Kurulum','New Installation'],['Kurulum Kaydı Oluştur','Create Installation Record'],['Cihaz Bilgileri','Device Information'],['Tesis Eşleştirme','Site Assignment'],['Ağ ve MQTT','Network & MQTT'],['Token ve QR','Token & QR'],['Canlı Testler','Live Tests'],['Aktivasyon','Activation'],['Kurulum Kayıtları','Installation Records'],['Yeni Kurulum Kaydı','New Installation Record'],['Müşteri seç...','Select customer...'],['Tesis seç...','Select site...'],['Yeni / elle gir','New / enter manually'],['Mevcut Makine','Existing Machine'],['Makine Kodu','Machine Code'],['Makine Adı','Machine Name'],['Makine Tipi','Machine Type'],['Seri No','Serial No'],['Beklenen Firmware','Expected Firmware'],['Boş = kontrolü atla','Blank = skip check'],['Ağ Tipi','Network Type'],['Wi-Fi Şifresi','Wi-Fi Password'],['Token Süresi','Token Lifetime'],['Provision Token ve QR Oluştur','Create Provision Token & QR'],['Cihaz Bilgisi İste','Request Device Info'],['Heartbeat İste','Request Heartbeat'],['Test Alarmı Gönder','Send Test Alarm'],['Testleri Çalıştır','Run Tests'],['Firmware Testini Atla','Skip Firmware Test'],['Alarm Testini Atla','Skip Alarm Test'],['Cihazı Aktive Et','Activate Device'],['Kurulumu Yeniden Aç','Reopen Installation'],['Cihazı Devre Dışı Bırak','Deactivate Device'],['Kurulum Raporunu İndir','Download Installation Report'],['Konfigürasyonu İndir','Download Configuration'],['Tokenı Kopyala','Copy Token'],['Güvenlik Aktiviteleri','Security Activity'],
-    ['Ayarları Yenile','Refresh Settings'],['Ayarları Kaydet','Save Settings'],['Yenile','Refresh'],['Şimdi Çalıştır','Run Now'],
+    ['Yenile','Refresh Settings'],['Ayarları Kaydet','Save Settings'],['Yenile','Refresh'],['Şimdi Çalıştır','Run Now'],
     ['Şimdi Tara','Scan Now'],['Filtrele','Apply Filter'],['Analizi Uygula','Apply Analysis'],['Analizi Getir','Load Analysis'],
     ['Oluştur','Create'],['Kaydet','Save'],['Sil','Delete'],['Kapat','Close'],['Başlat','Start'],['Tamamla','Complete'],
     ['Geçmiş','History'],['Kopyala','Copy'],['İptal','Cancel'],['Onayla','Acknowledge'],['Ticket Aç','Create Ticket'],
@@ -3967,7 +4207,7 @@
     ['En Çok Alarm Üreten Makineler','Machines With Most Alarms'],['Yeni SLA Kuralı','New SLA Rule'],['Kural Adı','Rule Name'],
     ['Acknowledge SLA (dk)','Acknowledge SLA (min)'],['Resolve SLA (dk)','Resolve SLA (min)'],['Kanal','Channel'],['Alıcılar','Recipients'],
     ['Kural Oluştur','Create Rule'],['SLA Kuralları','SLA Rules'],['Aktif Alarm SLA Durumu','Active Alarm SLA Status'],
-    ['SLA Tara ve Kuyruğa Al','Scan SLA and Queue'],['Bekleyenleri Gönder','Send Pending'],['Geçmişi Yenile','Refresh History'],
+    ['SLA Tara ve Kuyruğa Al','Scan SLA and Queue'],['Bekleyenleri Gönder','Send Pending'],['Yenile','Refresh History'],
     ['Gönderim Durumu','Delivery Status'],['SLA Aşaması','SLA Stage'],['Bildirim Ayarları / Kanal Testleri','Notification Settings / Channel Tests'],
     ['Delivery Worker','Delivery Worker'],['Çalışma Aralığı (sn)','Interval (sec)'],['Varsayılan Chat ID','Default Chat ID'],
     ['Telegram Test Mesajı','Send Telegram Test'],['Email Test Mesajı','Send Email Test'],['İlk Retry Bekleme (sn)','Initial Retry Delay (sec)'],
@@ -4065,7 +4305,7 @@
     ['Stok hareketi bekleniyor.','Waiting for a stock movement.'],['Parçalar yükleniyor...','Loading parts...'],['Hareketler yükleniyor...','Loading movements...'],
     ['Bir parçadaki Geçmiş düğmesine bas.','Click History on a part.'],['Yetki Özeti','Permission Overview'],
     ['Aktif kullanıcının rolü ve backend tarafından verilen yetkiler.','The active user role and permissions granted by the backend.'],
-    ['Kullanıcı Daveti / Tenant Erişimi','Invite User / Tenant Access'],
+    ['Kullanıcı Daveti / Şirket ve Lokasyon Erişimi','Invite User / Company & Location Access'],
     ['Yeni kullanıcıya müşteri/tesis erişimi ver ve davet e-postası gönder.','Grant customer/site access to a new user and send an invitation email.'],
     ['Davet Oluştur + Mail','Create Invitation + Email'],
     ['Her kullanıcı satırında mevcut role göre alacağı yetki listesi görünür. Rol değişince yetki önizlemesi de değişir.','Each user row shows the permissions granted by the selected role. The permission preview changes when the role changes.'],
@@ -4078,7 +4318,7 @@
     ['Cihaz Kayıtları / Provisioning','Device Registry / Provisioning'],
     ['FactoryBox cihazlarını müşteri, tesis ve makineye bağla; tek kullanımlık provisioning token üret.','Connect FactoryBox devices to tenants, sites and machines, and generate one-time provisioning tokens.'],
     ['Tesisler / Atölyeler','Sites / Workshops'],['v5.10: Tesis oluşturma, düzenleme ve abonelik tesis limit kontrolü.','v5.10: Site creation, editing and subscription site-limit control.'],
-    ['Tesis Adı','Site Name'],['Lokasyon','Location'],['Tesis Oluştur','Create Site'],['Tenant Erişimi','Tenant Access'],
+    ['Tesis Adı','Site Name'],['Lokasyon','Location'],['Tesis Oluştur','Create Site'],['Şirket ve Lokasyon Erişimi','Company & Location Access'],
     ['Güvenlik Aktiviteleri / Audit Log','Security Activity / Audit Log'],
     ['AUDIT_VIEW yetkisi olan roller yönetim, giriş, davet, parola ve abonelik aktivitelerini filtreleyebilir.','Roles with AUDIT_VIEW can filter administration, login, invitation, password and subscription activities.'],
     ['Sağlık','Health'],['Müşteri / Tesis','Customer / Site'],['Makine Durumu','Machine State'],['Makine Statüsü','Machine Status'],
@@ -4623,10 +4863,10 @@
     notifications:{title_tr:'Bildirim Ayarları',title_en:'Notification Settings',desc_tr:'Telegram, E-posta, test mesajları ve teslimat çalışanı ayarları.',desc_en:'Telegram, Email, test messages and delivery worker settings.'},
     scheduler:{title_tr:'Otomasyon Zamanlayıcı',title_en:'Automation Scheduler',desc_tr:'Otomatik SLA taraması, yeniden deneme, teslimat ve Dead Letter yönetimi.',desc_en:'Automatic SLA scanning, retry, delivery and Dead Letter management.'},
     reports:{title_tr:'Alarm Raporları',title_en:'Alarm Reports',desc_tr:'Günlük ve haftalık alarm özetleri, Telegram/E-posta teslimatı ve rapor geçmişi.',desc_en:'Daily and weekly alarm summaries, Telegram/Email delivery and report history.'},
-    'smartai-reports':{title_tr:'SmartAI Raporları',title_en:'SmartAI Reports',desc_tr:'Alarm, OEE, duruş, bakım, stok ve fabrika verilerinden yönetici raporları.',desc_en:'Management reports from alarm, OEE, downtime, maintenance, inventory and factory data.'},
-    'smartai-ask':{title_tr:'SmartAI Analiz Sor',title_en:'Ask SmartAI',desc_tr:'Operasyon verilerine doğal dille soru sor ve kanıta dayalı yanıt al.',desc_en:'Ask natural-language questions about operational data and receive evidence-based answers.'},
-    'smartai-history':{title_tr:'SmartAI Rapor Geçmişi',title_en:'SmartAI Report History',desc_tr:'Kaydedilen raporlar, metin indirme ve PDF/yazdırma görünümü.',desc_en:'Saved reports, text download and PDF/print view.'},
-    'smartai-settings':{title_tr:'SmartAI Ayarları',title_en:'SmartAI Settings',desc_tr:'AI motoru, dil, hedef kitle, zamanlama ve teslimat ayarları.',desc_en:'AI engine, language, audience, scheduling and delivery settings.'},
+    'smartai-reports':{title_tr:'HukaTech AI Raporları',title_en:'HukaTech AI Reports',desc_tr:'Alarm, OEE, duruş, bakım, stok ve fabrika verilerinden yönetici raporları.',desc_en:'Management reports from alarm, OEE, downtime, maintenance, inventory and factory data.'},
+    'smartai-ask':{title_tr:'HukaTech AI’ya Sor',title_en:'Ask HukaTech AI',desc_tr:'Operasyon verilerine doğal dille soru sor ve kanıta dayalı yanıt al.',desc_en:'Ask natural-language questions about operational data and receive evidence-based answers.'},
+    'smartai-history':{title_tr:'HukaTech AI Rapor Geçmişi',title_en:'HukaTech AI Report History',desc_tr:'Kaydedilen raporlar, metin indirme ve PDF/yazdırma görünümü.',desc_en:'Saved reports, text download and PDF/print view.'},
+    'smartai-settings':{title_tr:'HukaTech AI Ayarları',title_en:'HukaTech AI Settings',desc_tr:'AI motoru, dil, hedef kitle, zamanlama ve teslimat ayarları.',desc_en:'AI engine, language, audience, scheduling and delivery settings.'},
     maintenance:{title_tr:'Bakım ve Servis',title_en:'Maintenance & Service',desc_tr:'Servis talepleri, bakım planları, iş emirleri ve yedek parça süreçleri.',desc_en:'Service requests, maintenance plans, work orders and spare-parts workflows.'},
     'maintenance-plans':{title_tr:'Bakım ve Servis',title_en:'Maintenance & Service',desc_tr:'Servis talepleri, bakım planları, iş emirleri ve yedek parça süreçleri.',desc_en:'Service requests, maintenance plans, work orders and spare-parts workflows.'},
     'work-orders':{title_tr:'Bakım ve Servis',title_en:'Maintenance & Service',desc_tr:'Servis talepleri, bakım planları, iş emirleri ve yedek parça süreçleri.',desc_en:'Service requests, maintenance plans, work orders and spare-parts workflows.'},
@@ -7051,7 +7291,7 @@
       ['Devices', counts.devices],
       ['Pending Devices', counts.pending_devices],
       ['Paired Devices', counts.paired_devices],
-      ['Tenant Access', counts.tenant_access],
+      ['Company & Location Access', counts.tenant_access],
       ['Invites', counts.invites],
       ['Plans', counts.subscription_plans],
       ['Subscriptions', counts.subscriptions],
@@ -7074,27 +7314,154 @@
     `).join('');
   }
 
+  /* HUKATECH_USER_MANAGEMENT_UX_V1 */
+  function userRoleLabelV1(role) {
+    return ({
+      viewer:'Görüntüleyici',
+      operator:'Operatör',
+      admin:'Yönetici',
+      owner:'Firma Sahibi',
+      system_admin:'Sistem Yöneticisi'
+    })[String(role||'')] || String(role||'-');
+  }
+
+  function userStatusLabelV1(status) {
+    return ({
+      active:'Aktif',
+      inactive:'Pasif',
+      suspended:'Askıya Alındı'
+    })[String(status||'')] || String(status||'-');
+  }
+
+  function userStatusBadgeV1(status) {
+    const clean=String(status||'');
+    return `<span class="user-status-badge-v1 user-status-${esc(clean)}-v1">${esc(userStatusLabelV1(clean))}</span>`;
+  }
+
+  function userSelectHtmlV1(className, value, options, labelFn) {
+    return `<select class="${className}" data-original="${esc(value)}">${options.map(opt=>`<option value="${esc(opt)}" ${String(value)===String(opt)?'selected':''}>${esc(labelFn(opt))}</option>`).join('')}</select>`;
+  }
+
+  function userPermissionLabelV2(permission) {
+    const labels={
+      ADMIN_VIEW:'Yönetim paneli',
+      MANAGE_USERS:'Kullanıcı yönetimi',
+      MANAGE_CUSTOMERS:'Şirket yönetimi',
+      MANAGE_SITES:'Bölüm / alan yönetimi',
+      MANAGE_INVITES:'Davet yönetimi',
+      VIEW_BILLING:'Abonelik görüntüleme',
+      MANAGE_BILLING:'Abonelik yönetimi',
+      MANAGE_ASSETS:'Makine yönetimi',
+      MANAGE_DEVICES:'Cihaz yönetimi',
+      VIEW_REPORTS:'Rapor görüntüleme',
+      SEND_REPORTS:'Rapor gönderimi',
+      AUDIT_VIEW:'Denetim kayıtları',
+      VIEW_ALARMS:'Alarm görüntüleme',
+      MANAGE_ALARMS:'Alarm yönetimi',
+      ACKNOWLEDGE_ALARMS:'Alarm onaylama',
+      CLEAR_ALARMS:'Alarm kapatma',
+      VIEW_MAINTENANCE:'Bakım görüntüleme',
+      MANAGE_MAINTENANCE:'Bakım yönetimi',
+      VIEW_INVENTORY:'Stok görüntüleme',
+      MANAGE_INVENTORY:'Stok yönetimi',
+      VIEW_OEE:'OEE görüntüleme',
+      MANAGE_OEE:'OEE yönetimi',
+      VIEW_DEVICES:'Cihaz görüntüleme',
+      VIEW_ASSETS:'Makine görüntüleme',
+      VIEW_CUSTOMERS:'Şirket görüntüleme',
+      VIEW_SITES:'Bölüm / alan görüntüleme',
+      MANAGE_SETTINGS:'Ayar yönetimi',
+      VIEW_SECURITY:'Güvenlik görüntüleme',
+      MANAGE_SECURITY:'Güvenlik yönetimi'
+    };
+    const code=String(permission||'').trim();
+    if(labels[code])return labels[code];
+    return code
+      .toLocaleLowerCase('tr-TR')
+      .split('_')
+      .filter(Boolean)
+      .map(word=>word.charAt(0).toLocaleUpperCase('tr-TR')+word.slice(1))
+      .join(' ');
+  }
+
+  function userPermissionSummaryV1(userOrRole) {
+    const row=userOrRole&&typeof userOrRole==='object'?userOrRole:null;
+    const role=row?.role||String(userOrRole||'viewer');
+    const permissions=Array.isArray(row?.permissions)?row.permissions:(permissionsForRole(role)||[]);
+    const labels=permissions.map(userPermissionLabelV2);
+    const visible=labels.slice(0,3);
+    const remaining=Math.max(labels.length-visible.length,0);
+    const title=labels.join(', ');
+    const payload=encodeURIComponent(JSON.stringify(permissions));
+    const userId=row?.id||'';
+    const userEmail=row?.email||'';
+    return `<button type="button" class="user-permission-summary-v1 user-permissions" data-permission-preview="" data-permission-role="${esc(role)}" data-permissions="${esc(payload)}" data-user-id="${esc(userId)}" data-user-email="${esc(userEmail)}" title="${esc(title)}">${visible.map(label=>`<span class="permission-badge user-permission-label-v2">${esc(label)}</span>`).join('')}${remaining?`<span class="user-permission-more-v1">+${remaining} yetki</span>`:''}</button>`;
+  }
+
+  function userAccessSummaryV2(row) {
+    const company=String(row.default_customer_code||'-');
+    const area=String(row.default_site_code||'Tüm şirket');
+    return `<span class="user-access-summary-v2"><strong>${esc(company)}</strong><small>${esc(area)}</small></span>`;
+  }
+
+  function syncInviteSelectorsV1() {
+    const customerSelect=document.getElementById('inviteCustomerCode');
+    const siteSelect=document.getElementById('inviteSiteCode');
+    if(!customerSelect||!siteSelect)return;
+
+    const customers=operationUiStateV6137.customers||[];
+    const sites=operationUiStateV6137.sites||[];
+    const previousCustomer=customerSelect.value;
+    const previousSite=siteSelect.value;
+
+    customerSelect.innerHTML=`<option value="">Şirket seç...</option>${customers.map(row=>`<option value="${esc(row.code)}">${esc(row.name||row.code)} (${esc(row.code)})</option>`).join('')}`;
+
+    const selectedCustomer=customers.some(row=>String(row.code)===String(previousCustomer))
+      ? previousCustomer
+      : (customers.length===1?String(customers[0].code):'');
+
+    customerSelect.value=selectedCustomer;
+    const filteredSites=sites.filter(row=>String(row.customer_code||'')===String(selectedCustomer));
+
+    siteSelect.innerHTML=`<option value="">Tüm şirket erişimi</option>${filteredSites.map(row=>`<option value="${esc(row.code)}">${esc(row.name||row.code)} (${esc(row.code)})</option>`).join('')}`;
+    siteSelect.disabled=!selectedCustomer;
+    siteSelect.value=filteredSites.some(row=>String(row.code)===String(previousSite))?previousSite:'';
+  }
+
   function renderUsers(data) {
-    const rows = (data.users || []).map(x => ({...x, __kind:'user'}));
-    document.getElementById('usersTable').innerHTML = table([
-      {label:'Email', value:r=>r.email},
-      {label:'Ad', value:r=>r.full_name},
-      {label:'Rol', html:true, value:r=>can('MANAGE_USERS') ? selectHtml('user-role-select', r.role, ['viewer','operator','admin','owner','system_admin']) : esc(r.role)},
-      {label:'Status', html:true, value:r=>can('MANAGE_USERS') ? selectHtml('user-status-select', r.status, ['active','inactive','suspended']) : esc(r.status)},
-      {label:'Permissions', html:true, value:r=>`<span class="permission-list user-permissions" data-permission-preview="${esc(r.id)}">${permissionBadges(permissionsForRole(r.role))}</span>`},
-      {label:'Customer', value:r=>r.default_customer_code},
-      {label:'Site', value:r=>r.default_site_code},
-      {label:'Son Login', value:r=>fmtDate(r.last_login_at)},
-      {label:'Aksiyon', html:true, value:r=>can('MANAGE_USERS') ? `<button class="secondary-btn mini-btn" data-action="save-user" data-id="${esc(r.id)}">Kaydet</button>` : '<span class="muted">yetki yok</span>'}
-    ], rows);
+    const rows=(data.users||[]).map(x=>({...x,__kind:'user'}));
+    document.getElementById('usersTable').innerHTML=table([
+      {label:'E-posta',value:r=>r.email},
+      {label:'Ad',value:r=>r.full_name||'-'},
+      {label:'Rol',html:true,value:r=>`<span class="user-readonly-v1 user-role-badge-v1">${esc(userRoleLabelV1(r.role))}</span><span class="user-editonly-v1">${userSelectHtmlV1('user-role-select',r.role,['viewer','operator','admin','owner','system_admin'],userRoleLabelV1)}</span>`},
+      {label:'Durum',html:true,value:r=>`<span class="user-readonly-v1">${userStatusBadgeV1(r.status)}</span><span class="user-editonly-v1">${userSelectHtmlV1('user-status-select',r.status,['active','inactive','suspended'],userStatusLabelV1)}</span>`},
+      {label:'Yetkiler',html:true,value:r=>userPermissionSummaryV1(r)},
+      {label:'Erişim',html:true,value:r=>userAccessSummaryV2(r)},
+      {label:'Son Giriş',value:r=>fmtDate(r.last_login_at)},
+      {label:'İşlem',html:true,value:r=>can('MANAGE_USERS')?`<span class="user-action-group-v1 user-readonly-v1"><button class="secondary-btn mini-btn" data-action="edit-user" data-id="${esc(r.id)}">Düzenle</button></span><span class="user-action-group-v1 user-editonly-v1"><button class="primary-btn mini-btn" data-action="save-user" data-id="${esc(r.id)}">Kaydet</button><button class="secondary-btn mini-btn" data-action="cancel-user" data-id="${esc(r.id)}">İptal</button></span>`:'<span class="muted">Yetki yok</span>'}
+    ],rows);
   }
 
   function updateUserPermissionPreview(selectEl) {
-    const tr = selectEl.closest('tr');
-    if (!tr) return;
-    const preview = tr.querySelector('.user-permissions');
-    if (!preview) return;
-    preview.innerHTML = permissionBadges(permissionsForRole(selectEl.value));
+    const tr=selectEl.closest('tr');
+    if(!tr)return;
+    const preview=tr.querySelector('.user-permissions');
+    if(!preview)return;
+    preview.outerHTML=userPermissionSummaryV1(selectEl.value);
+  }
+
+  function setUserRowEditModeV1(button, editing) {
+    const tr=button.closest('tr');
+    if(!tr)return;
+    if(!editing){
+      const role=tr.querySelector('.user-role-select');
+      const status=tr.querySelector('.user-status-select');
+      if(role)role.value=role.dataset.original||role.value;
+      if(status)status.value=status.dataset.original||status.value;
+      if(role)updateUserPermissionPreview(role);
+    }
+    tr.classList.toggle('user-row-editing-v1',Boolean(editing));
+    if(editing)tr.querySelector('.user-role-select')?.focus();
   }
 
   function renderCustomers(data) {
@@ -7102,8 +7469,7 @@
     organizationAdminState.customers=data.customers||[]; renderOrganizationCustomerSelectors();
     syncOperationCreateSelectorsV6137();
     const rows = (data.customers || []).map(x => ({...x, __kind:'customer'}));
-    const customerInput = document.getElementById('inviteCustomerCode');
-    if (customerInput && !customerInput.value && rows.length === 1) customerInput.value = rows[0].code;
+    syncInviteSelectorsV1();
 
     document.getElementById('customersTable').innerHTML = table([
       {label:'Şirket Kodu', value:r=>r.code},
@@ -7308,6 +7674,7 @@
   function renderSites(data) {
     operationUiStateV6137.sites=data.sites||[];
     syncOperationCreateSelectorsV6137();
+    syncInviteSelectorsV1();
     const rows = (data.sites || []).map(x => ({...x, __kind:'site'}));
     document.getElementById('sitesTable').innerHTML = table([
       {label:'Code', value:r=>r.code},
@@ -7434,15 +7801,15 @@
   }
 
   function renderTenantAccess(data) {
-    document.getElementById('tenantAccessTable').innerHTML = table([
-      {label:'User', value:r=>r.user_email},
-      {label:'Name', value:r=>r.full_name},
-      {label:'User Role', value:r=>r.user_role},
-      {label:'Customer', value:r=>r.customer_code},
-      {label:'Site', value:r=>r.site_code || '*'},
-      {label:'Access Role', value:r=>r.access_role},
-      {label:'Created', value:r=>fmtDate(r.created_at)}
-    ], data.access || []);
+    document.getElementById('tenantAccessTable').innerHTML=table([
+      {label:'Kullanıcı',value:r=>r.user_email},
+      {label:'Ad',value:r=>r.full_name||'-'},
+      {label:'Kullanıcı Rolü',value:r=>userRoleLabelV1(r.user_role)},
+      {label:'Şirket',value:r=>r.customer_code},
+      {label:'Bölüm / Alan',value:r=>r.site_code||'Tüm şirket'},
+      {label:'Erişim Rolü',value:r=>userRoleLabelV1(r.access_role)},
+      {label:'Oluşturuldu',value:r=>fmtDate(r.created_at)}
+    ],data.access||[]);
   }
 
 
@@ -7919,22 +8286,27 @@
     ], data.logs || []);
   }
 
+  function inviteStatusLabelV1(status) {
+    return ({pending:'Bekliyor',accepted:'Kabul Edildi',cancelled:'İptal Edildi',expired:'Süresi Doldu'})[String(status||'')]||String(status||'-');
+  }
+
   function renderInvites(data) {
-    const target = document.getElementById('invitesTable');
-    if (!target) return;
-    target.innerHTML = table([
-      {label:'Email', value:r=>r.email},
-      {label:'Ad', value:r=>r.full_name || '-'},
-      {label:'Role', value:r=>r.role},
-      {label:'Customer', value:r=>r.customer_code},
-      {label:'Site', value:r=>r.site_code || '*'},
-      {label:'Status', value:r=>r.status},
-      {label:'Mail', value:r=>r.email_sent_at ? `Gönderildi ${fmtDate(r.email_sent_at)}` : (r.email_last_error ? `Hata: ${r.email_last_error}` : 'Gönderilmedi')},
-      {label:'Expires', value:r=>fmtDate(r.expires_at)},
-      {label:'Link', html:true, value:r=>`<button class="secondary-btn mini-btn" data-action="copy-invite" data-url="${esc(r.invite_url)}">Kopyala</button>`},
-      {label:'Mail Gönder', html:true, value:r=>can('MANAGE_INVITES') && r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="send-invite-email" data-id="${esc(r.id)}">Mail Gönder</button>` : '-'},
-      {label:'İptal', html:true, value:r=>can('MANAGE_INVITES') && r.status === 'pending' ? `<button class="secondary-btn mini-btn" data-action="cancel-invite" data-id="${esc(r.id)}">İptal</button>` : '-'}
-    ], data.invites || []);
+    const target=document.getElementById('invitesTable');
+    if(!target)return;
+    target.innerHTML=table([
+      {label:'E-posta',value:r=>r.email},
+      {label:'Ad',value:r=>r.full_name||'-'},
+      {label:'Rol',value:r=>userRoleLabelV1(r.role)},
+      {label:'Şirket',value:r=>r.customer_code},
+      {label:'Bölüm / Alan',value:r=>r.site_code||'Tüm şirket'},
+      {label:'Durum',value:r=>inviteStatusLabelV1(r.status)},
+      {label:'E-posta',value:r=>r.email_sent_at?`Gönderildi · ${fmtDate(r.email_sent_at)}`:(r.email_last_error?`Hata: ${r.email_last_error}`:'Gönderilmedi')},
+      {label:'Geçerlilik',value:r=>fmtDate(r.expires_at)},
+      {label:'Davet Bağlantısı',html:true,value:r=>r.status==='pending'
+        ? `<button class="secondary-btn mini-btn" data-action="copy-invite" data-url="${esc(r.invite_url)}">Kopyala</button>`
+        : '-'},
+      {label:'İşlem',html:true,value:r=>can('MANAGE_INVITES')&&r.status==='pending'?`<span class="user-action-group-v1"><button class="secondary-btn mini-btn" data-action="send-invite-email" data-id="${esc(r.id)}">E-postayı Yeniden Gönder</button><button class="secondary-btn mini-btn" data-action="cancel-invite" data-id="${esc(r.id)}">Daveti İptal Et</button></span>`:'-'}
+    ],data.invites||[]);
   }
 
 
@@ -8397,7 +8769,104 @@
 
   function syncLocationAccessScopeSelectors(){const data=organizationAdminState.hierarchy?.flat||{};const scope=document.getElementById('locationAccessScopeType')?.value||'customer';const f=document.getElementById('locationAccessFactory'),si=document.getElementById('locationAccessSite'),li=document.getElementById('locationAccessLine');if(f){const v=f.value;f.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(data.factories,'id',x=>x.name);if((data.factories||[]).some(x=>x.id===v))f.value=v;f.disabled=!['factory','site','line'].includes(scope);}if(si){const selectedFactory=f?.value;const rows=(data.sites||[]).filter(x=>!selectedFactory||x.factory_id===selectedFactory);const v=si.value;si.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(rows,'id',x=>x.name);if(rows.some(x=>x.id===v))si.value=v;si.disabled=!['site','line'].includes(scope);}if(li){const selectedSite=si?.value;const rows=(data.production_lines||[]).filter(x=>!selectedSite||x.site_id===selectedSite);const v=li.value;li.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(rows,'id',x=>x.name);if(rows.some(x=>x.id===v))li.value=v;li.disabled=scope!=='line';}}
 
-  function renderFactoryComparison(data){organizationAdminState.comparison=data;const s=data.summary||{};const summary=document.getElementById('factoryComparisonSummary');if(summary)summary.innerHTML=`<article><span>${orgText('Fabrika','Factories')}</span><strong>${esc(s.factory_count||0)}</strong></article><article><span>${orgText('Bölüm / Alan','Departments / Areas')}</span><strong>${esc(s.site_count||0)}</strong></article><article><span>${orgText('Makine','Machines')}</span><strong>${esc(s.machine_count||0)}</strong></article><article><span>${orgText('Aktif Alarm','Active Alarms')}</span><strong>${esc(s.active_alarm_count||0)}</strong></article><article><span>${orgText('En İyi Fabrika','Best Factory')}</span><strong>${esc(s.best_factory?.name||'-')}</strong></article>`;const cards=document.getElementById('factoryComparisonCards');if(cards)cards.innerHTML=(data.factories||[]).map(r=>`<article class="org-comparison-card-v640"><header><div><h3>${esc(r.name)}</h3><small>${esc(r.location||'-')}</small></div><span class="status-badge ${Number(r.oee_pct)>=85?'ok':Number(r.oee_pct)>=60?'warn':'danger'}">${esc(r.status)}</span></header><div class="org-oee-v640">${esc(r.oee_pct||0)}%</div><div class="org-metrics-v640"><span>Availability<br><strong>${esc(r.availability_pct||0)}%</strong></span><span>Performance<br><strong>${esc(r.performance_pct||0)}%</strong></span><span>Quality<br><strong>${esc(r.quality_pct||0)}%</strong></span><span>${orgText('Cihaz Online','Devices Online')}<br><strong>${esc(r.online_device_count||0)}/${esc(r.device_count||0)}</strong></span><span>${orgText('Üretim','Production')}<br><strong>${esc(r.total_count||0)}</strong></span><span>${orgText('Duruş','Downtime')}<br><strong>${esc(Math.round(Number(r.downtime_sec||0)/60))} dk</strong></span></div></article>`).join('')||`<span class="muted">${orgText('Karşılaştırılacak fabrika yok.','No factories to compare.')}</span>`;const target=document.getElementById('factoryComparisonTable');if(target)target.innerHTML=table([{label:orgText('Fabrika','Factory'),value:r=>r.name},{label:'OEE',value:r=>`${r.oee_pct}%`},{label:'Availability',value:r=>`${r.availability_pct}%`},{label:'Performance',value:r=>`${r.performance_pct}%`},{label:'Quality',value:r=>`${r.quality_pct}%`},{label:orgText('Cihaz','Devices'),value:r=>`${r.online_device_count}/${r.device_count}`},{label:orgText('Aktif Alarm','Active Alarms'),value:r=>String(r.active_alarm_count||0)},{label:orgText('Üretim','Production'),value:r=>String(r.total_count||0)},{label:orgText('Plansız Duruş','Unplanned Downtime'),value:r=>`${Math.round(Number(r.downtime_sec||0)/60)} dk`}],data.factories||[]);}
+  // HUKATECH_FACTORY_COMPARISON_DATA_SAFETY_HOTFIX_V1
+  function renderFactoryComparison(data){
+    organizationAdminState.comparison=data;
+
+    const s=data.summary||{};
+    const factories=data.factories||[];
+    const enoughFactories=factories.length>=2;
+
+    const hasOperationalData=row=>
+      Number(row?.total_count||0)>0 ||
+      Number(row?.downtime_sec||0)>0 ||
+      Number(row?.oee_pct||0)>0 ||
+      Number(row?.performance_pct||0)>0 ||
+      Number(row?.quality_pct||0)>0;
+
+    const anyData=factories.some(hasOperationalData);
+
+    const metricValue=(row,key,suffix='%')=>
+      hasOperationalData(row)
+        ? `${Number(row?.[key]||0)}${suffix}`
+        : '—';
+
+    const bestLabel=enoughFactories&&anyData
+      ? orgText('En İyi Fabrika','Best Factory')
+      : orgText('Karşılaştırma Durumu','Comparison Status');
+
+    const bestValue=enoughFactories&&anyData
+      ? (s.best_factory?.name||'-')
+      : orgText('En az 2 fabrika gerekli','At least 2 factories required');
+
+    const summary=document.getElementById('factoryComparisonSummary');
+    if(summary){
+      summary.innerHTML=
+        `<article><span>${orgText('Fabrika','Factories')}</span><strong>${esc(s.factory_count||0)}</strong></article>`+
+        `<article><span>${orgText('Bölüm / Alan','Departments / Areas')}</span><strong>${esc(s.site_count||0)}</strong></article>`+
+        `<article><span>${orgText('Makine','Machines')}</span><strong>${esc(s.machine_count||0)}</strong></article>`+
+        `<article><span>${orgText('Aktif Alarm','Active Alarms')}</span><strong>${esc(s.active_alarm_count||0)}</strong></article>`+
+        `<article><span>${esc(bestLabel)}</span><strong>${esc(bestValue)}</strong></article>`;
+    }
+
+    const cards=document.getElementById('factoryComparisonCards');
+    if(cards){
+      const warning=!enoughFactories
+        ? `<div class="comparison-note-v1">${esc(orgText('Karşılaştırma için en az iki fabrika gerekir.','At least two factories are required for comparison.'))}</div>`
+        : '';
+
+      const cardHtml=factories.map(r=>{
+        const hasData=hasOperationalData(r);
+        const statusText=hasData
+          ? (r.status||'-')
+          : orgText('Veri bekleniyor','Waiting for data');
+
+        const statusClass=hasData
+          ? (Number(r.oee_pct)>=85?'ok':Number(r.oee_pct)>=60?'warn':'danger')
+          : '';
+
+        const oeeText=hasData
+          ? `${Number(r.oee_pct||0)}%`
+          : '—';
+
+        return `<article class="org-comparison-card-v640 ${hasData?'':'data-missing-v1'}">
+          <header>
+            <div>
+              <h3>${esc(r.name)}</h3>
+              <small>${esc(r.location||'-')}</small>
+            </div>
+            <span class="status-badge ${statusClass}">${esc(statusText)}</span>
+          </header>
+          <div class="org-oee-v640">${esc(oeeText)}</div>
+          <div class="org-metrics-v640">
+            <span>${orgText('Kullanılabilirlik','Availability')}<br><strong>${esc(metricValue(r,'availability_pct'))}</strong></span>
+            <span>${orgText('Performans','Performance')}<br><strong>${esc(metricValue(r,'performance_pct'))}</strong></span>
+            <span>${orgText('Kalite','Quality')}<br><strong>${esc(metricValue(r,'quality_pct'))}</strong></span>
+            <span>${orgText('Cihaz Online','Devices Online')}<br><strong>${esc(r.online_device_count||0)}/${esc(r.device_count||0)}</strong></span>
+            <span>${orgText('Üretim','Production')}<br><strong>${esc(r.total_count||0)}</strong></span>
+            <span>${orgText('Duruş','Downtime')}<br><strong>${esc(Math.round(Number(r.downtime_sec||0)/60))} dk</strong></span>
+          </div>
+        </article>`;
+      }).join('');
+
+      cards.innerHTML=warning+(cardHtml||`<span class="muted">${orgText('Karşılaştırılacak fabrika yok.','No factories to compare.')}</span>`);
+    }
+
+    const target=document.getElementById('factoryComparisonTable');
+    if(target){
+      target.innerHTML=table([
+        {label:orgText('Fabrika','Factory'),value:r=>r.name},
+        {label:'OEE',value:r=>metricValue(r,'oee_pct')},
+        {label:orgText('Kullanılabilirlik','Availability'),value:r=>metricValue(r,'availability_pct')},
+        {label:orgText('Performans','Performance'),value:r=>metricValue(r,'performance_pct')},
+        {label:orgText('Kalite','Quality'),value:r=>metricValue(r,'quality_pct')},
+        {label:orgText('Cihaz','Devices'),value:r=>`${r.online_device_count}/${r.device_count}`},
+        {label:orgText('Aktif Alarm','Active Alarms'),value:r=>String(r.active_alarm_count||0)},
+        {label:orgText('Üretim','Production'),value:r=>String(r.total_count||0)},
+        {label:orgText('Plansız Duruş','Unplanned Downtime'),value:r=>`${Math.round(Number(r.downtime_sec||0)/60)} dk`}
+      ],factories);
+    }
+  }
 
   async function reloadOrganizationAll(){
     const sequence=++organizationReloadSequenceV6138;
@@ -8421,7 +8890,7 @@
   async function handleOrganizationActionV640(button){const action=button.dataset.orgAction,id=button.dataset.id;const row=button.closest('tr');button.disabled=true;try{if(action==='save-factory')await apiJson(`/api/admin/organization/factories/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-factory-name')?.value,location:row.querySelector('.org-factory-location')?.value,timezone:row.querySelector('.org-factory-timezone')?.value,status:row.querySelector('.org-factory-status')?.value})});if(action==='save-site')await apiJson(`/api/admin/organization/sites/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({factory_id:row.querySelector('.org-site-factory')?.value,name:row.querySelector('.org-site-name')?.value,location:row.querySelector('.org-site-location')?.value,timezone:row.querySelector('.org-site-timezone')?.value,status:row.querySelector('.org-site-status')?.value})});if(action==='save-line')await apiJson(`/api/admin/organization/production-lines/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:row.querySelector('.org-line-name')?.value,status:row.querySelector('.org-line-status')?.value,shift_pattern:{shift_count:Number(row.querySelector('.org-line-shifts')?.value||1),workdays:[1,2,3,4,5]}})});if(action==='assign-machine')await apiJson(`/api/admin/organization/machines/${encodeURIComponent(id)}/assignment`,{method:'PATCH',body:JSON.stringify({production_line_id:row.querySelector('.org-machine-line')?.value})});if(action==='revoke-access')await apiJson(`/api/admin/organization/access/${encodeURIComponent(id)}`,{method:'DELETE'});await reloadOrganizationAll();}finally{button.disabled=false;}}
 
 
-  // v6.6.6 SmartAI Admin Center
+  // v6.6.6 HukaTech AI Admin Center
   function smartAiUi(tr,en){return currentLanguage==='en'?en:tr;}
   function smartAiBoolValue(id){return document.getElementById(id)?.value==='true';}
   function smartAiSelectedCustomer(){return document.getElementById('smartAiCustomerSelect')?.value||smartAiState.hierarchy?.customer?.code||'';}
@@ -8445,7 +8914,7 @@
   function smartAiSetSelect(id,value){const el=document.getElementById(id);if(el&&value!==undefined&&value!==null)el.value=String(value);}
   function renderSmartAiStatus(data){smartAiState.status=data;const open=data.openai||{},n=data.notifications||{},scope=data.scope||{},settings=data.settings||{};const html=[
     [smartAiUi('Çalışma Modu','Operating Mode'),data.read_only?smartAiUi('SALT OKUNUR','READ ONLY'):smartAiUi('YAZMA AÇIK','WRITE ENABLED'),data.read_only?'ok':'warn'],
-    [smartAiUi('FactoryBox Motoru','FactoryBox Engine'),smartAiUi('HAZIR','READY'),'ok'],
+    [smartAiUi('HukaTech Motoru','HukaTech Engine'),smartAiUi('HAZIR','READY'),'ok'],
     ['OpenAI',open.configured&&open.enabled?smartAiUi('HAZIR','READY'):smartAiUi('OPSİYONEL / KAPALI','OPTIONAL / OFF'),open.configured&&open.enabled?'ok':'warn'],
     [smartAiUi('Kapsamdaki Makine','Machines in Scope'),scope.machine_count||0,'']
   ].map(x=>`<article class="smartai-kpi-v650"><span>${esc(x[0])}</span><strong class="${x[2]||''}">${esc(x[1])}</strong><small>${x[0]==='OpenAI'?esc(open.model||'-'):''}</small></article>`).join('');
@@ -8454,26 +8923,114 @@
   }
   function renderSmartAiSettings(data){const s=data.settings||data||{};smartAiState.settings=s;smartAiSetSelect('smartAiEnabled',String(Boolean(s.enabled)));smartAiSetSelect('smartAiSettingsEngine',s.engine||'rules');smartAiSetSelect('smartAiSettingsLanguage',s.language||'tr');smartAiSetSelect('smartAiDefaultAudience',s.default_audience||'executive');const tz=document.getElementById('smartAiTimezone');if(tz)tz.value=s.timezone||'Europe/Istanbul';const hl=document.getElementById('smartAiHistoryLimitSetting');if(hl)hl.value=s.history_limit||100;smartAiSetSelect('smartAiDailyEnabled',String(Boolean(s.daily_enabled)));smartAiSetSelect('smartAiDailyHour',s.daily_hour??8);smartAiSetSelect('smartAiWeeklyEnabled',String(Boolean(s.weekly_enabled)));smartAiSetSelect('smartAiWeeklyDay',s.weekly_day??1);smartAiSetSelect('smartAiWeeklyHour',s.weekly_hour??8);smartAiSetSelect('smartAiMonthlyEnabled',String(Boolean(s.monthly_enabled)));smartAiSetSelect('smartAiMonthlyDay',s.monthly_day??1);smartAiSetSelect('smartAiMonthlyHour',s.monthly_hour??8);const channels=s.delivery_channels||[];const tg=document.getElementById('smartAiChannelTelegram'),em=document.getElementById('smartAiChannelEmail');if(tg)tg.checked=channels.includes('telegram');if(em)em.checked=channels.includes('email');const chats=document.getElementById('smartAiTelegramChatIds');if(chats)chats.value=s.telegram_chat_ids||'';const emails=document.getElementById('smartAiEmailRecipients');if(emails)emails.value=s.email_recipients||'';smartAiSetSelect('smartAiEngine',s.engine||'rules');smartAiSetSelect('smartAiLanguage',s.language||generalSettings.language||'tr');smartAiSetSelect('smartAiAudience',s.default_audience||'executive');smartAiSetSelect('smartAiAskEngine',s.engine||'rules');smartAiSetSelect('smartAiAskLanguage',s.language||generalSettings.language||'tr');}
   async function loadSmartAiHierarchy(customerCode=''){const url=`/api/admin/organization/hierarchy${customerCode?`?customer_code=${encodeURIComponent(customerCode)}`:''}`;const data=await getJson(url);smartAiState.hierarchy=data;const customers=data.companies||[];const c=document.getElementById('smartAiCustomerSelect');if(c){const previous=c.value||data.customer?.code||'';c.innerHTML='<option value="">'+smartAiUi('Şirket seç...','Select company...')+'</option>'+customers.map(x=>`<option value="${esc(x.code)}">${esc(x.name)} (${esc(x.code)})</option>`).join('');if(customers.some(x=>x.code===previous))c.value=previous;else if(data.customer?.code)c.value=data.customer.code;}renderSmartAiLocationOptions(data);return data;}
-  function renderSmartAiLocationOptions(data){const factories=data.flat?.factories||[];const sites=data.flat?.sites||[];const f=document.getElementById('smartAiFactorySelect'),s=document.getElementById('smartAiSiteSelect');const oldF=f?.value||'',oldS=s?.value||'';if(f){f.innerHTML=`<option value="">${smartAiUi('Tüm fabrikalar','All factories')}</option>`+factories.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(factories.some(x=>x.id===oldF))f.value=oldF;}const selected=f?.value||'';const filtered=sites.filter(x=>!selected||String(x.factory_id)===String(selected));if(s){s.innerHTML=`<option value="">${smartAiUi('Tüm tesisler','All sites')}</option>`+filtered.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(filtered.some(x=>x.id===oldS))s.value=oldS;}}
+  function renderSmartAiLocationOptions(data){const factories=data.flat?.factories||[];const sites=data.flat?.sites||[];const f=document.getElementById('smartAiFactorySelect'),s=document.getElementById('smartAiSiteSelect');const oldF=f?.value||'',oldS=s?.value||'';if(f){f.innerHTML=`<option value="">${smartAiUi('Tüm fabrikalar','All factories')}</option>`+factories.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(factories.some(x=>x.id===oldF))f.value=oldF;}const selected=f?.value||'';const filtered=sites.filter(x=>!selected||String(x.factory_id)===String(selected));if(s){s.innerHTML=`<option value="">${smartAiUi('Tüm bölümler / alanlar','All departments / areas')}</option>`+filtered.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(filtered.some(x=>x.id===oldS))s.value=oldS;}}
   function smartAiReportPayload(){const period=document.getElementById('smartAiPeriod')?.value||'daily';return {...smartAiScopePayload(),period,from:document.getElementById('smartAiFrom')?.value,to:document.getElementById('smartAiTo')?.value,audience:document.getElementById('smartAiAudience')?.value||'executive',language:document.getElementById('smartAiLanguage')?.value||'tr',engine:document.getElementById('smartAiEngine')?.value||'rules'};}
-  function renderSmartAiReport(data){const report=data.report||data;smartAiState.latestReport={...report,id:data.report_id||report.id};const m=report.metrics||{},a=m.alarms||{},o=m.oee||{};const findings=(report.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';const risks=(report.risks||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';const recs=(report.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';const id=data.report_id||report.id||'';const target=document.getElementById('smartAiReportPreview');if(!target)return;target.innerHTML=`<div class="smartai-score-v650"><div><h3>${smartAiUi('Yönetici Özeti','Executive Summary')}</h3><p>${esc(report.summary||'-')}</p></div><strong>${esc(report.health_score||0)}/100</strong></div><div class="smartai-grid-v650"><article class="smartai-kpi-v650"><span>${smartAiUi('Toplam Alarm','Total Alarms')}</span><strong>${esc(a.total||0)}</strong></article><article class="smartai-kpi-v650"><span>OEE</span><strong>${esc(Number(o.oee_pct||0).toFixed(1))}%</strong></article><article class="smartai-kpi-v650"><span>${smartAiUi('Gecikmiş Bakım','Overdue Maintenance')}</span><strong>${esc(Number(m.overdue_tickets||0)+Number(m.overdue_plans||0))}</strong></article><article class="smartai-kpi-v650"><span>${smartAiUi('Kritik Stok','Critical Stock')}</span><strong>${esc(m.low_stock||0)}</strong></article></div><div class="smartai-layout-v650"><div><div class="smartai-panel-v650"><h3>${smartAiUi('Bulgular','Findings')}</h3><ul class="smartai-list-v650">${findings}</ul></div><div class="smartai-panel-v650"><h3>${smartAiUi('Öneriler','Recommendations')}</h3><ul class="smartai-list-v650">${recs}</ul></div></div><div><div class="smartai-panel-v650"><h3>${smartAiUi('Riskler','Risks')}</h3><ul class="smartai-list-v650">${risks}</ul></div><div class="smartai-panel-v650"><h3>${smartAiUi('Rapor Bilgisi','Report Info')}</h3><p>${smartAiUi('Dönem','Period')}: ${esc(report.period?.from)} — ${esc(report.period?.to)}</p><p>${smartAiUi('Hedef Kitle','Audience')}: ${esc(smartAiAudienceLabel(report.audience))}</p><p>${smartAiUi('Motor','Engine')}: ${esc(report.ai_engine)}</p>${id?`<div class="admin-form-actions"><button class="secondary-btn" data-smartai-action="deliver-telegram" data-id="${esc(id)}">Telegram</button><button class="secondary-btn" data-smartai-action="deliver-email" data-id="${esc(id)}">E-posta</button><button class="secondary-btn" data-smartai-action="download-text" data-id="${esc(id)}">TXT</button><button class="secondary-btn" data-smartai-action="print" data-id="${esc(id)}">PDF / Yazdır</button></div>`:''}</div></div></div>`;}
+  function renderSmartAiReport(data){
+    const report=data.report||data;
+    smartAiState.latestReport={...report,id:data.report_id||report.id};
+
+    const m=report.metrics||{};
+    const a=m.alarms||{};
+    const o=m.oee||{};
+    const insufficient=
+      report.score_status==='insufficient_data' ||
+      report.health_score===null ||
+      report.health_score===undefined;
+
+    const scoreText=insufficient
+      ? smartAiUi('Hesaplanamadı','Not calculated')
+      : `${Number(report.health_score)}/100`;
+
+    const oeeText=insufficient
+      ? '—'
+      : `${Number(o.oee_pct||0).toFixed(1)}%`;
+
+    const findings=(report.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';
+    const risks=(report.risks||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';
+    const recs=(report.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>';
+    const id=data.report_id||report.id||'';
+    const engineLabel=report.ai_engine==='rules'
+      ? smartAiUi('HukaTech Kural Motoru','HukaTech Rule Engine')
+      : report.ai_engine;
+
+    const target=document.getElementById('smartAiReportPreview');
+    if(!target)return;
+
+    target.innerHTML=`<div class="smartai-score-v650">
+      <div>
+        <h3>${smartAiUi('Yönetici Özeti','Executive Summary')}</h3>
+        <p>${esc(report.summary||'-')}</p>
+      </div>
+      <strong class="${insufficient?'smartai-score-unavailable-v1':''}">${esc(scoreText)}</strong>
+    </div>
+    <div class="smartai-grid-v650">
+      <article class="smartai-kpi-v650"><span>${smartAiUi('Toplam Alarm','Total Alarms')}</span><strong>${esc(a.total||0)}</strong></article>
+      <article class="smartai-kpi-v650"><span>OEE</span><strong>${esc(oeeText)}</strong></article>
+      <article class="smartai-kpi-v650"><span>${smartAiUi('Gecikmiş Bakım','Overdue Maintenance')}</span><strong>${esc(Number(m.overdue_tickets||0)+Number(m.overdue_plans||0))}</strong></article>
+      <article class="smartai-kpi-v650"><span>${smartAiUi('Kritik Stok','Critical Stock')}</span><strong>${esc(m.low_stock||0)}</strong></article>
+    </div>
+    <div class="smartai-layout-v650">
+      <div>
+        <div class="smartai-panel-v650"><h3>${smartAiUi('Bulgular','Findings')}</h3><ul class="smartai-list-v650">${findings}</ul></div>
+        <div class="smartai-panel-v650"><h3>${smartAiUi('Öneriler','Recommendations')}</h3><ul class="smartai-list-v650">${recs}</ul></div>
+      </div>
+      <div>
+        <div class="smartai-panel-v650"><h3>${smartAiUi('Riskler','Risks')}</h3><ul class="smartai-list-v650">${risks}</ul></div>
+        <div class="smartai-panel-v650">
+          <h3>${smartAiUi('Rapor Bilgisi','Report Info')}</h3>
+          <p>${smartAiUi('Dönem','Period')}: ${esc(report.period?.from)} — ${esc(report.period?.to)}</p>
+          <p>${smartAiUi('Hedef Kitle','Audience')}: ${esc(smartAiAudienceLabel(report.audience))}</p>
+          <p>${smartAiUi('Motor','Engine')}: ${esc(engineLabel)}</p>
+          ${id?`<div class="admin-form-actions">
+            <button class="secondary-btn" data-smartai-action="deliver-telegram" data-id="${esc(id)}">Telegram</button>
+            <button class="secondary-btn" data-smartai-action="deliver-email" data-id="${esc(id)}">E-posta</button>
+            <button class="secondary-btn" data-smartai-action="download-text" data-id="${esc(id)}">TXT</button>
+            <button class="secondary-btn" data-smartai-action="print" data-id="${esc(id)}">PDF / Yazdır</button>
+          </div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
   function renderSmartAiHistory(data){
     smartAiState.reports=data.reports||[];
     const target=document.getElementById('smartAiHistoryTable');
     if(!target)return;
+
     target.innerHTML=table([
-      {label:smartAiUi('Dönem','Period'),html:true,value:r=>`<strong>${esc(smartAiPeriodLabel(String(r.report_type||'').replace('smartai_','')))}</strong><br><small class="muted">${esc(smartAiDateOnly(r.period_start))} — ${esc(smartAiDateOnly(r.period_end))}</small>`},
-      {label:smartAiUi('Skor','Score'),value:r=>`${r.health_score??'-'}/100`},
+      {
+        label:smartAiUi('Dönem','Period'),
+        html:true,
+        value:r=>`<strong>${esc(smartAiPeriodLabel(String(r.report_type||'').replace('smartai_','')))}</strong><br><small class="muted">${esc(smartAiDateOnly(r.period_start))} — ${esc(smartAiDateOnly(r.period_end))}</small>`
+      },
+      {
+        label:smartAiUi('Skor','Score'),
+        value:r=>(r.score_status==='insufficient_data'||r.health_score===null||r.health_score===undefined)
+          ? smartAiUi('Hesaplanamadı','Not calculated')
+          : `${r.health_score}/100`
+      },
       {label:smartAiUi('Özet','Summary'),value:r=>r.summary||'-'},
       {label:smartAiUi('Hedef','Audience'),value:r=>smartAiAudienceLabel(r.audience)},
-      {label:smartAiUi('Motor','Engine'),value:r=>r.ai_engine||'-'},
+      {
+        label:smartAiUi('Motor','Engine'),
+        value:r=>r.ai_engine==='rules'
+          ? smartAiUi('HukaTech Kural Motoru','HukaTech Rule Engine')
+          : (r.ai_engine||'-')
+      },
       {label:smartAiUi('Oluşturulma','Created'),value:r=>fmtDate(r.created_at)},
-      {label:smartAiUi('İşlem','Action'),html:true,value:r=>`<div class="smartai-history-actions-v650"><button type="button" class="secondary-btn" data-smartai-action="view" data-id="${esc(r.id)}">${esc(smartAiUi('Detay','Detail'))}</button><button type="button" class="secondary-btn" data-smartai-action="download-text" data-id="${esc(r.id)}">TXT</button><button type="button" class="secondary-btn" data-smartai-action="print" data-id="${esc(r.id)}">PDF</button></div>`}
+      {
+        label:smartAiUi('İşlem','Action'),
+        html:true,
+        value:r=>`<div class="smartai-history-actions-v650">
+          <button type="button" class="secondary-btn" data-smartai-action="view" data-id="${esc(r.id)}">${esc(smartAiUi('Detay','Detail'))}</button>
+          <button type="button" class="secondary-btn" data-smartai-action="download-text" data-id="${esc(r.id)}">TXT</button>
+          <button type="button" class="secondary-btn" data-smartai-action="print" data-id="${esc(r.id)}">PDF</button>
+        </div>`
+      }
     ],smartAiState.reports);
   }
   function renderSmartAiQuestions(data){smartAiState.questions=data.questions||[];const target=document.getElementById('smartAiQuestionsTable');if(!target)return;target.innerHTML=table([{label:smartAiUi('Soru','Question'),value:r=>esc(r.question)},{label:smartAiUi('Cevap','Answer'),value:r=>esc(r.answer)},{label:smartAiUi('Niyet','Intent'),value:r=>r.intent||'-'},{label:smartAiUi('Motor','Engine'),value:r=>r.ai_engine||'-'},{label:smartAiUi('Tarih','Date'),value:r=>fmtDate(r.created_at)}],smartAiState.questions.slice(0,25));}
   function renderSmartAiAnswer(data){const a=data.answer||data;const target=document.getElementById('smartAiAnswer');if(!target)return;target.innerHTML=`<div class="meta">${esc(a.intent||'-')} · ${esc(a.ai_engine||'-')} · ${esc(a.period?.from||'-')} — ${esc(a.period?.to||'-')}</div><div class="answer">${esc(a.answer||'-')}</div><h4>${smartAiUi('Bulgular','Findings')}</h4><ul class="smartai-list-v650">${(a.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul><h4>${smartAiUi('Öneriler','Recommendations')}</h4><ul class="smartai-list-v650">${(a.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul>`;}
-  async function smartAiDownload(id,type='text'){const token=authToken();const res=await fetch(`/api/admin/smartai/reports/${encodeURIComponent(id)}/${type}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!res.ok)throw new Error(`${smartAiUi('Rapor açılamadı','Report could not be opened')}: ${res.status}`);if(type==='print'){const html=await res.text();const w=window.open('','_blank','noopener');if(!w)throw new Error(smartAiUi('Açılır pencereye izin ver.','Allow pop-up windows.'));w.document.open();w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);return;}const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`FactoryBox_SmartAI_${id}.txt`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+  async function smartAiDownload(id,type='text'){const token=authToken();const res=await fetch(`/api/admin/smartai/reports/${encodeURIComponent(id)}/${type}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!res.ok)throw new Error(`${smartAiUi('Rapor açılamadı','Report could not be opened')}: ${res.status}`);if(type==='print'){const html=await res.text();const w=window.open('','_blank','noopener');if(!w)throw new Error(smartAiUi('Açılır pencereye izin ver.','Allow pop-up windows.'));w.document.open();w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);return;}const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`HukaTech_AI_${id}.txt`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
   async function loadSmartAiHistory(){const period=document.getElementById('smartAiHistoryPeriod')?.value||'',limit=document.getElementById('smartAiHistoryLimit')?.value||100;const q=new URLSearchParams({customer_code:smartAiSelectedCustomer(),limit});if(period)q.set('period',period);renderSmartAiHistory(await getJson(`/api/admin/smartai/reports?${q}`));}
   async function loadSmartAiQuestions(){renderSmartAiQuestions(await getJson(`/api/admin/smartai/questions?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}&limit=50`));}
   async function loadSmartAiCenter(){initializeSmartAiDates();await loadSmartAiHierarchy(smartAiSelectedCustomer());const code=smartAiSelectedCustomer();const [status,settings]=await Promise.all([getJson(`/api/admin/smartai/status?customer_code=${encodeURIComponent(code)}`),getJson(`/api/admin/smartai/settings?customer_code=${encodeURIComponent(code)}`)]);renderSmartAiStatus(status);renderSmartAiSettings(settings);await Promise.all([loadSmartAiHistory(),loadSmartAiQuestions()]);}
@@ -8593,20 +9150,47 @@
   }
 
   async function saveUser(button) {
-    const tr = button.closest('tr');
-    const id = button.dataset.id;
-    const role = tr.querySelector('.user-role-select').value;
-    const status = tr.querySelector('.user-status-select').value;
+    const tr=button.closest('tr');
+    const id=button.dataset.id;
+    const roleSelect=tr.querySelector('.user-role-select');
+    const statusSelect=tr.querySelector('.user-status-select');
+    const role=roleSelect.value;
+    const status=statusSelect.value;
+    const originalRole=roleSelect.dataset.original||role;
+    const originalStatus=statusSelect.dataset.original||status;
 
-    await apiJson(`/api/admin/users/${encodeURIComponent(id)}/role`, {
-      method:'PATCH',
-      body:JSON.stringify({role})
-    });
+    const changes=[];
+    if(role!==originalRole)changes.push(`Rol: ${userRoleLabelV1(originalRole)} → ${userRoleLabelV1(role)}`);
+    if(status!==originalStatus)changes.push(`Durum: ${userStatusLabelV1(originalStatus)} → ${userStatusLabelV1(status)}`);
+    if(!changes.length)return {changed:false};
 
-    await apiJson(`/api/admin/users/${encodeURIComponent(id)}/status`, {
-      method:'PATCH',
-      body:JSON.stringify({status})
-    });
+    const warning=[
+      'Kullanıcı güncellenecek.',
+      ...changes,
+      '',
+      role!==originalRole?'Rol değişikliği kullanıcının diğer açık oturumlarını kapatabilir.':'',
+      status!=='active'?'Pasif veya askıya alınmış kullanıcıların tüm oturumları kapatılır.':'',
+      '',
+      'Devam edilsin mi?'
+    ].filter(Boolean).join('\n');
+
+    if(!window.confirm(warning))return {changed:false,cancelled:true};
+
+    if(role!==originalRole){
+      await apiJson(`/api/admin/users/${encodeURIComponent(id)}/role`,{
+        method:'PATCH',
+        body:JSON.stringify({role})
+      });
+    }
+
+    if(status!==originalStatus){
+      await apiJson(`/api/admin/users/${encodeURIComponent(id)}/status`,{
+        method:'PATCH',
+        body:JSON.stringify({status})
+      });
+    }
+
+    return {changed:true};
   }
 
   async function saveCustomer(button) {
@@ -9224,29 +9808,28 @@
     const customer_code = document.getElementById('inviteCustomerCode').value.trim();
     const site_code = document.getElementById('inviteSiteCode').value.trim();
     const send_email = document.getElementById('inviteSendEmail').checked;
+    const permissions = window.HukaTechPermissionUX?.selectedInvitePermissions?.() || [];
 
     const data = await apiJson('/api/admin/invites', {
       method:'POST',
-      body:JSON.stringify({email, full_name, role, customer_code, site_code, send_email})
+      body:JSON.stringify({email, full_name, role, permissions, customer_code, site_code, send_email})
     });
 
     const result = document.getElementById('inviteResult');
-    const url = data.invite.invite_url;
-    result.innerHTML = `Davet oluşturuldu: <code>${esc(url)}</code>`;
+    const emailRequested = Boolean(send_email);
+    const emailSent = Boolean(data.email?.sent);
 
-    if (data.email) {
-      result.innerHTML += data.email.sent
-        ? ' <strong>Mail gönderildi.</strong>'
-        : ` <strong>Mail gönderilemedi:</strong> ${esc(data.email.reason || 'SMTP kontrol et')}`;
+    if (!emailRequested) {
+      result.textContent = 'Davet oluşturuldu. Bağlantıyı bekleyen davetteki Kopyala düğmesiyle alabilirsiniz.';
+    } else if (emailSent) {
+      result.textContent = 'Davet oluşturuldu. E-posta gönderildi.';
+    } else {
+      result.textContent = 'Davet oluşturuldu. E-posta gönderilemedi. Bekleyen davetteki Kopyala veya E-postayı Yeniden Gönder seçeneklerini kullanabilirsiniz.';
     }
-
-    try {
-      await navigator.clipboard.writeText(url);
-      result.innerHTML += ' <strong>Link kopyalandı.</strong>';
-    } catch {}
 
     document.getElementById('inviteEmail').value = '';
     document.getElementById('inviteFullName').value = '';
+    window.HukaTechPermissionUX?.resetInvitePermissions?.();
   }
 
   async function cancelInvite(button) {
@@ -9259,7 +9842,7 @@
     const url = button.dataset.url;
     const absolute = url.startsWith('http') ? url : `${location.origin}${url}`;
     await navigator.clipboard.writeText(absolute);
-    document.getElementById('inviteResult').innerHTML = `Davet linki kopyalandı: <code>${esc(absolute)}</code>`;
+    document.getElementById('inviteResult').textContent = 'Davet bağlantısı panoya kopyalandı.';
   }
 
   async function sendInviteEmail(button) {
@@ -9283,10 +9866,27 @@
     status.textContent = 'İşlem yapılıyor...';
 
     try {
-      if (action === 'save-user') {
-        await saveUser(button);
-        await loadAdmin();
-        status.textContent = 'Kullanıcı güncellendi. Permission kontrolü uygulandı.';
+      if(action==='edit-user'){
+        setUserRowEditModeV1(button,true);
+        status.textContent='Kullanıcı düzenleme modu açıldı.';
+      }
+
+      if(action==='cancel-user'){
+        setUserRowEditModeV1(button,false);
+        status.textContent='Kullanıcı değişiklikleri iptal edildi.';
+      }
+
+      if(action==='save-user'){
+        const result=await saveUser(button);
+        if(result?.changed){
+          await loadAdmin();
+          status.textContent='Kullanıcı güncellendi. Yetki ve oturum güvenliği uygulandı.';
+        }else if(result?.cancelled){
+          status.textContent='Kullanıcı güncellemesi iptal edildi.';
+        }else{
+          setUserRowEditModeV1(button,false);
+          status.textContent='Değişiklik yok.';
+        }
       }
 
       if (action === 'save-customer') {
@@ -9859,7 +10459,10 @@
         if (!can('MANAGE_INVITES')) throw new Error('Permission required: MANAGE_INVITES');
         await createInvite();
         await loadAdmin();
-        document.getElementById('adminStatus').textContent = 'Davet oluşturuldu. Mail durumu güncellendi.';
+        document.getElementById('adminStatus').textContent =
+          document.getElementById('inviteSendEmail')?.checked
+            ? 'Davet oluşturuldu. E-posta sonucu aşağıda gösterildi.'
+            : 'Davet oluşturuldu. Bağlantı hazırlandı.';
       } catch(e) {
         document.getElementById('adminStatus').textContent = e.message;
       } finally {
@@ -9969,10 +10572,10 @@
     const applySmartAiHistoryBtn=document.getElementById('applySmartAiHistoryBtn');if(applySmartAiHistoryBtn)applySmartAiHistoryBtn.addEventListener('click',loadSmartAiHistory);
     const smartAiCustomer=document.getElementById('smartAiCustomerSelect');if(smartAiCustomer)smartAiCustomer.addEventListener('change',async()=>{await loadSmartAiHierarchy(smartAiCustomer.value);await loadSmartAiCenter();});
     const smartAiFactory=document.getElementById('smartAiFactorySelect');if(smartAiFactory)smartAiFactory.addEventListener('change',()=>renderSmartAiLocationOptions(smartAiState.hierarchy||{}));
-    const generateSmartAiReportBtn=document.getElementById('generateSmartAiReportBtn');if(generateSmartAiReportBtn)generateSmartAiReportBtn.addEventListener('click',async()=>{generateSmartAiReportBtn.disabled=true;const st=document.getElementById('smartAiReportStatus');try{if(st)st.textContent=smartAiUi('SmartAI raporu oluşturuluyor...','Generating SmartAI report...');const data=await apiJson('/api/admin/smartai/reports/generate',{method:'POST',body:JSON.stringify(smartAiReportPayload())});renderSmartAiReport(data);if(st)st.textContent=smartAiUi(`Rapor kaydedildi: ${data.report_id}`,`Report saved: ${data.report_id}`);await loadSmartAiHistory();}catch(e){if(st)st.textContent=e.message;}finally{generateSmartAiReportBtn.disabled=false;}});
+    const generateSmartAiReportBtn=document.getElementById('generateSmartAiReportBtn');if(generateSmartAiReportBtn)generateSmartAiReportBtn.addEventListener('click',async()=>{generateSmartAiReportBtn.disabled=true;const st=document.getElementById('smartAiReportStatus');try{if(st)st.textContent=smartAiUi('HukaTech AI raporu oluşturuluyor...','Generating HukaTech AI report...');const data=await apiJson('/api/admin/smartai/reports/generate',{method:'POST',body:JSON.stringify(smartAiReportPayload())});renderSmartAiReport(data);if(st)st.textContent=smartAiUi(`Rapor kaydedildi: ${data.report_id}`,`Report saved: ${data.report_id}`);await loadSmartAiHistory();}catch(e){if(st)st.textContent=e.message;}finally{generateSmartAiReportBtn.disabled=false;}});
     const askSmartAiBtn=document.getElementById('askSmartAiBtn');if(askSmartAiBtn)askSmartAiBtn.addEventListener('click',async()=>{askSmartAiBtn.disabled=true;const st=document.getElementById('smartAiAskStatus');try{if(st)st.textContent=smartAiUi('Veriler analiz ediliyor...','Analyzing data...');const body={...smartAiScopePayload(),question:document.getElementById('smartAiQuestion')?.value,period:document.getElementById('smartAiAskPeriod')?.value,from:document.getElementById('smartAiAskFrom')?.value,to:document.getElementById('smartAiAskTo')?.value,language:document.getElementById('smartAiAskLanguage')?.value,engine:document.getElementById('smartAiAskEngine')?.value};const data=await apiJson('/api/admin/smartai/ask',{method:'POST',body:JSON.stringify(body)});renderSmartAiAnswer(data);if(st)st.textContent=smartAiUi('Analiz tamamlandı.','Analysis completed.');await loadSmartAiQuestions();}catch(e){if(st)st.textContent=e.message;}finally{askSmartAiBtn.disabled=false;}});
     document.querySelectorAll('[data-smartai-question]').forEach(btn=>btn.addEventListener('click',()=>{const q=document.getElementById('smartAiQuestion');if(q)q.value=btn.dataset.smartaiQuestion||'';}));
-    const saveSmartAiSettingsBtn=document.getElementById('saveSmartAiSettingsBtn');if(saveSmartAiSettingsBtn)saveSmartAiSettingsBtn.addEventListener('click',async()=>{saveSmartAiSettingsBtn.disabled=true;const st=document.getElementById('smartAiSettingsActionStatus');try{await saveSmartAiSettings();if(st)st.textContent=smartAiUi('SmartAI ayarları kaydedildi.','SmartAI settings saved.');await loadSmartAiCenter();}catch(e){if(st)st.textContent=e.message;}finally{saveSmartAiSettingsBtn.disabled=false;}});
+    const saveSmartAiSettingsBtn=document.getElementById('saveSmartAiSettingsBtn');if(saveSmartAiSettingsBtn)saveSmartAiSettingsBtn.addEventListener('click',async()=>{saveSmartAiSettingsBtn.disabled=true;const st=document.getElementById('smartAiSettingsActionStatus');try{await saveSmartAiSettings();if(st)st.textContent=smartAiUi('HukaTech AI ayarları kaydedildi.','HukaTech AI settings saved.');await loadSmartAiCenter();}catch(e){if(st)st.textContent=e.message;}finally{saveSmartAiSettingsBtn.disabled=false;}});
     ['smartAiReportsSection','smartAiHistorySection'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',async e=>{const btn=e.target.closest('[data-smartai-action]');if(!btn)return;btn.disabled=true;try{await handleSmartAiAction(btn);}catch(error){const st=document.getElementById('smartAiReportStatus');if(st)st.textContent=error.message;}finally{btn.disabled=false;}});});
 
     initializeOrganizationDates();
@@ -10006,9 +10609,12 @@
       setAdminView(jump.dataset.dashboardView);
     });
     document.body.addEventListener('click', handleAction);
-    document.body.addEventListener('change', (e) => {
-      if (e.target && e.target.classList && e.target.classList.contains('user-role-select')) {
+    document.body.addEventListener('change',(e)=>{
+      if(e.target?.classList?.contains('user-role-select')){
         updateUserPermissionPreview(e.target);
+      }
+      if(e.target?.id==='inviteCustomerCode'){
+        syncInviteSelectorsV1();
       }
     });
     startTranslationObserver();
@@ -10077,5 +10683,1294 @@
     }
   })();
   </script>
+<style id="hukatechGranularPermissionsV1Style">
+  /* HUKATECH_GRANULAR_USER_PERMISSIONS_V1 */
+  .invite-permission-chooser-v1{
+    grid-column:1/-1;
+    border:1px solid #dfe6ec;
+    border-radius:14px;
+    background:#f8fafb;
+    overflow:hidden;
+  }
+  .invite-permission-toggle-v1{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    border:0;
+    background:transparent;
+    padding:13px 15px;
+    color:#34414b;
+    font-weight:750;
+    cursor:pointer;
+    text-align:left;
+  }
+  .invite-permission-toggle-v1 small{
+    color:#74808a;
+    font-weight:650;
+  }
+  .invite-permission-body-v1{
+    display:none;
+    padding:0 15px 15px;
+    border-top:1px solid #e5ebef;
+  }
+  .invite-permission-chooser-v1.is-open .invite-permission-body-v1{display:block}
+  .permission-toolbar-v1{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin:12px 0;
+    flex-wrap:wrap;
+  }
+  .permission-toolbar-v1 p{
+    margin:0;
+    color:#687580;
+    font-size:12px;
+    line-height:1.45;
+  }
+  .permission-toolbar-actions-v1{
+    display:flex;
+    gap:8px;
+  }
+  .permission-text-btn-v1{
+    border:1px solid #d7e0e6;
+    background:#fff;
+    border-radius:9px;
+    padding:6px 9px;
+    color:#43515c;
+    font-size:11px;
+    font-weight:750;
+    cursor:pointer;
+  }
+  .permission-text-btn-v1:disabled{opacity:.5;cursor:not-allowed}
+  .permission-grid-v1{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+  }
+  .permission-option-v1{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    min-width:0;
+    padding:9px 10px;
+    border:1px solid #e2e8ec;
+    border-radius:11px;
+    background:#fff;
+    color:#3f4c56;
+    font-size:12px;
+    line-height:1.35;
+    cursor:pointer;
+  }
+  .permission-option-v1 input{
+    width:15px!important;
+    height:15px!important;
+    min-width:15px;
+    margin:1px 0 0!important;
+    padding:0!important;
+  }
+  .permission-option-v1.is-required{
+    background:#f2f5f7;
+    color:#65717a;
+  }
+  .user-permission-summary-v1{
+    border:0;
+    background:transparent;
+    padding:0;
+    text-align:left;
+    cursor:pointer;
+  }
+  .user-permission-summary-v1:hover .user-permission-more-v1,
+  .user-permission-summary-v1:focus-visible .user-permission-more-v1{
+    border-color:#c77725;
+    color:#a75f17;
+  }
+  .permission-modal-v1[hidden]{display:none!important}
+  .permission-modal-v1{
+    position:fixed;
+    inset:0;
+    z-index:10050;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:22px;
+  }
+  .permission-modal-backdrop-v1{
+    position:absolute;
+    inset:0;
+    background:rgba(15,23,42,.52);
+    backdrop-filter:blur(2px);
+  }
+  .permission-modal-card-v1{
+    position:relative;
+    z-index:1;
+    width:min(820px,100%);
+    max-height:min(82vh,760px);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid #dfe6eb;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 24px 70px rgba(15,23,42,.25);
+  }
+  .permission-modal-head-v1{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+    padding:20px 22px 16px;
+    border-bottom:1px solid #e7ecef;
+  }
+  .permission-modal-head-v1 h3{
+    margin:0 0 5px;
+    color:#26333d;
+    font-size:20px;
+  }
+  .permission-modal-head-v1 p{
+    margin:0;
+    color:#73808a;
+    font-size:12px;
+  }
+  .permission-modal-close-v1{
+    width:34px;
+    height:34px;
+    border:1px solid #dfe6eb;
+    border-radius:10px;
+    background:#fff;
+    color:#53616b;
+    font-size:20px;
+    cursor:pointer;
+  }
+  .permission-modal-body-v1{
+    overflow:auto;
+    padding:18px 22px;
+  }
+  .permission-modal-notice-v1{
+    margin:0 0 14px;
+    padding:11px 12px;
+    border:1px solid #e1e7eb;
+    border-radius:11px;
+    background:#f7f9fa;
+    color:#64717b;
+    font-size:12px;
+    line-height:1.5;
+  }
+  .permission-modal-actions-v1{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:9px;
+    padding:15px 22px;
+    border-top:1px solid #e7ecef;
+    background:#fafbfc;
+  }
+  .permission-modal-status-v1{
+    margin-right:auto;
+    color:#697680;
+    font-size:12px;
+  }
+  @media(max-width:980px){
+    .permission-grid-v1{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media(max-width:640px){
+    .permission-grid-v1{grid-template-columns:1fr}
+    .permission-modal-v1{padding:10px}
+    .permission-modal-actions-v1{flex-wrap:wrap}
+    .permission-modal-status-v1{width:100%}
+  }
+</style>
+
+<div id="hukatechPermissionModalV1" class="permission-modal-v1" hidden>
+  <div class="permission-modal-backdrop-v1" data-permission-close-v1></div>
+  <section class="permission-modal-card-v1" role="dialog" aria-modal="true" aria-labelledby="hukatechPermissionModalTitleV1">
+    <header class="permission-modal-head-v1">
+      <div>
+        <h3 id="hukatechPermissionModalTitleV1">Kullanıcı Yetkileri</h3>
+        <p id="hukatechPermissionModalSubtitleV1"></p>
+      </div>
+      <button type="button" class="permission-modal-close-v1" data-permission-close-v1 aria-label="Kapat">×</button>
+    </header>
+    <div class="permission-modal-body-v1">
+      <p id="hukatechPermissionModalNoticeV1" class="permission-modal-notice-v1"></p>
+      <div id="hukatechPermissionModalGridV1" class="permission-grid-v1"></div>
+    </div>
+    <footer class="permission-modal-actions-v1">
+      <span id="hukatechPermissionModalStatusV1" class="permission-modal-status-v1"></span>
+      <button type="button" class="secondary-btn" data-permission-close-v1>Kapat</button>
+      <button type="button" id="hukatechPermissionModalSaveV1" class="primary-btn" hidden>Yetkileri Kaydet</button>
+    </footer>
+  </section>
+</div>
+
+<script id="hukatechGranularPermissionsV1Script">
+(function(){
+  const MATRIX={"system_admin":["ADMIN_VIEW","MANAGE_USERS","MANAGE_CUSTOMERS","MANAGE_SITES","MANAGE_DEVICES","MANAGE_INVITES","VIEW_BILLING","MANAGE_BILLING","AUDIT_VIEW","SEND_REPORTS","VIEW_REPORTS","VIEW_DASHBOARD","VIEW_MAINTENANCE","MANAGE_MAINTENANCE"],"owner":["ADMIN_VIEW","MANAGE_USERS","MANAGE_CUSTOMERS","MANAGE_SITES","MANAGE_DEVICES","MANAGE_INVITES","VIEW_BILLING","MANAGE_BILLING","AUDIT_VIEW","SEND_REPORTS","VIEW_REPORTS","VIEW_DASHBOARD","VIEW_MAINTENANCE","MANAGE_MAINTENANCE"],"admin":["ADMIN_VIEW","MANAGE_CUSTOMERS","MANAGE_SITES","MANAGE_DEVICES","MANAGE_INVITES","VIEW_BILLING","AUDIT_VIEW","SEND_REPORTS","VIEW_REPORTS","VIEW_DASHBOARD","VIEW_MAINTENANCE","MANAGE_MAINTENANCE"],"operator":["SEND_REPORTS","VIEW_REPORTS","VIEW_DASHBOARD","VIEW_MAINTENANCE","MANAGE_MAINTENANCE"],"viewer":["VIEW_REPORTS","VIEW_DASHBOARD","VIEW_MAINTENANCE"]};
+  const FIXED_ROLES=new Set(['owner','system_admin']);
+  const REQUIRED_BY_ROLE={admin:['ADMIN_VIEW']};
+
+  const LABELS={
+    ADMIN_VIEW:'Yönetim paneline erişim',
+    MANAGE_USERS:'Kullanıcıları yönetme',
+    MANAGE_CUSTOMERS:'Şirketleri yönetme',
+    MANAGE_SITES:'Lokasyonları yönetme',
+    MANAGE_DEVICES:'Cihazları yönetme',
+    MANAGE_INVITES:'Davetleri yönetme',
+    VIEW_BILLING:'Abonelikleri görüntüleme',
+    MANAGE_BILLING:'Abonelikleri yönetme',
+    AUDIT_VIEW:'Denetim kayıtlarını görüntüleme',
+    SEND_REPORTS:'Rapor gönderme',
+    VIEW_REPORTS:'Raporları görüntüleme',
+    VIEW_DASHBOARD:'Ana paneli görüntüleme',
+    VIEW_MAINTENANCE:'Bakım kayıtlarını görüntüleme',
+    MANAGE_MAINTENANCE:'Bakım kayıtlarını yönetme',
+    VIEW_ALARMS:'Alarmları görüntüleme',
+    MANAGE_ALARMS:'Alarmları yönetme',
+    ACKNOWLEDGE_ALARMS:'Alarmları onaylama',
+    CLEAR_ALARMS:'Alarmları kapatma',
+    VIEW_ASSETS:'Makineleri görüntüleme',
+    MANAGE_ASSETS:'Makineleri yönetme',
+    VIEW_DEVICES:'Cihazları görüntüleme',
+    VIEW_CUSTOMERS:'Şirketleri görüntüleme',
+    VIEW_SITES:'Lokasyonları görüntüleme',
+    VIEW_INVENTORY:'Stokları görüntüleme',
+    MANAGE_INVENTORY:'Stokları yönetme',
+    VIEW_OEE:'OEE verilerini görüntüleme',
+    MANAGE_OEE:'OEE verilerini yönetme',
+    MANAGE_SETTINGS:'Ayarları yönetme',
+    VIEW_SECURITY:'Güvenlik kayıtlarını görüntüleme',
+    MANAGE_SECURITY:'Güvenlik ayarlarını yönetme'
+  };
+
+  const ROLE_LABELS={
+    viewer:'Görüntüleyici',
+    operator:'Operatör',
+    admin:'Yönetici',
+    owner:'Firma Sahibi',
+    system_admin:'Sistem Yöneticisi'
+  };
+
+  function label(code){
+    if(LABELS[code])return LABELS[code];
+    return String(code||'')
+      .toLocaleLowerCase('tr-TR')
+      .split('_')
+      .filter(Boolean)
+      .map(x=>x.charAt(0).toLocaleUpperCase('tr-TR')+x.slice(1))
+      .join(' ');
+  }
+
+  function rolePermissions(role){
+    return Array.isArray(MATRIX[role])?[...MATRIX[role]]:[...(MATRIX.viewer||[])];
+  }
+
+  function requiredPermissions(role){
+    return REQUIRED_BY_ROLE[role]||[];
+  }
+
+  function authToken(){
+    const keys=['factorybox_auth_token','hukatech_auth_token','auth_token'];
+    for(const key of keys){
+      const value=localStorage.getItem(key)||sessionStorage.getItem(key);
+      if(value)return value;
+    }
+    return '';
+  }
+
+  async function api(url,options={}){
+    const headers={...(options.headers||{})};
+    const token=authToken();
+    if(token)headers.Authorization=`Bearer ${token}`;
+    if(options.body)headers['Content-Type']='application/json';
+    const response=await fetch(url,{...options,headers});
+    let body=null;
+    try{body=await response.json()}catch{}
+    if(!response.ok)throw new Error(body?.message||`İstek başarısız: ${response.status}`);
+    return body;
+  }
+
+  function optionHtml(code,checked,disabled=false){
+    return `<label class="permission-option-v1${disabled?' is-required':''}">
+      <input type="checkbox" value="${String(code).replaceAll('"','&quot;')}" ${checked?'checked':''} ${disabled?'disabled':''}>
+      <span>${label(code)}</span>
+    </label>`;
+  }
+
+  const chooserState={role:'viewer',selected:new Set(rolePermissions('viewer'))};
+
+  function renderInviteChooser(){
+    const host=document.getElementById('invitePermissionChooserV1');
+    if(!host)return;
+    const role=document.getElementById('inviteRole')?.value||'viewer';
+    if(chooserState.role!==role){
+      chooserState.role=role;
+      chooserState.selected=new Set(rolePermissions(role));
+    }
+
+    const allowed=rolePermissions(role);
+    const required=new Set(requiredPermissions(role));
+    const fixed=FIXED_ROLES.has(role);
+    required.forEach(x=>chooserState.selected.add(x));
+    chooserState.selected=new Set(allowed.filter(x=>chooserState.selected.has(x)));
+
+    const selectedCount=allowed.filter(x=>chooserState.selected.has(x)).length;
+    const open=host.classList.contains('is-open');
+
+    host.className=`invite-permission-chooser-v1${open?' is-open':''}`;
+    host.innerHTML=`
+      <button type="button" class="invite-permission-toggle-v1" aria-expanded="${open?'true':'false'}">
+        <span>Rol Yetkileri</span>
+        <small>${selectedCount} / ${allowed.length} yetki seçili · ${open?'Kapat':'Düzenle'}</small>
+      </button>
+      <div class="invite-permission-body-v1">
+        <div class="permission-toolbar-v1">
+          <p>${fixed?'Bu kritik rolün yetkileri güvenlik nedeniyle sabittir.':'Rolün izin verdiği yetkileri seçebilirsiniz. Rol dışı yetki eklenemez.'}</p>
+          <div class="permission-toolbar-actions-v1">
+            <button type="button" class="permission-text-btn-v1" data-invite-permission-all ${fixed?'disabled':''}>Tümünü Seç</button>
+            <button type="button" class="permission-text-btn-v1" data-invite-permission-clear ${fixed?'disabled':''}>Temizle</button>
+          </div>
+        </div>
+        <div class="permission-grid-v1">
+          ${allowed.map(code=>optionHtml(code,chooserState.selected.has(code),fixed||required.has(code))).join('')}
+        </div>
+      </div>`;
+
+    host.querySelector('.invite-permission-toggle-v1')?.addEventListener('click',()=>{
+      host.classList.toggle('is-open');
+      renderInviteChooser();
+    });
+
+    host.querySelector('[data-invite-permission-all]')?.addEventListener('click',()=>{
+      chooserState.selected=new Set(allowed);
+      renderInviteChooser();
+    });
+
+    host.querySelector('[data-invite-permission-clear]')?.addEventListener('click',()=>{
+      chooserState.selected=new Set(required);
+      renderInviteChooser();
+    });
+
+    host.querySelectorAll('input[type="checkbox"]').forEach(input=>{
+      input.addEventListener('change',()=>{
+        if(input.checked)chooserState.selected.add(input.value);
+        else chooserState.selected.delete(input.value);
+        required.forEach(x=>chooserState.selected.add(x));
+        renderInviteChooser();
+      });
+    });
+  }
+
+  function selectedInvitePermissions(){
+    const role=document.getElementById('inviteRole')?.value||chooserState.role;
+    const allowed=rolePermissions(role);
+    if(FIXED_ROLES.has(role))return allowed;
+    const required=new Set(requiredPermissions(role));
+    required.forEach(x=>chooserState.selected.add(x));
+    return allowed.filter(x=>chooserState.selected.has(x));
+  }
+
+  function resetInvitePermissions(){
+    const role=document.getElementById('inviteRole')?.value||'viewer';
+    chooserState.role=role;
+    chooserState.selected=new Set(rolePermissions(role));
+    renderInviteChooser();
+  }
+
+  const modal=document.getElementById('hukatechPermissionModalV1');
+  const modalTitle=document.getElementById('hukatechPermissionModalTitleV1');
+  const modalSubtitle=document.getElementById('hukatechPermissionModalSubtitleV1');
+  const modalNotice=document.getElementById('hukatechPermissionModalNoticeV1');
+  const modalGrid=document.getElementById('hukatechPermissionModalGridV1');
+  const modalSave=document.getElementById('hukatechPermissionModalSaveV1');
+  const modalStatus=document.getElementById('hukatechPermissionModalStatusV1');
+  let modalState=null;
+
+  function closeModal(){
+    if(!modal)return;
+    modal.hidden=true;
+    modalState=null;
+    modalStatus.textContent='';
+  }
+
+  function openModal(trigger){
+    if(!modal)return;
+    const role=trigger.dataset.permissionRole||'viewer';
+    const allowed=rolePermissions(role);
+    let selected=[];
+    try{selected=JSON.parse(decodeURIComponent(trigger.dataset.permissions||''))}catch{}
+    if(!Array.isArray(selected))selected=allowed;
+    selected=allowed.filter(x=>selected.includes(x));
+
+    const userId=trigger.dataset.userId||'';
+    const email=trigger.dataset.userEmail||'';
+    const editable=Boolean(userId)&&!FIXED_ROLES.has(role);
+    const required=new Set(requiredPermissions(role));
+
+    modalState={userId,email,role,allowed,selected:new Set(selected),editable,required};
+    required.forEach(x=>modalState.selected.add(x));
+
+    modalTitle.textContent='Kullanıcı Yetkileri';
+    modalSubtitle.textContent=`${email||'Rol önizlemesi'} · ${ROLE_LABELS[role]||role}`;
+    modalNotice.textContent=FIXED_ROLES.has(role)
+      ? 'Bu kritik rolün yetkileri güvenlik nedeniyle sabittir.'
+      : editable
+        ? 'Değişiklikler kaydedildiğinde kullanıcının açık oturumları kapatılır ve yeni yetkiler sonraki girişte uygulanır.'
+        : 'Bu pencere seçilen rolün yetkilerini gösterir.';
+
+    modalGrid.innerHTML=allowed.map(code=>optionHtml(code,modalState.selected.has(code),!editable||required.has(code))).join('');
+    modalGrid.querySelectorAll('input[type="checkbox"]').forEach(input=>{
+      input.addEventListener('change',()=>{
+        if(input.checked)modalState.selected.add(input.value);
+        else modalState.selected.delete(input.value);
+        required.forEach(x=>modalState.selected.add(x));
+      });
+    });
+
+    modalSave.hidden=!editable;
+    modalSave.disabled=false;
+    modalStatus.textContent='';
+    modal.hidden=false;
+  }
+
+  modalSave?.addEventListener('click',async()=>{
+    if(!modalState?.editable)return;
+    modalSave.disabled=true;
+    modalStatus.textContent='Yetkiler kaydediliyor...';
+    try{
+      const permissions=modalState.allowed.filter(x=>modalState.selected.has(x));
+      await api(`/api/admin/users/${encodeURIComponent(modalState.userId)}/permissions`,{
+        method:'PATCH',
+        body:JSON.stringify({permissions})
+      });
+      modalStatus.textContent='Yetkiler kaydedildi. Tablo yenileniyor...';
+      setTimeout(()=>location.reload(),650);
+    }catch(error){
+      modalStatus.textContent=error.message;
+      modalSave.disabled=false;
+    }
+  });
+
+  document.addEventListener('click',event=>{
+    const close=event.target.closest('[data-permission-close-v1]');
+    if(close){closeModal();return}
+
+    const preview=event.target.closest('[data-permission-preview]');
+    if(preview){openModal(preview);return}
+  });
+
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&!modal?.hidden)closeModal();
+  });
+
+  function init(){
+    document.querySelector('[data-admin-nav="permissions"]')?.remove();
+
+    const role=document.getElementById('inviteRole');
+    if(role&&!role.dataset.permissionUxBound){
+      role.dataset.permissionUxBound='true';
+      role.addEventListener('change',()=>{
+        chooserState.role=role.value;
+        chooserState.selected=new Set(rolePermissions(role.value));
+        renderInviteChooser();
+      });
+    }
+
+    renderInviteChooser();
+  }
+
+  window.HukaTechPermissionUX={
+    selectedInvitePermissions,
+    resetInvitePermissions,
+    renderInviteChooser,
+    matrix:MATRIX
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+
+  setTimeout(init,600);
+})();
+</script>
+
+<style id="hukatechRolePermissionsNeutralThemeV1">
+  /* HUKATECH_ROLE_PERMISSIONS_NEUTRAL_THEME_V1 */
+  .invite-permission-chooser-v1{
+    border:1px solid #dce3e8 !important;
+    border-left:4px solid #c8d0d6 !important;
+    background:#ffffff !important;
+    box-shadow:0 4px 16px rgba(26,39,52,.05) !important;
+  }
+
+  .invite-permission-toggle-v1{
+    background:#f4f6f8 !important;
+    color:#2f3b45 !important;
+    border:0 !important;
+    border-bottom:1px solid #e3e8ec !important;
+    box-shadow:none !important;
+  }
+
+  .invite-permission-toggle-v1:hover,
+  .invite-permission-toggle-v1:focus-visible{
+    background:#edf1f4 !important;
+    color:#26323b !important;
+  }
+
+  .invite-permission-toggle-v1 small{
+    color:#6e7b85 !important;
+  }
+
+  .invite-permission-body-v1{
+    background:#ffffff !important;
+  }
+
+  .permission-text-btn-v1{
+    background:#ffffff !important;
+    color:#45525c !important;
+    border:1px solid #cfd8df !important;
+    box-shadow:none !important;
+  }
+
+  .permission-text-btn-v1:hover,
+  .permission-text-btn-v1:focus-visible{
+    background:#f1f4f6 !important;
+    color:#26323b !important;
+    border-color:#b8c4cc !important;
+  }
+
+  .permission-text-btn-v1:disabled{
+    background:#f4f6f8 !important;
+    color:#9aa5ad !important;
+    border-color:#e0e5e9 !important;
+  }
+</style>
+
+
+<style id="hukatechUserPermissionBadgesNeutralV1">
+  /* HUKATECH_USER_PERMISSION_BADGES_NEUTRAL_V1 */
+  #usersTable .user-permission-summary-v1{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:5px !important;
+    width:auto !important;
+    max-width:100% !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    background-image:none !important;
+    color:inherit !important;
+    box-shadow:none !important;
+    text-align:left !important;
+    appearance:none !important;
+  }
+
+  #usersTable .user-permission-summary-v1:hover,
+  #usersTable .user-permission-summary-v1:focus,
+  #usersTable .user-permission-summary-v1:focus-visible,
+  #usersTable .user-permission-summary-v1:active{
+    border:0 !important;
+    background:transparent !important;
+    background-image:none !important;
+    box-shadow:none !important;
+    transform:none !important;
+    outline:none !important;
+  }
+
+  #usersTable .user-permission-summary-v1:focus-visible{
+    outline:2px solid #cbd4db !important;
+    outline-offset:3px !important;
+    border-radius:7px !important;
+  }
+
+  #usersTable .user-permission-label-v2,
+  #usersTable .user-permission-more-v1{
+    display:inline-flex !important;
+    align-items:center !important;
+    min-height:24px !important;
+    margin:0 !important;
+    padding:4px 8px !important;
+    border:1px solid #d9e0e5 !important;
+    border-radius:999px !important;
+    background:#f4f6f8 !important;
+    background-image:none !important;
+    color:#3f4c56 !important;
+    box-shadow:none !important;
+    font-size:11px !important;
+    font-weight:650 !important;
+    line-height:1.15 !important;
+    white-space:nowrap !important;
+  }
+
+  #usersTable .user-permission-more-v1{
+    background:#ffffff !important;
+    color:#5b6872 !important;
+    border-color:#cfd8de !important;
+    cursor:pointer !important;
+  }
+
+  #usersTable .user-permission-summary-v1:hover .user-permission-label-v2{
+    background:#eef2f4 !important;
+    border-color:#cfd8de !important;
+  }
+
+  #usersTable .user-permission-summary-v1:hover .user-permission-more-v1{
+    background:#f1f4f6 !important;
+    color:#34414a !important;
+    border-color:#bfcbd3 !important;
+  }
+</style>
+
+
+<style id="hukatechPermissionModalNeutralHeaderV1">
+  /* HUKATECH_PERMISSION_MODAL_NEUTRAL_HEADER_V1 */
+  .permission-modal-head-v1{
+    background:#f4f6f8 !important;
+    border-bottom:1px solid #dfe5e9 !important;
+    box-shadow:none !important;
+  }
+
+  .permission-modal-head-v1 h3{
+    color:#26323b !important;
+  }
+
+  .permission-modal-head-v1 p{
+    color:#6c7882 !important;
+  }
+
+  .permission-modal-close-v1{
+    background:#ffffff !important;
+    color:#4d5963 !important;
+    border:1px solid #cfd8df !important;
+    box-shadow:none !important;
+  }
+
+  .permission-modal-close-v1:hover,
+  .permission-modal-close-v1:focus-visible{
+    background:#e9eef1 !important;
+    color:#26323b !important;
+    border-color:#b8c4cc !important;
+    transform:none !important;
+  }
+</style>
+
+
+<style id="hukatechAnalysisCenterPolishV1">
+  /* HUKATECH_ANALYSIS_CENTER_POLISH_V1 */
+  [data-admin-view^="smartai"] .smartai-panel-v650,
+  #factoryComparisonSectionV640 .org-panel-v640{
+    border-color:#dce3e8 !important;
+    box-shadow:0 8px 22px rgba(31,43,54,.045) !important;
+  }
+
+  [data-admin-view^="smartai"] .smartai-form-v650 label,
+  #factoryComparisonSectionV640 .org-toolbar-v640 label{
+    display:grid !important;
+    gap:7px !important;
+    align-content:start !important;
+    color:#3e4b55 !important;
+    font-size:12px !important;
+    font-weight:800 !important;
+  }
+
+  [data-admin-view^="smartai"] .smartai-form-v650 input:not([type="checkbox"]),
+  [data-admin-view^="smartai"] .smartai-form-v650 select,
+  [data-admin-view^="smartai"] .smartai-form-v650 textarea,
+  #factoryComparisonSectionV640 .org-toolbar-v640 input,
+  #factoryComparisonSectionV640 .org-toolbar-v640 select{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:42px !important;
+    box-sizing:border-box !important;
+    padding:9px 11px !important;
+    border:1px solid #cfd9e0 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#25313a !important;
+    font:inherit !important;
+    box-shadow:none !important;
+  }
+
+  [data-admin-view^="smartai"] .smartai-form-v650 input:focus,
+  [data-admin-view^="smartai"] .smartai-form-v650 select:focus,
+  [data-admin-view^="smartai"] .smartai-form-v650 textarea:focus,
+  #factoryComparisonSectionV640 .org-toolbar-v640 input:focus,
+  #factoryComparisonSectionV640 .org-toolbar-v640 select:focus{
+    border-color:#aebcc6 !important;
+    outline:3px solid rgba(113,132,145,.12) !important;
+  }
+
+  [data-admin-view^="smartai"] .smartai-form-v650 input:disabled,
+  [data-admin-view^="smartai"] .smartai-form-v650 select:disabled{
+    background:#f1f4f6 !important;
+    color:#929da5 !important;
+    border-color:#dfe5e9 !important;
+    cursor:not-allowed !important;
+    opacity:1 !important;
+  }
+
+  #smartAiReportsSection .smartai-form-v650{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:14px !important;
+  }
+
+  #smartAiAskSection .smartai-layout-v650{
+    grid-template-columns:minmax(0,1.35fr) minmax(360px,.65fr) !important;
+    gap:16px !important;
+  }
+
+  #smartAiQuestion{
+    width:100% !important;
+    min-height:150px !important;
+    box-sizing:border-box !important;
+  }
+
+  #smartAiAskSection .smartai-quick-v650 button{
+    background:#f4f6f8 !important;
+    background-image:none !important;
+    color:#3f4c56 !important;
+    border:1px solid #d5dde3 !important;
+    box-shadow:none !important;
+    font-weight:750 !important;
+  }
+
+  #smartAiAskSection .smartai-quick-v650 button:hover,
+  #smartAiAskSection .smartai-quick-v650 button:focus-visible{
+    background:#e9eef1 !important;
+    color:#26323b !important;
+    border-color:#bcc8d0 !important;
+    transform:none !important;
+  }
+
+  #smartAiSettingsSection .smartai-layout-v650{
+    grid-template-columns:minmax(0,1.1fr) minmax(370px,.9fr) !important;
+    gap:16px !important;
+  }
+
+  #smartAiSettingsSection input[type="checkbox"]{
+    width:17px !important;
+    height:17px !important;
+    margin:0 !important;
+    accent-color:#6a7780 !important;
+  }
+
+  #smartAiSettingsSection .smartai-panel-v650 > .smartai-form-v650 > label:has(input[type="checkbox"]){
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    min-height:44px !important;
+    padding:10px 12px !important;
+    border:1px solid #dce3e8 !important;
+    border-radius:11px !important;
+    background:#f8fafb !important;
+  }
+
+  #factoryComparisonCards .org-comparison-card-v640.data-missing-v1 header{
+    background:#eef2f5 !important;
+    color:#33414b !important;
+  }
+
+  #factoryComparisonCards .org-comparison-card-v640.data-missing-v1 .org-oee-v640{
+    font-size:18px !important;
+    line-height:1.35 !important;
+    color:#687681 !important;
+  }
+
+  #factoryComparisonSectionV640 .comparison-note-v1{
+    display:flex;
+    align-items:center;
+    min-height:56px;
+    padding:12px 14px;
+    border:1px solid #dce3e8;
+    border-radius:12px;
+    background:#f6f8f9;
+    color:#5f6d77;
+    font-weight:750;
+  }
+
+  @media(max-width:1100px){
+    #smartAiAskSection .smartai-layout-v650,
+    #smartAiSettingsSection .smartai-layout-v650{
+      grid-template-columns:1fr !important;
+    }
+  }
+
+  @media(max-width:760px){
+    #smartAiReportsSection .smartai-form-v650{
+      grid-template-columns:1fr !important;
+    }
+  }
+</style>
+
+
+<script id="hukatechAnalysisCenterPolishBehaviorV1">
+(() => {
+  const MARKER='HUKATECH_ANALYSIS_CENTER_POLISH_V1';
+
+  function aiText(tr,en){
+    return window.currentLanguage==='en' ? en : tr;
+  }
+
+  function engineLabel(value){
+    const v=String(value||'').toLowerCase();
+    if(v==='rules') return aiText('HukaTech Kural Motoru','HukaTech Rule Engine');
+    if(v==='openai') return aiText('OpenAI + HukaTech Kural Motoru','OpenAI + HukaTech Rule Engine');
+    return String(value||'-')
+      .replaceAll('FactoryBox','HukaTech')
+      .replaceAll('SmartAI','HukaTech AI');
+  }
+
+  function polishDynamicText(root){
+    if(!root) return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    const nodes=[];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node=>{
+      const raw=node.nodeValue;
+      if(!raw) return;
+      const trimmed=raw.trim();
+      let next=raw
+        .replaceAll('FactoryBox Kural Motoru','HukaTech Kural Motoru')
+        .replaceAll('FactoryBox Motoru','HukaTech Motoru')
+        .replaceAll('SmartAI','HukaTech AI');
+      if(trimmed==='rules') next=raw.replace(trimmed,engineLabel('rules'));
+      if(trimmed==='openai') next=raw.replace(trimmed,engineLabel('openai'));
+      if(next!==raw) node.nodeValue=next;
+    });
+  }
+
+  function syncScheduleFields(){
+    const daily=document.getElementById('smartAiDailyEnabled')?.value==='true';
+    const weekly=document.getElementById('smartAiWeeklyEnabled')?.value==='true';
+    const monthly=document.getElementById('smartAiMonthlyEnabled')?.value==='true';
+
+    const dailyHour=document.getElementById('smartAiDailyHour');
+    const weeklyDay=document.getElementById('smartAiWeeklyDay');
+    const weeklyHour=document.getElementById('smartAiWeeklyHour');
+    const monthlyDay=document.getElementById('smartAiMonthlyDay');
+    const monthlyHour=document.getElementById('smartAiMonthlyHour');
+
+    if(dailyHour) dailyHour.disabled=!daily;
+    if(weeklyDay) weeklyDay.disabled=!weekly;
+    if(weeklyHour) weeklyHour.disabled=!weekly;
+    if(monthlyDay) monthlyDay.disabled=!monthly;
+    if(monthlyHour) monthlyHour.disabled=!monthly;
+
+    const telegram=document.getElementById('smartAiChannelTelegram')?.checked;
+    const email=document.getElementById('smartAiChannelEmail')?.checked;
+    const chats=document.getElementById('smartAiTelegramChatIds');
+    const emails=document.getElementById('smartAiEmailRecipients');
+    if(chats) chats.disabled=!telegram;
+    if(emails) emails.disabled=!email;
+  }
+
+  function hasOperationalData(row){
+    return Number(row?.total_count||0)>0
+      || Number(row?.downtime_sec||0)>0
+      || Number(row?.oee_pct||0)>0
+      || Number(row?.performance_pct||0)>0
+      || Number(row?.quality_pct||0)>0;
+  }
+
+  function metricValue(row,key,suffix='%'){
+    return hasOperationalData(row)
+      ? `${Number(row?.[key]||0)}${suffix}`
+      : aiText('Yeterli veri yok','Insufficient data');
+  }
+
+  if(typeof renderSmartAiSettings==='function'){
+    const originalRenderSmartAiSettings=renderSmartAiSettings;
+    renderSmartAiSettings=function(data){
+      const result=originalRenderSmartAiSettings(data);
+      syncScheduleFields();
+      polishDynamicText(document.getElementById('smartAiSettingsSection'));
+      return result;
+    };
+  }
+
+  ['renderSmartAiStatus','renderSmartAiReport','renderSmartAiHistory','renderSmartAiQuestions','renderSmartAiAnswer'].forEach(name=>{
+    const original=window[name];
+    if(typeof original!=='function') return;
+    window[name]=function(...args){
+      const result=original.apply(this,args);
+      [
+        document.getElementById('smartAiReportsSection'),
+        document.getElementById('smartAiAskSection'),
+        document.getElementById('smartAiHistorySection'),
+        document.getElementById('smartAiSettingsSection')
+      ].forEach(polishDynamicText);
+      return result;
+    };
+  });
+
+  if(typeof renderFactoryComparison==='function'){
+    renderFactoryComparison=function(data){
+      organizationAdminState.comparison=data;
+      const s=data.summary||{};
+      const factories=data.factories||[];
+      const enoughFactories=factories.length>=2;
+      const anyData=factories.some(hasOperationalData);
+      const bestText=enoughFactories&&anyData
+        ? (s.best_factory?.name||'-')
+        : aiText('En az 2 fabrika gerekli','At least 2 factories required');
+      const bestLabel=enoughFactories&&anyData
+        ? orgText('En İyi Fabrika','Best Factory')
+        : aiText('Karşılaştırma Durumu','Comparison Status');
+
+      const summary=document.getElementById('factoryComparisonSummary');
+      if(summary) summary.innerHTML=
+        `<article><span>${orgText('Fabrika','Factories')}</span><strong>${esc(s.factory_count||0)}</strong></article>`+
+        `<article><span>${orgText('Bölüm / Alan','Departments / Areas')}</span><strong>${esc(s.site_count||0)}</strong></article>`+
+        `<article><span>${orgText('Makine','Machines')}</span><strong>${esc(s.machine_count||0)}</strong></article>`+
+        `<article><span>${orgText('Aktif Alarm','Active Alarms')}</span><strong>${esc(s.active_alarm_count||0)}</strong></article>`+
+        `<article><span>${esc(bestLabel)}</span><strong>${esc(bestText)}</strong></article>`;
+
+      const cards=document.getElementById('factoryComparisonCards');
+      if(cards){
+        const note=!enoughFactories
+          ? `<div class="comparison-note-v1">${esc(aiText('Karşılaştırma için en az iki fabrika gerekir.','At least two factories are required for comparison.'))}</div>`
+          : '';
+        const rows=factories.map(r=>{
+          const hasData=hasOperationalData(r);
+          const badgeText=hasData ? r.status : aiText('Veri bekleniyor','Waiting for data');
+          const badgeClass=hasData ? (Number(r.oee_pct)>=85?'ok':Number(r.oee_pct)>=60?'warn':'danger') : '';
+          const oee=hasData ? `${esc(r.oee_pct||0)}%` : esc(aiText('Yeterli veri yok','Insufficient data'));
+          return `<article class="org-comparison-card-v640 ${hasData?'':'data-missing-v1'}">
+            <header><div><h3>${esc(r.name)}</h3><small>${esc(r.location||'-')}</small></div><span class="status-badge ${badgeClass}">${esc(badgeText)}</span></header>
+            <div class="org-oee-v640">${oee}</div>
+            <div class="org-metrics-v640">
+              <span>${orgText('Kullanılabilirlik','Availability')}<br><strong>${esc(metricValue(r,'availability_pct'))}</strong></span>
+              <span>${orgText('Performans','Performance')}<br><strong>${esc(metricValue(r,'performance_pct'))}</strong></span>
+              <span>${orgText('Kalite','Quality')}<br><strong>${esc(metricValue(r,'quality_pct'))}</strong></span>
+              <span>${orgText('Cihaz Online','Devices Online')}<br><strong>${esc(r.online_device_count||0)}/${esc(r.device_count||0)}</strong></span>
+              <span>${orgText('Üretim','Production')}<br><strong>${esc(r.total_count||0)}</strong></span>
+              <span>${orgText('Duruş','Downtime')}<br><strong>${esc(Math.round(Number(r.downtime_sec||0)/60))} dk</strong></span>
+            </div>
+          </article>`;
+        }).join('');
+        cards.innerHTML=note+(rows||`<span class="muted">${orgText('Karşılaştırılacak fabrika yok.','No factories to compare.')}</span>`);
+      }
+
+      const target=document.getElementById('factoryComparisonTable');
+      if(target) target.innerHTML=table([
+        {label:orgText('Fabrika','Factory'),value:r=>r.name},
+        {label:'OEE',value:r=>metricValue(r,'oee_pct')},
+        {label:orgText('Kullanılabilirlik','Availability'),value:r=>metricValue(r,'availability_pct')},
+        {label:orgText('Performans','Performance'),value:r=>metricValue(r,'performance_pct')},
+        {label:orgText('Kalite','Quality'),value:r=>metricValue(r,'quality_pct')},
+        {label:orgText('Cihaz','Devices'),value:r=>`${r.online_device_count}/${r.device_count}`},
+        {label:orgText('Aktif Alarm','Active Alarms'),value:r=>String(r.active_alarm_count||0)},
+        {label:orgText('Üretim','Production'),value:r=>String(r.total_count||0)},
+        {label:orgText('Plansız Duruş','Unplanned Downtime'),value:r=>`${Math.round(Number(r.downtime_sec||0)/60)} dk`}
+      ],factories);
+    };
+  }
+
+  document.addEventListener('change',event=>{
+    if([
+      'smartAiDailyEnabled','smartAiWeeklyEnabled','smartAiMonthlyEnabled',
+      'smartAiChannelTelegram','smartAiChannelEmail'
+    ].includes(event.target?.id)) syncScheduleFields();
+  });
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    syncScheduleFields();
+    [
+      document.getElementById('smartAiReportsSection'),
+      document.getElementById('smartAiAskSection'),
+      document.getElementById('smartAiHistorySection'),
+      document.getElementById('smartAiSettingsSection')
+    ].forEach(polishDynamicText);
+  });
+})();
+</script>
+
+
+<style id="hukatechFactoryComparisonEmptyStatePolishV1">
+  /* HUKATECH_FACTORY_COMPARISON_EMPTY_STATE_POLISH_V1 */
+  #factoryComparisonCards{
+    align-items:start !important;
+  }
+
+  #factoryComparisonCards .comparison-note-v1{
+    grid-column:1 / -1 !important;
+    width:auto !important;
+    min-height:0 !important;
+    margin:0 0 2px !important;
+    padding:10px 12px !important;
+    border:1px solid #dce3e8 !important;
+    border-radius:10px !important;
+    background:#f7f9fa !important;
+    color:#687681 !important;
+    font-size:12px !important;
+    font-weight:700 !important;
+    line-height:1.4 !important;
+    box-shadow:none !important;
+  }
+
+  #factoryComparisonCards .org-comparison-card-v640.data-missing-v1 .org-oee-v640{
+    color:#8a969f !important;
+    font-size:24px !important;
+    font-weight:600 !important;
+    line-height:1 !important;
+  }
+
+  #factoryComparisonCards .org-comparison-card-v640.data-missing-v1 .org-metrics-v640 strong{
+    color:#7d8992 !important;
+    font-size:20px !important;
+    font-weight:600 !important;
+  }
+
+  #factoryComparisonTable td{
+    vertical-align:middle !important;
+  }
+</style>
+
+
+<style id="hukatechAnalysisCenterFinalPolishV12">
+  /* HUKATECH_ANALYSIS_CENTER_FINAL_POLISH_V1_2 */
+  #smartAiQuestion{
+    border:1px solid #cfd9e0 !important;
+    border-radius:12px !important;
+    background:#ffffff !important;
+    color:#25313a !important;
+    padding:14px 15px !important;
+    line-height:1.5 !important;
+    resize:vertical !important;
+    box-shadow:none !important;
+  }
+
+  #smartAiQuestion:focus{
+    border-color:#aebcc6 !important;
+    outline:3px solid rgba(113,132,145,.12) !important;
+  }
+
+  [data-admin-view^="smartai"] .section-title-row > button,
+  #factoryComparisonSectionV640 .section-title-row > button{
+    min-width:86px !important;
+  }
+</style>
+
+
+<style id="hukatechAiScoreDataSufficiencyUiV1">
+  /* HUKATECH_AI_SCORE_DATA_SUFFICIENCY_UI_V1_1 */
+  .smartai-score-v650 .smartai-score-unavailable-v1{
+    max-width:260px !important;
+    color:#687681 !important;
+    font-size:25px !important;
+    line-height:1.15 !important;
+    text-align:right !important;
+  }
+
+  @media(max-width:760px){
+    .smartai-score-v650 .smartai-score-unavailable-v1{
+      max-width:none !important;
+      text-align:left !important;
+    }
+  }
+</style>
+
+
+<style id="hukatechAiPeriodDateSyncStyleV1">
+  /* HUKATECH_AI_PERIOD_DATE_SYNC_V1 */
+  .smartai-period-auto-v1{
+    background:#f3f6f8 !important;
+    color:#667681 !important;
+    cursor:not-allowed !important;
+  }
+
+  /* HUKATECH_AI_PERIOD_DATE_SYNC_V1_1 */
+  .smartai-period-hidden-v1,
+  [data-admin-view^="smartai"] .smartai-form-v650 label.smartai-period-hidden-v1{
+    display:none !important;
+  }
+
+  /* HUKATECH_AI_PERIOD_DATE_SYNC_V1_3 */
+</style>
+
+<script id="hukatechAiPeriodDateSyncV1">
+(() => {
+  const MARKER='HUKATECH_AI_PERIOD_DATE_SYNC_V1';
+
+  function uiText(tr,en){
+    return typeof smartAiUi==='function' ? smartAiUi(tr,en) : tr;
+  }
+
+  function parseIsoDate(value){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))) return null;
+    const [y,m,d]=String(value).split('-').map(Number);
+    const date=new Date(y,m-1,d,12,0,0,0);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function isoDate(date){
+    const y=date.getFullYear();
+    const m=String(date.getMonth()+1).padStart(2,'0');
+    const d=String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function addDays(value,days){
+    const date=parseIsoDate(value);
+    if(!date) return value||'';
+    date.setDate(date.getDate()+days);
+    return isoDate(date);
+  }
+
+  function firstDayOfMonth(value){
+    const date=parseIsoDate(value);
+    if(!date) return value||'';
+    date.setDate(1);
+    return isoDate(date);
+  }
+
+  function lastDayOfMonth(value){
+    const date=parseIsoDate(value);
+    if(!date) return value||'';
+    return isoDate(new Date(date.getFullYear(),date.getMonth()+1,0,12,0,0,0));
+  }
+
+  function setLabelText(input,text){
+    const label=input?.closest('label');
+    if(!label) return;
+    const textNode=[...label.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);
+    if(textNode) textNode.nodeValue=text;
+    else label.insertBefore(document.createTextNode(text),input);
+  }
+
+  function setToVisibility(input,visible){
+    const label=input?.closest('label');
+    if(!label) return;
+    label.classList.toggle('smartai-period-hidden-v1',!visible);
+    label.style.removeProperty('display');
+  }
+
+  function normalizeCustomRange(from,to){
+    to.disabled=false;
+    to.classList.remove('smartai-period-auto-v1');
+    setToVisibility(to,true);
+    setLabelText(from,uiText('Başlangıç','Start'));
+    setLabelText(to,uiText('Bitiş','End'));
+    to.min=from.value||'';
+    if(from.value&&to.value&&to.value<from.value) to.value=from.value;
+  }
+
+  // HUKATECH_AI_PERIOD_DATE_SYNC_V1_2
+  function smartAiLocalToday(){
+    const tz=(window.generalSettings&&generalSettings.timezone)||'Europe/Istanbul';
+    try{
+      const parts=Object.fromEntries(
+        new Intl.DateTimeFormat('en-GB',{
+          timeZone:tz,
+          year:'numeric',
+          month:'2-digit',
+          day:'2-digit'
+        })
+        .formatToParts(new Date())
+        .filter(x=>x.type!=='literal')
+        .map(x=>[x.type,x.value])
+      );
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    }catch{
+      const now=new Date();
+      const y=now.getFullYear();
+      const m=String(now.getMonth()+1).padStart(2,'0');
+      const d=String(now.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  function mondayOfWeek(value){
+    const date=parseIsoDate(value);
+    if(!date) return value||'';
+    const day=date.getDay();
+    const delta=day===0?-6:1-day;
+    date.setDate(date.getDate()+delta);
+    return isoDate(date);
+  }
+
+  function syncPeriod(periodId,fromId,toId,reason='sync'){
+    const period=document.getElementById(periodId);
+    const from=document.getElementById(fromId);
+    const to=document.getElementById(toId);
+    if(!period||!from||!to) return;
+
+    const mode=period.value||'daily';
+    const today=smartAiLocalToday();
+    const resetToCurrent=reason==='period'||reason==='initial';
+
+    if(mode==='daily'){
+      if(resetToCurrent||!from.value) from.value=today;
+      to.value=from.value;
+      to.disabled=true;
+      to.classList.add('smartai-period-auto-v1');
+      setToVisibility(to,false);
+      setLabelText(from,uiText('Tarih','Date'));
+      return;
+    }
+
+    if(mode==='weekly'){
+      if(resetToCurrent||!from.value) from.value=mondayOfWeek(today);
+      to.value=addDays(from.value,6);
+      to.disabled=true;
+      to.classList.add('smartai-period-auto-v1');
+      setToVisibility(to,true);
+      setLabelText(from,uiText('Hafta Başlangıcı','Week Start'));
+      setLabelText(to,uiText('Hafta Bitişi','Week End'));
+      return;
+    }
+
+    if(mode==='monthly'){
+      if(resetToCurrent||!from.value) from.value=firstDayOfMonth(today);
+      else from.value=firstDayOfMonth(from.value);
+      to.value=lastDayOfMonth(from.value);
+      to.disabled=true;
+      to.classList.add('smartai-period-auto-v1');
+      setToVisibility(to,true);
+      setLabelText(from,uiText('Ay Başlangıcı','Month Start'));
+      setLabelText(to,uiText('Ay Bitişi','Month End'));
+      return;
+    }
+
+    if(reason==='period'&&(!from.value||!to.value)){
+      from.value=from.value||today;
+      to.value=to.value||today;
+    }
+    normalizeCustomRange(from,to);
+  }
+
+  function bindPeriod(periodId,fromId,toId){
+    const period=document.getElementById(periodId);
+    const from=document.getElementById(fromId);
+    const to=document.getElementById(toId);
+    if(!period||!from||!to) return;
+
+    period.addEventListener('change',()=>syncPeriod(periodId,fromId,toId,'period'));
+    from.addEventListener('change',()=>syncPeriod(periodId,fromId,toId,'from'));
+    to.addEventListener('change',()=>{
+      if((period.value||'daily')==='custom') normalizeCustomRange(from,to);
+    });
+
+    syncPeriod(periodId,fromId,toId,'initial');
+  }
+
+  function setup(){
+    bindPeriod('smartAiPeriod','smartAiFrom','smartAiTo');
+    bindPeriod('smartAiAskPeriod','smartAiAskFrom','smartAiAskTo');
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',setup,{once:true});
+  }else{
+    setup();
+  }
+})();
+</script>
+
 </body>
 </html>
