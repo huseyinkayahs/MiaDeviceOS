@@ -2364,6 +2364,21 @@
     }
   </style>
 
+<style id="hukatech-settings-final-polish-v1">
+  #securityCenterSection .security-panel-v620>header{
+    padding:14px 16px;
+    margin:-4px -4px 16px;
+    border:1px solid #d8e0e5;
+    border-radius:13px;
+    background:linear-gradient(135deg,#fafbfc,#f2f5f6);
+    box-shadow:0 5px 15px rgba(26,38,47,.035);
+  }
+  #securityCenterSection .security-panel-v620>header h3{color:#202a31!important;}
+  #securityCenterSection .security-panel-v620>header p{color:#687681!important;}
+  .settings-tech-details-v1{margin-top:12px;border:1px solid #d8e0e5;border-radius:12px;background:#fff;}
+  .settings-tech-details-v1>summary{cursor:pointer;padding:12px 14px;font-weight:750;color:#56636d;}
+  .settings-tech-details-v1>.admin-form-grid{margin:0;border:0;border-top:1px solid #e2e7ea;border-radius:0 0 12px 12px;box-shadow:none;}
+</style>
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
@@ -2857,16 +2872,16 @@
     </div>
     <div id="generalSettingsStatus" class="mini-status">Genel ayarlar yükleniyor...</div>
     <div class="general-settings-grid-v600">
-      <label class="wide-setting-v600">Müşteri / Organizasyon Adı<input id="generalOrganizationName" type="text" maxlength="160" placeholder="FactoryBox"></label>
-      <label>Fabrika / Tesis Adı<input id="generalSiteName" type="text" maxlength="160" placeholder="Main Factory"></label>
-      <label>Panel Language<select id="generalLanguage"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
-      <label>Time Zone<select id="generalTimezone"></select></label>
-      <label>Date Format<select id="generalDateFormat"><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></label>
-      <label>Time Format<select id="generalTimeFormat"><option value="24h">24 Saat</option><option value="12h">12 Hour</option></select></label>
-      <label>Week Starts<select id="generalWeekStart"><option value="monday">Pazartesi</option><option value="sunday">Sunday</option></select></label>
-      <label>Auto Refresh<select id="generalAutoRefresh"><option value="0">Kapalı</option><option value="15">15 saniye</option><option value="30">30 saniye</option><option value="60">1 dakika</option><option value="120">2 dakika</option><option value="300">5 dakika</option></select></label>
-      <label>Default Opening Page<select id="generalDefaultView"></select></label>
-      <label>Compact Menu<select id="generalCompactMode"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
+      <label class="wide-setting-v600">Müşteri / Organizasyon Adı<input id="generalOrganizationName" type="text" maxlength="160" placeholder="Şirket / Organizasyon"></label>
+      <label>Fabrika / Tesis Adı<input id="generalSiteName" type="text" maxlength="160" placeholder="Ana Tesis"></label>
+      <label>Panel Dili<select id="generalLanguage"><option value="tr">Türkçe</option><option value="en">İngilizce</option></select></label>
+      <label>Saat Dilimi<select id="generalTimezone"></select></label>
+      <label>Tarih Biçimi<select id="generalDateFormat"><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></label>
+      <label>Saat Biçimi<select id="generalTimeFormat"><option value="24h">24 Saat</option><option value="12h">12 Saat</option></select></label>
+      <label>Hafta Başlangıcı<select id="generalWeekStart"><option value="monday">Pazartesi</option><option value="sunday">Pazar</option></select></label>
+      <label>Otomatik Yenileme<select id="generalAutoRefresh"><option value="0">Kapalı</option><option value="15">15 saniye</option><option value="30">30 saniye</option><option value="60">1 dakika</option><option value="120">2 dakika</option><option value="300">5 dakika</option></select></label>
+      <label>Varsayılan Açılış Sayfası<select id="generalDefaultView"></select></label>
+      <label>Kompakt Menü<select id="generalCompactMode"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
     </div>
     <div class="general-settings-note-v600">Dil değişikliği menüleri, ekran başlıklarını, düğmeleri, tablo başlıklarını, durum metinlerini ve sistem mesajlarını birlikte değiştirir.</div>
   </section>
@@ -2878,39 +2893,38 @@
     <div class="section-title-row">
       <div>
         <h2>Uzak Erişim, Domain ve Cloudflare Tunnel</h2>
-        <p class="muted">Modemde port açmadan FactoryBox panelini farklı Wi-Fi ve mobil internet üzerinden güvenli biçimde erişilebilir hale getir.</p>
+        <p class="muted">HukaTech paneline farklı ağlardan güvenli ve kalıcı erişim durumunu izleyin.</p>
       </div>
       <div class="button-row">
         <button id="refreshRemoteAccessBtn" class="secondary-btn">Durumu Yenile</button>
         <button id="testRemoteAccessBtn" class="secondary-btn">Uzak Adresi Test Et</button>
-        <button id="saveRemoteAccessBtn">Ayarları Kaydet</button>
+        <button id="saveRemoteAccessBtn" class="primary-btn">Ayarları Kaydet</button>
       </div>
     </div>
     <div id="remoteAccessStatus" class="mini-status">Uzak erişim durumu yükleniyor...</div>
     <div class="remote-grid-v670">
       <div class="remote-card-v670"><span>Uzak Erişim</span><strong id="remoteAccessState">-</strong><small id="remoteAccessStateDetail">-</small></div>
-      <div class="remote-card-v670"><span>Çalışma Modu</span><strong id="remoteAccessModeValue">-</strong><small>Quick test veya kalıcı named tunnel</small></div>
-      <div class="remote-card-v670"><span>Tunnel Token</span><strong id="remoteAccessTokenValue">-</strong><small>Token panelde gösterilmez</small></div>
+      <div class="remote-card-v670"><span>Çalışma Modu</span><strong id="remoteAccessModeValue">-</strong><small>Kalıcı production tüneli</small></div>
+      <div class="remote-card-v670"><span>Tünel Durumu</span><strong id="remoteAccessTokenValue">-</strong><small>Kimlik bilgileri panelde gösterilmez</small></div>
       <div class="remote-card-v670"><span>Son Kontrol</span><strong id="remoteAccessLastCheck">-</strong><small id="remoteAccessLatency">-</small></div>
     </div>
     <div class="remote-layout-v670">
       <div>
         <div class="remote-panel-v670">
           <h3>Uzak Erişim Ayarları</h3>
-          <p>Bu ekran güvenlik ve görünüm ayarlarını saklar. Cloudflare Tunnel tokeni yalnızca production bilgisayarındaki <code>.env.production</code> dosyasında tutulur.</p>
+          <p>Kalıcı uzak erişim production servisinde çalışır. Hassas tünel kimlik bilgileri panelde gösterilmez.</p>
           <div class="remote-form-v670">
             <label>Mod<select id="remoteAccessMode"><option value="disabled">Kapalı</option><option value="quick">Quick Tunnel / Test</option><option value="named">Named Tunnel / Production</option></select></label>
             <label>Cloudflare Access Koruması<select id="remoteAccessProtected"><option value="false">Kapalı / Henüz ayarlanmadı</option><option value="true">Açık</option></select></label>
             <label class="wide">Uzak Panel Adresi<input id="remoteAccessPublicUrl" type="url" placeholder="https://panel.example.com"></label>
-            <label class="wide">İzin Verilen E-posta Domainleri<input id="remoteAccessAllowedDomains" type="text" placeholder="example.com, partner.com"></label>
+            <label class="wide">İzin Verilen E-posta Domainleri<input id="remoteAccessAllowedDomains" type="text" placeholder="Virgülle ayırın"></label>
             <label>Uzaktan Teknik Servis<select id="remoteAccessTechnicalService"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
             <label class="wide">Notlar<textarea id="remoteAccessNotes" placeholder="Domain, Cloudflare Access politikası ve teknik servis notları"></textarea></label>
           </div>
         </div>
         <div class="remote-panel-v670">
-          <h3>Production Bilgisayarında Çalıştırılacak Komut</h3>
-          <p>Kalıcı erişim için Cloudflare panelinden oluşturduğun Tunnel tokenini kullan.</p>
-          <div id="remoteAccessCommand" class="remote-code-v670">Komut hazırlanıyor...</div>
+          <h3>Production Tüneli</h3>
+          <p>Kalıcı erişim Windows üzerindeki Cloudflared servisi tarafından sağlanır. Kurulum anahtarı ve servis komutu güvenlik nedeniyle panelde gösterilmez.</p>
         </div>
       </div>
       <div>
@@ -2935,7 +2949,7 @@
       </div>
       <div class="button-row">
         <button id="refreshSystemHealthBtn" class="secondary-btn">Durumu Yenile</button>
-        <button id="runSystemHealthCheckBtn">Tam Sağlık Kontrolü</button>
+        <button id="runSystemHealthCheckBtn" class="primary-btn">Sağlık Kontrolünü Çalıştır</button>
       </div>
     </div>
     <div id="systemHealthStatus" class="mini-status">Sistem sağlığı yükleniyor...</div>
@@ -2959,7 +2973,7 @@
       <header>
         <div><h3>Otomatik Yedek Ayarları</h3><p>PostgreSQL yedeklerini proje Backups klasöründe saklar ve süre/adet politikasına göre temizler.</p></div>
         <div class="health-toolbar-v610">
-          <button id="saveSystemHealthSettingsBtn">Ayarları Kaydet</button>
+          <button id="saveSystemHealthSettingsBtn" class="primary-btn">Ayarları Kaydet</button>
           <button id="createDatabaseBackupBtn" class="secondary-btn">Şimdi Veritabanı Yedeği Al</button>
           <button id="cleanupDatabaseBackupsBtn" class="secondary-btn">Eski Yedekleri Temizle</button>
         </div>
@@ -2987,7 +3001,7 @@
     <div class="health-panel-v610">
       <header>
         <div><h3>Sistem Günlükleri</h3><p>Sağlık kontrolleri, yedekleme ve kritik bildirim olayları.</p></div>
-        <select id="systemHealthLogLevel" class="health-log-filter-v610"><option value="all">Tüm seviyeler</option><option value="info">Info</option><option value="warning">Warning</option><option value="error">Error</option></select>
+        <select id="systemHealthLogLevel" class="health-log-filter-v610"><option value="all">Tüm seviyeler</option><option value="info">Bilgi</option><option value="warning">Uyarı</option><option value="error">Hata</option></select>
       </header>
       <div id="systemHealthLogs">Sistem günlükleri yükleniyor...</div>
     </div>
@@ -3003,7 +3017,7 @@
       </div>
       <div class="button-row">
         <button id="refreshSecurityCenterBtn" class="secondary-btn">Durumu Yenile</button>
-        <button id="saveSecuritySettingsBtn">Ayarları Kaydet</button>
+        <button id="saveSecuritySettingsBtn" class="primary-btn">Ayarları Kaydet</button>
       </div>
     </div>
     <div id="securityCenterStatus" class="mini-status">Güvenlik merkezi yükleniyor...</div>
@@ -3027,11 +3041,11 @@
         <label>Küçük Harf<select id="securityRequireLower"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
         <label>Rakam<select id="securityRequireNumber"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
         <label>Özel Karakter<select id="securityRequireSpecial"><option value="true">Zorunlu</option><option value="false">İsteğe Bağlı</option></select></label>
-        <label>API Limiti / dakika<input id="securityApiRate" type="number" min="60" max="5000" value="300"></label>
+        <label>Servis İstek Limiti / dakika<input id="securityApiRate" type="number" min="60" max="5000" value="300"></label>
         <label>Giriş Limiti / 15 dk<input id="securityLoginRate" type="number" min="5" max="200" value="20"></label>
         <label>Şüpheli Giriş Telegram<select id="securityTelegramAlert"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
         <label>HTTP Güvenlik Başlıkları<select id="securityHeadersEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
-        <label>CSRF Origin Kontrolü<select id="securityCsrfEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+        <label>Form Kaynağı Güvenlik Kontrolü<select id="securityCsrfEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
       </div>
       <div id="securityPolicyNote" class="security-policy-note-v620">Şifre politikası yükleniyor...</div>
     </div>
@@ -3041,7 +3055,8 @@
       <div class="security-password-grid-v620">
         <label>Mevcut Şifre<input id="securityCurrentPassword" type="password" autocomplete="current-password"></label>
         <label>Yeni Şifre<input id="securityNewPassword" type="password" autocomplete="new-password"></label>
-        <div><button id="changeOwnPasswordBtn">Şifremi Değiştir</button></div>
+        <label>Yeni Şifre Tekrar<input id="securityNewPasswordConfirm" type="password" autocomplete="new-password"></label>
+        <div><button id="changeOwnPasswordBtn" class="primary-btn">Şifremi Değiştir</button></div>
       </div>
       <div id="securityPasswordStatus" class="mini-status">Şifre işlemi bekleniyor.</div>
     </div>
@@ -3066,7 +3081,7 @@
     <div class="section-title-row">
       <div>
         <h2>Notification Settings / Channel Tests</h2>
-        <p class="muted">v6.8.1: Telegram, HukaTech Central Mail Gateway, Brevo API ve Delivery Worker ayarlarını tek ekrandan yönet.</p>
+        <p class="muted">Telegram, e-posta, kanal testleri ve otomatik teslimat ayarlarını tek ekrandan yönetin.</p>
       </div>
       <div class="admin-topbar-actions-v58">
         <button id="refreshNotificationSettingsBtn" class="secondary-btn">Yenile</button>
@@ -3076,12 +3091,12 @@
 
     <div id="notificationSettingsStatus">Bildirim ayarları yükleniyor...</div>
 
-    <h3>Delivery Worker</h3>
+    <h3>Teslimat Servisi</h3>
     <div class="admin-form-grid">
-      <label>Teslimat Aktif<select id="notificationDeliveryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
-      <label>Auto Worker<select id="notificationAutoEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Teslimat Aktif<select id="notificationDeliveryEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+      <label>Otomatik Çalıştırma<select id="notificationAutoEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
       <label>Çalışma Aralığı (sn)<input id="notificationIntervalSec" type="number" min="15" max="3600" value="60"></label>
-      <label>Batch Size<input id="notificationBatchSize" type="number" min="1" max="100" value="20"></label>
+      <label>Paket Boyutu<input id="notificationBatchSize" type="number" min="1" max="100" value="20"></label>
     </div>
 
     <div class="notification-channel-grid-v518">
@@ -3089,7 +3104,7 @@
         <h3>Telegram</h3>
         <div id="notificationTelegramState">Durum yükleniyor...</div>
         <div class="admin-form-grid">
-          <label>Enabled<select id="notificationTelegramEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+          <label>Enabled<select id="notificationTelegramEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
           <label>Default Chat ID<input id="notificationTelegramChatId" type="text" placeholder="Telegram chat ID"></label>
           <label>Bot Token<input id="notificationTelegramToken" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut token korunur"></label>
         </div>
@@ -3101,11 +3116,11 @@
       </div>
 
       <div class="notification-channel-card-v518">
-        <h3>Email Delivery</h3>
+        <h3>E-posta Teslimatı</h3>
         <div id="notificationEmailState">Durum yükleniyor...</div>
 
         <div class="admin-form-grid">
-          <label>Enabled<select id="notificationEmailEnabled"><option value="true">true</option><option value="false">false</option></select></label>
+          <label>Enabled<select id="notificationEmailEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
           <label>Gönderim Modu
             <select id="notificationEmailMode">
               <option value="gateway">HukaTech Central Gateway</option>
@@ -3120,14 +3135,14 @@
         <div id="notificationGatewayFields" class="mail-mode-panel-v680">
           <h4>HukaTech Central Mail Gateway</h4>
           <div class="mail-gateway-flow-v680">
-            <span>Müşteri FactoryBox</span><b>→</b><span>HukaTech Mail Gateway</span><b>→</b><span>noreply@hukatech.com</span>
+            <span>Müşteri Sistemi</span><b>→</b><span>HukaTech Mail Gateway</span><b>→</b><span>noreply@hukatech.com</span>
           </div>
           <div class="admin-form-grid">
-            <label>Gateway URL<input id="notificationMailGatewayUrl" type="url" placeholder="https://mail.hukatech.com"></label>
-            <label>Installation ID<input id="notificationMailInstallationId" type="text" placeholder="customer-installation-id"></label>
-            <label>Gateway API Key<input id="notificationMailApiKey" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut anahtar korunur"></label>
+            <label>Gateway Adresi<input id="notificationMailGatewayUrl" type="url" placeholder="https://mail.hukatech.com"></label>
+            <label>Kurulum Kimliği<input id="notificationMailInstallationId" type="text" placeholder="customer-installation-id"></label>
+            <label>Gateway API Anahtarı<input id="notificationMailApiKey" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut anahtar korunur"></label>
             <label>SMTP Fallback
-              <select id="notificationMailSmtpFallback"><option value="false">false</option><option value="true">true</option></select>
+              <select id="notificationMailSmtpFallback"><option value="false">Kapalı</option><option value="true">Açık</option></select>
             </label>
           </div>
           <p class="notification-secret-note-v518">SMTP şifresi müşteri kurulumunda tutulmaz. Gateway anahtarı iptal edilebilir ve panelde açık gösterilmez.</p>
@@ -3161,7 +3176,7 @@
     <div class="section-title-row">
       <div>
         <h2>Automatic Escalation Scheduler</h2>
-        <p class="muted">v5.19: SLA taraması, otomatik teslimat, exponential retry/backoff ve Dead Letter yönetimi.</p>
+        <p class="muted">SLA taraması, otomatik teslimat, yeniden deneme ve hata kuyruğu yönetimi.</p>
       </div>
       <div class="admin-topbar-actions-v58">
         <button id="refreshAutomationSchedulerBtn" class="secondary-btn">Durumu Yenile</button>
@@ -3173,16 +3188,16 @@
     <div id="automationSchedulerStatus">Zamanlayıcı durumu yükleniyor...</div>
 
     <div class="scheduler-flow-v519">
-      <span>Aktif alarm</span><b>→</b><span>SLA tarama</span><b>→</b><span>Bekleyen kuyruk</span><b>→</b><span>Telegram / Email</span><b>→</b><span>Delivered</span>
+      <span>Aktif alarm</span><b>→</b><span>SLA tarama</span><b>→</b><span>Bekleyen kuyruk</span><b>→</b><span>Telegram / E-posta</span><b>→</b><span>Delivered</span>
     </div>
 
     <h3>Zamanlayıcı Ayarları</h3>
     <div class="admin-form-grid">
-      <label>Zamanlayıcı Aktif<select id="automationSchedulerEnabled"><option value="false">false</option><option value="true">true</option></select></label>
+      <label>Zamanlayıcı Aktif<select id="automationSchedulerEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
       <label>Çalışma Aralığı (sn)<input id="automationSchedulerIntervalSec" type="number" min="15" max="3600" value="60"></label>
-      <label>Automatic Retry<select id="automationRetryEnabled"><option value="true">true</option><option value="false">false</option></select></label>
-      <label>İlk Retry Bekleme (sn)<input id="automationRetryBaseDelaySec" type="number" min="15" max="86400" value="60"></label>
-      <label>Maks. Retry Bekleme (sn)<input id="automationRetryMaxDelaySec" type="number" min="15" max="604800" value="3600"></label>
+      <label>Automatic Retry<select id="automationRetryEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+      <label>İlk Yeniden Deneme Beklemesi (sn)<input id="automationRetryBaseDelaySec" type="number" min="15" max="86400" value="60"></label>
+      <label>Maks. Yeniden Deneme Beklemesi (sn)<input id="automationRetryMaxDelaySec" type="number" min="15" max="604800" value="3600"></label>
       <label>Maks. Deneme<input id="automationRetryMaxAttempts" type="number" min="1" max="20" value="5"></label>
     </div>
 
@@ -4023,7 +4038,7 @@
     <div class="section-title-row">
       <div>
         <h2>Security Activity / Audit Log</h2>
-        <p class="muted">AUDIT_VIEW yetkisi olan roller yönetim, giriş, davet, parola ve abonelik aktivitelerini filtreleyebilir.</p>
+        <p class="muted">Yetkili kullanıcılar yönetim, giriş, davet, parola ve abonelik aktivitelerini filtreleyebilir.</p>
       </div>
       <button id="exportAuditCsvBtn" class="secondary-btn">CSV İndir</button>
     </div>
@@ -4031,14 +4046,14 @@
     <div class="admin-form-grid">
       <label>
         Arama
-        <input id="auditQ" type="text" placeholder="action, entity veya email">
+        <input id="auditQ" type="text" placeholder="işlem, varlık veya e-posta">
       </label>
       <label>
-        Action
+        İşlem
         <input id="auditAction" type="text" placeholder="örn: login_failed">
       </label>
       <label>
-        Entity Type
+        Varlık Türü
         <select id="auditEntityType">
           <option value="all">all</option>
           <option value="auth">auth</option>
@@ -4064,7 +4079,7 @@
         <input id="auditTo" type="date">
       </label>
       <label>
-        Limit
+        Kayıt Sayısı
         <select id="auditLimit">
           <option value="50">50</option>
           <option value="100">100</option>
@@ -5611,22 +5626,52 @@
     return params.toString();
   }
 
+  function auditActionLabelV1(action){
+    const key=String(action||'');
+    if(currentLanguage==='en')return key.replaceAll('_',' ');
+    const labels={login_success:'Başarılı giriş',login_failed:'Hatalı giriş',logout:'Çıkış',request_password_reset:'Şifre sıfırlama talebi',reset_user_password:'Şifre sıfırlandı',change_own_password:'Şifre değiştirildi',admin_reset_password:'Yönetici şifre sıfırladı',revoke_session:'Oturum kapatıldı',revoke_user_sessions:'Kullanıcı oturumları kapatıldı',force_password_change:'Şifre değişimi zorunlu kılındı',unlock_user:'Hesap kilidi açıldı',update_general_settings:'Genel ayarlar güncellendi',test_remote_access:'Uzak erişim test edildi',update_remote_access_settings:'Uzak erişim ayarları güncellendi',generate_smartai_report:'HukaTech AI raporu oluşturuldu',ask_smartai:'HukaTech AI sorgusu',create_user_invite:'Kullanıcı daveti oluşturuldu',send_user_invite_email:'Davet e-postası gönderildi',publish_device_capabilities:'Cihaz yetkinlikleri yayınlandı',save_device_capabilities:'Cihaz yetkinlikleri kaydedildi',update_device_status:'Cihaz durumu güncellendi',test_email_notification:'E-posta testi gönderildi',create_database_backup:'Veritabanı yedeği oluşturuldu',update_alarm_automation_scheduler:'Otomasyon zamanlayıcı güncellendi',create_device_provisioning_token:'Cihaz kurulum anahtarı oluşturuldu',test_mail_gateway:'E-posta bağlantısı test edildi',update_notification_settings:'Bildirim ayarları güncellendi',save_system_health_settings:'Sistem sağlığı ayarları güncellendi'};
+    return labels[key]||key.replaceAll('_',' ');
+  }
+  function auditEntityLabelV1(type){
+    const key=String(type||'');
+    if(currentLanguage==='en')return key.replaceAll('_',' ');
+    const labels={auth:'Kimlik doğrulama',user:'Kullanıcı',invite:'Davet',subscription:'Abonelik',customer:'Şirket',site:'Lokasyon',audit_log:'Denetim günlüğü',maintenance_ticket:'Servis talebi',device:'Cihaz',machine:'Makine',remote_access:'Uzak erişim',general_settings:'Genel ayarlar',smartai_question:'HukaTech AI sorusu',ai_report:'AI raporu',customer_installation:'Müşteri kurulumu',notification_channel:'Bildirim kanalı',system_backup:'Sistem yedeği',automation_scheduler:'Otomasyon zamanlayıcı',alarm_escalation_queue:'Alarm bildirim kuyruğu',alarm_escalation_rule:'Alarm bildirim kuralı',machine_type_catalog:'Makine tipi kataloğu'};
+    return labels[key]||key.replaceAll('_',' ');
+  }
+  function auditEntityDisplayV1(row){
+    const label=auditEntityLabelV1(row?.entity_type);
+    const id=String(row?.entity_id||'');
+    if(!id||id==='global'||/^usr_/i.test(id)||/^[a-f0-9-]{20,}$/i.test(id))return label;
+    return `${label} · ${id}`;
+  }
+
+  function auditDetailV1(row){
+    const m=row?.metadata&&typeof row.metadata==='object'?row.metadata:{};
+    const parts=[];
+    if(m.email)parts.push(String(m.email));
+    if(m.device)parts.push(String(m.device));
+    if(m.customer_code)parts.push((currentLanguage==='en'?'Company':'Şirket')+': '+String(m.customer_code));
+    if(m.read_only===true)parts.push(currentLanguage==='en'?'Read only':'Salt okunur');
+    if(m.http_status!=null)parts.push('HTTP '+String(m.http_status));
+    if(m.latency_ms!=null)parts.push(String(m.latency_ms)+' ms');
+    return parts.join(' · ')||'-';
+  }
   function renderAuditSummary(data) {
     const target = document.getElementById('auditSummary');
     if (!target) return;
 
     const totals = data.totals || {};
-    const actions = (data.actions || []).map(x => `${x.action}: ${x.count}`).join(' · ') || 'Aksiyon yok';
-    const entities = (data.entities || []).map(x => `${x.entity_type}: ${x.count}`).join(' · ') || 'Entity yok';
+    const actions = (data.actions || []).map(x => `${auditActionLabelV1(x.action)}: ${x.count}`).join(' · ') || (currentLanguage==='en'?'No actions':'İşlem yok');
+    const entities = (data.entities || []).map(x => `${auditEntityLabelV1(x.entity_type)}: ${x.count}`).join(' · ') || (currentLanguage==='en'?'No entities':'Varlık yok');
 
     target.innerHTML = `
-      <strong>Total:</strong> ${esc(totals.total ?? 0)} ·
+      <strong>${currentLanguage==='en'?'Total':'Toplam'}:</strong> ${esc(totals.total ?? 0)} ·
       <strong>24 Saat:</strong> ${esc(totals.last_24h ?? 0)} ·
       <strong>7 Gün:</strong> ${esc(totals.last_7d ?? 0)} ·
-      <strong>Actor:</strong> ${esc(totals.actor_count ?? 0)} ·
+      <strong>${currentLanguage==='en'?'Actors':'İşlemi Yapan'}:</strong> ${esc(totals.actor_count ?? 0)} ·
       <strong>Son:</strong> ${esc(fmtDate(totals.latest_at))}<br>
-      <strong>Actions:</strong> ${esc(actions)}<br>
-      <strong>Entities:</strong> ${esc(entities)}
+      <strong>${currentLanguage==='en'?'Actions':'İşlemler'}:</strong> ${esc(actions)}<br>
+      <strong>${currentLanguage==='en'?'Entities':'Varlıklar'}:</strong> ${esc(entities)}
     `;
   }
 
@@ -7027,7 +7072,7 @@
         <div class="kpi-card-v59"><span>Gönderiliyor</span><strong>${esc(s.processing || 0)}</strong><small>Worker tarafından işleniyor</small></div>
         <div class="kpi-card-v59"><span>Teslim Edildi</span><strong>${esc(s.delivered || 0)}</strong><small>Dashboard veya onaylanmış gönderim</small></div>
         <div class="kpi-card-v59"><span>Başarısız</span><strong>${esc(s.failed || 0)}</strong><small>Retry zamanı bekleniyor</small></div>
-        <div class="kpi-card-v59"><span>Dead Letter</span><strong>${esc(s.dead_letter || 0)}</strong><small>Maksimum deneme aşıldı</small></div>
+        <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Dead Letter':'Hata Kuyruğu'}</span><strong>${esc(s.dead_letter || 0)}</strong><small>Maksimum deneme aşıldı</small></div>
         <div class="kpi-card-v59"><span>Bastırıldı</span><strong>${esc(s.suppressed || 0)}</strong><small>Gönderim yapılmayacak</small></div>
       </div>
       <p class="mini-status">Kuyruk yönetimi: <strong>${data.can_manage_events ? 'Açık' : 'Sadece görüntüleme'}</strong> · Güncelleme: ${esc(fmtDate(data.generated_at))}</p>
@@ -7060,16 +7105,30 @@
 
   function notificationStateHtml(enabled, configured, label) {
     const cls = !enabled ? 'disabled' : (configured ? 'ready' : 'not-ready');
-    const text = !enabled ? 'DISABLED' : (configured ? 'READY' : 'NOT READY');
+    const text = currentLanguage==='en'?(!enabled?'DISABLED':(configured?'READY':'NOT READY')):(!enabled?'KAPALI':(configured?'HAZIR':'HAZIR DEĞİL'));
     return `<span class="channel-state ${cls}">${esc(label)}: ${text}</span>`;
   }
 
   function notificationLastTestText(test) {
     if (!test) return 'Henüz test yapılmadı.';
-    const detail = test.status === 'delivered'
-      ? `Başarılı · Provider ID: ${test.provider_message_id || '-'}`
-      : `Başarısız · ${test.error_message || '-'}`;
+    const detail = test.status === 'delivered' ? (currentLanguage==='en'?'Successful':'Başarılı') : `${currentLanguage==='en'?'Failed':'Başarısız'} · ${test.error_message || '-'}`;
     return `${detail} · ${fmtDate(test.created_at)}`;
+  }
+
+  function applySettingsFinalPolishV1(){
+    const gateway=document.getElementById('notificationGatewayFields');
+    if(gateway&&!gateway.querySelector('details.settings-tech-details-v1')){
+      const grid=gateway.querySelector('.admin-form-grid');
+      if(grid){
+        const details=document.createElement('details');
+        details.className='settings-tech-details-v1';
+        const summary=document.createElement('summary');
+        summary.textContent=currentLanguage==='en'?'Advanced Technical Settings':'Gelişmiş Teknik Ayarlar';
+        details.appendChild(summary);
+        grid.parentNode.insertBefore(details,grid);
+        details.appendChild(grid);
+      }
+    }
   }
 
   function syncNotificationEmailModeFields() {
@@ -7127,25 +7186,23 @@
 
     const status = document.getElementById('notificationSettingsStatus');
     if (status) {
-      const modeText = email.mode === 'gateway' ? 'CENTRAL' : email.mode === 'direct_smtp' ? 'SMTP' : 'OFF';
+      const modeText = email.mode === 'gateway' ? (currentLanguage==='en'?'CENTRAL':'MERKEZİ') : email.mode === 'direct_smtp' ? 'SMTP' : (currentLanguage==='en'?'OFF':'KAPALI');
       status.innerHTML = `
         <div class="kpi-grid-v59">
-          <div class="kpi-card-v59"><span>Delivery</span><strong>${delivery.enabled ? 'ON' : 'OFF'}</strong><small>Escalation teslimatı</small></div>
-          <div class="kpi-card-v59"><span>Email Modu</span><strong>${modeText}</strong><small>${email.configured ? 'Yapılandırıldı' : 'Ayar bekliyor'}</small></div>
+          <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Delivery':'Teslimat'}</span><strong>${delivery.enabled?(currentLanguage==='en'?'ON':'AÇIK'):(currentLanguage==='en'?'OFF':'KAPALI')}</strong><small>${currentLanguage==='en'?'Notification delivery':'Bildirim teslimatı'}</small></div>
+          <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Email Mode':'E-posta Modu'}</span><strong>${modeText}</strong><small>${email.configured?(currentLanguage==='en'?'Configured':'Yapılandırıldı'):(currentLanguage==='en'?'Waiting for settings':'Ayar bekliyor')}</small></div>
           <div class="kpi-card-v59"><span>Son Teslimat</span><strong>${latest ? esc(String(latest.delivery_status || '-').toUpperCase()) : '-'}</strong><small>${latest ? esc(fmtDate(latest.last_attempt_at)) : 'Henüz kayıt yok'}</small></div>
-          <div class="kpi-card-v59"><span>Ayar Kaynağı</span><strong>${data.settings_source === 'database' ? 'DB' : 'ENV'}</strong><small>${esc(data.updated_by || 'Ortam değişkenleri')}</small></div>
+          <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Settings Source':'Ayar Kaynağı'}</span><strong>${data.settings_source==='database'?(currentLanguage==='en'?'DATABASE':'VERİTABANI'):(currentLanguage==='en'?'ENVIRONMENT':'ORTAM')}</strong><small>${currentLanguage==='en'?'Saved configuration':'Kayıtlı yapılandırma'}</small></div>
         </div>`;
     }
 
     const telegramState = document.getElementById('notificationTelegramState');
-    if (telegramState) telegramState.innerHTML = `${notificationStateHtml(telegram.enabled, telegram.configured, 'Telegram')}<p class="muted">Chat ID: ${esc(telegram.chat_id_masked || 'yok')}<br>${esc(notificationLastTestText(telegram.last_test))}</p>`;
+    if (telegramState) telegramState.innerHTML = `${notificationStateHtml(telegram.enabled, telegram.configured, 'Telegram')}<p class="muted">${telegram.chat_id_masked?(currentLanguage==='en'?'Default target configured':'Varsayılan hedef yapılandırıldı'):(currentLanguage==='en'?'No default target':'Varsayılan hedef yok')}<br>${esc(notificationLastTestText(telegram.last_test))}</p>`;
 
     const emailState = document.getElementById('notificationEmailState');
     if (emailState) {
-      const modeLabel = email.mode === 'gateway' ? 'Central Gateway' : email.mode === 'direct_smtp' ? 'Direct SMTP' : 'Disabled';
-      const detail = email.mode === 'gateway'
-        ? `${gateway.url || 'Gateway URL yok'} · Installation: ${gateway.installation_id || 'yok'}`
-        : `${email.host || 'SMTP host yok'} · ${email.from || 'from yok'}`;
+      const modeLabel = email.mode === 'gateway' ? (currentLanguage==='en'?'HukaTech Mail Gateway':'HukaTech E-posta Hizmeti') : email.mode === 'direct_smtp' ? 'SMTP' : (currentLanguage==='en'?'Disabled':'Kapalı');
+      const detail = email.mode === 'gateway' ? (currentLanguage==='en'?'Central email service configured':'Merkezi e-posta hizmeti yapılandırıldı') : (email.mode==='direct_smtp'?(currentLanguage==='en'?'Corporate SMTP configured':'Kurumsal SMTP yapılandırıldı'):(currentLanguage==='en'?'Email delivery disabled':'E-posta teslimatı kapalı'));
       emailState.innerHTML = `${notificationStateHtml(email.enabled && email.mode !== 'disabled', email.configured, modeLabel)}<p class="muted">${esc(detail)}<br>${esc(notificationLastTestText(email.last_test))}</p>`;
     }
 
@@ -7176,11 +7233,11 @@
     const status = document.getElementById('automationSchedulerStatus');
     if (status) status.innerHTML = `
       <div class="kpi-grid-v59">
-        <div class="kpi-card-v59"><span>Zamanlayıcı</span><strong>${scheduler.enabled ? 'ON' : 'OFF'}</strong><small>${scheduler.running ? 'Şu an çalışıyor' : `${esc(scheduler.interval_sec || 60)} sn aralık`}</small></div>
+        <div class="kpi-card-v59"><span>Zamanlayıcı</span><strong>${scheduler.enabled ? (currentLanguage==='en'?'ON':'AÇIK') : (currentLanguage==='en'?'OFF':'KAPALI')}</strong><small>${scheduler.running ? 'Şu an çalışıyor' : `${esc(scheduler.interval_sec || 60)} sn aralık`}</small></div>
         <div class="kpi-card-v59"><span>Son Çalışma</span><strong>${esc(String(scheduler.last_run_status || '-').toUpperCase())}</strong><small>${esc(fmtDate(scheduler.last_run_finished_at || scheduler.last_run_started_at))}</small></div>
-        <div class="kpi-card-v59"><span>Sonraki Çalışma</span><strong>${scheduler.enabled ? esc(fmtDate(scheduler.next_run_at)) : '-'}</strong><small>${scheduler.enabled ? 'Otomatik planlandı' : 'Scheduler kapalı'}</small></div>
-        <div class="kpi-card-v59"><span>Retry Due</span><strong>${esc(queue.retry_due || 0)}</strong><small>${retry.enabled ? `Max ${esc(retry.max_attempts || 5)} deneme` : 'Retry kapalı'}</small></div>
-        <div class="kpi-card-v59"><span>Pending</span><strong>${esc(queue.pending || 0)}</strong><small>Gönderim bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Sonraki Çalışma</span><strong>${scheduler.enabled ? esc(fmtDate(scheduler.next_run_at)) : '-'}</strong><small>${scheduler.enabled ? (currentLanguage==='en'?'Automatically scheduled':'Otomatik planlandı') : (currentLanguage==='en'?'Scheduler disabled':'Zamanlayıcı kapalı')}</small></div>
+        <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Retry Due':'Yeniden Deneme Bekleyen'}</span><strong>${esc(queue.retry_due || 0)}</strong><small>${retry.enabled ? `${currentLanguage==='en'?'Max':'En fazla'} ${esc(retry.max_attempts || 5)} ${currentLanguage==='en'?'attempts':'deneme'}` : (currentLanguage==='en'?'Retry disabled':'Yeniden deneme kapalı')}</small></div>
+        <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Pending':'Bekleyen'}</span><strong>${esc(queue.pending || 0)}</strong><small>Gönderim bekliyor</small></div>
         <div class="kpi-card-v59"><span>Dead Letter</span><strong>${esc(queue.dead_letter || 0)}</strong><small>Manuel inceleme gerekli</small></div>
       </div>
       ${scheduler.last_error ? `<p class="mini-status">Son hata: ${esc(scheduler.last_error)}</p>` : ''}
@@ -8274,15 +8331,13 @@
     const target = document.getElementById('auditLogTable');
     if (!target) return;
     target.innerHTML = table([
-      {label:'Tarih', value:r=>fmtDate(r.created_at)},
-      {label:'Actor', value:r=>r.actor_email || '-'},
-      {label:'Role', value:r=>r.actor_role || '-'},
-      {label:'Action', value:r=>r.action},
-      {label:'Entity', value:r=>`${r.entity_type}:${r.entity_id}`},
+      {label:currentLanguage==='en'?'Date':'Tarih', value:r=>fmtDate(r.created_at)},
+      {label:currentLanguage==='en'?'Actor':'İşlemi Yapan', value:r=>r.actor_email || '-'},
+      {label:currentLanguage==='en'?'Role':'Rol', value:r=>userRoleLabelV1(r.actor_role)},
+      {label:currentLanguage==='en'?'Action':'İşlem', value:r=>auditActionLabelV1(r.action)},
+      {label:currentLanguage==='en'?'Entity':'Varlık', value:r=>auditEntityDisplayV1(r)},
       {label:'IP', value:r=>r.ip_address || '-'},
-      {label:'Metadata', value:r=>compactJson(r.metadata)},
-      {label:'Old', value:r=>compactJson(r.old_values)},
-      {label:'New', value:r=>compactJson(r.new_values)}
+      {label:currentLanguage==='en'?'Detail':'Detay', value:r=>auditDetailV1(r)}
     ], data.logs || []);
   }
 
@@ -8547,15 +8602,15 @@
     const alert=document.getElementById('systemHealthAlerts');if(alert){const messages=en?[...(data.critical||[]),...(data.warnings||[])]:[...(data.critical_tr||data.critical||[]),...(data.warnings_tr||data.warnings||[])];alert.innerHTML=messages.length?`<div class="health-alert-v610 ${data.critical?.length?'critical':'warning'}">${messages.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:`<div class="health-alert-v610">${en?'No critical system issue detected.':'Kritik sistem sorunu tespit edilmedi.'}</div>`;}
 
     const services=[
-      ['Alarm Delivery',data.services?.alarm_delivery?.enabled?(data.services.alarm_delivery.running?'running':'ok'):'disabled',`${en?'Automatic':'Otomatik'}: ${data.services?.alarm_delivery?.automatic?'ON':'OFF'}`],
-      ['Automation Scheduler',data.services?.automation_scheduler?.enabled?(data.services.automation_scheduler.last_error?'warning':'ok'):'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.automation_scheduler?.next_run_at)}`],
-      ['Alarm Reports',data.services?.alarm_reports?.enabled?'ok':'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.alarm_reports?.next_run_at)}`],
-      ['Maintenance Scheduler',data.services?.maintenance?.enabled?(data.services.maintenance.last_error?'warning':'ok'):'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.maintenance?.next_run_at)}`],
+      [en?'Alarm Delivery':'Alarm Teslimatı',data.services?.alarm_delivery?.enabled?(data.services.alarm_delivery.running?'running':'ok'):'disabled',`${en?'Automatic':'Otomatik'}: ${data.services?.alarm_delivery?.automatic?(en?'ON':'AÇIK'):(en?'OFF':'KAPALI')}`],
+      [en?'Automation Scheduler':'Otomasyon Zamanlayıcı',data.services?.automation_scheduler?.enabled?(data.services.automation_scheduler.last_error?'warning':'ok'):'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.automation_scheduler?.next_run_at)}`],
+      [en?'Alarm Reports':'Alarm Raporları',data.services?.alarm_reports?.enabled?'ok':'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.alarm_reports?.next_run_at)}`],
+      [en?'Maintenance Scheduler':'Bakım Zamanlayıcı',data.services?.maintenance?.enabled?(data.services.maintenance.last_error?'warning':'ok'):'disabled',`${en?'Next':'Sonraki'}: ${fmtDate(data.services?.maintenance?.next_run_at)}`],
       [en?'MQTT Broker':'MQTT Broker',!data.mqtt?.configured?'unconfigured':(data.mqtt?.broker_connected?'ok':'offline'),!data.mqtt?.configured?(en?'MQTT_URL is not configured':'MQTT_URL yapılandırılmadı'):(data.mqtt?.broker_connected?(en?'Socket connection established':'Soket bağlantısı kuruldu'):(en?'Broker connection is closed':'Broker bağlantısı kapalı'))],
       [en?'Device Traffic':'Cihaz Trafiği',data.mqtt?.device_active?'ok':(data.mqtt?.broker_connected?'stale':'offline'),data.mqtt?.device_active?`${en?'Last message':'Son mesaj'}: ${fmtDate(data.mqtt?.last_message_at)}`:(data.mqtt?.last_message_at?`${en?'Last message':'Son mesaj'}: ${fmtDate(data.mqtt.last_message_at)}`:(en?'No device message received':'Cihaz mesajı alınmadı'))],
       ['Telegram',data.notification?.telegram?.enabled?(data.notification.telegram.configured?'ok':'warning'):'disabled',data.notification?.telegram?.configured?(en?'Configured':'Yapılandırıldı'):(en?'Not configured':'Yapılandırılmadı')],
-      ['Email / SMTP',data.notification?.email?.enabled?(data.notification.email.configured?'ok':'warning'):'disabled',data.notification?.email?.configured?(en?'Configured':'Yapılandırıldı'):(en?'Not configured':'Yapılandırılmadı')],
-      ['Automatic Backup',data.services?.backup?.enabled?(data.services.backup.running?'running':'ok'):'disabled',`${String(data.services?.backup?.backup_hour??2).padStart(2,'0')}:00`],
+      [en?'Email / SMTP':'E-posta / SMTP',data.notification?.email?.enabled?(data.notification.email.configured?'ok':'warning'):'disabled',data.notification?.email?.configured?(en?'Configured':'Yapılandırıldı'):(en?'Not configured':'Yapılandırılmadı')],
+      [en?'Automatic Backup':'Otomatik Yedek',data.services?.backup?.enabled?(data.services.backup.running?'running':'ok'):'disabled',`${String(data.services?.backup?.backup_hour??2).padStart(2,'0')}:00`],
       ['pg_dump',data.tools?.pg_dump?.ready?'ok':'warning',data.tools?.pg_dump?.version|| (en?'Not found':'Bulunamadı')],
       ['pg_restore',data.tools?.pg_restore?.ready?'ok':'warning',data.tools?.pg_restore?.version|| (en?'Checksum-only verification':'Yalnızca checksum doğrulaması')]
     ];
@@ -8616,10 +8671,15 @@
     return copy;
   }
 
+  function healthComponentLabelV1(component,en){
+    const key=String(component||'');
+    if(en)return key;
+    return ({backup:'Yedekleme','health-check':'Sağlık Kontrolü',notification:'Bildirim',system:'Sistem'})[key]||key.replaceAll('_',' ');
+  }
   function renderSystemHealthLogs() {
     const target=document.getElementById('systemHealthLogs');if(!target||!lastSystemHealthData)return;const en=currentLanguage==='en';const level=document.getElementById('systemHealthLogLevel')?.value||'all';
     const rows=(lastSystemHealthData.logs||[]).filter(r=>level==='all'||r.level===level);
-    target.innerHTML=table([{label:en?'Date':'Tarih',value:r=>fmtDate(r.created_at)},{label:en?'Level':'Seviye',html:true,value:r=>healthChipV610(r.level,r.level)},{label:en?'Component':'Bileşen',value:r=>r.component},{label:en?'Message':'Mesaj',value:r=>localizeHealthLogMessageV612(r,en)},{label:'Metadata',value:r=>compactJson(localizeHealthMetadataV612(r.metadata,en))}],rows);
+    target.innerHTML=table([{label:en?'Date':'Tarih',value:r=>fmtDate(r.created_at)},{label:en?'Level':'Seviye',html:true,value:r=>healthChipV610(r.level,r.level)},{label:en?'Component':'Bileşen',value:r=>healthComponentLabelV1(r.component,en)},{label:en?'Message':'Mesaj',value:r=>localizeHealthLogMessageV612(r,en)}],rows);
   }
 
 
@@ -8627,6 +8687,24 @@
   let lastSecurityCenterData=null;
   function securityChipV620(text,type='neutral'){return `<span class="security-chip-v620 ${esc(type)}">${esc(text)}</span>`;}
   function securityBoolValue(id,value){const el=document.getElementById(id);if(el)el.value=String(Boolean(value));}
+  function securityDisplayNameV1(row){
+    const raw=String(row?.full_name||row?.email||'-');
+    return raw==='FactoryBox Admin'?(currentLanguage==='en'?'HukaTech Administrator':'HukaTech Yönetici'):raw;
+  }
+  function securityEventLabelV1(action){
+    const key=String(action||'');
+    if(currentLanguage==='en')return key.replaceAll('_',' ');
+    const labels={login_success:'Başarılı giriş',login_failed:'Hatalı giriş',account_locked:'Hesap kilitlendi',login_rate_limited:'Giriş limiti aşıldı',login_blocked_locked_account:'Kilitli hesaba giriş engellendi',logout:'Çıkış',change_own_password:'Şifre değiştirildi',admin_reset_password:'Şifre sıfırlandı',revoke_session:'Oturum kapatıldı',revoke_user_sessions:'Kullanıcı oturumları kapatıldı',unlock_user:'Hesap kilidi açıldı',force_password_change:'Şifre değişimi zorunlu kılındı'};
+    return labels[key]||key.replaceAll('_',' ');
+  }
+  function securityEventDetailV1(row){
+    const m=row?.metadata&&typeof row.metadata==='object'?row.metadata:{};
+    const parts=[];
+    if(m.email)parts.push(String(m.email));
+    if(m.device)parts.push(String(m.device));
+    if(m.customer_code)parts.push((currentLanguage==='en'?'Company':'Şirket')+': '+String(m.customer_code));
+    return parts.join(' · ')||'-';
+  }
   function renderSecurityCenter(data){
     lastSecurityCenterData=data;const en=currentLanguage==='en';const summary=data.summary||{};const settings=data.settings||{};const policy=data.password_policy||{};
     const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value??'-';};
@@ -8636,16 +8714,16 @@
     securityBoolValue('securityRequireUpper',settings.password_require_upper);securityBoolValue('securityRequireLower',settings.password_require_lower);securityBoolValue('securityRequireNumber',settings.password_require_number);securityBoolValue('securityRequireSpecial',settings.password_require_special);securityBoolValue('securityTelegramAlert',settings.suspicious_login_telegram);securityBoolValue('securityHeadersEnabled',settings.secure_headers_enabled);securityBoolValue('securityCsrfEnabled',settings.csrf_origin_check_enabled);
     const requirements=[policy.require_upper?(en?'uppercase':'büyük harf'):null,policy.require_lower?(en?'lowercase':'küçük harf'):null,policy.require_number?(en?'number':'rakam'):null,policy.require_special?(en?'special character':'özel karakter'):null].filter(Boolean);
     setText('securityPolicyNote',`${en?'Password policy':'Şifre politikası'}: ${policy.min_length||10}+ ${en?'characters':'karakter'}${requirements.length?' · '+requirements.join(' · '):''}.`);
-    setText('securityCenterStatus',`${en?'Updated':'Güncellendi'}: ${fmtDate(data.generated_at)} · ${en?'Security headers':'Güvenlik başlıkları'}: ${settings.secure_headers_enabled?'ON':'OFF'} · CSRF: ${settings.csrf_origin_check_enabled?'ON':'OFF'}`);
+    setText('securityCenterStatus',`${en?'Updated':'Güncellendi'}: ${fmtDate(data.generated_at)} · ${en?'Security headers':'Güvenlik başlıkları'}: ${settings.secure_headers_enabled?(en?'ON':'AÇIK'):(en?'OFF':'KAPALI')} · CSRF: ${settings.csrf_origin_check_enabled?(en?'ON':'AÇIK'):(en?'OFF':'KAPALI')}`);
 
     const sessions=data.sessions||[];const sessionTarget=document.getElementById('securitySessionsTable');
-    if(sessionTarget)sessionTarget.innerHTML=sessions.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'User':'Kullanıcı'}</th><th>${en?'Device / IP':'Cihaz / IP'}</th><th>${en?'Created':'Oluşturuldu'}</th><th>${en?'Last Activity':'Son Aktivite'}</th><th>${en?'Idle Expiry':'Boşta Bitiş'}</th><th>${en?'Action':'Aksiyon'}</th></tr></thead><tbody>${sessions.map(row=>`<tr class="${row.id===data.current_session_id?'security-current-session-v620':''}"><td><strong>${esc(row.full_name||row.email)}</strong><br><small>${esc(row.email)} · ${esc(row.role)}</small></td><td>${esc(row.device_label||'-')}<br><small>${esc(row.ip_address||'-')}</small></td><td>${esc(fmtDate(row.created_at))}</td><td>${esc(fmtDate(row.last_seen_at))}</td><td>${esc(fmtDate(row.idle_expires_at))}</td><td>${row.id===data.current_session_id?securityChipV620(en?'Current':'Mevcut','warn'):`<button data-security-action="revoke-session" data-id="${esc(row.id)}" class="secondary-btn">${en?'Close':'Kapat'}</button>`}</td></tr>`).join('')}</tbody></table></div>`:`<span class="muted">${en?'No active sessions.':'Aktif oturum yok.'}</span>`;
+    if(sessionTarget)sessionTarget.innerHTML=sessions.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'User':'Kullanıcı'}</th><th>${en?'Device / IP':'Cihaz / IP'}</th><th>${en?'Created':'Oluşturuldu'}</th><th>${en?'Last Activity':'Son Aktivite'}</th><th>${en?'Idle Expiry':'Boşta Bitiş'}</th><th>${en?'Action':'Aksiyon'}</th></tr></thead><tbody>${sessions.map(row=>`<tr class="${row.id===data.current_session_id?'security-current-session-v620':''}"><td><strong>${esc(securityDisplayNameV1(row))}</strong><br><small>${esc(row.email)} · ${esc(userRoleLabelV1(row.role))}</small></td><td>${esc(row.device_label||'-')}<br><small>${esc(row.ip_address||'-')}</small></td><td>${esc(fmtDate(row.created_at))}</td><td>${esc(fmtDate(row.last_seen_at))}</td><td>${esc(fmtDate(row.idle_expires_at))}</td><td>${row.id===data.current_session_id?securityChipV620(en?'Current':'Mevcut','warn'):`<button data-security-action="revoke-session" data-id="${esc(row.id)}" class="secondary-btn">${en?'Close':'Kapat'}</button>`}</td></tr>`).join('')}</tbody></table></div>`:`<span class="muted">${en?'No active sessions.':'Aktif oturum yok.'}</span>`;
 
     const users=data.locked_users||[];const usersTarget=document.getElementById('securityUsersTable');
-    if(usersTarget)usersTarget.innerHTML=users.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'User':'Kullanıcı'}</th><th>${en?'Status':'Durum'}</th><th>${en?'Failed':'Hatalı'}</th><th>${en?'Locked Until':'Kilit Bitişi'}</th><th>${en?'Last Failed IP':'Son Hatalı IP'}</th><th>${en?'Actions':'Aksiyonlar'}</th></tr></thead><tbody>${users.map(row=>{const locked=row.locked_until&&new Date(row.locked_until)>new Date();return `<tr><td><strong>${esc(row.full_name||row.email)}</strong><br><small>${esc(row.email)} · ${esc(row.role)}</small></td><td>${locked?securityChipV620(en?'LOCKED':'KİLİTLİ','danger'):row.force_password_change?securityChipV620(en?'PASSWORD CHANGE':'ŞİFRE DEĞİŞİMİ','warn'):securityChipV620(en?'WATCH':'İZLE','neutral')}</td><td>${esc(row.failed_login_count||0)}</td><td>${esc(fmtDate(row.locked_until))}</td><td>${esc(row.last_failed_ip||'-')}</td><td><div class="security-actions-v620">${locked?`<button data-security-action="unlock-user" data-id="${esc(row.id)}">${en?'Unlock':'Kilidi Aç'}</button>`:''}<button data-security-action="revoke-user-sessions" data-id="${esc(row.id)}" class="secondary-btn">${en?'Close Sessions':'Oturumları Kapat'}</button><button data-security-action="force-password" data-id="${esc(row.id)}" class="secondary-btn">${en?'Force Change':'Değişimi Zorunlu Kıl'}</button><button data-security-action="reset-password" data-id="${esc(row.id)}" class="secondary-btn">${en?'Reset Password':'Şifre Sıfırla'}</button></div></td></tr>`}).join('')}</tbody></table></div>`:`<span class="muted">${en?'No locked or flagged accounts.':'Kilitli veya işaretli hesap yok.'}</span>`;
+    if(usersTarget)usersTarget.innerHTML=users.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'User':'Kullanıcı'}</th><th>${en?'Status':'Durum'}</th><th>${en?'Failed':'Hatalı'}</th><th>${en?'Locked Until':'Kilit Bitişi'}</th><th>${en?'Last Failed IP':'Son Hatalı IP'}</th><th>${en?'Actions':'Aksiyonlar'}</th></tr></thead><tbody>${users.map(row=>{const locked=row.locked_until&&new Date(row.locked_until)>new Date();return `<tr><td><strong>${esc(securityDisplayNameV1(row))}</strong><br><small>${esc(row.email)} · ${esc(userRoleLabelV1(row.role))}</small></td><td>${locked?securityChipV620(en?'LOCKED':'KİLİTLİ','danger'):row.force_password_change?securityChipV620(en?'PASSWORD CHANGE':'ŞİFRE DEĞİŞİMİ','warn'):securityChipV620(en?'WATCH':'İZLE','neutral')}</td><td>${esc(row.failed_login_count||0)}</td><td>${esc(fmtDate(row.locked_until))}</td><td>${esc(row.last_failed_ip||'-')}</td><td><div class="security-actions-v620">${locked?`<button data-security-action="unlock-user" data-id="${esc(row.id)}">${en?'Unlock':'Kilidi Aç'}</button>`:''}<button data-security-action="revoke-user-sessions" data-id="${esc(row.id)}" class="secondary-btn">${en?'Close Sessions':'Oturumları Kapat'}</button><button data-security-action="force-password" data-id="${esc(row.id)}" class="secondary-btn">${en?'Force Change':'Değişimi Zorunlu Kıl'}</button><button data-security-action="reset-password" data-id="${esc(row.id)}" class="secondary-btn">${en?'Reset Password':'Şifre Sıfırla'}</button></div></td></tr>`}).join('')}</tbody></table></div>`:`<span class="muted">${en?'No locked or flagged accounts.':'Kilitli veya işaretli hesap yok.'}</span>`;
 
     const events=data.events||[];const eventsTarget=document.getElementById('securityEventsTable');
-    if(eventsTarget)eventsTarget.innerHTML=events.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'Date':'Tarih'}</th><th>${en?'Event':'Olay'}</th><th>${en?'Actor':'Aktör'}</th><th>IP</th><th>${en?'Details':'Detay'}</th></tr></thead><tbody>${events.map(row=>`<tr><td>${esc(fmtDate(row.created_at))}</td><td>${securityChipV620(row.action,['account_locked','login_rate_limited','login_blocked_locked_account'].includes(row.action)?'danger':row.action==='login_failed'?'warn':'neutral')}</td><td>${esc(row.actor_email||'-')}</td><td>${esc(row.ip_address||'-')}</td><td>${esc(compactJson(row.metadata))}</td></tr>`).join('')}</tbody></table></div>`:`<span class="muted">${en?'No security events.':'Güvenlik olayı yok.'}</span>`;
+    if(eventsTarget)eventsTarget.innerHTML=events.length?`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>${en?'Date':'Tarih'}</th><th>${en?'Event':'Olay'}</th><th>${en?'Actor':'Aktör'}</th><th>IP</th><th>${en?'Details':'Detay'}</th></tr></thead><tbody>${events.map(row=>`<tr><td>${esc(fmtDate(row.created_at))}</td><td>${securityChipV620(securityEventLabelV1(row.action),['account_locked','login_rate_limited','login_blocked_locked_account'].includes(row.action)?'danger':row.action==='login_failed'?'warn':'neutral')}</td><td>${esc(row.actor_email||'-')}</td><td>${esc(row.ip_address||'-')}</td><td>${esc(securityEventDetailV1(row))}</td></tr>`).join('')}</tbody></table></div>`:`<span class="muted">${en?'No security events.':'Güvenlik olayı yok.'}</span>`;
   }
 
   async function loadSecurityCenter(){const data=await getJson('/api/admin/security-center');renderSecurityCenter(data);return data;}
@@ -8655,7 +8733,7 @@
     const token=authToken();
     const res=await fetch(`/api/admin/system-health/backups/${encodeURIComponent(id)}/download`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
     if(!res.ok){let message=`Backup download failed: ${res.status}`;try{const body=await res.json();message=body.message||message;}catch{}throw new Error(message);}
-    const blob=await res.blob();const disposition=res.headers.get('content-disposition')||'';const match=disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);const filename=match?decodeURIComponent(match[1].replace(/\"/g,'')):`FactoryBox_DB_${new Date().toISOString().replace(/[:.]/g,'-')}.dump`;
+    const blob=await res.blob();const disposition=res.headers.get('content-disposition')||'';const match=disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);const filename=match?decodeURIComponent(match[1].replace(/\"/g,'')):`HukaTech_DB_${new Date().toISOString().replace(/[:.]/g,'-')}.dump`;
     const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
 
@@ -8666,16 +8744,16 @@
   function remoteAccessModeLabel(mode){const labels={disabled:currentLanguage==='en'?'DISABLED':'KAPALI',quick:'QUICK TUNNEL',named:'NAMED TUNNEL'};return labels[mode]||String(mode||'-').toUpperCase();}
   function renderRemoteAccessV670(data){
     remoteAccessStateV670=data||remoteAccessStateV670;const settings=data.settings||{},runtime=data.runtime||{};
-    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.13.2'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
+    const status=document.getElementById('remoteAccessStatus');if(status)status.textContent=`v${data.version||'6.13.6'} · ${settings.public_url||'-'} · ${currentLanguage==='en'?'Origin':'Kaynak'}: ${settings.origin_service||'http://nginx:8081'}`;
     const state=document.getElementById('remoteAccessState');if(state)state.textContent=runtime.status==='online'?(currentLanguage==='en'?'ONLINE':'ÇEVRİMİÇİ'):runtime.status==='configured'?(currentLanguage==='en'?'CONFIGURED':'YAPILANDIRILDI'):runtime.status==='waiting_configuration'?(currentLanguage==='en'?'WAITING':'AYAR BEKLİYOR'):(currentLanguage==='en'?'OFF':'KAPALI');
     const detail=document.getElementById('remoteAccessStateDetail');if(detail)detail.textContent=runtime.last_error||settings.public_url||'-';
     const mode=document.getElementById('remoteAccessModeValue');if(mode)mode.textContent=remoteAccessModeLabel(settings.mode);
-    const token=document.getElementById('remoteAccessTokenValue');if(token)token.textContent=settings.mode==='quick'?(currentLanguage==='en'?'NOT REQUIRED':'GEREKMİYOR'):(settings.token_configured?(currentLanguage==='en'?'CONFIGURED':'HAZIR'):(currentLanguage==='en'?'NOT READY':'HAZIR DEĞİL'));
+    const token=document.getElementById('remoteAccessTokenValue');if(token)token.textContent=settings.mode==='quick'?(currentLanguage==='en'?'NOT REQUIRED':'GEREKMİYOR'):(settings.mode==='named'&&runtime.status==='online'?(currentLanguage==='en'?'READY':'HAZIR'):(settings.token_configured?(currentLanguage==='en'?'READY':'HAZIR'):(currentLanguage==='en'?'CHECK':'KONTROL')));
     const last=document.getElementById('remoteAccessLastCheck');if(last)last.textContent=runtime.last_check_at?fmtDate(runtime.last_check_at):'-';
     const latency=document.getElementById('remoteAccessLatency');if(latency)latency.textContent=runtime.last_latency_ms!=null?`${runtime.last_latency_ms} ms · HTTP ${runtime.last_http_status||'-'}`:(runtime.last_error||'-');
     const fields={remoteAccessMode:settings.mode||'disabled',remoteAccessProtected:String(Boolean(settings.access_protected)),remoteAccessPublicUrl:settings.public_url||'',remoteAccessAllowedDomains:settings.allowed_email_domains||'',remoteAccessTechnicalService:String(Boolean(settings.technical_service_enabled)),remoteAccessNotes:settings.notes||''};Object.entries(fields).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.value=value;});
-    const checks=document.getElementById('remoteAccessChecklist');if(checks)checks.innerHTML=(data.checklist||[]).map(item=>`<div class="remote-check-v670 ${item.ok?'ok':'warn'}"><span>${esc(currentLanguage==='en'?item.message_en:item.message_tr)}</span><b>${item.ok?(currentLanguage==='en'?'OK':'HAZIR'):(currentLanguage==='en'?'CHECK':'KONTROL')}</b></div>`).join('')||'-';
-    const info=document.getElementById('remoteAccessConnectionInfo');if(info)info.innerHTML=settings.mode==='quick'?(currentLanguage==='en'?'Quick Tunnel is temporary; the URL changes after restart. Use it only for testing.':'Quick Tunnel geçicidir; yeniden başlatmada adres değişir. Yalnızca test için kullan.'):(settings.mode==='named'?(currentLanguage==='en'?'Named Tunnel provides a stable domain. Configure the public hostname origin as <b>http://nginx:8081</b> and protect it with Cloudflare Access.':'Named Tunnel sabit domain sağlar. Public hostname kaynağını <b>http://nginx:8081</b> yap ve Cloudflare Access ile koru.'):(currentLanguage==='en'?'Remote access is disabled. Local HTTPS access continues to work.':'Uzak erişim kapalı. Yerel HTTPS erişimi çalışmaya devam eder.'));
+    const checks=document.getElementById('remoteAccessChecklist');if(checks)checks.innerHTML=(data.checklist||[]).map(item=>{let message=currentLanguage==='en'?item.message_en:item.message_tr;if(currentLanguage!=='en')message=String(message||'').replace('FactoryBox kullanıcı girişi açık','HukaTech kullanıcı girişi açık');const runtimeReady=settings.mode==='named'&&runtime.status==='online'&&/Tunnel (?:çalışma|çalıştırma) bilgisi hazır|Tunnel runtime information ready/i.test(String(message||''));const ok=Boolean(item.ok)||runtimeReady;return `<div class="remote-check-v670 ${ok?'ok':'warn'}"><span>${esc(message)}</span><b>${ok?(currentLanguage==='en'?'OK':'HAZIR'):(currentLanguage==='en'?'CHECK':'KONTROL')}</b></div>`;}).join('')||'-';
+    const info=document.getElementById('remoteAccessConnectionInfo');if(info)info.innerHTML=settings.mode==='quick'?(currentLanguage==='en'?'Quick Tunnel is temporary; use it only for testing.':'Quick Tunnel geçicidir; yalnızca test amacıyla kullanın.'):(settings.mode==='named'?(runtime.status==='online'?(currentLanguage==='en'?'Named Tunnel is online and the public address is reachable.':'Named Tunnel çevrimiçi ve uzak panel adresi erişilebilir.'):(currentLanguage==='en'?'Named Tunnel is configured. Run the remote address test to verify connectivity.':'Named Tunnel yapılandırıldı. Bağlantıyı doğrulamak için uzak adres testini çalıştırın.')):(currentLanguage==='en'?'Remote access is disabled.':'Uzak erişim kapalı.'));
     const command=document.getElementById('remoteAccessCommand');if(command){const dir='C:\\FactoryBox\\deployment\\production';command.textContent=settings.mode==='quick'?`cd /d "${dir}"\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\\start-quick-remote-access.ps1"`:`cd /d "${dir}"\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\\enable-cloudflare-tunnel.ps1" -TunnelToken "CLOUDFLARE_TOKEN" -PublicUrl "${settings.public_url||'https://panel.example.com'}"`;}
   }
   async function loadRemoteAccessV670(probe=false){const data=await getJson(`/api/admin/remote-access${probe?'?probe=1':''}`);renderRemoteAccessV670(data);return data;}
@@ -9039,6 +9117,7 @@
 
 
   async function loadAdmin() {
+    applySettingsFinalPolishV1();
     const status = document.getElementById('adminStatus');
     const refreshBtn = document.getElementById('refreshAdmin');
 
@@ -10512,7 +10591,7 @@
     const saveSecuritySettingsBtn=document.getElementById('saveSecuritySettingsBtn');
     if(saveSecuritySettingsBtn)saveSecuritySettingsBtn.addEventListener('click',async()=>{saveSecuritySettingsBtn.disabled=true;const st=document.getElementById('securityCenterStatus');try{await saveSecuritySettings();if(st)st.textContent=currentLanguage==='en'?'Security settings saved.':'Güvenlik ayarları kaydedildi.';await loadSecurityCenter();}catch(e){if(st)st.textContent=e.message;}finally{saveSecuritySettingsBtn.disabled=false;}});
     const changeOwnPasswordBtn=document.getElementById('changeOwnPasswordBtn');
-    if(changeOwnPasswordBtn)changeOwnPasswordBtn.addEventListener('click',async()=>{changeOwnPasswordBtn.disabled=true;const st=document.getElementById('securityPasswordStatus');try{const current=document.getElementById('securityCurrentPassword')?.value||'';const next=document.getElementById('securityNewPassword')?.value||'';const result=await apiJson('/api/auth/change-password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});document.getElementById('securityCurrentPassword').value='';document.getElementById('securityNewPassword').value='';if(st)st.textContent=`${currentLanguage==='en'?'Password changed. Other sessions closed':'Şifre değiştirildi. Diğer oturumlar kapatıldı'}: ${result.sessions_revoked||0}`;await loadSecurityCenter();}catch(e){if(st)st.textContent=e.message;}finally{changeOwnPasswordBtn.disabled=false;}});
+    if(changeOwnPasswordBtn)changeOwnPasswordBtn.addEventListener('click',async()=>{changeOwnPasswordBtn.disabled=true;const st=document.getElementById('securityPasswordStatus');try{const current=document.getElementById('securityCurrentPassword')?.value||'';const next=document.getElementById('securityNewPassword')?.value||'';const confirm=document.getElementById('securityNewPasswordConfirm')?.value||'';if(next!==confirm)throw new Error(currentLanguage==='en'?'New passwords do not match.':'Yeni şifreler eşleşmiyor.');const result=await apiJson('/api/auth/change-password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});document.getElementById('securityCurrentPassword').value='';document.getElementById('securityNewPassword').value='';document.getElementById('securityNewPasswordConfirm').value='';if(st)st.textContent=`${currentLanguage==='en'?'Password changed. Other sessions closed':'Şifre değiştirildi. Diğer oturumlar kapatıldı'}: ${result.sessions_revoked||0}`;await loadSecurityCenter();}catch(e){if(st)st.textContent=e.message;}finally{changeOwnPasswordBtn.disabled=false;}});
     const securityCenterSection=document.getElementById('securityCenterSection');
     if(securityCenterSection)securityCenterSection.addEventListener('click',async(e)=>{const btn=e.target.closest('[data-security-action]');if(!btn)return;const action=btn.dataset.securityAction;const id=btn.dataset.id;btn.disabled=true;const st=document.getElementById('securityCenterStatus');try{if(action==='revoke-session')await apiJson(`/api/admin/security-center/sessions/${encodeURIComponent(id)}/revoke`,{method:'POST',body:'{}'});if(action==='unlock-user')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/unlock`,{method:'POST',body:'{}'});if(action==='revoke-user-sessions')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/revoke-sessions`,{method:'POST',body:'{}'});if(action==='force-password')await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/force-password-change`,{method:'POST',body:JSON.stringify({force:true})});if(action==='reset-password'){const password=prompt(currentLanguage==='en'?'Enter a new temporary password:':'Yeni geçici şifreyi gir:');if(!password)return;await apiJson(`/api/admin/security-center/users/${encodeURIComponent(id)}/reset-password`,{method:'POST',body:JSON.stringify({new_password:password,force_change:true})});}if(st)st.textContent=currentLanguage==='en'?'Security action completed.':'Güvenlik işlemi tamamlandı.';await loadSecurityCenter();}catch(error){if(st)st.textContent=error.message;}finally{btn.disabled=false;}});
 

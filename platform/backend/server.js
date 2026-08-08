@@ -255,7 +255,7 @@ let assetCatalogFoundationReady = false;
 const authSessions = new Map();
 const passwordResetRequestWindow = new Map();
 
-const APP_VERSION = '6.13.2';
+const APP_VERSION = '6.13.6';
 
 
 app.get('/healthz', (_req, res) => {
@@ -6890,7 +6890,7 @@ async function createSystemDatabaseBackup({trigger='manual',actor='admin'}={}) {
   systemHealthRuntime.backup_running=true;
   const backupDir=systemBackupRootDir();
   fs.mkdirSync(backupDir,{recursive:true});
-  const filename=`FactoryBox_DB_${systemBackupTimestamp()}.dump`;
+  const filename=`HukaTech_DB_${systemBackupTimestamp()}.dump`;
   const filePath=path.join(backupDir,filename);
   const record=await one(`INSERT INTO system_backup_history(filename,file_path,backup_type,status,created_by) VALUES($1,$2,$3,'running',$4) RETURNING *`,[filename,filePath,trigger,actor]);
   try {
@@ -7017,7 +7017,7 @@ async function maybeSendSystemCriticalAlert(snapshot) {
   const signature=crypto.createHash('sha256').update(JSON.stringify(snapshot.critical)).digest('hex');
   const lastAt=systemHealthRuntime.last_critical_alert_at?new Date(systemHealthRuntime.last_critical_alert_at).getTime():0;
   if (signature===systemHealthRuntime.last_critical_signature && Date.now()-lastAt<1800000) return {sent:false,reason:'throttled'};
-  const text=['🚨 FactoryBox System Health Critical',`Version: v${APP_VERSION}`,`Host: ${os.hostname()}`,...snapshot.critical.map(item=>`- ${item}`),`Time: ${new Date().toISOString()}`].join('\n');
+  const text=['🚨 HukaTech Sistem Sağlığı Kritik',`Sürüm: v${APP_VERSION}`,`Sunucu: ${os.hostname()}`,...snapshot.critical.map(item=>`- ${item}`),`Zaman: ${new Date().toISOString()}`].join('\n');
   try {
     const result=await sendSystemHealthTelegramAlert(text);
     if (result.sent) { systemHealthRuntime.last_critical_signature=signature;systemHealthRuntime.last_critical_alert_at=new Date().toISOString(); }
@@ -8493,9 +8493,9 @@ app.post('/api/admin/notification-settings/test-email', adminRequired, permissio
   try {
     const result = await sendReportEmail({
       to:target,
-      subject:`FactoryBox v${APP_VERSION} Email Test`,
-      html:emailShellHtml('FactoryBox Email Test', `<h1 style="margin:0 0 12px;color:#102033;">Bildirim kanalı hazır</h1><p>FactoryBox v${APP_VERSION} test e-postası başarıyla gönderildi.</p>`),
-      text:`FactoryBox v${APP_VERSION} test e-postası. Email bildirim kanalı hazır ve çalışıyor.`,
+      subject:`HukaTech v${APP_VERSION} E-posta Testi`,
+      html:emailShellHtml('HukaTech E-posta Testi', `<h1 style="margin:0 0 12px;color:#102033;">Bildirim kanalı hazır</h1><p>HukaTech v${APP_VERSION} test e-postası başarıyla gönderildi.</p>`),
+      text:`HukaTech v${APP_VERSION} test e-postası. E-posta bildirim kanalı hazır ve çalışıyor.`,
       purpose:'test',
       metadata:{customer_code:CFG.customerCode,site_code:CFG.siteCode}
     });
