@@ -2379,13 +2379,18 @@
   .settings-tech-details-v1>summary{cursor:pointer;padding:12px 14px;font-weight:750;color:#56636d;}
   .settings-tech-details-v1>.admin-form-grid{margin:0;border:0;border-top:1px solid #e2e7ea;border-radius:0 0 12px 12px;box-shadow:none;}
 </style>
+  <link rel="stylesheet" href="/admin-theme.css?v=6.13.6.16">
 </head>
 <body class="admin-ui-v58">
 <div class="admin-shell-v58">
   <aside class="admin-sidebar-v58" id="adminSidebarV58">
     <div class="admin-brand-v58">
-      <h1 class="hukatech-sidebar-logo-v2" aria-label="HukaTech"><span class="hukatech-brand-huka-v2">Huka</span><span class="hukatech-brand-tech-v2">Tech</span></h1>
-      <p id="adminVersionLabel">v6.13.6 &mdash; Operasyon odakl&#305; genel bak&#305;&#351; aktif.</p>
+      <div class="hukatech-sidebar-brand-v3" aria-label="HukaTech — One Platform. Unlimited Monitoring.">
+        <span class="hukatech-mark-v3" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="hukatech-wordmark-v3"><b>Huka</b><b>Tech</b></span>
+      </div>
+      <p class="hukatech-tagline-v3">ONE PLATFORM. UNLIMITED MONITORING.</p>
+      <p id="adminVersionLabel" class="hukatech-version-v3">HukaTech v6.13.6</p>
     </div>
 
     <div class="admin-nav-title-v58">Ana Menü</div>
@@ -3080,7 +3085,7 @@
   <section id="notificationSettingsSection" class="card wide admin-card" data-admin-view="notifications">
     <div class="section-title-row">
       <div>
-        <h2>Notification Settings / Channel Tests</h2>
+        <h2>Bildirim Ayarları ve Kanal Testleri</h2>
         <p class="muted">Telegram, e-posta, kanal testleri ve otomatik teslimat ayarlarını tek ekrandan yönetin.</p>
       </div>
       <div class="admin-topbar-actions-v58">
@@ -3104,8 +3109,8 @@
         <h3>Telegram</h3>
         <div id="notificationTelegramState">Durum yükleniyor...</div>
         <div class="admin-form-grid">
-          <label>Enabled<select id="notificationTelegramEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
-          <label>Default Chat ID<input id="notificationTelegramChatId" type="text" placeholder="Telegram chat ID"></label>
+          <label>Telegram Aktif<select id="notificationTelegramEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+          <label>Varsayılan Chat ID<input id="notificationTelegramChatId" type="text" placeholder="Telegram chat ID"></label>
           <label>Bot Token<input id="notificationTelegramToken" type="password" autocomplete="new-password" placeholder="Boş bırakılırsa mevcut token korunur"></label>
         </div>
         <p class="notification-secret-note-v518">Bot token panelde gösterilmez. Yeni token girilmezse mevcut değer korunur.</p>
@@ -3120,12 +3125,12 @@
         <div id="notificationEmailState">Durum yükleniyor...</div>
 
         <div class="admin-form-grid">
-          <label>Enabled<select id="notificationEmailEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+          <label>E-posta Aktif<select id="notificationEmailEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
           <label>Gönderim Modu
             <select id="notificationEmailMode">
               <option value="gateway">HukaTech Central Gateway</option>
-              <option value="direct_smtp">Direct SMTP / Geliştirme</option>
-              <option value="disabled">Disabled</option>
+              <option value="direct_smtp">Doğrudan SMTP / Geliştirme</option>
+              <option value="disabled">Kapalı</option>
             </select>
           </label>
           <label>Gönderen Adı<input id="notificationEmailSenderName" type="text" placeholder="HukaTech | Müşteri Adı"></label>
@@ -3175,7 +3180,7 @@
   <section id="automationSchedulerSection" class="card wide admin-card" data-admin-view="scheduler">
     <div class="section-title-row">
       <div>
-        <h2>Automatic Escalation Scheduler</h2>
+        <h2>Otomatik Alarm Yükseltme Zamanlayıcısı</h2>
         <p class="muted">SLA taraması, otomatik teslimat, yeniden deneme ve hata kuyruğu yönetimi.</p>
       </div>
       <div class="admin-topbar-actions-v58">
@@ -3195,7 +3200,7 @@
     <div class="admin-form-grid">
       <label>Zamanlayıcı Aktif<select id="automationSchedulerEnabled"><option value="false">Kapalı</option><option value="true">Açık</option></select></label>
       <label>Çalışma Aralığı (sn)<input id="automationSchedulerIntervalSec" type="number" min="15" max="3600" value="60"></label>
-      <label>Automatic Retry<select id="automationRetryEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
+      <label>Otomatik Yeniden Deneme<select id="automationRetryEnabled"><option value="true">Açık</option><option value="false">Kapalı</option></select></label>
       <label>İlk Yeniden Deneme Beklemesi (sn)<input id="automationRetryBaseDelaySec" type="number" min="15" max="86400" value="60"></label>
       <label>Maks. Yeniden Deneme Beklemesi (sn)<input id="automationRetryMaxDelaySec" type="number" min="15" max="604800" value="3600"></label>
       <label>Maks. Deneme<input id="automationRetryMaxAttempts" type="number" min="1" max="20" value="5"></label>
@@ -4037,7 +4042,7 @@
   <section id="auditSection" class="card wide admin-card" data-admin-view="security">
     <div class="section-title-row">
       <div>
-        <h2>Security Activity / Audit Log</h2>
+        <h2>Güvenlik Aktiviteleri / Denetim Günlüğü</h2>
         <p class="muted">Yetkili kullanıcılar yönetim, giriş, davet, parola ve abonelik aktivitelerini filtreleyebilir.</p>
       </div>
       <button id="exportAuditCsvBtn" class="secondary-btn">CSV İndir</button>
@@ -4055,19 +4060,19 @@
       <label>
         Varlık Türü
         <select id="auditEntityType">
-          <option value="all">all</option>
-          <option value="auth">auth</option>
-          <option value="user">user</option>
-          <option value="invite">invite</option>
-          <option value="subscription">subscription</option>
-          <option value="customer">customer</option>
-          <option value="site">site</option>
-          <option value="audit_log">audit_log</option>
-          <option value="maintenance_ticket">maintenance_ticket</option>
+          <option value="all">Tümü</option>
+          <option value="auth">Kimlik doğrulama</option>
+          <option value="user">Kullanıcı</option>
+          <option value="invite">Davet</option>
+          <option value="subscription">Abonelik</option>
+          <option value="customer">Şirket</option>
+          <option value="site">Lokasyon</option>
+          <option value="audit_log">Denetim günlüğü</option>
+          <option value="maintenance_ticket">Servis talebi</option>
         </select>
       </label>
       <label>
-        Actor Email
+        İşlemi Yapan E-posta
         <input id="auditActorEmail" type="email" placeholder="admin@firma.com">
       </label>
       <label>
@@ -6337,7 +6342,21 @@
   function alarmBadge(value) {
     const clean = String(value || '-').toLowerCase();
     const cls = clean === 'critical' ? 'alarm' : (clean === 'cleared' ? 'stopped' : 'stale');
-    return `<span class="live-badge-v511 ${esc(cls)}">${esc(clean)}</span>`;
+    return `<span class="live-badge-v511 ${esc(cls)}">${esc(alarmUiLabel(clean))}</span>`;
+  }
+
+  function alarmUiLabel(value) {
+    const key = String(value || '-').toLowerCase();
+    const labels = {
+      active:'Aktif', acknowledged:'Onaylandı', cleared:'Kapatıldı',
+      critical:'Kritik', warning:'Uyarı', info:'Bilgi',
+      over_current:'Aşırı Akım', over_temperature:'Aşırı Sıcaklık',
+      pending:'Bekliyor', processing:'Gönderiliyor', delivered:'Teslim Edildi',
+      failed:'Başarısız', dead_letter:'Hata Kuyruğu', suppressed:'Bastırıldı',
+      ack_overdue:'Onay Gecikmesi', resolve_overdue:'Çözüm Gecikmesi',
+      dashboard:'Panel', email:'E-posta', telegram:'Telegram'
+    };
+    return currentLanguage === 'en' ? String(value || '-') : (labels[key] || String(value || '-').replaceAll('_',' '));
   }
 
   function maintenanceTicketQueryString() {
@@ -6837,33 +6856,33 @@
 
     summaryTarget.innerHTML = `
       ${currentLanguage==='en'?'Alarm center':'Alarm merkezi'}: <strong>${currentLanguage==='en'?(data.alarm_center_enabled?'ON':'OFF'):(data.alarm_center_enabled?'Açık':'Kapalı')}</strong> —
-      Active: <strong>${esc(s.active || 0)}</strong> ·
-      Acknowledged: <strong>${esc(s.acknowledged || 0)}</strong> ·
-      Cleared: <strong>${esc(s.cleared || 0)}</strong> ·
-      Critical: <strong>${esc(s.critical || 0)}</strong> ·
-      Warning: <strong>${esc(s.warning || 0)}</strong>
+      ${currentLanguage==='en'?'Active':'Aktif'}: <strong>${esc(s.active || 0)}</strong> ·
+      ${currentLanguage==='en'?'Acknowledged':'Onaylandı'}: <strong>${esc(s.acknowledged || 0)}</strong> ·
+      ${currentLanguage==='en'?'Cleared':'Kapatıldı'}: <strong>${esc(s.cleared || 0)}</strong> ·
+      ${currentLanguage==='en'?'Critical':'Kritik'}: <strong>${esc(s.critical || 0)}</strong> ·
+      ${currentLanguage==='en'?'Warning':'Uyarı'}: <strong>${esc(s.warning || 0)}</strong>
     `;
 
     tableTarget.innerHTML = table([
-      {label:'Status', html:true, value:r=>alarmBadge(r.status)},
-      {label:'Severity', html:true, value:r=>alarmBadge(r.severity)},
-      {label:'Machine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
-      {label:'Customer / Site', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
-      {label:'Alarm Type', value:r=>r.alarm_type || '-'},
-      {label:'Message', value:r=>r.message || '-'},
-      {label:'Started', value:r=>fmtDate(r.started_at)},
-      {label:'Ack', value:r=>r.acknowledged_at ? `${fmtDate(r.acknowledged_at)} / ${r.acknowledged_by || '-'}` : '-'},
+      {label:'Durum', html:true, value:r=>alarmBadge(r.status)},
+      {label:'Önem', html:true, value:r=>alarmBadge(r.severity)},
+      {label:'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
+      {label:'Müşteri / Tesis', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
+      {label:'Alarm Tipi', value:r=>alarmUiLabel(r.alarm_type)},
+      {label:'Mesaj', value:r=>r.message || '-'},
+      {label:'Başlangıç', value:r=>fmtDate(r.started_at)},
+      {label:'Onay', value:r=>r.acknowledged_at ? `${fmtDate(r.acknowledged_at)} / ${r.acknowledged_by || '-'}` : '-'},
       {label:currentLanguage==='en'?'Cleared':'Kapatıldı', value:r=>r.cleared_at ? `${fmtDate(r.cleared_at)} / ${r.cleared_by || '-'}` : '-'},
       {label:'Aksiyon', html:true, value:r=>`
-        <button class="secondary-btn mini-btn" data-action="ack-alarm" data-id="${esc(r.id)}">Acknowledge</button>
-        <button class="secondary-btn mini-btn" data-action="clear-alarm" data-id="${esc(r.id)}">Clear</button>
-        ${can('MANAGE_MAINTENANCE') ? `<button class="secondary-btn mini-btn" data-action="create-ticket-from-alarm" data-id="${esc(r.id)}">Ticket Aç</button>` : ''}
+        <button class="secondary-btn mini-btn" data-action="ack-alarm" data-id="${esc(r.id)}">Onayla</button>
+        <button class="secondary-btn mini-btn" data-action="clear-alarm" data-id="${esc(r.id)}">Kapat</button>
+        ${can('MANAGE_MAINTENANCE') ? `<button class="secondary-btn mini-btn" data-action="create-ticket-from-alarm" data-id="${esc(r.id)}">Servis Talebi Aç</button>` : ''}
       `}
     ], alarms);
   }
 
   async function acknowledgeAlarm(button) {
-    const note = prompt('Acknowledge notu:', '') || '';
+    const note = prompt('Onay notu:', '') || '';
     await apiJson(`/api/admin/alarms/${encodeURIComponent(button.dataset.id)}/acknowledge`, {
       method:'POST',
       body:JSON.stringify({note})
@@ -6871,7 +6890,7 @@
   }
 
   async function clearAlarm(button) {
-    const note = prompt('Clear notu:', '') || '';
+    const note = prompt('Kapatma notu:', '') || '';
     await apiJson(`/api/admin/alarms/${encodeURIComponent(button.dataset.id)}/clear`, {
       method:'POST',
       body:JSON.stringify({note})
@@ -6917,9 +6936,9 @@
     summaryTarget.innerHTML = `
       <div class="kpi-grid-v59">
         <div class="kpi-card-v59"><span>${esc(data.window_days || 7)} Gün Alarm</span><strong>${esc(s.total_in_window || 0)}</strong><small>Pencere içindeki toplam alarm</small></div>
-        <div class="kpi-card-v59"><span>Aktif</span><strong>${esc(s.active || 0)}</strong><small>${esc(s.unacknowledged_active || 0)} acknowledge bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Aktif</span><strong>${esc(s.active || 0)}</strong><small>${esc(s.unacknowledged_active || 0)} onay bekliyor</small></div>
         <div class="kpi-card-v59"><span>Kritik Aktif</span><strong>${esc(s.critical_active || 0)}</strong><small>Hemen kontrol edilmesi gereken</small></div>
-        <div class="kpi-card-v59"><span>Ort. Acknowledge</span><strong>${esc(fmtMinutes(s.avg_ack_minutes))}</strong><small>İlk müdahale süresi</small></div>
+        <div class="kpi-card-v59"><span>Ort. Onay Süresi</span><strong>${esc(fmtMinutes(s.avg_ack_minutes))}</strong><small>İlk müdahale süresi</small></div>
         <div class="kpi-card-v59"><span>Ort. Çözüm</span><strong>${esc(fmtMinutes(s.avg_resolution_minutes))}</strong><small>Alarm kapanma süresi</small></div>
         <div class="kpi-card-v59"><span>Kapatılan</span><strong>${esc(s.cleared_in_window || 0)}</strong><small>Seçilen analiz aralığında</small></div>
       </div>
@@ -6930,7 +6949,7 @@
       {label:'Gün', value:r=>fmtAnalyticsDay(r.day)},
       {label:'Toplam', value:r=>r.total || 0},
       {label:'Kritik', value:r=>r.critical || 0},
-      {label:'Warning', value:r=>r.warning || 0},
+      {label:'Uyarı', value:r=>r.warning || 0},
       {label:currentLanguage==='en'?'Cleared':'Kapatıldı', value:r=>r.cleared || 0}
     ], data.daily || []);
 
@@ -6939,11 +6958,11 @@
       <div class="kpi-row-v59"><span>5–15 dakika</span><strong>${esc(b.from_5_to_15m || 0)}</strong></div>
       <div class="kpi-row-v59"><span>15–60 dakika</span><strong>${esc(b.from_15_to_60m || 0)}</strong></div>
       <div class="kpi-row-v59"><span>60 dakika üzeri</span><strong>${esc(b.over_60m || 0)}</strong></div>
-      <div class="kpi-row-v59"><span>Acknowledge edilmemiş</span><strong>${esc(b.not_acknowledged || 0)}</strong></div>
+      <div class="kpi-row-v59"><span>Onaylanmamış</span><strong>${esc(b.not_acknowledged || 0)}</strong></div>
     `;
 
     typesTarget.innerHTML = table([
-      {label:'Alarm Tipi', value:r=>r.alarm_type || '-'},
+      {label:'Alarm Tipi', value:r=>alarmUiLabel(r.alarm_type)},
       {label:'Toplam', value:r=>r.count || 0},
       {label:'Kritik', value:r=>r.critical_count || 0},
       {label:'Aktif', value:r=>r.active_count || 0}
@@ -6951,7 +6970,7 @@
 
     machinesTarget.innerHTML = table([
       {label:'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
-      {label:'Customer / Site', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
+      {label:'Müşteri / Tesis', value:r=>`${r.customer_code || '-'}/${r.site_code || '-'}`},
       {label:'Toplam', value:r=>r.alarm_count || 0},
       {label:'Kritik', value:r=>r.critical_count || 0},
       {label:'Aktif', value:r=>r.active_count || 0}
@@ -7048,8 +7067,8 @@
     const telegramReady = data.telegram?.enabled && data.telegram?.configured;
     target.innerHTML = `
       <div class="kpi-grid-v59">
-        <div class="kpi-card-v59"><span>Delivery Worker</span><strong>${data.delivery_enabled ? 'ON' : 'OFF'}</strong><small>Otomatik: ${data.auto_delivery_enabled ? 'ON' : 'OFF'} · ${esc(data.interval_sec || 0)} sn</small></div>
-        <div class="kpi-card-v59"><span>Email</span><strong>${currentLanguage==='en'?(emailReady?'READY':'NOT READY'):(emailReady?'HAZIR':'HAZIR DEĞİL')}</strong><small>SMTP ve varsayılan alıcı kontrolü</small></div>
+        <div class="kpi-card-v59"><span>Teslimat Servisi</span><strong>${data.delivery_enabled ? 'AÇIK' : 'KAPALI'}</strong><small>Otomatik: ${data.auto_delivery_enabled ? 'AÇIK' : 'KAPALI'} · ${esc(data.interval_sec || 0)} sn</small></div>
+        <div class="kpi-card-v59"><span>E-posta</span><strong>${currentLanguage==='en'?(emailReady?'READY':'NOT READY'):(emailReady?'HAZIR':'HAZIR DEĞİL')}</strong><small>SMTP ve varsayılan alıcı kontrolü</small></div>
         <div class="kpi-card-v59"><span>Telegram</span><strong>${currentLanguage==='en'?(telegramReady?'READY':'NOT READY'):(telegramReady?'HAZIR':'HAZIR DEĞİL')}</strong><small>Bot token ve chat ID kontrolü</small></div>
         <div class="kpi-card-v59"><span>Aktif İş</span><strong>${esc(q.processing || 0)}</strong><small>${esc(q.pending || 0)} bekliyor · ${esc(q.failed || 0)} başarısız · ${esc(q.dead_letter || 0)} ${currentLanguage==='en'?'dead letter':'hata kuyruğu'}</small></div>
       </div>
@@ -7067,11 +7086,11 @@
     const s = data.summary || {};
     summaryTarget.innerHTML = `
       <div class="kpi-grid-v59">
-        <div class="kpi-card-v59"><span>Toplam Olay</span><strong>${esc(s.total || 0)}</strong><small>${esc(s.ack_overdue || 0)} ack · ${esc(s.resolve_overdue || 0)} resolve</small></div>
-        <div class="kpi-card-v59"><span>Bekliyor</span><strong>${esc(s.pending || 0)}</strong><small>Email / Telegram teslimatı bekliyor</small></div>
-        <div class="kpi-card-v59"><span>Gönderiliyor</span><strong>${esc(s.processing || 0)}</strong><small>Worker tarafından işleniyor</small></div>
+        <div class="kpi-card-v59"><span>Toplam Olay</span><strong>${esc(s.total || 0)}</strong><small>${esc(s.ack_overdue || 0)} onay gecikmesi · ${esc(s.resolve_overdue || 0)} çözüm gecikmesi</small></div>
+        <div class="kpi-card-v59"><span>Bekliyor</span><strong>${esc(s.pending || 0)}</strong><small>E-posta / Telegram teslimatı bekliyor</small></div>
+        <div class="kpi-card-v59"><span>Gönderiliyor</span><strong>${esc(s.processing || 0)}</strong><small>Teslimat servisi tarafından işleniyor</small></div>
         <div class="kpi-card-v59"><span>Teslim Edildi</span><strong>${esc(s.delivered || 0)}</strong><small>Dashboard veya onaylanmış gönderim</small></div>
-        <div class="kpi-card-v59"><span>Başarısız</span><strong>${esc(s.failed || 0)}</strong><small>Retry zamanı bekleniyor</small></div>
+        <div class="kpi-card-v59"><span>Başarısız</span><strong>${esc(s.failed || 0)}</strong><small>Yeniden deneme zamanı bekleniyor</small></div>
         <div class="kpi-card-v59"><span>${currentLanguage==='en'?'Dead Letter':'Hata Kuyruğu'}</span><strong>${esc(s.dead_letter || 0)}</strong><small>Maksimum deneme aşıldı</small></div>
         <div class="kpi-card-v59"><span>Bastırıldı</span><strong>${esc(s.suppressed || 0)}</strong><small>Gönderim yapılmayacak</small></div>
       </div>
@@ -7084,14 +7103,14 @@
       {label:'Durum', value:r=>escalationDeliveryLabel(r.delivery_status)},
       {label:'Aşama', value:r=>escalationStageLabel(r.stage)},
       {label:'Makine', value:r=>`${r.machine_name || '-'} (${r.machine_code || '-'})`},
-      {label:'Alarm', value:r=>`${r.alarm_type || '-'} / ${r.severity || '-'}`},
-      {label:'Kanal', value:r=>r.channel || 'dashboard'},
+      {label:'Alarm', value:r=>`${alarmUiLabel(r.alarm_type)} / ${alarmUiLabel(r.severity)}`},
+      {label:'Kanal', value:r=>alarmUiLabel(r.channel || 'dashboard')},
       {label:'Alıcılar', value:r=>r.recipients || '-'},
       {label:'Mesaj', value:r=>r.message || '-'},
       {label:'Deneme', value:r=>r.attempt_count || 0},
       {label:'Son Deneme', value:r=>fmtDate(r.last_attempt_at)},
       {label:'Sonraki Deneme', value:r=>fmtDate(r.next_attempt_at)},
-      {label:'Provider ID', value:r=>r.provider_message_id || '-'},
+      {label:'Sağlayıcı ID', value:r=>r.provider_message_id || '-'},
       {label:'Hata', value:r=>r.last_error || '-'},
       {label:'Aksiyon', html:true, value:r=>{
         if (!data.can_manage_events) return '<span class="muted">yetki yok</span>';
@@ -7566,15 +7585,15 @@
     const rows = data.plans || [];
     subscriptionPlanCodes = rows.filter(r => r.is_active).map(r => r.code);
     document.getElementById('subscriptionPlansTable').innerHTML = table([
-      {label:'Code', value:r=>r.code},
+      {label:'Kod', value:r=>r.code},
       {label:'Plan', value:r=>r.name},
       {label:'Açıklama', value:r=>r.description || '-'},
-      {label:'Trial', value:r=>`${r.trial_days} gün`},
-      {label:'Users', value:r=>limitText(r.user_limit)},
-      {label:'Sites', value:r=>limitText(r.site_limit)},
-      {label:'Devices', value:r=>limitText(r.device_limit)},
+      {label:'Deneme', value:r=>`${r.trial_days} gün`},
+      {label:'Kullanıcılar', value:r=>limitText(r.user_limit)},
+      {label:'Lokasyonlar', value:r=>limitText(r.site_limit)},
+      {label:'Cihazlar', value:r=>limitText(r.device_limit)},
       {label:'Aylık', value:r=>money(r.monthly_price_cents, r.currency)},
-      {label:'Aktif', value:r=>r.is_active ? 'yes' : 'no'}
+      {label:'Aktif', value:r=>r.is_active ? 'Evet' : 'Hayır'}
     ], rows);
   }
 
@@ -7584,6 +7603,11 @@
     const pending = item.reserved ? ` (+${item.reserved} bekleyen)` : '';
     const warning = item.capacity_exceeded ? ' ⚠ kapasite aşıldı' : (item.at_limit ? ' • limit dolu' : '');
     return `${item.used}/${item.limit}${pending}${warning}`;
+  }
+
+  function subscriptionStatusSelect(value) {
+    const labels={trialing:'Deneme',active:'Aktif',past_due:'Ödeme Gecikmiş',cancelled:'İptal',expired:'Süresi Dolmuş'};
+    return `<select class="subscription-status-select">${Object.entries(labels).map(([code,label])=>`<option value="${code}" ${String(value)===code?'selected':''}>${label}</option>`).join('')}</select>`;
   }
 
   function renderSubscriptions(data) {
@@ -7597,15 +7621,15 @@
     }));
 
     document.getElementById('subscriptionsTable').innerHTML = table([
-      {label:'Customer', value:r=>`${r.customer_name} (${r.customer_code})`},
+      {label:'Şirket', value:r=>`${r.customer_name} (${r.customer_code})`},
       {label:'Plan', html:true, value:r=>can('MANAGE_BILLING') ? selectHtml('subscription-plan-select', r.plan_code, subscriptionPlanCodes) : esc(r.plan_code)},
-      {label:'Status', html:true, value:r=>can('MANAGE_BILLING') ? selectHtml('subscription-status-select', r.status, ['trialing','active','past_due','cancelled','expired']) : esc(r.status)},
-      {label:'Trial Ends', html:true, value:r=>can('MANAGE_BILLING') ? `<input class="subscription-trial-end" type="date" value="${esc(dateInputValue(r.trial_ends_at))}">` : esc(fmtDate(r.trial_ends_at))},
-      {label:'Period Ends', html:true, value:r=>can('MANAGE_BILLING') ? `<input class="subscription-period-end" type="date" value="${esc(dateInputValue(r.current_period_end))}">` : esc(fmtDate(r.current_period_end))},
-      {label:'Users', value:r=>usageText(r.usage?.users)},
-      {label:'Sites', value:r=>usageText(r.usage?.sites)},
-      {label:'Devices', value:r=>usageText(r.usage?.devices)},
-      {label:'Access', value:r=>r.access?.allowed ? (r.access?.quota_at_limit ? 'allowed • quota full' : 'allowed') : `blocked: ${r.access?.reason || '-'}`},
+      {label:'Durum', html:true, value:r=>can('MANAGE_BILLING') ? subscriptionStatusSelect(r.status) : esc(({trialing:'Deneme',active:'Aktif',past_due:'Ödeme Gecikmiş',cancelled:'İptal',expired:'Süresi Dolmuş'})[r.status]||r.status)},
+      {label:'Deneme Bitişi', html:true, value:r=>can('MANAGE_BILLING') ? `<input class="subscription-trial-end" type="date" value="${esc(dateInputValue(r.trial_ends_at))}">` : esc(fmtDate(r.trial_ends_at))},
+      {label:'Dönem Bitişi', html:true, value:r=>can('MANAGE_BILLING') ? `<input class="subscription-period-end" type="date" value="${esc(dateInputValue(r.current_period_end))}">` : esc(fmtDate(r.current_period_end))},
+      {label:'Kullanıcılar', value:r=>usageText(r.usage?.users)},
+      {label:'Lokasyonlar', value:r=>usageText(r.usage?.sites)},
+      {label:'Cihazlar', value:r=>usageText(r.usage?.devices)},
+      {label:'Erişim', value:r=>r.access?.allowed ? (r.access?.quota_at_limit ? 'İzinli • Kota dolu' : 'İzinli') : `Engelli: ${r.access?.reason || '-'}`},
       {label:'Aksiyon', html:true, value:r=>can('MANAGE_BILLING') ? `<button class="secondary-btn mini-btn" data-action="save-subscription" data-customer-code="${esc(r.customer_code)}">Kaydet</button>` : '<span class="muted">görüntüleme</span>'}
     ], rows);
   }
@@ -8625,7 +8649,7 @@
       {label:en?'Check':'Kontrol',value:r=>en?(r.label_en||r.label):(r.label_tr||r.label)},{label:en?'Status':'Durum',html:true,value:r=>healthChipV610(r.status)},{label:en?'Description':'Açıklama',value:r=>en?(r.message_en||r.message):(r.message_tr||r.message)}
     ],data.environment||[]);
     const backup=document.getElementById('systemBackupHistory');if(backup)backup.innerHTML=table([
-      {label:en?'Date':'Tarih',value:r=>fmtDate(r.completed_at||r.started_at)},{label:en?'File':'Dosya',value:r=>r.filename},{label:en?'Type':'Tip',value:r=>r.backup_type},{label:en?'Status':'Durum',html:true,value:r=>healthChipV610(r.status)},{label:en?'Size':'Boyut',value:r=>fmtBytesV610(r.size_bytes)},{label:en?'Verification':'Doğrulama',html:true,value:r=>healthChipV610(r.verification_status)},{label:'SHA256',value:r=>r.sha256?`${r.sha256.slice(0,12)}…`:'-'},{label:en?'Action':'Aksiyon',html:true,value:r=>r.status==='completed'&&data.can_manage!==false?`<div class="button-row"><button class="secondary-btn mini-btn" data-health-action="verify" data-id="${esc(r.id)}">${en?'Verify':'Doğrula'}</button><button class="secondary-btn mini-btn" data-health-action="download" data-id="${esc(r.id)}">${en?'Download':'İndir'}</button></div>`:'-'}
+      {label:en?'Date':'Tarih',value:r=>fmtDate(r.completed_at||r.started_at)},{label:en?'File':'Dosya',value:r=>r.filename},{label:en?'Type':'Tip',value:r=>en?r.backup_type:({manual:'Manuel',automatic:'Otomatik',scheduled:'Zamanlanmış'}[String(r.backup_type||'').toLowerCase()]||r.backup_type)},{label:en?'Status':'Durum',html:true,value:r=>healthChipV610(r.status)},{label:en?'Size':'Boyut',value:r=>fmtBytesV610(r.size_bytes)},{label:en?'Verification':'Doğrulama',html:true,value:r=>healthChipV610(r.verification_status)},{label:'SHA256',value:r=>r.sha256?`${r.sha256.slice(0,12)}…`:'-'},{label:en?'Action':'Aksiyon',html:true,value:r=>r.status==='completed'&&data.can_manage!==false?`<div class="button-row"><button class="secondary-btn mini-btn" data-health-action="verify" data-id="${esc(r.id)}">${en?'Verify':'Doğrula'}</button><button class="secondary-btn mini-btn" data-health-action="download" data-id="${esc(r.id)}">${en?'Download':'İndir'}</button></div>`:'-'}
     ],(data.backups||[]).filter(r=>r.status!=='deleted').slice(0,25));
     renderSystemHealthLogs();
   }
@@ -8843,7 +8867,7 @@
     const machineTarget=document.getElementById('organizationMachineAssignments');if(machineTarget)machineTarget.innerHTML=table([{label:orgText('Makine','Machine'),value:r=>`${r.name} (${r.code})`},{label:orgText('Fabrika','Factory'),value:r=>factoryOfSite(r.site_id)?.name||'-'},{label:orgText('Bölüm / Alan','Department / Area'),value:r=>siteOf(r.site_id)?.name||'-'},{label:orgText('Üretim Hattı','Production Line'),html:true,value:r=>`<select class="org-machine-line">${lines.filter(line=>line.site_id===r.site_id).map(line=>`<option value="${esc(line.id)}" ${line.id===r.production_line_id?'selected':''}>${esc(factoryOfSite(line.site_id)?.name||'-')} / ${esc(siteOf(line.site_id)?.name||'-')} / ${esc(line.name)}</option>`).join('')}</select>`},{label:orgText('Cihaz','Devices'),value:r=>`${r.online_device_count||0}/${r.device_count||0}`},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="assign-machine" data-id="${esc(r.id)}">${orgText('Ata','Assign')}</button>`}],(flat.machines||[]).map(x=>({...x,__kind:'org-machine'})));
   }
 
-  function renderOrganizationAccess(data){organizationAdminState.access=data;const users=data.users||[];const userSel=document.getElementById('locationAccessUser');if(userSel){const v=userSel.value;userSel.innerHTML='<option value="">'+orgText('Kullanıcı seç...','Select user...')+'</option>'+orgOptions(users,'id',x=>`${x.full_name||x.email} (${x.email})`);if(users.some(x=>x.id===v))userSel.value=v;}const target=document.getElementById('locationAccessTable');if(target)target.innerHTML=table([{label:orgText('Kullanıcı','User'),value:r=>`${r.full_name||'-'} / ${r.email}`},{label:orgText('Şirket','Company'),value:r=>r.customer_name},{label:orgText('Kapsam','Scope'),value:r=>r.production_line_name?`${orgText('Hat','Line')}: ${r.production_line_name}`:r.site_name?`${orgText('Bölüm / Alan','Department / Area')}: ${r.site_name}`:r.factory_name?`${orgText('Fabrika','Factory')}: ${r.factory_name}`:orgText('Tüm Şirket','Entire Company')},{label:orgText('Rol','Role'),value:r=>r.access_role},{label:orgText('Durum','Status'),value:r=>r.status},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="revoke-access" data-id="${esc(r.id)}">${orgText('Kaldır','Remove')}</button>`}],(data.access||[]).map(x=>({...x,__kind:'org-access'})));}
+  function renderOrganizationAccess(data){organizationAdminState.access=data;const users=data.users||[];const userSel=document.getElementById('locationAccessUser');if(userSel){const v=userSel.value;userSel.innerHTML='<option value="">'+orgText('Kullanıcı seç...','Select user...')+'</option>'+orgOptions(users,'id',x=>`${x.full_name||x.email} (${x.email})`);if(users.some(x=>x.id===v))userSel.value=v;}const roleLabel=r=>({viewer:'Görüntüleyici',operator:'Operatör',admin:'Yönetici',owner:'Firma Sahibi'})[String(r||'')]||r||'-';const statusLabel=s=>({active:'Aktif',inactive:'Pasif',suspended:'Askıya Alındı'})[String(s||'')]||s||'-';const target=document.getElementById('locationAccessTable');if(target)target.innerHTML=table([{label:orgText('Kullanıcı','User'),value:r=>`${r.full_name||'-'} / ${r.email}`},{label:orgText('Şirket','Company'),value:r=>r.customer_name},{label:orgText('Kapsam','Scope'),value:r=>r.production_line_name?`${orgText('Hat','Line')}: ${r.production_line_name}`:r.site_name?`${orgText('Bölüm / Alan','Department / Area')}: ${r.site_name}`:r.factory_name?`${orgText('Fabrika','Factory')}: ${r.factory_name}`:orgText('Tüm Şirket','Entire Company')},{label:orgText('Rol','Role'),value:r=>currentLanguage==='en'?r.access_role:roleLabel(r.access_role)},{label:orgText('Durum','Status'),value:r=>currentLanguage==='en'?r.status:statusLabel(r.status)},{label:orgText('İşlem','Action'),html:true,value:r=>`<button class="secondary-btn mini-btn" data-org-action="revoke-access" data-id="${esc(r.id)}">${orgText('Kaldır','Remove')}</button>`}],(data.access||[]).map(x=>({...x,__kind:'org-access'})));}
 
   function syncLocationAccessScopeSelectors(){const data=organizationAdminState.hierarchy?.flat||{};const scope=document.getElementById('locationAccessScopeType')?.value||'customer';const f=document.getElementById('locationAccessFactory'),si=document.getElementById('locationAccessSite'),li=document.getElementById('locationAccessLine');if(f){const v=f.value;f.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(data.factories,'id',x=>x.name);if((data.factories||[]).some(x=>x.id===v))f.value=v;f.disabled=!['factory','site','line'].includes(scope);}if(si){const selectedFactory=f?.value;const rows=(data.sites||[]).filter(x=>!selectedFactory||x.factory_id===selectedFactory);const v=si.value;si.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(rows,'id',x=>x.name);if(rows.some(x=>x.id===v))si.value=v;si.disabled=!['site','line'].includes(scope);}if(li){const selectedSite=si?.value;const rows=(data.production_lines||[]).filter(x=>!selectedSite||x.site_id===selectedSite);const v=li.value;li.innerHTML='<option value="">'+orgText('Seç...','Select...')+'</option>'+orgOptions(rows,'id',x=>x.name);if(rows.some(x=>x.id===v))li.value=v;li.disabled=scope!=='line';}}
 
@@ -8989,6 +9013,7 @@
   function initializeSmartAiDates(){[['smartAiFrom',0],['smartAiTo',0],['smartAiAskFrom',6],['smartAiAskTo',0]].forEach(([id,n])=>{const el=document.getElementById(id);if(el&&!el.value)el.value=smartAiDateDefault(n);});}
   function smartAiPeriodLabel(v){return ({daily:smartAiUi('Günlük','Daily'),weekly:smartAiUi('Haftalık','Weekly'),monthly:smartAiUi('Aylık','Monthly'),custom:smartAiUi('Özel Tarih','Custom')})[v]||v;}
   function smartAiAudienceLabel(v){return ({executive:smartAiUi('Yönetici','Executive'),technical:smartAiUi('Teknik Ekip','Technical'),operator:smartAiUi('Operatör','Operator')})[v]||v;}
+  function smartAiIntentLabel(v){return ({alarm_count:'Alarm Sayısı',operations_summary:'Operasyon Özeti',rules:'Kural Analizi'})[String(v||'')]||v||'-';}
   function smartAiSetSelect(id,value){const el=document.getElementById(id);if(el&&value!==undefined&&value!==null)el.value=String(value);}
   function renderSmartAiStatus(data){smartAiState.status=data;const open=data.openai||{},n=data.notifications||{},scope=data.scope||{},settings=data.settings||{};const html=[
     [smartAiUi('Çalışma Modu','Operating Mode'),data.read_only?smartAiUi('SALT OKUNUR','READ ONLY'):smartAiUi('YAZMA AÇIK','WRITE ENABLED'),data.read_only?'ok':'warn'],
@@ -9106,8 +9131,8 @@
       }
     ],smartAiState.reports);
   }
-  function renderSmartAiQuestions(data){smartAiState.questions=data.questions||[];const target=document.getElementById('smartAiQuestionsTable');if(!target)return;target.innerHTML=table([{label:smartAiUi('Soru','Question'),value:r=>esc(r.question)},{label:smartAiUi('Cevap','Answer'),value:r=>esc(r.answer)},{label:smartAiUi('Niyet','Intent'),value:r=>r.intent||'-'},{label:smartAiUi('Motor','Engine'),value:r=>r.ai_engine||'-'},{label:smartAiUi('Tarih','Date'),value:r=>fmtDate(r.created_at)}],smartAiState.questions.slice(0,25));}
-  function renderSmartAiAnswer(data){const a=data.answer||data;const target=document.getElementById('smartAiAnswer');if(!target)return;target.innerHTML=`<div class="meta">${esc(a.intent||'-')} · ${esc(a.ai_engine||'-')} · ${esc(a.period?.from||'-')} — ${esc(a.period?.to||'-')}</div><div class="answer">${esc(a.answer||'-')}</div><h4>${smartAiUi('Bulgular','Findings')}</h4><ul class="smartai-list-v650">${(a.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul><h4>${smartAiUi('Öneriler','Recommendations')}</h4><ul class="smartai-list-v650">${(a.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul>`;}
+  function renderSmartAiQuestions(data){smartAiState.questions=data.questions||[];const target=document.getElementById('smartAiQuestionsTable');if(!target)return;target.innerHTML=table([{label:smartAiUi('Soru','Question'),value:r=>esc(r.question)},{label:smartAiUi('Cevap','Answer'),value:r=>esc(r.answer)},{label:smartAiUi('Niyet','Intent'),value:r=>currentLanguage==='en'?(r.intent||'-'):smartAiIntentLabel(r.intent)},{label:smartAiUi('Motor','Engine'),value:r=>r.ai_engine==='rules'?smartAiUi('HukaTech Kural Motoru','HukaTech Rule Engine'):(r.ai_engine||'-')},{label:smartAiUi('Tarih','Date'),value:r=>fmtDate(r.created_at)}],smartAiState.questions.slice(0,25));}
+  function renderSmartAiAnswer(data){const a=data.answer||data;const target=document.getElementById('smartAiAnswer');if(!target)return;const intent=currentLanguage==='en'?(a.intent||'-'):smartAiIntentLabel(a.intent);const engine=a.ai_engine==='rules'?smartAiUi('HukaTech Kural Motoru','HukaTech Rule Engine'):(a.ai_engine||'-');target.innerHTML=`<div class="meta">${esc(intent)} · ${esc(engine)} · ${esc(a.period?.from||'-')} — ${esc(a.period?.to||'-')}</div><div class="answer">${esc(a.answer||'-')}</div><h4>${smartAiUi('Bulgular','Findings')}</h4><ul class="smartai-list-v650">${(a.findings||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul><h4>${smartAiUi('Öneriler','Recommendations')}</h4><ul class="smartai-list-v650">${(a.recommendations||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>-</li>'}</ul>`;}
   async function smartAiDownload(id,type='text'){const token=authToken();const res=await fetch(`/api/admin/smartai/reports/${encodeURIComponent(id)}/${type}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!res.ok)throw new Error(`${smartAiUi('Rapor açılamadı','Report could not be opened')}: ${res.status}`);if(type==='print'){const html=await res.text();const w=window.open('','_blank','noopener');if(!w)throw new Error(smartAiUi('Açılır pencereye izin ver.','Allow pop-up windows.'));w.document.open();w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);return;}const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`HukaTech_AI_${id}.txt`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
   async function loadSmartAiHistory(){const period=document.getElementById('smartAiHistoryPeriod')?.value||'',limit=document.getElementById('smartAiHistoryLimit')?.value||100;const q=new URLSearchParams({customer_code:smartAiSelectedCustomer(),limit});if(period)q.set('period',period);renderSmartAiHistory(await getJson(`/api/admin/smartai/reports?${q}`));}
   async function loadSmartAiQuestions(){renderSmartAiQuestions(await getJson(`/api/admin/smartai/questions?customer_code=${encodeURIComponent(smartAiSelectedCustomer())}&limit=50`));}
@@ -9169,8 +9194,8 @@
         renderCounts(data.counts || {});
         const el = document.getElementById('subscriptionEnforcementStatus');
         if (el) el.textContent = data.subscription_enforcement_enabled
-          ? 'Subscription enforcement: ON — expired/blocked tenant ve quota kontrolleri aktif.'
-          : 'Subscription enforcement: OFF — sadece izleme modu.';
+          ? 'Abonelik denetimi: AÇIK — süresi dolan veya engellenen şirketler ile kota sınırları denetleniyor.'
+          : 'Abonelik denetimi: KAPALI — yalnızca izleme modu etkin.';
       }, 'adminCounts'],
       ['users', '/api/admin/users', renderUsers, 'usersTable'],
       ['customers', '/api/admin/customers', renderCustomers, 'customersTable'],

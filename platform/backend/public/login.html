@@ -2,32 +2,56 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>FactoryBox Login</title>
+  <title>HukaTech | Güvenli Giriş</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071426">
   <link href="/styles.css" rel="stylesheet">
 </head>
-<body class="login-body">
-  <main class="login-shell">
-    <section class="card login-card">
-      <h1>FactoryBox Login</h1>
-      <p class="muted" id="loginVersion">FactoryBox sürümü yükleniyor...</p>
+<body class="login-body hukatech-login">
+  <main class="login-shell" aria-labelledby="loginTitle">
+    <section class="login-brand-panel" aria-label="HukaTech platform tanıtımı">
+      <div class="login-brand">
+        <span class="login-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Huka<span>Tech</span></span>
+      </div>
+      <div class="login-brand-copy">
+        <p class="login-kicker">INDUSTRIAL INTELLIGENCE PLATFORM</p>
+        <h1>One Platform.<br><span>Unlimited Monitoring.</span></h1>
+        <p>İzleyin. Analiz edin.<br>Doğru kararlar alın.</p>
+      </div>
+      <div class="login-trust"><span aria-hidden="true">✓</span> Güvenli ve yetkilendirilmiş erişim</div>
+    </section>
 
-      <label>E-posta</label>
-      <input id="email" type="email" placeholder="admin@factorybox.local" autocomplete="username">
+    <section class="login-card">
+      <div class="login-card-head">
+        <p class="login-mobile-brand">Huka<span>Tech</span></p>
+        <p class="login-eyebrow">YÖNETİM PANELİ</p>
+        <h2 id="loginTitle">Tekrar hoş geldiniz</h2>
+        <p class="login-subtitle">HukaTech hesabınıza güvenli şekilde giriş yapın.</p>
+      </div>
 
-      <label>Şifre</label>
-      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
+      <form id="loginForm" novalidate>
+        <label for="email">E-posta adresi</label>
+        <input id="email" type="email" placeholder="ornek@hukatech.com" autocomplete="username" required>
 
-      <button id="loginBtn" class="primary-btn">Giriş Yap</button>
-      <p id="loginStatus" class="mini-status"></p>
+        <div class="login-label-row">
+          <label for="password">Şifre</label>
+          <a href="/forgot-password.html" class="text-link">Şifremi unuttum</a>
+        </div>
+        <div class="password-field">
+          <input id="password" type="password" placeholder="Şifrenizi girin" autocomplete="current-password" required>
+          <button id="togglePassword" type="button" class="password-toggle" aria-label="Şifreyi göster" aria-pressed="false">Göster</button>
+        </div>
 
-      <hr>
-      <p class="muted">
-        AUTH_ENABLED=false ise login zorunlu değildir. AUTH_ENABLED=true olduğunda API erişimi için token gerekir.
-      </p>
-      <a href="/forgot-password.html" class="text-link">Şifremi unuttum</a>
-      <a href="/signup.html" class="secondary-btn link-btn">Hesap Oluştur</a>
-      <a href="/" class="secondary-btn link-btn">Dashboard’a Dön</a>
+        <button id="loginBtn" class="primary-btn" type="submit"><span>Giriş Yap</span><b aria-hidden="true">→</b></button>
+        <p id="loginStatus" class="mini-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="login-footer">
+        <span id="loginVersion">HukaTech sürümü yükleniyor...</span>
+        <span>•</span>
+        <span>Korumalı bağlantı</span>
+      </div>
     </section>
   </main>
 
@@ -35,61 +59,66 @@
     async function login() {
       const status = document.getElementById('loginStatus');
       const btn = document.getElementById('loginBtn');
-      status.textContent = 'Giriş deneniyor...';
+      const email = document.getElementById('email');
+      const password = document.getElementById('password');
+
+      if (!email.value.trim() || !password.value) {
+        status.textContent = 'Lütfen e-posta adresinizi ve şifrenizi girin.';
+        status.className = 'mini-status error';
+        (!email.value.trim() ? email : password).focus();
+        return;
+      }
+
+      status.textContent = 'Giriş bilgileriniz doğrulanıyor...';
+      status.className = 'mini-status loading';
       btn.disabled = true;
 
       try {
         const res = await fetch('/api/auth/login', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            email:document.getElementById('email').value.trim(),
-            password:document.getElementById('password').value
-          })
+          body:JSON.stringify({email:email.value.trim(), password:password.value})
         });
-
         const data = await res.json();
-
-        if (!res.ok) throw new Error(data.message || `Login failed ${res.status}`);
-
-        if (data.token) {
-          localStorage.setItem('factorybox_auth_token', data.token);
-        }
+        if (!res.ok) throw new Error(data.message || `Giriş başarısız (${res.status})`);
+        if (data.token) localStorage.setItem('factorybox_auth_token', data.token);
 
         const role = String(data.user?.role || '').toLowerCase();
-        const adminRoles = ['owner', 'admin', 'system_admin'];
-        const openAdminPanel = data.auth_enabled === false || adminRoles.includes(role);
-        const targetUrl = openAdminPanel ? '/admin.html' : '/';
-
-        status.textContent = openAdminPanel
-          ? 'Giriş başarılı. Admin Panel açılıyor...'
-          : 'Giriş başarılı. Dashboard açılıyor...';
-
-        setTimeout(() => { window.location.replace(targetUrl); }, 500);
+        const openAdminPanel = data.auth_enabled === false || ['owner', 'admin', 'system_admin'].includes(role);
+        status.textContent = 'Giriş başarılı. Panel açılıyor...';
+        status.className = 'mini-status success';
+        setTimeout(() => window.location.replace(openAdminPanel ? '/admin.html' : '/'), 500);
       } catch(e) {
-        status.textContent = e.message;
+        status.textContent = e.message === 'Invalid email or password'
+          ? 'E-posta adresi veya şifre hatalı.'
+          : e.message;
+        status.className = 'mini-status error';
       } finally {
         btn.disabled = false;
       }
     }
 
-    async function loadFactoryBoxVersion() {
+    async function loadHukaTechVersion() {
       const target = document.getElementById('loginVersion');
       try {
         const res = await fetch('/api/health', {cache:'no-store'});
         const data = await res.json();
-        target.textContent = `v${String(data.version || '6.12.0').replace(/^v/i, '')} — FactoryBox güvenli giriş`;
+        target.textContent = `HukaTech v${String(data.version || '6.13.6').replace(/^v/i, '')}`;
       } catch (_) {
-        target.textContent = 'v6.12.0 — FactoryBox güvenli giriş';
+        target.textContent = 'HukaTech güvenli giriş';
       }
     }
 
-    loadFactoryBoxVersion();
-
-    document.getElementById('loginBtn').addEventListener('click', login);
-    document.getElementById('password').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') login();
+    document.getElementById('loginForm').addEventListener('submit', (e) => { e.preventDefault(); login(); });
+    document.getElementById('togglePassword').addEventListener('click', (e) => {
+      const input = document.getElementById('password');
+      const visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      e.currentTarget.textContent = visible ? 'Göster' : 'Gizle';
+      e.currentTarget.setAttribute('aria-label', visible ? 'Şifreyi göster' : 'Şifreyi gizle');
+      e.currentTarget.setAttribute('aria-pressed', String(!visible));
     });
+    loadHukaTechVersion();
   </script>
 </body>
 </html>

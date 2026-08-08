@@ -1,0 +1,1223 @@
+:root{
+  --ht-navy-950:#06101e;
+  --ht-navy-900:#071426;
+  --ht-navy-850:#0a1a2e;
+  --ht-navy-800:#0d2138;
+  --ht-surface:#17344d;
+  --ht-surface-2:#1d405d;
+  --ht-line:rgba(72,224,210,.28);
+  --ht-cyan:#18d0c2;
+  --ht-cyan-2:#40e0d0;
+  --ht-blue:#2698e7;
+  --ht-text:#edf7ff;
+  --ht-muted:#91a9bc;
+  --ht-shadow:0 16px 38px rgba(0,0,0,.22);
+}
+
+body.admin-ui-v58{
+  background:
+    radial-gradient(circle at 86% 4%,rgba(38,152,231,.10),transparent 28rem),
+    linear-gradient(145deg,var(--ht-navy-900),var(--ht-navy-950));
+  color:var(--ht-text);
+}
+
+body.admin-ui-v58 .admin-shell-v58{background:transparent}
+body.admin-ui-v58 .admin-main-v58{background:transparent}
+
+#adminSidebarV58{
+  background:linear-gradient(180deg,#081729 0%,#071321 100%)!important;
+  border-right:1px solid var(--ht-line)!important;
+  box-shadow:18px 0 48px rgba(0,0,0,.18)!important;
+}
+
+#adminSidebarV58::after{
+  background:radial-gradient(circle,rgba(24,208,194,.10),transparent 68%)!important;
+}
+
+.admin-brand-v58{padding:20px 18px 18px!important;border-bottom:1px solid var(--ht-line)!important}
+.admin-brand-v58 .hukatech-sidebar-logo-v2{
+  position:relative!important;
+  padding-left:42px!important;
+  color:var(--ht-text)!important;
+  font-size:25px!important;
+  letter-spacing:-.04em!important;
+}
+.admin-brand-v58 .hukatech-sidebar-logo-v2::before{
+  content:""!important;
+  position:absolute!important;
+  left:0!important;top:50%!important;
+  width:29px!important;height:25px!important;
+  transform:translateY(-50%) skewX(-12deg)!important;
+  border:3px solid var(--ht-cyan)!important;
+  border-left-width:7px!important;
+  border-radius:5px!important;
+  background:linear-gradient(135deg,rgba(24,208,194,.17),rgba(38,152,231,.10))!important;
+  box-shadow:0 0 20px rgba(24,208,194,.24)!important;
+}
+.hukatech-brand-tech-v2{color:var(--ht-cyan)!important}
+.admin-brand-v58 p,.admin-sidebar-footer-v58{color:var(--ht-muted)!important}
+
+#adminSidebarV58 .admin-nav-group-toggle-v517,
+#adminSidebarV58 .admin-subnav-link-v517{
+  color:#b8cad8!important;
+  border:1px solid transparent!important;
+  border-radius:10px!important;
+}
+#adminSidebarV58 .admin-nav-group-toggle-v517:hover,
+#adminSidebarV58 .admin-subnav-link-v517:hover{
+  background:rgba(38,152,231,.08)!important;
+  color:var(--ht-text)!important;
+  border-color:rgba(38,152,231,.14)!important;
+}
+#adminSidebarV58 .admin-nav-group-v517:has(.admin-subnav-link-v517.active)>.admin-nav-group-toggle-v517,
+#adminSidebarV58 .admin-nav-group-toggle-v517.active,
+#adminSidebarV58 .admin-subnav-link-v517.active{
+  background:linear-gradient(90deg,rgba(24,208,194,.16),rgba(38,152,231,.10))!important;
+  color:#fff!important;
+  border-color:rgba(24,208,194,.34)!important;
+  box-shadow:inset 3px 0 0 var(--ht-cyan)!important;
+}
+#adminSidebarV58 .admin-nav-chevron-v517{color:var(--ht-cyan)!important}
+.admin-sidebar-footer-v58{border-top-color:var(--ht-line)!important}
+
+.admin-topbar-v58{
+  background:rgba(8,24,42,.86)!important;
+  border:1px solid var(--ht-line)!important;
+  border-radius:14px!important;
+  box-shadow:var(--ht-shadow)!important;
+  backdrop-filter:blur(14px);
+}
+.admin-topbar-v58 h2{color:var(--ht-text)!important}
+.admin-topbar-v58 p{color:var(--ht-muted)!important}
+.admin-topbar-v58 .admin-status-pill-v58,
+.admin-topbar-v58 .badge{
+  background:rgba(24,208,194,.10)!important;
+  border-color:rgba(24,208,194,.30)!important;
+  color:#bffbf5!important;
+}
+
+.admin-view-header-v58{
+  background:linear-gradient(135deg,rgba(13,33,56,.96),rgba(10,26,46,.96))!important;
+  border:1px solid var(--ht-line)!important;
+  border-radius:14px!important;
+  box-shadow:var(--ht-shadow)!important;
+}
+.admin-view-header-v58::before{background:linear-gradient(180deg,var(--ht-cyan),var(--ht-blue))!important}
+.admin-view-header-v58 strong{color:var(--ht-cyan)!important}
+.admin-view-header-v58 h3{color:var(--ht-text)!important}
+.admin-view-header-v58 p{color:var(--ht-muted)!important}
+
+body.admin-ui-v58 .card,
+body.admin-ui-v58 [class*="panel-v"],
+body.admin-ui-v58 [class*="card-v"]{
+  background:linear-gradient(145deg,rgba(29,64,93,.98),rgba(20,48,72,.98))!important;
+  border-color:var(--ht-line)!important;
+  color:var(--ht-text)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.16)!important;
+}
+
+/* HukaTech Admin Theme v2 — login ekranı ile aynı lacivert/turkuaz kimlik */
+body.admin-ui-v58 .admin-content-v58{
+  background:
+    radial-gradient(circle at 88% 0,rgba(24,208,194,.10),transparent 34rem),
+    linear-gradient(145deg,#0b1d31,#071525)!important;
+}
+
+body.admin-ui-v58 .admin-topbar-v58{
+  background:linear-gradient(135deg,#17344d,#112a41)!important;
+  border-color:rgba(64,224,208,.24)!important;
+}
+
+body.admin-ui-v58 .admin-view-header-v58{
+  background:linear-gradient(135deg,#1a405b,#14344e)!important;
+  border-color:rgba(64,224,208,.28)!important;
+}
+
+body.admin-ui-v58 .admin-view-header-v58 strong,
+body.admin-ui-v58 .admin-view-header-v58 h3,
+body.admin-ui-v58 .admin-view-header-v58 p{
+  color:var(--ht-text)!important;
+}
+
+body.admin-ui-v58 .admin-view-header-v58 p{color:#b7cad9!important}
+
+body.admin-ui-v58 #adminSidebarV58 .admin-nav-group-v517.child-active>.admin-nav-group-toggle-v517,
+body.admin-ui-v58 #adminSidebarV58 .admin-nav-group-v517:has(.admin-subnav-link-v517.active)>.admin-nav-group-toggle-v517,
+body.admin-ui-v58 #adminSidebarV58 .admin-nav-group-toggle-v517.active,
+body.admin-ui-v58 #adminSidebarV58 .admin-subnav-link-v517.active{
+  background:linear-gradient(90deg,rgba(24,208,194,.20),rgba(38,152,231,.10))!important;
+  border-color:rgba(64,224,208,.42)!important;
+  border-left-color:var(--ht-cyan)!important;
+  box-shadow:inset 3px 0 0 var(--ht-cyan),0 8px 20px rgba(0,0,0,.10)!important;
+}
+
+body.admin-ui-v58 #adminSidebarV58 .admin-nav-link-v58.active .admin-nav-pill-v58{
+  background:rgba(24,208,194,.18)!important;
+  color:#c9fffa!important;
+  border-color:rgba(64,224,208,.35)!important;
+}
+
+body.admin-ui-v58 #adminSidebarV58 .admin-nav-chevron-v517{
+  color:var(--ht-cyan)!important;
+}
+
+body.admin-ui-v58 .dashboard-operations-v6136,
+body.admin-ui-v58 #dashboardOperationsOverview{
+  background:linear-gradient(145deg,#173b57,#112f49)!important;
+  border:1px solid rgba(64,224,208,.25)!important;
+  border-radius:18px!important;
+  box-shadow:0 18px 38px rgba(0,0,0,.20)!important;
+}
+
+body.admin-ui-v58 button.dashboard-kpi-card-v6136{
+  background:linear-gradient(145deg,#265473,#1d4564)!important;
+  border:1px solid rgba(82,190,220,.38)!important;
+  border-top:3px solid var(--ht-cyan)!important;
+  color:var(--ht-text)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.13)!important;
+}
+
+body.admin-ui-v58 button.dashboard-kpi-card-v6136:hover{
+  background:linear-gradient(145deg,#2b5d7d,#214c6c)!important;
+  border-color:rgba(64,224,208,.58)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.18)!important;
+}
+
+body.admin-ui-v58 .dashboard-kpi-card-v6136 span,
+body.admin-ui-v58 .dashboard-kpi-card-v6136 small{
+  color:#a9c3d6!important;
+}
+
+body.admin-ui-v58 .dashboard-kpi-card-v6136 strong{
+  color:#f1fbff!important;
+}
+
+body.admin-ui-v58 .dashboard-kpi-card-v6136.ok{border-top-color:#35d5b5!important}
+body.admin-ui-v58 .dashboard-kpi-card-v6136.warn{border-top-color:#55d9d0!important}
+body.admin-ui-v58 .dashboard-kpi-card-v6136.danger{border-top-color:#ff7080!important}
+body.admin-ui-v58 .dashboard-kpi-card-v6136.neutral{border-top-color:#4ebde7!important}
+
+body.admin-ui-v58 .dashboard-panel-v6136{
+  background:linear-gradient(145deg,#1c4563,#153752)!important;
+  border-color:rgba(64,224,208,.24)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.14)!important;
+}
+
+body.admin-ui-v58 .dashboard-panel-head-v6136 h3,
+body.admin-ui-v58 .dashboard-attention-item-v6136 b,
+body.admin-ui-v58 .dashboard-event-item-v6136 b,
+body.admin-ui-v58 .dashboard-today-card-v6136 strong{
+  color:#edf8ff!important;
+}
+
+body.admin-ui-v58 .dashboard-panel-head-v6136 p,
+body.admin-ui-v58 .dashboard-attention-item-v6136 small,
+body.admin-ui-v58 .dashboard-event-item-v6136 small,
+body.admin-ui-v58 .dashboard-attention-time-v6136,
+body.admin-ui-v58 .dashboard-event-time-v6136,
+body.admin-ui-v58 .dashboard-today-card-v6136 span{
+  color:#a9c0d2!important;
+}
+
+body.admin-ui-v58 .dashboard-attention-item-v6136,
+body.admin-ui-v58 .dashboard-event-item-v6136,
+body.admin-ui-v58 .dashboard-row-link-v6136,
+body.admin-ui-v58 .dashboard-today-card-v6136{
+  background:#f5f9fc!important;
+  border-color:#d4e4ec!important;
+}
+
+body.admin-ui-v58 .dashboard-attention-item-v6136 b,
+body.admin-ui-v58 .dashboard-event-item-v6136 b,
+body.admin-ui-v58 .dashboard-row-link-v6136 b,
+body.admin-ui-v58 .dashboard-today-card-v6136 strong{
+  color:#173047!important;
+}
+
+body.admin-ui-v58 .dashboard-attention-item-v6136 small,
+body.admin-ui-v58 .dashboard-event-item-v6136 small,
+body.admin-ui-v58 .dashboard-row-link-v6136 small,
+body.admin-ui-v58 .dashboard-today-card-v6136 span,
+body.admin-ui-v58 .dashboard-attention-time-v6136,
+body.admin-ui-v58 .dashboard-event-time-v6136{
+  color:#667d90!important;
+}
+
+body.admin-ui-v58 .dashboard-row-link-v6136:hover{
+  background:#ffffff!important;
+  border-color:var(--ht-cyan)!important;
+}
+
+body.admin-ui-v58 .dashboard-row-link-v6136:focus-visible{
+  outline:3px solid rgba(24,208,194,.20)!important;
+}
+
+body.admin-ui-v58 .dashboard-machine-scope-v6136{
+  color:#118f91!important;
+}
+
+body.admin-ui-v58 .admin-topbar-v58 .admin-user-chip-v6135,
+body.admin-ui-v58 .admin-topbar-v58 [class*="user"],
+body.admin-ui-v58 .admin-topbar-v58 .admin-status-pill-v58{
+  border-color:rgba(64,224,208,.28)!important;
+}
+
+body.admin-ui-v58 .dashboard-live-pill-v6136{
+  border-color:rgba(24,208,194,.40)!important;
+  background:rgba(24,208,194,.12)!important;
+  color:#bffbf5!important;
+}
+
+body.admin-ui-v58 .dashboard-live-pill-v6136 i{
+  background:var(--ht-cyan)!important;
+  box-shadow:0 0 0 4px rgba(24,208,194,.14)!important;
+}
+body.admin-ui-v58 [class*="card-v"] h3,
+body.admin-ui-v58 [class*="card-v"] h4,
+body.admin-ui-v58 [class*="panel-v"] h3,
+body.admin-ui-v58 [class*="panel-v"] h4,
+body.admin-ui-v58 .card h2,
+body.admin-ui-v58 .card h3{color:var(--ht-text)!important;text-shadow:none!important}
+body.admin-ui-v58 .muted,
+body.admin-ui-v58 [class*="card-v"] p,
+body.admin-ui-v58 [class*="panel-v"] p{color:var(--ht-muted)!important;text-shadow:none!important}
+
+body.admin-ui-v58 table{color:var(--ht-text)!important}
+body.admin-ui-v58 th{background:rgba(6,16,30,.48)!important;color:#9eb5c7!important;border-color:var(--ht-line)!important}
+body.admin-ui-v58 td{background:rgba(10,27,47,.35)!important;border-color:var(--ht-line)!important}
+body.admin-ui-v58 tr:hover td{background:rgba(38,152,231,.08)!important}
+
+body.admin-ui-v58 input,
+body.admin-ui-v58 select,
+body.admin-ui-v58 textarea{
+  background:#08192b!important;
+  border-color:rgba(118,170,207,.26)!important;
+  color:var(--ht-text)!important;
+}
+body.admin-ui-v58 input:focus,
+body.admin-ui-v58 select:focus,
+body.admin-ui-v58 textarea:focus{
+  border-color:var(--ht-cyan)!important;
+  box-shadow:0 0 0 3px rgba(24,208,194,.12)!important;
+  outline:none!important;
+}
+body.admin-ui-v58 label{color:#b7cad9!important}
+
+body.admin-ui-v58 .primary-btn{
+  background:linear-gradient(135deg,var(--ht-cyan),#12aeb4)!important;
+  color:#04212a!important;
+  border-color:transparent!important;
+  box-shadow:0 8px 22px rgba(24,208,194,.18)!important;
+}
+body.admin-ui-v58 .secondary-btn{
+  background:rgba(38,152,231,.08)!important;
+  color:#bfe4ff!important;
+  border-color:rgba(38,152,231,.30)!important;
+}
+body.admin-ui-v58 .secondary-btn:hover{background:rgba(38,152,231,.16)!important}
+body.admin-ui-v58 .admin-logout-v6135{
+  background:rgba(255,103,103,.08)!important;
+  color:#ffb7b7!important;
+  border-color:rgba(255,103,103,.25)!important;
+}
+
+body.admin-ui-v58 pre{background:#050e1a!important;color:#c8e8ff!important;border:1px solid var(--ht-line)!important}
+body.admin-ui-v58 a{color:#52d8ee}
+body.admin-ui-v58 hr{border-color:var(--ht-line)!important}
+
+@media(max-width:900px){
+  .admin-topbar-v58,.admin-view-header-v58{border-radius:12px!important}
+  .admin-brand-v58 .hukatech-sidebar-logo-v2{font-size:23px!important}
+}
+
+/* HukaTech Admin Theme v3 — giriş ekranıyla birebir marka ve dengeli yüzeyler */
+.admin-brand-v58{
+  padding:22px 18px 17px!important;
+  background:linear-gradient(145deg,rgba(13,38,58,.92),rgba(7,25,42,.92))!important;
+}
+.hukatech-sidebar-brand-v3{display:flex;align-items:center;gap:12px;min-width:0}
+.hukatech-mark-v3{
+  display:flex;align-items:flex-end;justify-content:center;gap:3px;
+  width:42px;height:42px;padding:10px 9px;box-sizing:border-box;flex:0 0 42px;
+  border-radius:12px;background:linear-gradient(145deg,#22d2ca,#149aa8);
+  box-shadow:0 10px 24px rgba(24,208,194,.22),inset 0 1px 0 rgba(255,255,255,.24)
+}
+.hukatech-mark-v3 i{display:block;width:5px;border-radius:4px;background:#06364b}
+.hukatech-mark-v3 i:nth-child(1){height:12px}.hukatech-mark-v3 i:nth-child(2){height:22px}.hukatech-mark-v3 i:nth-child(3){height:17px}
+.hukatech-wordmark-v3{display:flex;align-items:baseline;font-size:28px;line-height:1;letter-spacing:-1.15px;white-space:nowrap}
+.hukatech-wordmark-v3 b{color:#f4fbff;font-weight:800}.hukatech-wordmark-v3 b:last-child{color:#1dd0c6}
+.admin-brand-v58 .hukatech-tagline-v3{margin:14px 0 0!important;color:#35d8ce!important;font-size:9px!important;font-weight:800!important;letter-spacing:1.35px!important;line-height:1.45!important}
+.admin-brand-v58 .hukatech-version-v3{margin:5px 0 0!important;color:#819bad!important;font-size:11px!important}
+
+body.admin-ui-v58 .admin-content-v58{background:linear-gradient(145deg,#102a40,#0a2034)!important}
+body.admin-ui-v58 .admin-topbar-v58{background:linear-gradient(135deg,#1d435d,#17364f)!important}
+body.admin-ui-v58 .admin-view-header-v58{background:linear-gradient(135deg,#24516c,#1b405b)!important}
+body.admin-ui-v58 .dashboard-operations-v6136,
+body.admin-ui-v58 #dashboardOperationsOverview{background:linear-gradient(145deg,#204a64,#173a54)!important}
+body.admin-ui-v58 button.dashboard-kpi-card-v6136{background:linear-gradient(145deg,#32627d,#28536e)!important}
+body.admin-ui-v58 .dashboard-panel-v6136{background:linear-gradient(145deg,#28546e,#204761)!important}
+
+body.admin-ui-v58 .dashboard-attention-item-v6136,
+body.admin-ui-v58 .dashboard-event-item-v6136,
+body.admin-ui-v58 .dashboard-row-link-v6136,
+body.admin-ui-v58 .dashboard-today-card-v6136{
+  background:linear-gradient(135deg,#315f78,#284f69)!important;
+  border-color:rgba(94,219,211,.24)!important;color:#f0f9ff!important
+}
+body.admin-ui-v58 .dashboard-row-link-v6136:hover{background:linear-gradient(135deg,#376c85,#2d5972)!important}
+body.admin-ui-v58 .dashboard-attention-item-v6136 b,
+body.admin-ui-v58 .dashboard-event-item-v6136 b,
+body.admin-ui-v58 .dashboard-row-link-v6136 b,
+body.admin-ui-v58 .dashboard-today-card-v6136 strong{color:#f3fbff!important}
+body.admin-ui-v58 .dashboard-attention-item-v6136 small,
+body.admin-ui-v58 .dashboard-event-item-v6136 small,
+body.admin-ui-v58 .dashboard-row-link-v6136 small,
+body.admin-ui-v58 .dashboard-today-card-v6136 span,
+body.admin-ui-v58 .dashboard-attention-time-v6136,
+body.admin-ui-v58 .dashboard-event-time-v6136{color:#b8d0df!important}
+
+body.admin-ui-v58 table{background:#183a53!important;border-color:rgba(64,224,208,.24)!important}
+body.admin-ui-v58 th{background:#214b64!important;color:#d9edf6!important}
+body.admin-ui-v58 td{background:#1a3e57!important;color:#edf8ff!important}
+body.admin-ui-v58 tr:nth-child(even) td{background:#1d435d!important}
+body.admin-ui-v58 tr:hover td{background:#28566f!important}
+
+body.admin-ui-v58 .operation-suite-tab-v6137{background:#244d66!important;border-color:rgba(64,224,208,.22)!important;color:#cae2ed!important}
+body.admin-ui-v58 .operation-suite-tab-v6137:hover{background:#2b5b73!important;border-color:#35d8ce!important;color:#fff!important}
+body.admin-ui-v58 .operation-suite-tab-v6137.active{background:linear-gradient(135deg,#18bdb6,#128f9e)!important;border-color:#32dbd1!important;color:#fff!important;box-shadow:0 7px 18px rgba(24,208,194,.18)!important}
+
+body.admin-ui-v58 .admin-form-grid,
+body.admin-ui-v58 .admin-table-wrap,
+body.admin-ui-v58 .settings-tech-details-v1{background:#1b4059!important;border-color:rgba(64,224,208,.22)!important;color:#edf8ff!important}
+body.admin-ui-v58 .settings-tech-details-v1>summary{color:#d9edf6!important}
+
+@media(max-width:900px){
+  .hukatech-wordmark-v3{font-size:25px}.hukatech-mark-v3{width:38px;height:38px;flex-basis:38px;padding:9px 8px}
+  .admin-brand-v58 .hukatech-tagline-v3{letter-spacing:1px!important}
+}
+
+/* HukaTech Admin Theme v4 — unified content surfaces */
+body.admin-ui-v58{
+  --fb-bg:#0b2034;
+  --fb-panel:#1b4059;
+  --fb-panel-soft:#214b64;
+  --fb-border:rgba(64,224,208,.24);
+  --fb-text:#edf8ff;
+  --fb-muted:#a9c2d3;
+  --fb-primary:#21d1c6;
+  --fb-primary-soft:rgba(33,209,198,.14);
+}
+
+body.admin-ui-v58 .admin-view-v58,
+body.admin-ui-v58 .view,
+body.admin-ui-v58 .admin-view-content-v58{color:var(--ht-text)!important}
+
+/* Common panels that still inherited the legacy white theme. */
+body.admin-ui-v58 :is(
+  .kpi-panel-v59,.notification-channel-card-v518,.mail-mode-panel-v680,
+  .scheduler-flow-v519,.alarm-report-flow-v520,.alarm-report-preview-v520,
+  .alarm-report-mini-v520,.maintenance-flow-v521,.maintenance-create-v521,
+  .maintenance-history-v521,.maintenance-v522-toolbar,.maintenance-v522-panel,
+  .maintenance-v522-flow,.inventory-flow-v523,.inventory-panel-v523,
+  .live-card-v511,.live-metric-v511,.oee-flow-v524,.oee-panel-v524,
+  .operations-suite-v6137,.operation-suite-panel-v6137,
+  .dashboard-empty-v6136,.empty-state,.empty-state-v58
+){
+  background:linear-gradient(145deg,#214b64,#193d57)!important;
+  border-color:rgba(64,224,208,.24)!important;
+  color:var(--ht-text)!important;
+  box-shadow:0 10px 24px rgba(2,12,24,.13)!important;
+}
+
+body.admin-ui-v58 :is(
+  .mail-gateway-flow-v680 span,.scheduler-flow-v519 span,
+  .alarm-report-flow-v520 span,.maintenance-flow-v521 span,
+  .maintenance-v522-flow span,.inventory-flow-v523 span,.oee-flow-v524 span
+){background:#28566f!important;border-color:rgba(64,224,208,.27)!important;color:#eaf8ff!important}
+
+body.admin-ui-v58 :is(.kpi-card-v59,.live-metric-v511,.oee-score-v524){
+  background:linear-gradient(145deg,#2a5872,#234b65)!important;
+  border-color:rgba(82,205,208,.25)!important;
+  color:#f2fbff!important;
+}
+body.admin-ui-v58 :is(.kpi-card-v59,.live-metric-v511,.oee-score-v524) strong{color:#f5fcff!important}
+body.admin-ui-v58 :is(.kpi-card-v59,.live-metric-v511,.oee-score-v524) span,
+body.admin-ui-v58 :is(.kpi-card-v59,.live-metric-v511,.oee-score-v524) small{color:#b7cfdd!important}
+
+/* Live Monitoring and OEE: readable dark cards, without flat white islands. */
+body.admin-ui-v58 .live-card-v511{background:linear-gradient(145deg,#244e68,#1c425d)!important}
+body.admin-ui-v58 .live-card-v511.is-not-live-v6136{background:linear-gradient(145deg,#23475f,#1b3b53)!important;border-color:rgba(147,174,192,.25)!important}
+body.admin-ui-v58 .live-card-v511.is-not-live-v6136 .live-metric-v511{background:#234b63!important}
+body.admin-ui-v58 .live-card-v511 p,
+body.admin-ui-v58 .live-updated-v511{color:#afc7d6!important}
+body.admin-ui-v58 .oee-progress-v524 div,
+body.admin-ui-v58 .maintenance-v522-progress-bar{background:#102c43!important}
+body.admin-ui-v58 .oee-progress-v524 i,
+body.admin-ui-v58 .maintenance-v522-progress-bar i{background:linear-gradient(90deg,#18c9bf,#2698e7)!important}
+
+/* Tables and their wrappers form a single calm surface. */
+body.admin-ui-v58 :is(.table-wrap,.table-responsive,[class*="table-wrap"]){
+  background:#183a53!important;border-color:rgba(64,224,208,.22)!important;color:var(--ht-text)!important
+}
+body.admin-ui-v58 table{box-shadow:none!important}
+body.admin-ui-v58 thead th{border-bottom-color:rgba(64,224,208,.30)!important}
+body.admin-ui-v58 tbody td{color:#e7f5fb!important}
+
+/* Titles, descriptions and generated text retain contrast inside every surface. */
+body.admin-ui-v58 :is(
+  .kpi-panel-v59,.notification-channel-card-v518,.mail-mode-panel-v680,
+  .maintenance-create-v521,.maintenance-history-v521,.maintenance-v522-panel,
+  .inventory-panel-v523,.live-card-v511,.oee-panel-v524
+) :is(h2,h3,h4,strong){color:#f2fbff!important}
+body.admin-ui-v58 :is(
+  .kpi-panel-v59,.notification-channel-card-v518,.mail-mode-panel-v680,
+  .maintenance-create-v521,.maintenance-history-v521,.maintenance-v522-panel,
+  .inventory-panel-v523,.live-card-v511,.oee-panel-v524
+) :is(p,small,.muted){color:#acc5d5!important}
+
+/* Neutral controls use cyan; semantic warning/danger badges keep their meaning. */
+body.admin-ui-v58 button:not(.danger):not(.warning):not(.admin-logout-v6135),
+body.admin-ui-v58 .btn:not(.danger):not(.warning){border-color:rgba(64,224,208,.30)!important}
+body.admin-ui-v58 :is(.admin-tabs-v58,.tabs,[class*="tab-list"]){border-color:rgba(64,224,208,.20)!important}
+body.admin-ui-v58 :is(.admin-tab-v58,.tab):not(.active){background:#214b64!important;color:#c6deea!important;border-color:rgba(64,224,208,.20)!important}
+body.admin-ui-v58 :is(.admin-tab-v58,.tab).active{background:linear-gradient(135deg,#18bdb6,#128f9e)!important;color:#fff!important;border-color:#32dbd1!important}
+
+/* Remove legacy orange decoration from brand/navigation/content chrome only. */
+body.admin-ui-v58 .admin-view-header-v58,
+body.admin-ui-v58 .dashboard-panel-v6136,
+body.admin-ui-v58 .operations-suite-v6137,
+body.admin-ui-v58 .operation-suite-panel-v6137{border-top-color:rgba(64,224,208,.30)!important}
+
+body.admin-ui-v58 ::placeholder{color:#7895a9!important}
+body.admin-ui-v58 select option{background:#102a40;color:#edf8ff}
+
+@media(max-width:900px){
+  body.admin-ui-v58 :is(.live-card-v511,.oee-panel-v524,.maintenance-v522-panel,.inventory-panel-v523){border-radius:14px!important}
+}
+
+/* HukaTech Admin Theme v5 — exact component overrides verified from v6.13.6 markup */
+body.admin-ui-v58{
+  --ht-surface-1:#173b55;
+  --ht-surface-2:#1e4862;
+  --ht-surface-3:#285873;
+  --ht-surface-4:#31647e;
+  --ht-line-strong:rgba(49,216,207,.34);
+}
+
+/* Every main page card follows the login-screen navy/cyan language. */
+body.admin-ui-v58 main > .card,
+body.admin-ui-v58 main > .admin-card,
+body.admin-ui-v58 .dashboard-operations-section-v6136{
+  background:linear-gradient(145deg,var(--ht-surface-1),#12324a)!important;
+  border-color:var(--ht-line-strong)!important;
+  color:#eefaff!important;
+  box-shadow:0 18px 42px rgba(2,12,24,.18)!important;
+}
+
+body.admin-ui-v58 .section-title-row,
+body.admin-ui-v58 .dashboard-title-v6136{
+  background:linear-gradient(135deg,#214d68,#193f5a)!important;
+  border:1px solid rgba(49,216,207,.28)!important;
+  border-left:4px solid #27d2c8!important;
+  border-radius:15px!important;
+  padding:18px 20px!important;
+  color:#f2fbff!important;
+}
+body.admin-ui-v58 .section-title-row :is(h2,h3),
+body.admin-ui-v58 .dashboard-title-v6136 :is(h2,h3){color:#f4fcff!important}
+body.admin-ui-v58 .section-title-row :is(p,.muted),
+body.admin-ui-v58 .dashboard-title-v6136 :is(p,.muted){color:#a9c7d8!important}
+
+/* General dashboard: remove the last pale islands. */
+body.admin-ui-v58 .dashboard-state-v6136,
+body.admin-ui-v58 .dashboard-today-card-v6136,
+body.admin-ui-v58 .dashboard-attention-item-v6136,
+body.admin-ui-v58 .dashboard-event-item-v6136,
+body.admin-ui-v58 .dashboard-row-link-v6136{
+  background:linear-gradient(135deg,var(--ht-surface-4),var(--ht-surface-3))!important;
+  border-color:rgba(69,213,207,.27)!important;
+  color:#eefaff!important;
+}
+body.admin-ui-v58 .dashboard-state-v6136 strong,
+body.admin-ui-v58 .dashboard-today-card-v6136 strong{color:#f6fdff!important}
+body.admin-ui-v58 .dashboard-state-v6136,
+body.admin-ui-v58 .dashboard-today-card-v6136 span{color:#b9d1df!important}
+body.admin-ui-v58 button.dashboard-kpi-card-v6136{
+  background:linear-gradient(145deg,#31627c,#28536e)!important;
+  border:1px solid rgba(69,213,207,.30)!important;
+  border-top:3px solid #29d2c8!important;
+}
+body.admin-ui-v58 button.dashboard-kpi-card-v6136 :is(span,small){color:#b7d0df!important}
+body.admin-ui-v58 button.dashboard-kpi-card-v6136 strong{color:#f5fcff!important}
+
+/* Shared status strips: cyan, calm, and readable. */
+body.admin-ui-v58 .mini-status,
+body.admin-ui-v58 .oee-range-status-v6136{
+  background:#244f69!important;
+  border:1px solid rgba(49,216,207,.29)!important;
+  border-left:4px solid #27d2c8!important;
+  color:#c6dce8!important;
+  box-shadow:none!important;
+}
+body.admin-ui-v58 .mini-status :is(strong,b),
+body.admin-ui-v58 .oee-range-status-v6136 :is(strong,b){color:#f4fcff!important}
+
+/* OEE page — exact v6.13.6 classes. */
+body.admin-ui-v58 .oee-filter-panel-v6136,
+body.admin-ui-v58 .oee-section-v6136,
+body.admin-ui-v58 .oee-details-v6136{
+  background:linear-gradient(145deg,var(--ht-surface-2),var(--ht-surface-1))!important;
+  border-color:var(--ht-line-strong)!important;
+  color:#eefaff!important;
+}
+body.admin-ui-v58 .oee-kpi-v6136{
+  background:linear-gradient(145deg,#2b5c76,#234e69)!important;
+  border-color:rgba(69,213,207,.30)!important;
+}
+body.admin-ui-v58 .oee-kpi-v6136 span{color:#b7cfdd!important}
+body.admin-ui-v58 .oee-kpi-v6136 strong,
+body.admin-ui-v58 .oee-kpi-v6136 strong.no-data-v6136{color:#f4fcff!important}
+body.admin-ui-v58 .oee-kpi-v6136 small{color:#a9c3d3!important}
+body.admin-ui-v58 .oee-section-head-v6136 h3{color:#f2fbff!important}
+body.admin-ui-v58 .oee-section-head-v6136 p{color:#aac5d5!important}
+body.admin-ui-v58 .oee-machine-card-v6136,
+body.admin-ui-v58 .oee-machine-card-v6136.no-data-v6136{
+  background:linear-gradient(135deg,#285671,#214b65)!important;
+  border-color:rgba(69,213,207,.29)!important;
+}
+body.admin-ui-v58 .oee-machine-info-v6136 strong{color:#f3fbff!important}
+body.admin-ui-v58 .oee-machine-info-v6136 small{color:#aac6d6!important}
+body.admin-ui-v58 .oee-mini-metric-v6136,
+body.admin-ui-v58 .oee-machine-empty-v6136{
+  background:#32647d!important;
+  border:1px solid rgba(104,224,216,.25)!important;
+  color:#bed5e1!important;
+}
+body.admin-ui-v58 .oee-mini-metric-v6136 span{color:#b8d0de!important}
+body.admin-ui-v58 .oee-mini-metric-v6136 strong,
+body.admin-ui-v58 .oee-mini-metric-v6136 strong.no-data-v6136,
+body.admin-ui-v58 .oee-machine-empty-v6136 strong{color:#f4fcff!important}
+body.admin-ui-v58 .oee-empty-v6136{
+  background:#214b65!important;
+  border-color:rgba(69,213,207,.30)!important;
+  color:#aac5d5!important;
+}
+body.admin-ui-v58 .oee-empty-v6136 strong{color:#f3fbff!important}
+body.admin-ui-v58 .oee-details-v6136 > summary{
+  background:#214b65!important;
+  color:#edfaff!important;
+}
+body.admin-ui-v58 .oee-details-v6136 > summary::after{color:#29d2c8!important}
+body.admin-ui-v58 .oee-details-v6136[open] > summary{
+  background:#285873!important;
+  border-bottom-color:rgba(49,216,207,.25)!important;
+}
+body.admin-ui-v58 .oee-details-body-v6136,
+body.admin-ui-v58 .oee-action-strip-v6136{background:#173b55!important;color:#eaf8ff!important}
+body.admin-ui-v58 .oee-action-strip-v6136{border-color:rgba(49,216,207,.24)!important}
+
+/* Live Monitoring headings and telemetry cards. */
+body.admin-ui-v58 #liveMonitoringSection,
+body.admin-ui-v58 #oeeAnalyticsSection{background:linear-gradient(145deg,#173b55,#12324a)!important}
+body.admin-ui-v58 .live-card-v511,
+body.admin-ui-v58 .live-card-v511.is-not-live-v6136{
+  background:linear-gradient(145deg,#285772,#204961)!important;
+  border-color:rgba(69,213,207,.29)!important;
+}
+body.admin-ui-v58 .live-metric-v511,
+body.admin-ui-v58 .live-card-v511.is-not-live-v6136 .live-metric-v511{
+  background:#31627b!important;
+  border-color:rgba(69,213,207,.25)!important;
+}
+body.admin-ui-v58 .live-card-v511 h3,
+body.admin-ui-v58 .live-metric-v511 strong{color:#f5fcff!important}
+
+/* Orange is reserved for semantic warning badges only, never structural chrome. */
+body.admin-ui-v58 .oee-filter-grid-v6136 :is(input,select):focus{
+  border-color:#27d2c8!important;
+  box-shadow:0 0 0 4px rgba(39,210,200,.14)!important;
+}
+body.admin-ui-v58 :is(.section-title-row,.dashboard-title-v6136,.oee-range-status-v6136,.mini-status){border-top-color:rgba(49,216,207,.30)!important}
+
+@media(max-width:900px){
+  body.admin-ui-v58 .section-title-row,
+  body.admin-ui-v58 .dashboard-title-v6136{padding:15px!important}
+  body.admin-ui-v58 .oee-kpi-grid-v6136{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* HukaTech Admin Theme v6 — cool status palette and polished logout action */
+body.admin-ui-v58 .admin-card::after{
+  background:linear-gradient(90deg,#22d2ca 0%,#2698e7 48%,rgba(38,152,231,0) 100%)!important;
+  opacity:.72!important;
+}
+
+/* Connection-age and unassigned-device states are informational, not alarms. */
+body.admin-ui-v58 .live-badge-v511.stale,
+body.admin-ui-v58 .live-badge-v511.offline,
+body.admin-ui-v58 .live-badge-v511.no_device,
+body.admin-ui-v58 .live-badge-v511.stopped{
+  background:#dcecf4!important;
+  color:#24516b!important;
+  border:1px solid rgba(69,151,184,.28)!important;
+  box-shadow:none!important;
+}
+
+body.admin-ui-v58 .dashboard-severity-v6136.warn{
+  background:#dcecf4!important;
+  color:#24516b!important;
+  border:1px solid rgba(69,151,184,.28)!important;
+}
+body.admin-ui-v58 .dashboard-severity-v6136.info{
+  background:rgba(35,210,199,.16)!important;
+  color:#8ff2ea!important;
+  border:1px solid rgba(35,210,199,.30)!important;
+}
+body.admin-ui-v58 .dashboard-severity-v6136.danger{
+  background:rgba(255,93,115,.14)!important;
+  color:#ffb4bf!important;
+  border:1px solid rgba(255,93,115,.30)!important;
+}
+
+body.admin-ui-v58 .admin-logout-v6135{
+  min-height:44px!important;
+  padding:0 20px!important;
+  border:1px solid rgba(77,235,224,.48)!important;
+  border-radius:12px!important;
+  background:linear-gradient(135deg,#20c9c1,#159aa7)!important;
+  color:#062c39!important;
+  font-weight:850!important;
+  letter-spacing:.01em!important;
+  box-shadow:0 8px 20px rgba(24,208,194,.18)!important;
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease!important;
+}
+body.admin-ui-v58 .admin-logout-v6135:hover{
+  background:linear-gradient(135deg,#31dcd2,#1baab5)!important;
+  color:#042833!important;
+  transform:translateY(-1px)!important;
+  box-shadow:0 11px 26px rgba(24,208,194,.28)!important;
+  filter:none!important;
+}
+body.admin-ui-v58 .admin-logout-v6135:focus-visible{
+  outline:3px solid rgba(76,232,222,.28)!important;
+  outline-offset:3px!important;
+}
+
+/* HukaTech Admin Theme v7 — centered live-state badges and visible date controls */
+body.admin-ui-v58 .live-badge-v511{
+  min-width:88px!important;
+  min-height:32px!important;
+  box-sizing:border-box!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  line-height:1.15!important;
+}
+
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"],
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]{
+  color-scheme:dark!important;
+  padding-right:12px!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-calendar-picker-indicator,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-calendar-picker-indicator{
+  display:block!important;
+  opacity:1!important;
+  cursor:pointer!important;
+  filter:invert(77%) sepia(78%) saturate(558%) hue-rotate(122deg) brightness(96%) contrast(91%)!important;
+}
+
+/* HukaTech Admin Theme v8 — high-contrast dates and prominent calendar controls */
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"],
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]{
+  color:#f7fdff!important;
+  -webkit-text-fill-color:#f7fdff!important;
+  font-size:15px!important;
+  font-weight:800!important;
+  letter-spacing:.01em!important;
+  caret-color:#31ddd3!important;
+  padding-right:14px!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-datetime-edit,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper{
+  color:#f7fdff!important;
+  -webkit-text-fill-color:#f7fdff!important;
+  opacity:1!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-datetime-edit-day-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-datetime-edit-month-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-datetime-edit-year-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-datetime-edit-minute-field{
+  color:#f7fdff!important;
+  -webkit-text-fill-color:#f7fdff!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-calendar-picker-indicator,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-calendar-picker-indicator{
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  margin-left:10px!important;
+  padding:2px!important;
+  border-radius:6px!important;
+  background-color:rgba(45,221,211,.14)!important;
+  filter:invert(82%) sepia(83%) saturate(727%) hue-rotate(116deg) brightness(105%) contrast(96%) drop-shadow(0 0 3px rgba(42,224,213,.72))!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-calendar-picker-indicator:hover,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover{
+  background-color:rgba(45,221,211,.26)!important;
+}
+
+/* HukaTech Alarms UI v9 — white calendars and clearer alarm pages */
+body.admin-ui-v58 #alarmCenterSection input[type="date"]{
+  color:#f8fdff!important;
+  -webkit-text-fill-color:#f8fdff!important;
+  color-scheme:dark!important;
+  font-size:15px!important;
+  font-weight:800!important;
+}
+body.admin-ui-v58 #alarmCenterSection input[type="date"]::-webkit-datetime-edit,
+body.admin-ui-v58 #alarmCenterSection input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+body.admin-ui-v58 #alarmCenterSection input[type="date"]::-webkit-datetime-edit-day-field,
+body.admin-ui-v58 #alarmCenterSection input[type="date"]::-webkit-datetime-edit-month-field,
+body.admin-ui-v58 #alarmCenterSection input[type="date"]::-webkit-datetime-edit-year-field{
+  color:#f8fdff!important;
+  -webkit-text-fill-color:#f8fdff!important;
+  opacity:1!important;
+}
+body.admin-ui-v58 #alarmCenterSection input[type="date"]::-webkit-calendar-picker-indicator{
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  margin-left:8px!important;
+  padding:2px!important;
+  opacity:1!important;
+  cursor:pointer!important;
+  background-color:transparent!important;
+  filter:grayscale(1) brightness(0) invert(1) drop-shadow(0 1px 2px rgba(255,255,255,.28))!important;
+}
+
+/* HukaTech UI v10 — notification action spacing and white OEE calendars */
+body.admin-ui-v58 #alarmEscalationQueueSection .section-title-row > .admin-form-actions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:12px!important;
+  row-gap:10px!important;
+}
+body.admin-ui-v58 #alarmEscalationQueueSection .section-title-row > .admin-form-actions > button{
+  margin:0!important;
+  min-height:44px!important;
+  white-space:nowrap!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-calendar-picker-indicator,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-calendar-picker-indicator{
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  margin-left:10px!important;
+  padding:2px!important;
+  opacity:1!important;
+  cursor:pointer!important;
+  border-radius:6px!important;
+  background-color:transparent!important;
+  filter:grayscale(1) brightness(0) invert(1) drop-shadow(0 1px 2px rgba(255,255,255,.32))!important;
+}
+body.admin-ui-v58 #oeeAnalyticsSection input[type="date"]::-webkit-calendar-picker-indicator:hover,
+body.admin-ui-v58 #oeeAnalyticsSection input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover{
+  background-color:rgba(255,255,255,.12)!important;
+}
+@media (max-width:900px){
+  body.admin-ui-v58 #alarmEscalationQueueSection .section-title-row > .admin-form-actions{
+    width:100%!important;
+    justify-content:flex-start!important;
+  }
+}
+body.admin-ui-v58 #alarmCenterSummary{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-wrap:wrap!important;
+  gap:5px 8px!important;
+  min-height:54px!important;
+  text-align:center!important;
+}
+body.admin-ui-v58 #alarmSuiteTabsV6136 .alarm-suite-tab-v6136:not(.active){
+  color:#d5e7f1!important;
+  border-color:rgba(117,193,215,.38)!important;
+  background:#1d4962!important;
+}
+body.admin-ui-v58 #alarmSuiteTabsV6136 .alarm-suite-tab-v6136:not(.active):hover{
+  color:#fff!important;
+  border-color:#35d8cf!important;
+  background:#285d76!important;
+}
+body.admin-ui-v58 #alarmAnalyticsSection .kpi-card-v59,
+body.admin-ui-v58 #alarmEscalationQueueSection .kpi-card-v59{
+  min-height:112px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+}
+body.admin-ui-v58 #alarmEscalationEventsTable .admin-table-wrap{
+  overflow-x:auto!important;
+}
+body.admin-ui-v58 #alarmEscalationEventsTable table{
+  min-width:1420px!important;
+  table-layout:auto!important;
+}
+body.admin-ui-v58 #alarmEscalationEventsTable th,
+body.admin-ui-v58 #alarmEscalationEventsTable td{
+  vertical-align:top!important;
+  line-height:1.35!important;
+}
+body.admin-ui-v58 #alarmEscalationEventsTable th:nth-child(8),
+body.admin-ui-v58 #alarmEscalationEventsTable td:nth-child(8){
+  min-width:230px!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+body.admin-ui-v58 #alarmEscalationEventsTable th:nth-child(1),
+body.admin-ui-v58 #alarmEscalationEventsTable td:nth-child(1){min-width:105px!important}
+
+@media(max-width:900px){
+  body.admin-ui-v58 #alarmCenterSummary{justify-content:flex-start!important;text-align:left!important}
+}
+
+/* HukaTech Operations UI v11 */
+body.admin-ui-v58 :is(#organizationSectionV640,#productionLinesSectionV640,#machineTypeCatalogSection,#deviceModelCatalogSection,#deviceOnboardingSection,#deviceCapabilitiesSection,#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) :is(.org-panel-v640,.operation-catalog-panel-v6142,.onboarding-panel-v630,.capability-panel-v631,.maintenance-create-v521,.maintenance-history-v521,.maintenance-v522-panel){background:linear-gradient(155deg,#173d55,#123348)!important;border-color:rgba(87,174,201,.36)!important;color:#edf9ff!important;box-shadow:0 12px 28px rgba(1,14,25,.18)!important}
+body.admin-ui-v58 :is(#organizationSectionV640,#productionLinesSectionV640) :is(.org-summary-v640 article,.org-factory-v640,.org-site-v640,.org-line-v640,.org-machine-chip-v640){background:#1b465e!important;border-color:rgba(99,186,210,.36)!important;color:#effaff!important}
+body.admin-ui-v58 :is(#organizationSectionV640,#productionLinesSectionV640) :is(.org-summary-v640 strong,.org-summary-v640 span,.org-tree-v640 strong,.org-tree-v640 small,.org-panel-v640 h3,.org-panel-v640 p){color:#effaff!important}
+body.admin-ui-v58 :is(#organizationSectionV640,#productionLinesSectionV640) .org-site-v640{border-left-color:#2ed8cf!important}
+body.admin-ui-v58 :is(#organizationSectionV640,#productionLinesSectionV640) .org-scope-badge-v640{background:rgba(46,216,207,.14)!important;color:#80fff5!important;border:1px solid rgba(46,216,207,.42)!important}
+body.admin-ui-v58 #productionLinesSectionV640 #productionLineCustomerSelect{background:#173e56!important;color:#f6fdff!important;border-color:#3c768e!important}
+
+body.admin-ui-v58 :is(#organizationFactoriesTable,#organizationSitesTable,#productionLinesTable,#organizationMachineAssignments,#machineTypeCatalogTable,#deviceModelCatalogTable,#devicesTable) .admin-table-wrap{overflow-x:auto!important;scrollbar-width:thin!important;scrollbar-color:#3ecfc7 #102d40!important}
+body.admin-ui-v58 :is(#organizationFactoriesTable,#organizationSitesTable,#productionLinesTable,#organizationMachineAssignments,#machineTypeCatalogTable,#deviceModelCatalogTable,#devicesTable) .admin-table-wrap::-webkit-scrollbar{height:8px!important;width:8px!important}
+body.admin-ui-v58 :is(#organizationFactoriesTable,#organizationSitesTable,#productionLinesTable,#organizationMachineAssignments,#machineTypeCatalogTable,#deviceModelCatalogTable,#devicesTable) .admin-table-wrap::-webkit-scrollbar-track{background:#102d40!important;border-radius:999px!important}
+body.admin-ui-v58 :is(#organizationFactoriesTable,#organizationSitesTable,#productionLinesTable,#organizationMachineAssignments,#machineTypeCatalogTable,#deviceModelCatalogTable,#devicesTable) .admin-table-wrap::-webkit-scrollbar-thumb{background:#3ecfc7!important;border-radius:999px!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) table{min-width:1180px!important;table-layout:auto!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) :is(td,th){vertical-align:middle!important;color:#eaf8ff!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) tr:nth-child(even) td{background:rgba(20,56,77,.62)!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) tr:nth-child(odd) td{background:rgba(27,70,94,.48)!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) :is(input,textarea,select):disabled{opacity:1!important;background:#163b52!important;color:#f4fbff!important;-webkit-text-fill-color:#f4fbff!important;border-color:#3b7087!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) .operation-catalog-code-v6142{display:inline-block!important;background:#112f43!important;color:#8ffcf5!important;border:1px solid rgba(70,218,208,.42)!important;padding:4px 8px!important;border-radius:7px!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) .operation-catalog-meta-v6142 span{background:#214f68!important;color:#dff7ff!important;border-color:#477b91!important}
+body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) .operation-catalog-actions-v6143{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important;min-width:170px!important}
+
+body.admin-ui-v58 #deviceOnboardingSection :is(.onboarding-summary-v630 article,.onboarding-step-v630,.onboarding-meta-v630 div,.onboarding-test-v630,.onboarding-empty-v630){background:#1a455d!important;border-color:rgba(91,179,204,.38)!important;color:#edfaff!important}
+body.admin-ui-v58 #deviceOnboardingSection :is(.onboarding-summary-v630 strong,.onboarding-summary-v630 span,.onboarding-step-v630 strong,.onboarding-step-v630 small,.onboarding-meta-v630 span,.onboarding-meta-v630 strong,.onboarding-test-v630 span){color:#edfaff!important}
+body.admin-ui-v58 #deviceOnboardingSection .onboarding-step-v630.current{background:linear-gradient(145deg,#155b69,#16756f)!important;border-color:#37ded4!important;box-shadow:0 0 0 1px rgba(55,222,212,.28)!important}
+body.admin-ui-v58 #deviceOnboardingSection .onboarding-step-v630.current b{background:#2ed8cf!important;color:#052f36!important}
+body.admin-ui-v58 #deviceOnboardingSection .onboarding-provision-v630{background:#173e55!important;border-color:#36bdb5!important}
+
+body.admin-ui-v58 #deviceCapabilitiesSection :is(.capability-summary-v631 article,.capability-card-v631,.capability-transfer-v632,.capability-transfer-grid-v632 div,.capability-empty-v631){background:#1a455d!important;border-color:rgba(91,179,204,.38)!important;color:#edfaff!important}
+body.admin-ui-v58 #deviceCapabilitiesSection :is(.capability-summary-v631 span,.capability-summary-v631 strong,.capability-panel-v631 p,.capability-card-head-v631 small,.capability-grid-v631 label,.capability-transfer-grid-v632 span,.capability-transfer-grid-v632 b,.capability-transfer-message-v632){color:#edfaff!important}
+body.admin-ui-v58 #deviceCapabilitiesSection input[type="number"]{color-scheme:dark!important}
+
+body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) :is(input,select,textarea){color:#f8fdff!important;-webkit-text-fill-color:#f8fdff!important}
+body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) input::placeholder,body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) textarea::placeholder{color:#afc6d2!important;opacity:1!important}
+body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) input[type="date"],body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) input[type="datetime-local"]{color-scheme:dark!important;font-weight:750!important}
+body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) input[type="date"]::-webkit-calendar-picker-indicator,body.admin-ui-v58 :is(#maintenanceTicketsSection,#maintenancePlansSection,#maintenanceWorkOrdersSection) input[type="datetime-local"]::-webkit-calendar-picker-indicator{width:21px!important;height:21px!important;opacity:1!important;cursor:pointer!important;filter:grayscale(1) brightness(0) invert(1) drop-shadow(0 1px 2px rgba(255,255,255,.3))!important}
+body.admin-ui-v58 :is(#maintenanceTicketSummary,#maintenancePlanSummary,#maintenanceWorkOrderSummary){margin-bottom:14px!important}
+
+body.admin-ui-v58 #notificationSettingsSection > .admin-form-grid:first-of-type{margin-bottom:14px!important}
+body.admin-ui-v58 #notificationSettingsSection .notification-channel-grid-v518{margin-top:14px!important}
+body.admin-ui-v58 #alarmEscalationDeliveryStatus{margin-bottom:14px!important}
+body.admin-ui-v58 #alarmEscalationDeliveryStatus > .mini-status{margin-bottom:0!important}
+
+@media(max-width:800px){body.admin-ui-v58 :is(#machineTypeCatalogTable,#deviceModelCatalogTable) table{min-width:1050px!important}}
+
+/* HukaTech Users & Analytics UI v12 */
+body.admin-ui-v58 #organizationHierarchyTree :is(.org-factory-v640,.org-site-v640) > :is(strong,b,small):first-child,
+body.admin-ui-v58 #organizationHierarchyTree :is(.org-factory-label-v640,.org-site-label-v640){color:#72f4ea!important}
+
+body.admin-ui-v58 [data-admin-view="users"] :is(.permission-preview-v1,.invite-email-panel-v1,.user-role-permissions-v1),
+body.admin-ui-v58 :is(#siteAccessSectionV640,#billingPlansSection,#billingSubscriptionsSection) .org-panel-v640{
+  background:linear-gradient(155deg,#173d55,#123348)!important;
+  border-color:rgba(87,174,201,.36)!important;
+  color:#edf9ff!important;
+}
+body.admin-ui-v58 [data-admin-view="users"] :is(h3,h4,label,p,strong,small,.muted),
+body.admin-ui-v58 :is(#siteAccessSectionV640,#billingPlansSection,#billingSubscriptionsSection) :is(h3,label,p,strong,small){color:#eaf8ff!important}
+body.admin-ui-v58 [data-admin-view="users"] input[type="checkbox"],
+body.admin-ui-v58 #smartAiSettingsSection input[type="checkbox"]{accent-color:#2ed8cf!important;width:18px!important;height:18px!important}
+body.admin-ui-v58 #usersTable .user-access-summary-v2 :is(strong,small){color:#e9f9ff!important;opacity:1!important}
+body.admin-ui-v58 #usersTable .permission-badge{background:#18465d!important;color:#a9fff8!important;border-color:rgba(67,220,209,.38)!important}
+body.admin-ui-v58 :is(#usersTable,#locationAccessTable,#billingPlansTable,#billingSubscriptionsTable) .admin-table-wrap{overflow-x:auto!important;scrollbar-width:thin!important;scrollbar-color:#3ecfc7 #102d40!important}
+body.admin-ui-v58 :is(#usersTable,#locationAccessTable,#billingPlansTable,#billingSubscriptionsTable) table{min-width:980px!important}
+body.admin-ui-v58 :is(#billingPlansSection,#billingSubscriptionsSection) :is(input,select){background:#173e56!important;color:#f7fdff!important;-webkit-text-fill-color:#f7fdff!important;border-color:#3c768e!important}
+
+body.admin-ui-v58 :is(#billingPlansSection,#billingSubscriptionsSection,#smartAiReportsSection,#smartAiAskSection,#smartAiHistorySection,#smartAiSettingsSection,#factoryComparisonSectionV640) input[type="date"]{color-scheme:dark!important;color:#f8fdff!important;-webkit-text-fill-color:#f8fdff!important;font-weight:800!important}
+body.admin-ui-v58 :is(#billingPlansSection,#billingSubscriptionsSection,#smartAiReportsSection,#smartAiAskSection,#smartAiHistorySection,#smartAiSettingsSection,#factoryComparisonSectionV640) input[type="date"]::-webkit-calendar-picker-indicator{width:22px!important;height:22px!important;opacity:1!important;cursor:pointer!important;filter:grayscale(1) brightness(0) invert(1) drop-shadow(0 1px 2px rgba(255,255,255,.32))!important}
+
+body.admin-ui-v58 :is(#smartAiReportsSection,#smartAiAskSection,#smartAiHistorySection,#smartAiSettingsSection,#factoryComparisonSectionV640) :is(.smartai-panel-v650,.smartai-grid-v650>*,.smartai-answer-v650,.org-summary-v640 article,.org-comparison-card-v640,.org-panel-v640){background:linear-gradient(155deg,#173d55,#123348)!important;border-color:rgba(87,174,201,.36)!important;color:#edf9ff!important;box-shadow:0 12px 28px rgba(1,14,25,.18)!important}
+body.admin-ui-v58 :is(#smartAiReportsSection,#smartAiAskSection,#smartAiHistorySection,#smartAiSettingsSection,#factoryComparisonSectionV640) :is(h3,h4,label,p,span,strong,small,.muted,.answer,.meta){color:#edf9ff!important;opacity:1!important}
+body.admin-ui-v58 :is(#smartAiReportsSection,#smartAiAskSection,#smartAiHistorySection,#smartAiSettingsSection) :is(input,select,textarea){background:#173e56!important;color:#f7fdff!important;-webkit-text-fill-color:#f7fdff!important;border-color:#3c768e!important}
+body.admin-ui-v58 #smartAiAnswer{min-height:190px!important;padding:22px!important}
+body.admin-ui-v58 #smartAiHistoryTable .admin-table-wrap{overflow-x:auto!important;scrollbar-width:thin!important;scrollbar-color:#3ecfc7 #102d40!important}
+body.admin-ui-v58 #smartAiHistoryTable table{min-width:1180px!important}
+body.admin-ui-v58 #smartAiHistoryTable td:last-child{white-space:nowrap!important}
+body.admin-ui-v58 #factoryComparisonCards .comparison-note-v1{background:rgba(46,216,207,.12)!important;color:#dffdfa!important;border:1px solid rgba(46,216,207,.36)!important;border-radius:12px!important;padding:14px 16px!important;margin-bottom:14px!important}
+body.admin-ui-v58 #factoryComparisonTable{background:transparent!important;border:0!important}
+
+@media(max-width:900px){
+  body.admin-ui-v58 :is(#usersTable,#locationAccessTable,#billingPlansTable,#billingSubscriptionsTable) table{min-width:900px!important}
+}
+
+/* HukaTech targeted UI correction v13 */
+body.admin-ui-v58 #organizationHierarchyTree .org-level-label-v6140{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:26px!important;
+  padding:4px 11px!important;
+  border:1px solid rgba(88,238,226,.52)!important;
+  border-radius:999px!important;
+  background:rgba(46,216,207,.16)!important;
+  color:#8cfff6!important;
+  -webkit-text-fill-color:#8cfff6!important;
+  box-shadow:none!important;
+}
+body.admin-ui-v58 #organizationHierarchyTree .org-site-v640{
+  border-left-color:#2ed8cf!important;
+}
+
+body.admin-ui-v58 #invitePermissionChooserV1 .invite-permission-toggle-v1,
+body.admin-ui-v58 [data-admin-view="users"] .invite-email-option-v1,
+body.admin-ui-v58 [data-admin-view="users"] label:has(#inviteSendEmail){
+  background:#173e56!important;
+  color:#f2fbff!important;
+  border-color:#3c768e!important;
+  -webkit-text-fill-color:#f2fbff!important;
+}
+body.admin-ui-v58 #invitePermissionChooserV1 .invite-permission-toggle-v1 :is(span,small),
+body.admin-ui-v58 [data-admin-view="users"] label:has(#inviteSendEmail) :is(strong,small,span){
+  color:#f2fbff!important;
+  -webkit-text-fill-color:#f2fbff!important;
+  opacity:1!important;
+}
+
+body.admin-ui-v58 #smartAiSettingsSection .smartai-panel-v650 > .smartai-form-v650 > label:has(input[type="checkbox"]){
+  background:#173e56!important;
+  color:#f2fbff!important;
+  border-color:#3c768e!important;
+  -webkit-text-fill-color:#f2fbff!important;
+}
+body.admin-ui-v58 #smartAiSettingsSection input[type="checkbox"]{
+  accent-color:#2ed8cf!important;
+}
+
+body.admin-ui-v58 #factoryComparisonSectionV640 .org-toolbar-v640 input,
+body.admin-ui-v58 #factoryComparisonSectionV640 .org-toolbar-v640 select{
+  background:#173e56!important;
+  color:#f8fdff!important;
+  -webkit-text-fill-color:#f8fdff!important;
+  border-color:#3c768e!important;
+  color-scheme:dark!important;
+}
+body.admin-ui-v58 #factoryComparisonCards .org-comparison-card-v640.data-missing-v1,
+body.admin-ui-v58 #factoryComparisonCards .org-comparison-card-v640.data-missing-v1 header{
+  background:linear-gradient(155deg,#173d55,#123348)!important;
+  color:#edf9ff!important;
+  border-color:rgba(87,174,201,.36)!important;
+}
+body.admin-ui-v58 #factoryComparisonCards .org-comparison-card-v640.data-missing-v1 :is(h3,span,strong,small,.org-oee-v640){
+  color:#edf9ff!important;
+  -webkit-text-fill-color:#edf9ff!important;
+  opacity:1!important;
+}
+
+/* HukaTech Settings UI v14 */
+body.admin-ui-v58 :is(#generalSettingsSection,#notificationSettingsSection,#systemHealthSection,#remoteAccessSection,#securityCenterSection,#auditSection) :is(input,select,textarea){
+  background:#173e56!important;color:#f8fdff!important;-webkit-text-fill-color:#f8fdff!important;border-color:#3c768e!important;
+}
+body.admin-ui-v58 :is(#generalSettingsSection,#notificationSettingsSection,#systemHealthSection,#remoteAccessSection,#securityCenterSection,#auditSection) :is(input,textarea)::placeholder{color:#abc4d1!important;opacity:1!important}
+body.admin-ui-v58 #generalSettingsSection .general-settings-grid-v600,
+body.admin-ui-v58 #generalSettingsSection .general-settings-note-v600{
+  background:linear-gradient(155deg,#173d55,#123348)!important;border:1px solid rgba(87,174,201,.36)!important;color:#edf9ff!important;box-shadow:0 12px 28px rgba(1,14,25,.16)!important;
+}
+body.admin-ui-v58 #generalSettingsSection .general-settings-grid-v600{padding:18px!important;border-radius:14px!important}
+body.admin-ui-v58 #generalSettingsSection .general-settings-note-v600{color:#d9eff8!important}
+body.admin-ui-v58 #generalSettingsSection .hukatech-save-general-v6135{background:linear-gradient(135deg,#32d7cd,#24aeb8)!important;border-color:#45e5dc!important;color:#052e38!important;box-shadow:0 8px 18px rgba(35,204,197,.22)!important}
+
+body.admin-ui-v58 #notificationSettingsSection .notification-test-actions-v518{display:flex!important;align-items:end!important;flex-wrap:wrap!important;gap:12px!important}
+body.admin-ui-v58 #notificationSettingsSection .notification-test-actions-v518>label{flex:1 1 260px!important;min-width:0!important;margin:0!important}
+body.admin-ui-v58 #notificationSettingsSection .notification-test-actions-v518>button{flex:0 0 auto!important;margin:0!important;min-height:44px!important}
+
+body.admin-ui-v58 #systemHealthSection :is(.health-summary-card-v610,.health-service-card-v610,.health-panel-v610){background:linear-gradient(155deg,#173d55,#123348)!important;border-color:rgba(87,174,201,.36)!important;color:#edf9ff!important}
+body.admin-ui-v58 #systemHealthSection :is(.health-summary-card-v610,.health-service-card-v610,.health-panel-v610) :is(h3,h4,p,span,strong,small,label){color:#edf9ff!important;-webkit-text-fill-color:#edf9ff!important;opacity:1!important}
+body.admin-ui-v58 #systemHealthSection .health-alert-v610:not(.critical){background:#183e55!important;border-color:#3d7289!important;color:#ddecf3!important}
+body.admin-ui-v58 #systemHealthSection .health-alert-v610.warning{background:#1b465e!important;border-color:#5b8397!important;color:#eef8fc!important}
+body.admin-ui-v58 #systemHealthSection .health-alert-v610.critical{background:#4a1f2a!important;border-color:#d85a6b!important;color:#ffe8ec!important}
+
+body.admin-ui-v58 #remoteAccessSection :is(.remote-card-v670,.remote-panel-v670,.remote-note-v670){background:linear-gradient(155deg,#173d55,#123348)!important;border-color:rgba(87,174,201,.36)!important;color:#edf9ff!important}
+body.admin-ui-v58 #remoteAccessSection :is(.remote-card-v670,.remote-panel-v670,.remote-note-v670) :is(h3,p,span,strong,small,label){color:#edf9ff!important;-webkit-text-fill-color:#edf9ff!important;opacity:1!important}
+body.admin-ui-v58 #remoteAccessSection .remote-check-v670{background:#173e56!important;border-color:#3c768e!important;color:#edf9ff!important}
+body.admin-ui-v58 #remoteAccessSection .remote-check-v670.ok{background:#174b50!important;border-color:#35bfae!important}
+body.admin-ui-v58 #remoteAccessSection .remote-check-v670.warn{background:#29475a!important;border-color:#66869a!important}
+body.admin-ui-v58 #remoteAccessSection .remote-check-v670.warn b{color:#dcebf2!important}
+
+body.admin-ui-v58 #securityCenterSection :is(.security-summary-card-v620,.security-panel-v620,.security-policy-note-v620){background:linear-gradient(155deg,#173d55,#123348)!important;border-color:rgba(87,174,201,.36)!important;color:#edf9ff!important}
+body.admin-ui-v58 #securityCenterSection :is(.security-summary-card-v620,.security-panel-v620,.security-policy-note-v620) :is(h3,p,span,strong,small,label){color:#edf9ff!important;-webkit-text-fill-color:#edf9ff!important;opacity:1!important}
+
+body.admin-ui-v58 #auditSection input[type="date"]{color-scheme:dark!important;font-weight:800!important}
+body.admin-ui-v58 #auditSection input[type="date"]::-webkit-calendar-picker-indicator{width:22px!important;height:22px!important;min-width:22px!important;opacity:1!important;cursor:pointer!important;filter:grayscale(1) brightness(0) invert(1) drop-shadow(0 1px 2px rgba(255,255,255,.32))!important}
+body.admin-ui-v58 #auditSection #auditSummary{display:block!important;line-height:1.55!important;white-space:normal!important;overflow-wrap:anywhere!important;margin:14px 0!important}
+body.admin-ui-v58 #auditLogTable .admin-table-wrap{overflow-x:auto!important;scrollbar-width:thin!important;scrollbar-color:#3ecfc7 #102d40!important}
+body.admin-ui-v58 #auditLogTable table{min-width:1180px!important}
+body.admin-ui-v58 #auditLogTable :is(th,td){vertical-align:top!important;line-height:1.4!important}
+body.admin-ui-v58 #auditLogTable :is(th,td):last-child{min-width:280px!important;white-space:normal!important;overflow-wrap:anywhere!important}
+
+@media(max-width:760px){body.admin-ui-v58 #notificationSettingsSection .notification-test-actions-v518>button{width:100%!important}}
+
+/* HukaTech Settings UI correction v15 — dark status chips and modern remote fields */
+body.admin-ui-v58 #systemHealthSection .health-status-v610{
+  color:#eaffff!important;
+  -webkit-text-fill-color:#eaffff!important;
+  border:1px solid rgba(111,210,220,.46)!important;
+  background:#244d61!important;
+  box-shadow:none!important;
+  opacity:1!important;
+}
+body.admin-ui-v58 #systemHealthSection .health-status-v610:is(.healthy,.ok,.info,.verified,.completed){
+  color:#dffffa!important;
+  -webkit-text-fill-color:#dffffa!important;
+  background:#17605f!important;
+  border-color:#35cfc4!important;
+}
+body.admin-ui-v58 #systemHealthSection .health-status-v610:is(.warning,.not_checked,.running,.unconfigured,.stale){
+  color:#eef8fc!important;
+  -webkit-text-fill-color:#eef8fc!important;
+  background:#31556a!important;
+  border-color:#6f91a4!important;
+}
+body.admin-ui-v58 #systemHealthSection .health-status-v610:is(.disabled,.unknown,.deleted,.unsupported){
+  color:#dbe9f0!important;
+  -webkit-text-fill-color:#dbe9f0!important;
+  background:#29485a!important;
+  border-color:#58788a!important;
+}
+body.admin-ui-v58 #systemHealthSection .health-status-v610:is(.critical,.error,.failed,.offline){
+  color:#ffe9ed!important;
+  -webkit-text-fill-color:#ffe9ed!important;
+  background:#6b2937!important;
+  border-color:#dc6678!important;
+}
+
+body.admin-ui-v58 #remoteAccessSection .remote-settings-grid-v670 :is(input,select,textarea),
+body.admin-ui-v58 #remoteAccessSection :is(input,select,textarea){
+  min-height:44px!important;
+  padding:10px 13px!important;
+  border:1px solid #3d768e!important;
+  border-radius:10px!important;
+  background:#173e56!important;
+  color:#f8fdff!important;
+  -webkit-text-fill-color:#f8fdff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  outline:none!important;
+}
+body.admin-ui-v58 #remoteAccessSection textarea{
+  min-height:104px!important;
+  line-height:1.5!important;
+  resize:vertical!important;
+}
+body.admin-ui-v58 #remoteAccessSection :is(input,select,textarea):focus{
+  border-color:#35d8cf!important;
+  box-shadow:0 0 0 3px rgba(53,216,207,.14)!important;
+}
+body.admin-ui-v58 #remoteAccessSection label{
+  gap:7px!important;
+  color:#edf9ff!important;
+}
+
+body.admin-ui-v58 #securityCenterSection .security-panel-v620 > header{
+  padding:16px 18px!important;
+  margin:-3px -3px 18px!important;
+  border:1px solid rgba(87,174,201,.38)!important;
+  border-radius:14px!important;
+  background:linear-gradient(145deg,#1d4a63,#173b52)!important;
+  box-shadow:none!important;
+  color:#edf9ff!important;
+}
+body.admin-ui-v58 #securityCenterSection .security-panel-v620 > header :is(h3,p){
+  color:#edf9ff!important;
+  -webkit-text-fill-color:#edf9ff!important;
+  opacity:1!important;
+}
+body.admin-ui-v58 #securityCenterSection :is(.security-settings-grid-v620,.security-password-grid-v620) :is(input,select,textarea){
+  min-height:44px!important;
+  padding:10px 13px!important;
+  border:1px solid #3d768e!important;
+  border-radius:10px!important;
+  background:#173e56!important;
+  color:#f8fdff!important;
+  -webkit-text-fill-color:#f8fdff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  outline:none!important;
+}
+body.admin-ui-v58 #securityCenterSection :is(.security-settings-grid-v620,.security-password-grid-v620) :is(input,select,textarea):focus{
+  border-color:#35d8cf!important;
+  box-shadow:0 0 0 3px rgba(53,216,207,.14)!important;
+}
+body.admin-ui-v58 #securityCenterSection :is(.security-settings-grid-v620,.security-password-grid-v620) label{
+  gap:7px!important;
+  color:#edf9ff!important;
+  -webkit-text-fill-color:#edf9ff!important;
+}
+body.admin-ui-v58 #securityCenterSection .security-policy-note-v620{
+  border:1px solid rgba(65,214,203,.42)!important;
+  border-left:4px solid #35d8cf!important;
+  background:#17465b!important;
+  color:#e8fbff!important;
+  -webkit-text-fill-color:#e8fbff!important;
+}
+
+/* HukaTech Settings UI correction v16 — security status chips */
+body.admin-ui-v58 #securityCenterSection span.security-chip-v620{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:30px!important;
+  padding:5px 12px!important;
+  border:1px solid #43839a!important;
+  border-radius:999px!important;
+  background:#244d61!important;
+  color:#eaf8ff!important;
+  -webkit-text-fill-color:#eaf8ff!important;
+  font-size:.74rem!important;
+  font-weight:900!important;
+  line-height:1!important;
+  letter-spacing:.02em!important;
+  opacity:1!important;
+  box-shadow:none!important;
+}
+body.admin-ui-v58 #securityCenterSection span.security-chip-v620.neutral{
+  background:#15556a!important;
+  border-color:#2cb9c0!important;
+  color:#cffffb!important;
+  -webkit-text-fill-color:#cffffb!important;
+}
+body.admin-ui-v58 #securityCenterSection span.security-chip-v620.ok{
+  background:#17605f!important;
+  border-color:#35cfc4!important;
+  color:#dffffa!important;
+  -webkit-text-fill-color:#dffffa!important;
+}
+body.admin-ui-v58 #securityCenterSection span.security-chip-v620.warn{
+  background:#31556a!important;
+  border-color:#7195a8!important;
+  color:#f0f9fd!important;
+  -webkit-text-fill-color:#f0f9fd!important;
+}
+body.admin-ui-v58 #securityCenterSection span.security-chip-v620.danger{
+  background:#6b2937!important;
+  border-color:#dc6678!important;
+  color:#ffe9ed!important;
+  -webkit-text-fill-color:#ffe9ed!important;
+}
